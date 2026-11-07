@@ -7,10 +7,10 @@ namespace App\Console\Commands;
 use App\Enums\PersonalRecordType;
 use App\Models\PersonalRecord;
 use App\Models\User;
+use App\Models\Workout;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -171,32 +171,46 @@ class VerifyDataCoherence extends Command
      * sans chemin de reparation, le controle nocturne le signalerait chaque
      * nuit sans recours. Le volume d'un utilisateur, lui, n'est plus stocke :
      * il se lit dans ses seances.
+     *
+     * La réparation passe par l'écrivain du modèle, `recalculerLeVolume()`,
+     * et seulement sur les séances que le contrôle trouve en écart (#1513).
+     * Elle refaisait la somme par sa propre requête et l'écrivait sans le
+     * verrou de la séance : une série enregistrée entre sa lecture et son
+     * écriture repartait sous l'ancien total. L'écrivain relit le total sous
+     * ce verrou, une séance après l'autre.
      */
     private function recalculerLesVolumes(): void
     {
         $recalees = 0;
 
-        DB::table('workouts')->orderBy('id')->chunkById(500, function (Collection $seances) use (&$recalees): void {
-            foreach ($seances as $seance) {
-                $reel = (float) DB::table('workout_lines')
-                    ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
-                    ->where('workout_lines.workout_id', $seance->id)
-                    ->where('sets.is_completed', true)
-                    ->sum(DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
-
-                $stocke = is_numeric($seance->workout_volume) ? (float) $seance->workout_volume : 0.0;
-
-                if (abs($stocke - $reel) <= 0.01) {
-                    continue;
+        Workout::query()
+            ->whereIn('id', $this->seancesAuVolumeEcarte()->select('workouts.id'))
+            ->chunkById(500, function (\Illuminate\Database\Eloquent\Collection $seances) use (&$recalees): void {
+                foreach ($seances as $seance) {
+                    if ($seance->recalculerLeVolume()) {
+                        $recalees++;
+                    }
                 }
-
-                DB::table('workouts')->where('id', $seance->id)->update(['workout_volume' => $reel]);
-                $recalees++;
-            }
-        });
+            });
 
         $this->line(sprintf('  <fg=yellow>%d</> séance(s) dont le volume a été recalé', $recalees));
         $this->newLine();
+    }
+
+    /**
+     * Les séances dont le volume stocké s'écarte de plus d'un centime de celui
+     * de leurs séries, jointes à ce volume (`calcul.volume`, absent pour une
+     * séance sans série cochée).
+     *
+     * Le volume vient de `Workout::volumesDesSeries()`, la somme que lit
+     * l'écrivain : le contrôle et la réparation ne peuvent pas lui donner tort
+     * sur une séance qu'il vient d'écrire.
+     */
+    private function seancesAuVolumeEcarte(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('workouts')
+            ->leftJoinSub(Workout::volumesDesSeries(), 'calcul', 'calcul.workout_id', '=', 'workouts.id')
+            ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.volume, 0)) > 0.01');
     }
 
     /**
@@ -311,28 +325,17 @@ class VerifyDataCoherence extends Command
     /**
      * `workouts.workout_volume` contre la somme des series de la seance.
      *
+     * La somme est celle de l'écrivain, `Workout::volumesDesSeries()` : les
+     * séries faites seulement, pas celles qui attendent (#1499). Une seconde
+     * définition écrite ici pouvait signaler divergente une séance juste, ou
+     * laisser passer une séance fausse (#1513).
+     *
      * @return array{int, list<string>}
      */
     private function volumeSeances(): array
     {
-        $requete = DB::table('workouts')
-            ->leftJoinSub(
-                DB::table('workout_lines')
-                    ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    // Meme filtre que `Workout::recalculerLeVolume()` : le volume
-                    // compte les series faites, pas celles qui attendent (#1499).
-                    // Sans lui, une seance dont une serie n'est pas cochee
-                    // serait signalee divergente alors qu'elle est juste.
-                    ->where('sets.is_completed', true)
-                    ->selectRaw('workout_lines.workout_id, SUM(COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)) as reel')
-                    ->groupBy('workout_lines.workout_id'),
-                'calcul',
-                'calcul.workout_id',
-                '=',
-                'workouts.id',
-            )
-            ->selectRaw('workouts.id, workouts.workout_volume as stocke, COALESCE(calcul.reel, 0) as reel')
-            ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.reel, 0)) > 0.01');
+        $requete = $this->seancesAuVolumeEcarte()
+            ->selectRaw('workouts.id, workouts.workout_volume as stocke, COALESCE(calcul.volume, 0) as reel');
 
         return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             'séance %s : stocké %s, calculé %s',

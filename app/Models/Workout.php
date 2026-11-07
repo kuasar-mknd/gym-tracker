@@ -184,8 +184,31 @@ class Workout extends Model
     }
 
     /**
-     * Recalcule le volume de cette séance depuis ses séries, et déplace d'autant
-     * le total de l'utilisateur.
+     * Le volume de chaque séance qui a une série cochée, tiré de ses séries :
+     * une ligne par séance, `workout_id` et `volume`.
+     *
+     * Le volume est la somme du poids par les répétitions des séries COCHÉES,
+     * un poids ou des répétitions manquants comptant pour zéro : démarrer une
+     * séance depuis un modèle ne crédite rien avant le premier kilo soulevé
+     * (#1499). Une séance sans série cochée n'a pas de ligne, son volume est 0.
+     *
+     * C'est la seule définition du volume : l'écrivain (`recalculerLeVolume()`)
+     * et le contrôle nocturne (`app:verify-data-coherence`) la lisent ici. Le
+     * contrôle avait sa propre somme et la réparation une troisième, libres de
+     * diverger de l'écrivain (#1513).
+     */
+    public static function volumesDesSeries(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('workout_lines')
+            ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->where('sets.is_completed', true)
+            ->groupBy('workout_lines.workout_id')
+            ->selectRaw('workout_lines.workout_id, SUM(COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)) as volume');
+    }
+
+    /**
+     * Recalcule le volume de cette séance depuis ses séries, et dit s'il l'a
+     * réécrit.
      *
      * Les compteurs étaient tenus en accumulant un écart à chaque sauvegarde de
      * série : le nouveau volume moins celui que la série portait au chargement
@@ -196,17 +219,16 @@ class Workout extends Model
      * décrire, définitivement et sans que rien ne le montre.
      *
      * Recalculer depuis les lignes coûte un agrégat au lieu d'un incrément et ne
-     * peut pas dériver, quel que soit l'ordre d'arrivée des écritures.
+     * peut pas dériver, quel que soit l'ordre d'arrivée des écritures. C'est le
+     * seul écrivain du volume : la réparation nocturne l'appelle aussi (#1513).
      */
-    public function recalculerLeVolume(): void
+    public function recalculerLeVolume(): bool
     {
         /*
          * L'ancien total est relu SOUS VERROU dans la transaction qui l'ecrit :
          * deux enregistrements sur la meme seance se serialisent (#1595).
-         * Seules les series validees comptent : demarrer une seance depuis un
-         * modele ne credite rien avant le premier kilo souleve (#1499).
          */
-        DB::transaction(function (): void {
+        return DB::transaction(function (): bool {
             $stocke = $this->newQuery()
                 ->whereKey($this->getKey())
                 ->lockForUpdate()
@@ -214,20 +236,29 @@ class Workout extends Model
 
             $ancien = is_numeric($stocke) ? (float) $stocke : 0.0;
 
-            $total = (float) $this->workoutLines()
-                ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
-                ->where('sets.is_completed', true)
-                ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
+            /*
+             * La ligne de la séance, lue en entier : `value('volume')` rendrait
+             * la première colonne du `select` posé par `volumesDesSeries()`,
+             * l'identifiant de la séance. Pas de ligne : aucune série cochée.
+             */
+            $ligne = self::volumesDesSeries()
+                ->where('workout_lines.workout_id', $this->getKey())
+                ->first();
+
+            $volume = $ligne === null ? null : (get_object_vars($ligne)['volume'] ?? null);
+            $total = is_numeric($volume) ? (float) $volume : 0.0;
 
             // Les volumes sont des decimaux a deux chiffres : en deca, l'ecart
             // vient de l'arrondi et non d'un changement.
             $ecart = round($total - $ancien, 2);
 
             if ($ecart === 0.0) {
-                return;
+                return false;
             }
 
             $this->newQuery()->whereKey($this->getKey())->update(['workout_volume' => $total]);
+
+            return true;
         });
     }
 

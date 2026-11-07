@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **La réparation nocturne du volume d'une séance passe par l'écrivain du volume** (#1513, #PR) : `app:verify-data-coherence --repair` refaisait la somme des séries par sa propre requête et l'écrivait sans le verrou de la séance, si bien qu'une série enregistrée pendant la réparation pouvait repartir sous l'ancien total. Elle appelle désormais `Workout::recalculerLeVolume()`, sur les seules séances que le contrôle trouve en écart, et le contrôle lit la même somme que l'écrivain (`Workout::volumesDesSeries()`). Le volume de séance n'a plus qu'un écrivain.
+
 ## [1.7.0] - 2026-11-06
 
 ### Ajouté

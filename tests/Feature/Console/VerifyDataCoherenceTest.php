@@ -9,6 +9,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
@@ -474,6 +475,80 @@ it('repasse au vert après réparation', function (): void {
 
     // Une seconde passe, sans réparer : plus rien ne doit être signalé.
     $this->artisan('app:verify-data-coherence')->assertExitCode(0);
+});
+
+/**
+ * Les requêtes SQL envoyées pendant l'appel, dans l'ordre. L'écoute reste
+ * posée après lui, sur un tableau que plus rien ne lit.
+ *
+ * @return list<string>
+ */
+function coherenceRequetesPendant(callable $appel): array
+{
+    $requetes = [];
+
+    DB::listen(static function (QueryExecuted $requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
+    $appel();
+
+    return $requetes;
+}
+
+/**
+ * Les requêtes qui verrouillent ou réécrivent une séance.
+ *
+ * @param  list<string>  $requetes
+ * @return list<string>
+ */
+function coherenceEcrituresDesSeances(array $requetes): array
+{
+    return array_values(array_filter(
+        $requetes,
+        static fn (string $sql): bool => preg_match('/^update `workouts`|from `workouts`.* for update$/i', $sql) === 1,
+    ));
+}
+
+/*
+ * La réparation du volume passe par l'écrivain de la séance (#1513). Elle
+ * refaisait la somme par sa propre requête et l'écrivait sans verrou : une
+ * série enregistrée entre sa lecture et son écriture repartait sous l'ancien
+ * total. `Workout::recalculerLeVolume()` relit le total sous le verrou de la
+ * ligne, comme à chaque série enregistrée.
+ */
+it('recale par --repair un volume faussé en base, par l’écrivain de la séance et sous son verrou', function (): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['workout_volume' => 42]);
+
+    $requetes = coherenceRequetesPendant(function (): void {
+        $this->artisan('app:verify-data-coherence', ['--repair' => true])
+            ->expectsOutputToContain('1 séance(s) dont le volume a été recalé')
+            ->expectsOutputToContain('OK volume des séances')
+            ->assertExitCode(0)
+            ->run();
+    });
+
+    $volume = DB::table('workouts')->where('id', $idSeance)->value('workout_volume');
+
+    expect(is_numeric($volume) ? (float) $volume : null)->toBe(1000.0)
+        ->and(array_values(array_filter(coherenceEcrituresDesSeances($requetes), static fn (string $sql): bool => str_ends_with($sql, 'for update'))))
+        ->toHaveCount(1);
+});
+
+it('ne verrouille ni ne réécrit par --repair une séance dont le volume est juste', function (): void {
+    compteCoherent();
+
+    $requetes = coherenceRequetesPendant(function (): void {
+        $this->artisan('app:verify-data-coherence', ['--repair' => true])
+            ->expectsOutputToContain('0 séance(s) dont le volume a été recalé')
+            ->assertExitCode(0)
+            ->run();
+    });
+
+    expect(coherenceEcrituresDesSeances($requetes))->toBe([]);
 });
 
 /**

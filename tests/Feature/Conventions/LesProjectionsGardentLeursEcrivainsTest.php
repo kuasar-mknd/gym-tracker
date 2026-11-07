@@ -162,15 +162,17 @@ function projectionsLInventaire(): array
             domaine: 'La mémoire vérifiable de l’entraînement',
             colonnes: ['workout_volume'],
             ecrivains: [
-                'le recalcul à chaque série' => [
+                /*
+                 * Un seul écrivain depuis #1513 : la réparation nocturne
+                 * (`app:verify-data-coherence --repair`) refaisait la somme par
+                 * sa propre requête et l'écrivait sans le verrou de la séance.
+                 * Elle appelle désormais cet écrivain, et le contrôle lit la
+                 * même somme que lui (`Workout::volumesDesSeries()`).
+                 */
+                'le recalcul depuis les séries' => [
                     'app/Models/Workout.php' => ['recalculerLeVolume'],
                 ],
-                'la réparation par la commande de cohérence' => [
-                    'app/Console/Commands/VerifyDataCoherence.php' => ['recalculerLesVolumes'],
-                ],
             ],
-            dette: '`app:verify-data-coherence --repair` refait la somme par sa propre requête au lieu d’appeler '
-                .'`Workout::recalculerLeVolume()` : deux définitions du même volume, libres de diverger.',
         ),
         'l’avancement d’un objectif' => projectionsDecrire(
             genre: 'colonne',
