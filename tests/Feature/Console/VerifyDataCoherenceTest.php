@@ -149,6 +149,9 @@ it('signale les records d’un type que l’application ne tient plus, avec leur
         ->expectsOutputToContain("type 'strength', que l'application ne tient plus : 1 record(s) sur 1 compte(s)")
         // Posés sur une série saine, ils ne doivent rien faire signaler d'autre.
         ->expectsOutputToContain('2 écart(s)');
+
+    // Sans `--repair`, le contrôle ne fait que lire : les deux lignes restent.
+    expect(DB::table('personal_records')->where('user_id', $user->id)->whereIn(DB::raw('CAST(type AS BINARY)'), ['strength', '1RM'])->count())->toBe(2);
 });
 
 /**
@@ -573,4 +576,103 @@ it('signale un record de 1RM que plus aucune série ne donne, et --repair le ref
     $valeur = DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_1rm')->value('value');
 
     expect(is_numeric($valeur) ? (float) $valeur : null)->toBe(133.33);
+});
+
+/*
+ * `--repair` retire les records d'un type que l'application ne tient plus, et
+ * refait leur exercice depuis ses séries, AVANT de reconstruire les records
+ * détachés ou en écart (#1811). Cette reconstruction relit les records de
+ * l'exercice par le modèle, qui lève sur une valeur que l'enum ne connaît pas :
+ * un poids maximum écrit 'MAX_WEIGHT' et détaché de sa série faisait tomber la
+ * réparation entière (`ValueError`), et rien ne pouvait plus la ramener au
+ * vert. Le retrait n'annonce rien, comme le reste de la réparation (#2185).
+ */
+it('retire par --repair un poids maximum écrit en capitales et détaché, sans lever, et le refait depuis sa série sans l’annoncer', function (): void {
+    [$user, $set] = compteCoherent();
+    NotificationPreference::factory()->create(['user_id' => $user->id, 'type' => 'personal_record', 'is_enabled' => true, 'is_push_enabled' => true]);
+
+    DB::table('personal_records')
+        ->where('user_id', $user->id)
+        ->where('type', 'max_weight')
+        ->update(['type' => 'MAX_WEIGHT', 'set_id' => null]);
+
+    Notification::fake();
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain("1 record(s) d'un type que l'application ne tient plus retiré(s), sur 1 exercice(s) refait(s) depuis leurs séries")
+        ->expectsOutputToContain('OK type des records');
+
+    $record = PersonalRecord::query()->where('user_id', $user->id)->where('type', 'max_weight')->sole();
+
+    expect(DB::table('personal_records')->whereRaw('CAST(type AS BINARY) = ?', ['MAX_WEIGHT'])->count())->toBe(0)
+        ->and((float) $record->value)->toBe(100.0)
+        ->and($record->set_id)->toBe($set->id);
+
+    Notification::assertNothingSentTo($user);
+});
+
+it('retire par --repair un record d’un type non suivi, et le contrôle repasse au vert', function (string $type, bool $alterationDUnTypeSuivi): void {
+    [$user, $set] = compteCoherent();
+
+    if ($alterationDUnTypeSuivi) {
+        // L'index unique suit la collation : la variante prend la place du
+        // type suivi qu'elle imite.
+        DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_weight')->update(['type' => $type]);
+    } else {
+        recordDeTypeHeritePlanteEnBase($user, $set, $type);
+    }
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain("1 record(s) d'un type que l'application ne tient plus retiré(s), sur 1 exercice(s) refait(s) depuis leurs séries")
+        ->expectsOutputToContain('OK type des records');
+
+    expect(DB::table('personal_records')->where('user_id', $user->id)->pluck('type')->all())
+        ->toEqualCanonicalizing(['max_weight', 'max_1rm', 'max_volume_set']);
+})->with([
+    '1RM' => ['1RM', false],
+    'strength' => ['strength', false],
+    'cardio' => ['cardio', false],
+    'volume' => ['volume', false],
+    'un type inconnu' => ['inconnu', false],
+    'le poids maximum en majuscules' => ['MAX_WEIGHT', true],
+    'le poids maximum avec une espace finale' => ['max_weight ', true],
+]);
+
+/*
+ * Chaque couple (compte, exercice) se retire sous son propre verrou : la
+ * réparation additionne ce que chacun a retiré, et compte les exercices
+ * refaits.
+ */
+it('additionne par --repair les records retirés de chaque exercice refait', function (): void {
+    [$premier, $seriePremier] = compteCoherent();
+    [$second, $serieSecond] = compteCoherent();
+
+    recordDeTypeHeritePlanteEnBase($premier, $seriePremier, 'cardio');
+    recordDeTypeHeritePlanteEnBase($second, $serieSecond, '1RM');
+    recordDeTypeHeritePlanteEnBase($second, $serieSecond, 'volume');
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain("3 record(s) d'un type que l'application ne tient plus retiré(s), sur 2 exercice(s) refait(s) depuis leurs séries")
+        ->expectsOutputToContain('OK type des records');
+
+    foreach ([$premier, $second] as $compte) {
+        expect(DB::table('personal_records')->where('user_id', $compte->id)->pluck('type')->all())
+            ->toEqualCanonicalizing(['max_weight', 'max_1rm', 'max_volume_set']);
+    }
+});
+
+/*
+ * Sans rien à retirer, la réparation le dit, et ne refait aucun exercice de
+ * plus que les autres réparations.
+ */
+it('dit par --repair qu’il n’y a aucun record d’un type non suivi à retirer', function (): void {
+    compteCoherent();
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain("OK aucun record d'un type que l'application ne tient plus")
+        ->doesntExpectOutputToContain('retiré(s)');
 });
