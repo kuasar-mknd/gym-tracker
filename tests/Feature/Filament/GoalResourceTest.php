@@ -729,6 +729,45 @@ it('ne garde ni la valeur actuelle ni la date d’atteinte tapées à la modific
     'par l’action de la table' => ['table'],
 ]);
 
+/*
+ * Le formulaire n'envoie pas les champs calculés, et l'écriture du panneau les
+ * retire encore des données qu'elle reçoit (`GoalResource::CHAMPS_CALCULES`) :
+ * des données qui passeraient outre le champ désactivé n'écrivent pas
+ * l'avancement. Sans ce retrait, la date d'atteinte reçue restait sur un
+ * objectif atteint, que l'écrivain ne redate pas.
+ */
+it('retire de l’écriture du panneau l’avancement reçu dans les données', function (): void {
+    $this->freezeSecond();
+    [$compte, $exercice] = objectifsDuPanneauCompteQuiSouleve(120);
+    $goal = Goal::factory()->create([
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+    DB::table('goals')->where('id', $goal->id)->update(['current_value' => 120, 'progress_pct' => 100, 'completed_at' => null]);
+
+    EditGoal::modifier($goal->refresh(), [
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+        'current_value' => 5,
+        'progress_pct' => 7,
+        'completed_at' => '2020-01-01 10:00:00',
+    ]);
+
+    $goal->refresh();
+
+    expect($goal->current_value)->toBe(120.0)
+        ->and((float) $goal->progress_pct)->toBe(100.0)
+        ->and($goal->completed_at?->toDateTimeString())->toBe(now()->toDateTimeString());
+});
+
 it('interdit la gestion des objectifs à un admin sans les permissions Goal', function (): void {
     $goal = Goal::factory()->create();
 
