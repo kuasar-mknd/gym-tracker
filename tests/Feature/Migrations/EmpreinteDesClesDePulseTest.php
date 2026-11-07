@@ -18,7 +18,8 @@ use Laravel\Pulse\Value;
  * `md5()` en fonction native : le schéma figé ne s'y chargeait plus, et une
  * base 8.4 qui garde l'ancienne expression ne passe pas la mise à niveau
  * (`database/migrations/2026_10_17_145842_hacher_les_cles_de_pulse_sans_md5.php`).
- * Ces tests tournent sur le serveur de la suite : 8.4 et 9.7.2 en CI.
+ * Ces tests tournent sur le serveur de la suite : 8.4 et 9.7.4 en CI (9.7.2
+ * jusqu'au 2026-11-06).
  *
  * L'un d'eux (le remplacement de l'empreinte md5, sous 8.4 seulement) passe
  * par un ordre DDL, qui valide la transaction de `RefreshDatabase` : ce

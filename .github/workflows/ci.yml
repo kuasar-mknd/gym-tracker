@@ -167,7 +167,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                mysql: ['8.4', '9.7.2']
+                mysql: ['8.4', '9.7.4']
         services:
             mysql:
                 image: mysql:${{ matrix.mysql }}
@@ -284,7 +284,7 @@ jobs:
             fail-fast: false
             matrix:
                 shard: [1, 2, 3]
-                mysql: ['8.4', '9.7.2']
+                mysql: ['8.4', '9.7.4']
         services:
             mysql:
                 image: mysql:${{ matrix.mysql }}
@@ -617,7 +617,7 @@ jobs:
             # deterministe et ne depend pas de ce que le runner embarque.
             - name: Semgrep (default + php + owasp-top-ten)
               run: |
-                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.182.1 \
+                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.183.0 \
                     semgrep scan --config p/default --config p/php --config p/owasp-top-ten \
                     --severity ERROR --error .
 
@@ -639,9 +639,9 @@ jobs:
             # choisit l'image, se monte dans la même PR, et
             # LesActionsDeLaCiSontFigeesTest refuse qu'elles s'écartent.
             - name: TruffleHog
-              uses: trufflesecurity/trufflehog@31ce31ee1abbcc7dc8eee5764c17121c3044c8b2 # v3.99.7
+              uses: trufflesecurity/trufflehog@ea68ca03c865c5f324e86e849ced20ed3cf9dbbb # v3.99.8
               with:
-                  version: '3.99.7'
+                  version: '3.99.8'
                   path: ./
                   base: ''
                   head: ''
@@ -886,7 +886,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                mysql: ['8.4', '9.7.2']
+                mysql: ['8.4', '9.7.4']
         services:
             mysql:
                 image: mysql:${{ matrix.mysql }}
