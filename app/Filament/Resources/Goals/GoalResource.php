@@ -36,9 +36,9 @@ class GoalResource extends Resource
     public const CHAMPS_ASSIGNES_EXPLICITEMENT = ['user_id'];
 
     /**
-     * L'avancement de l'objectif, que seul son écrivain écrit
-     * (`GoalService::syncGoals()`, #1513) : jamais pris dans les données du
-     * formulaire, où ses champs sont en lecture seule.
+     * L'avancement de l'objectif, que seul son écrivain écrit, le recalcul de
+     * `GoalService` (#1513) : jamais pris dans les données du formulaire, où
+     * ses champs sont en lecture seule.
      */
     public const array CHAMPS_CALCULES = ['current_value', 'progress_pct', 'completed_at'];
 

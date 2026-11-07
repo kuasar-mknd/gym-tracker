@@ -1,6 +1,7 @@
 ---
 paths:
   - 'tests/**'
+  - 'database/factories/**'
 ---
 
 # Tests
@@ -92,4 +93,4 @@ Réglé le 2026-11-04 (#2173). `now()->subMonth()` garde le jour du mois et lais
 Réglé le 2026-11-05 (#2159). Carbon rebâtit le maintenant simulé depuis son heure murale, dans le fuseau demandé (`Carbon\Traits\Test::mockConstructorParameters()`, format `Y-m-d H:i:s.u`) : après `Carbon::setTestNow(Carbon::parse('2026-10-25T00:30:00Z'))`, `now()` rend `2026-10-25T01:30:00Z`, la seconde occurrence de l'heure que le passage à l'heure d'hiver répète à Paris, et un test du défaut passerait sans rien prouver. Un instant de la première occurrence vient d'un envoi qui porte son décalage, d'un âge du geste retranché d'un maintenant pris hors de cette occurrence (`X-Heure-De-L-Appareil`), ou d'un `Carbon` construit à cet instant (`Carbon::parse('…Z')->setTimezone(…)`). Une horloge posée près de l'heure répétée se vérifie, comme `heureRepeteeHorlogeA()` dans `InstantsDeLHeureRepeteeTest`, qui compare `now()` à l'instant voulu. Une ligne d'avant le décalage s'écrit sans lui (`DB::table()->insert()`, ou la fabrique `sansDecalage()`), et un cas qui doit rester juste (seconde occurrence, hors de l'heure répétée, ligne d'avant) se joue à côté de chaque cas du défaut.
 
 ## Une fabrique pose le défaut de la colonne, pas une valeur à elle
-Réglé le 2026-11-06 (#1513). `UserFactory` posait 60 s de repos par défaut quand la colonne `users.default_rest_time` vaut 90 (relevé dans #1514) : un compte de test n'était pas un compte ordinaire, et un test qui lisait le repos d'un compte sans le poser décrivait la fabrique, pas l'application. Une fabrique qui pose une colonne à défaut prend ce défaut, ou un état nommé quand un test veut autre chose. `LeTempsDeReposChoisiEstLuTest` compare la fabrique au défaut lu dans `information_schema`.
+Réglé le 2026-11-06 (#1513). `UserFactory` posait 60 s de repos par défaut quand la colonne `users.default_rest_time` vaut 90 (relevé dans #1514) : un compte de test n'était pas un compte ordinaire, et un test qui lisait le repos d'un compte sans le poser décrivait la fabrique, pas l'application. Une fabrique qui pose une colonne à défaut prend ce défaut, ou un état nommé quand un test veut autre chose. `LeTempsDeReposChoisiEstLuTest` compare la fabrique au défaut lu dans `information_schema`. La règle vaut pour `database/factories/**`, que ce fichier couvre aussi depuis le 2026-11-07 : c'est là qu'elle sert.
