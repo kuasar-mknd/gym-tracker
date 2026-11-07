@@ -37,7 +37,7 @@ class VerifyDataCoherence extends Command
     #[\Override]
     protected $signature = 'app:verify-data-coherence
         {--limit=5 : Nombre d\'identifiants cités par écart}
-        {--repair : Reconstruit les records détachés ou en écart, les volumes de séance et les séries de jours depuis leurs sources}';
+        {--repair : Retire les records d\'un type que l\'application ne tient plus, puis reconstruit les records détachés ou en écart, les volumes de séance et les séries de jours depuis leurs sources}';
 
     #[\Override]
     protected $description = 'Compare les valeurs dérivées (volumes, records, séries, objectifs) à leur source';
@@ -60,6 +60,7 @@ class VerifyDataCoherence extends Command
         ];
 
         if ($this->option('repair') === true) {
+            $this->retirerLesTypesNonSuivis();
             $this->reconstruireLesRecords();
             $this->recalculerLesVolumes();
             $this->recalculerLesSeries();
@@ -214,6 +215,64 @@ class VerifyDataCoherence extends Command
         return DB::table('workouts')
             ->leftJoinSub(Workout::volumesDesSeries(), 'calcul', 'calcul.workout_id', '=', 'workouts.id')
             ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.volume, 0)) > 0.01');
+    }
+
+    /**
+     * Retire les records d'un type que l'application ne tient plus, et refait
+     * leurs exercices depuis les séries, sans rien annoncer (#1811).
+     *
+     * Le retrait passe avant `reconstruireLesRecords()` : la reconstruction
+     * relit les records de l'exercice par le modèle, qui lève au cast
+     * (`ValueError`) sur une valeur que l'enum ne connaît pas, et un poids
+     * maximum écrit 'MAX_WEIGHT' et détaché de sa série arrêtait la réparation
+     * entière. Les couples se choisissent octet par octet, comme le contrôle
+     * « type des records » ; `retirerLesTypesNonSuivis()` du service retire
+     * et reconstruit chacun sous son verrou. Un couple dont le compte a
+     * disparu est laissé, comme dans la reconstruction des records.
+     */
+    private function retirerLesTypesNonSuivis(): void
+    {
+        $couples = DB::table('personal_records')
+            ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)
+            ->select(['user_id', 'exercise_id'])
+            ->distinct()
+            ->orderBy('user_id')
+            ->orderBy('exercise_id')
+            ->get()
+            ->map(fn (object $couple): array => [
+                $this->entier(get_object_vars($couple)['user_id'] ?? null),
+                $this->entier(get_object_vars($couple)['exercise_id'] ?? null),
+            ]);
+
+        if ($couples->isEmpty()) {
+            $this->line("  <fg=green>OK</> aucun record d'un type que l'application ne tient plus");
+            $this->newLine();
+
+            return;
+        }
+
+        $service = app(PersonalRecordService::class);
+        $comptes = User::query()->whereKey($couples->pluck(0)->unique()->values()->all())->get()->keyBy('id');
+        $retires = 0;
+        $refaits = 0;
+
+        foreach ($couples as [$idUtilisateur, $idExercice]) {
+            $user = $comptes->get($idUtilisateur);
+
+            if (! $user instanceof User) {
+                continue;
+            }
+
+            $retires += $service->retirerLesTypesNonSuivis($user, $idExercice);
+            $refaits++;
+        }
+
+        $this->line(sprintf(
+            "  <fg=yellow>%d</> record(s) d'un type que l'application ne tient plus retiré(s), sur %d exercice(s) refait(s) depuis leurs séries",
+            $retires,
+            $refaits,
+        ));
+        $this->newLine();
     }
 
     /**
@@ -564,7 +623,11 @@ class VerifyDataCoherence extends Command
      * porte encore (#1811). Les retirer tant qu'une ligne les porte ferait
      * lever une ValueError à chaque relecture par le modèle : le tableau de
      * bord du compte, la reconstruction des records de l'exercice. Ce contrôle
-     * les compte chaque nuit, plutôt que de le supposer.
+     * les compte chaque nuit, plutôt que de le supposer. La migration
+     * `2026_11_06_161554_retirer_les_records_d_un_type_non_suivi` les retire
+     * une fois, et `--repair` retire, par la même voie, ceux qu'il trouverait
+     * ensuite (`retirerLesTypesNonSuivis()`) ; le contrôle seul ne touche à
+     * rien.
      *
      * Il lit la colonne brute, sans le cast : il doit encore voir ces lignes
      * le jour où l'enum ne connaîtra plus leur valeur.

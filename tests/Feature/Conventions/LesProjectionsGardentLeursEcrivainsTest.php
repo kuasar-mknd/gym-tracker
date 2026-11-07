@@ -215,9 +215,14 @@ function projectionsLInventaire(): array
                 'la reconstruction depuis les séries' => [
                     'app/Services/PersonalRecordService.php' => ['reconstruire'],
                 ],
+                'le retrait des types que l’application ne tient plus, avant la reconstruction' => [
+                    'app/Services/PersonalRecordService.php' => ['retirerLesTypesNonSuivis'],
+                ],
             ],
             dette: 'Un record monte par comparaison à la valeur stockée, et se reconstruit depuis les séries quand celle '
-                .'qui le portait change ou disparaît. La base en détache aussi elle-même (`ON DELETE SET NULL`).',
+                .'qui le portait change ou disparaît. La base en détache aussi elle-même (`ON DELETE SET NULL`). '
+                .'Une ligne d’un type que le modèle ne relit pas se retire en base, sous le verrou de l’exercice, '
+                .'avant la reconstruction, qui la relirait par le modèle (#1811).',
         ),
         'les succès débloqués' => projectionsDecrire(
             genre: 'lignes',
