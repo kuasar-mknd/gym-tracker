@@ -22,13 +22,30 @@ class EditGoal extends EditRecord
      * exactement le meme chemin d'assignation en masse que la creation — et
      * perdait la meme valeur en silence en production (#1352).
      *
+     * La page relit ensuite dans son formulaire l'avancement que
+     * l'enregistrement vient de recalculer (#1513). `EditRecord::save()` ne
+     * recharge pas le formulaire : sans redirection, il garde l'état envoyé.
+     * La valeur actuelle et la date d'atteinte, en lecture seule, montraient
+     * donc ce qui était chargé à l'ouverture de la page, comme si
+     * l'enregistrement n'avait rien recalculé, jusqu'à ce que l'administrateur
+     * la recharge. L'objectif de la page est celui que
+     * `GoalResource::enregistrer()` a relu après le recalcul. La relecture se
+     * fait ici plutôt que dans le crochet `afterSave()`, que Filament appelle
+     * par son nom et que le détecteur de code mort tiendrait pour inutilisé.
+     * L'action de la table n'en a pas besoin : sa modale se ferme, et la table
+     * relit la base.
+     *
      * @param  array<string, mixed>  $data
      */
     #[\Override]
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var Goal $record */
-        return self::modifier($record, $data);
+        $objectif = self::modifier($record, $data);
+
+        $this->refreshFormData(['current_value', 'completed_at']);
+
+        return $objectif;
     }
 
     /**

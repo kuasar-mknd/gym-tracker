@@ -730,6 +730,45 @@ it('ne garde ni la valeur actuelle ni la date d’atteinte tapées à la modific
 ]);
 
 /*
+ * La page de modification ne recharge pas son formulaire après
+ * l'enregistrement : `EditRecord::save()` garde l'état envoyé, sans redirection.
+ * La valeur actuelle et la date d'atteinte montraient donc ce qui était chargé
+ * à l'ouverture de la page, comme si l'enregistrement n'avait rien recalculé,
+ * jusqu'à ce que l'administrateur la recharge (#1513). L'action de la table
+ * n'en a pas besoin : sa modale se ferme, et la table relit la base.
+ */
+it('montre sur la page de modification l’avancement que l’enregistrement vient de recalculer', function (): void {
+    $this->freezeSecond();
+    [$compte, $exercice] = objectifsDuPanneauCompteQuiSouleve(80);
+    $goal = Goal::factory()->create([
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+    DB::table('goals')->where('id', $goal->id)->update(['current_value' => 999, 'progress_pct' => 3, 'completed_at' => null]);
+
+    $page = Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->assertSchemaStateSet(['current_value' => 999.0, 'completed_at' => null])
+        // La cible passe sous le record de 80 kg : l'objectif devient atteint.
+        ->fillForm(['target_value' => 70])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $goal->refresh();
+
+    expect($goal->current_value)->toBe(80.0)
+        ->and($goal->completed_at?->toDateTimeString())->toBe(now()->toDateTimeString());
+
+    $page->assertSchemaStateSet([
+        'current_value' => 80.0,
+        'completed_at' => now()->toDateTimeString(),
+    ]);
+});
+
+/*
  * Le formulaire n'envoie pas les champs calculés, et l'écriture du panneau les
  * retire encore des données qu'elle reçoit (`GoalResource::CHAMPS_CALCULES`) :
  * des données qui passeraient outre le champ désactivé n'écrivent pas
