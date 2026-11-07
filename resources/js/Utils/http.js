@@ -18,6 +18,7 @@
  * ne dit rien du serveur.
  */
 import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
+import { noterLaRequete } from '@/Utils/releveDesTemps'
 
 /** Le jeton CSRF posé par Laravel dans l'en-tête du document. */
 const jetonCsrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? null
@@ -85,6 +86,9 @@ export const http = async (config) => {
     signal?.addEventListener('abort', () => arret.abort(), { once: true })
 
     let reponse
+
+    // Le relevé des temps, s'il est armé, apprend la méthode que l'entrée de la requête ne dira pas (#2148).
+    noterLaRequete(method, url)
 
     try {
         reponse = await fetch(url, {

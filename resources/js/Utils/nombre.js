@@ -15,11 +15,31 @@
  */
 export const LANGUE = 'fr-CH'
 
-const formateur = (decimales, decimalesMin = 0) =>
-    new Intl.NumberFormat(LANGUE, {
-        minimumFractionDigits: decimalesMin,
-        maximumFractionDigits: decimales,
-    })
+/**
+ * Les formateurs déjà bâtis, un par jeu de décimales. Bâtir un
+ * `Intl.NumberFormat` coûte bien plus que de s'en servir, et un tableau
+ * en écrit des centaines d'affilée (le relevé des temps, #2148) ; un
+ * formateur ne change plus une fois bâti.
+ *
+ * @type {Map<string, Intl.NumberFormat>}
+ */
+const formateurs = new Map()
+
+const formateur = (decimales, decimalesMin = 0) => {
+    const cle = `${decimales}:${decimalesMin}`
+
+    if (!formateurs.has(cle)) {
+        formateurs.set(
+            cle,
+            new Intl.NumberFormat(LANGUE, {
+                minimumFractionDigits: decimalesMin,
+                maximumFractionDigits: decimales,
+            }),
+        )
+    }
+
+    return formateurs.get(cle)
+}
 
 /**
  * Le serveur rend ses décimales en chaîne (`weight` vaut `"78.40"`), et une
