@@ -37,7 +37,7 @@ class VerifyDataCoherence extends Command
     #[\Override]
     protected $signature = 'app:verify-data-coherence
         {--limit=5 : Nombre d\'identifiants cités par écart}
-        {--repair : Retire les records d\'un type que l\'application ne tient plus, puis reconstruit les records détachés ou en écart, les volumes de séance et les séries de jours depuis leurs sources}';
+        {--repair : Retire les records d\'un type que l\'application ne tient plus, puis reconstruit les records détachés ou en écart, les objectifs de leurs comptes, les volumes de séance et les séries de jours depuis leurs sources}';
 
     #[\Override]
     protected $description = 'Compare les valeurs dérivées (volumes, records, séries, objectifs) à leur source';
@@ -60,8 +60,9 @@ class VerifyDataCoherence extends Command
         ];
 
         if ($this->option('repair') === true) {
-            $this->retirerLesTypesNonSuivis();
-            $this->reconstruireLesRecords();
+            $comptesAuxRecordsRefaits = $this->retirerLesTypesNonSuivis();
+            $comptesAuxRecordsRefaits += $this->reconstruireLesRecords();
+            $this->recalculerLesObjectifs($comptesAuxRecordsRefaits);
             $this->recalculerLesVolumes();
             $this->recalculerLesSeries();
         }
@@ -229,8 +230,10 @@ class VerifyDataCoherence extends Command
      * « type des records » ; `retirerLesTypesNonSuivis()` du service retire
      * et reconstruit chacun sous son verrou. Un couple dont le compte a
      * disparu est laissé, comme dans la reconstruction des records.
+     *
+     * @return array<int, User> Les comptes dont des records ont été refaits, par identifiant : leurs objectifs se recalculent ensuite (`recalculerLesObjectifs()`).
      */
-    private function retirerLesTypesNonSuivis(): void
+    private function retirerLesTypesNonSuivis(): array
     {
         $couples = DB::table('personal_records')
             ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)
@@ -248,13 +251,14 @@ class VerifyDataCoherence extends Command
             $this->line("  <fg=green>OK</> aucun record d'un type que l'application ne tient plus");
             $this->newLine();
 
-            return;
+            return [];
         }
 
         $service = app(PersonalRecordService::class);
         $comptes = User::query()->whereKey($couples->pluck(0)->unique()->values()->all())->get()->keyBy('id');
         $retires = 0;
         $refaits = 0;
+        $comptesRefaits = [];
 
         foreach ($couples as [$idUtilisateur, $idExercice]) {
             $user = $comptes->get($idUtilisateur);
@@ -265,6 +269,7 @@ class VerifyDataCoherence extends Command
 
             $retires += $service->retirerLesTypesNonSuivis($user, $idExercice);
             $refaits++;
+            $comptesRefaits[$user->id] = $user;
         }
 
         $this->line(sprintf(
@@ -273,6 +278,8 @@ class VerifyDataCoherence extends Command
             $refaits,
         ));
         $this->newLine();
+
+        return $comptesRefaits;
     }
 
     /**
@@ -293,8 +300,10 @@ class VerifyDataCoherence extends Command
      * serie eligible (#1984) : un tel record designe une serie qui existe, qui
      * compte et qui porte son poids, et aucun des criteres ci-dessous ne le
      * voit.
+     *
+     * @return array<int, User> Les comptes dont des records ont été refaits, par identifiant : leurs objectifs se recalculent ensuite (`recalculerLesObjectifs()`).
      */
-    private function reconstruireLesRecords(): void
+    private function reconstruireLesRecords(): array
     {
         $detaches = PersonalRecord::query()
             ->where(function (\Illuminate\Database\Eloquent\Builder $arefaire): void {
@@ -349,12 +358,13 @@ class VerifyDataCoherence extends Command
             $this->line('  <fg=green>OK</> aucun record à reconstruire');
             $this->newLine();
 
-            return;
+            return [];
         }
 
         $service = app(PersonalRecordService::class);
         $comptes = User::query()->whereKey(array_unique(array_column($aRefaire, 0)))->get()->keyBy('id');
         $faits = [];
+        $comptesRefaits = [];
 
         foreach ($aRefaire as $cle => [$idUtilisateur, $idExercice]) {
             $user = $comptes->get($idUtilisateur);
@@ -365,11 +375,46 @@ class VerifyDataCoherence extends Command
 
             $service->reparer($user, $idExercice);
             $faits[$cle] = true;
+            $comptesRefaits[$user->id] = $user;
         }
 
         $this->line(sprintf(
             '  <fg=yellow>%d</> exercice(s) reconstruit(s) depuis les séries restantes',
             count($faits),
+        ));
+        $this->newLine();
+
+        return $comptesRefaits;
+    }
+
+    /**
+     * Recalcule, par leur écrivain, les objectifs des comptes dont la
+     * réparation vient de refaire des records (#1513).
+     *
+     * Le poids maximum est la source de l'objectif de charge, et l'application
+     * recalcule les objectifs d'un compte après chaque recalcul de ses records
+     * (#1953 : `SyncPersonalRecord`, les écouteurs des séances et des séries).
+     * Les records refaits ici ne passaient par aucun : la réparation corrigeait
+     * le record, le contrôle « avancement des objectifs » signalait aussitôt
+     * l'objectif qui lisait l'ancien, et la commande sortait en erreur sur un
+     * écart qu'elle venait de créer, sans pouvoir repasser au vert. L'appel est
+     * celui de l'écrivain, `GoalService::syncGoals()` : aucun écrivain ne
+     * s'ajoute. Les objectifs des autres comptes restent au contrôle, qui ne
+     * répare pas (`avancementDesObjectifs()`).
+     *
+     * @param  array<int, User>  $comptes  Les comptes aux records refaits, par identifiant.
+     */
+    private function recalculerLesObjectifs(array $comptes): void
+    {
+        $service = app(GoalService::class);
+
+        foreach ($comptes as $compte) {
+            $service->syncGoals($compte);
+        }
+
+        $this->line(sprintf(
+            '  <fg=yellow>%d</> compte(s) dont les objectifs ont été recalculés sur leurs records refaits',
+            count($comptes),
         ));
         $this->newLine();
     }
@@ -848,7 +893,10 @@ class VerifyDataCoherence extends Command
      * Il ne répare pas, à dessein : `syncGoals()` est l'écrivain, et il tourne
      * à chaque séance, série ou mesure du compte (`SyncUserGoals`), comme à
      * chaque enregistrement de l'objectif ; un objectif signalé se recale
-     * ainsi. Le compte se lit en entier : le calcul en lit les relations.
+     * ainsi. Seuls les comptes dont `--repair` refait des records voient leurs
+     * objectifs recalculés par la réparation (`recalculerLesObjectifs()`),
+     * comme l'application après chaque recalcul de records. Le compte se lit
+     * en entier : le calcul en lit les relations.
      *
      * @return array{int, list<string>}
      */

@@ -635,7 +635,9 @@ it('signale un objectif que la base dit atteint ou non atteint à tort', functio
 /*
  * Le contrôle ne répare pas : `syncGoals()` est l'écrivain, et il recalcule
  * l'objectif à la prochaine séance, série ou mesure du compte, ou au prochain
- * enregistrement de l'objectif.
+ * enregistrement de l'objectif. Seul un compte dont la réparation refait des
+ * records voit ses objectifs recalculés (cas suivant) ; celui-ci n'en a aucun
+ * à refaire.
  */
 it('ne touche pas à l’objectif signalé sous --repair', function (): void {
     [$user, $set] = compteCoherent();
@@ -651,6 +653,43 @@ it('ne touche pas à l’objectif signalé sous --repair', function (): void {
 
     expect(is_numeric($valeur) ? (float) $valeur : null)->toBe(999.0);
 });
+
+/*
+ * Le record de poids maximum est la source de l'objectif de charge. Quand
+ * `--repair` refait des records, il recalcule les objectifs de leurs comptes
+ * par leur écrivain, comme l'application après chaque recalcul de records
+ * (#1953). Sans cela, la réparation corrigeait le record, le contrôle signalait
+ * aussitôt l'objectif qui lisait l'ancien, et la commande sortait en erreur sur
+ * un écart qu'elle venait de créer, sans le recaler (#1513). Deux chemins
+ * refont des records : un record en écart de sa série, et un record d'un type
+ * que l'application ne tient plus, que la base confond avec le poids maximum.
+ */
+it('recalcule par --repair les objectifs des comptes dont il refait les records', function (string $type): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    // Un poids maximum faux, 500 au lieu des 100 de la série, que l'objectif lit.
+    DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_weight')->update(['type' => $type, 'value' => 500]);
+    app(GoalService::class)->syncGoals($user);
+
+    expect($objectif->refresh()->current_value)->toBe(500.0)
+        ->and($objectif->completed_at)->not->toBeNull();
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->expectsOutputToContain('OK avancement des objectifs')
+        ->expectsOutputToContain('1 compte(s) dont les objectifs ont été recalculés sur leurs records refaits')
+        ->assertExitCode(0)
+        ->run();
+
+    $objectif->refresh();
+
+    expect($objectif->current_value)->toBe(100.0)
+        ->and((float) $objectif->progress_pct)->toBe(50.0)
+        ->and($objectif->completed_at)->toBeNull();
+})->with([
+    'un record en écart de sa série' => ['max_weight'],
+    'un record d’un type que l’application ne tient plus' => ['MAX_WEIGHT'],
+]);
 
 /**
  * Un record qui désigne une série existante, éligible et de même poids, mais
