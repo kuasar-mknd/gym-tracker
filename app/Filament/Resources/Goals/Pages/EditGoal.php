@@ -41,11 +41,9 @@ class EditGoal extends EditRecord
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var Goal $record */
-        $objectif = self::modifier($record, $data);
-
-        $this->refreshFormData(['current_value', 'completed_at']);
-
-        return $objectif;
+        return tap(self::modifier($record, $data), function (): void {
+            $this->refreshFormData(['current_value', 'completed_at']);
+        });
     }
 
     /**
