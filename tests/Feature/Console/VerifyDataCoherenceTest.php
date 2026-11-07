@@ -617,6 +617,34 @@ it('signale un objectif dont la valeur et la barre stockées s’écartent de le
     expect(get_object_vars($stocke ?? new stdClass()))->toEqual(['current_value' => 999, 'progress_pct' => 7]);
 });
 
+/*
+ * La barre se compare à part de la valeur : une barre fausse sous une valeur
+ * juste est un écart, que le cas précédent, où les deux s'écartent, ne
+ * distingue pas. Au centième près, comme la valeur et les autres contrôles.
+ */
+it('signale un objectif dont seule la barre stockée s’écarte de son calcul', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['progress_pct' => 7]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs')
+        ->expectsOutputToContain("objectif {$objectif->id} du compte {$user->id} : stocké 100 (7 %, non atteint), calculé 100 (50 %, non atteint)");
+});
+
+it('laisse passer une barre stockée à moins d’un centième de son calcul', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['progress_pct' => 50.004]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(0)
+        ->expectsOutputToContain('OK avancement des objectifs');
+});
+
 it('signale un objectif que la base dit atteint ou non atteint à tort', function (string $sorte, ?string $atteintLe, string $attendu): void {
     [$user, $set] = compteCoherent();
     $objectif = coherenceObjectifsTenus($user, $set)[$sorte];
