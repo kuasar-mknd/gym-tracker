@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use App\Models\Exercise;
+use App\Models\Goal;
 use App\Models\NotificationPreference;
 use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Services\GoalService;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -549,6 +551,102 @@ it('ne verrouille ni ne réécrit par --repair une séance dont le volume est ju
     });
 
     expect(coherenceEcrituresDesSeances($requetes))->toBe([]);
+});
+
+/*
+ * L'avancement d'un objectif (#1513) : sa valeur actuelle, sa barre et son
+ * atteinte. Le contrôle les compare au calcul de leur écrivain,
+ * `GoalService::syncGoals()`, sans rien écrire. Le panneau laissait taper la
+ * valeur et la date, et rien ne voyait un objectif que son calcul démentait.
+ */
+
+/**
+ * Un objectif de chaque sorte sur le compte de `compteCoherent()`, tenus par
+ * leur écrivain : la charge et le volume sur l'exercice de sa série (record de
+ * 100 kg, séance de 1000), la fréquence sur sa séance faite, une mensuration
+ * qu'aucune pesée ne porte.
+ *
+ * @return array{weight: Goal, volume: Goal, frequency: Goal, measurement: Goal}
+ */
+function coherenceObjectifsTenus(User $user, Set $set): array
+{
+    $exercice = $set->workoutLine->exercise_id;
+    $objectifs = [
+        'weight' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'weight', 'exercise_id' => $exercice, 'start_value' => 50, 'target_value' => 150]),
+        'volume' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'volume', 'exercise_id' => $exercice, 'start_value' => 0, 'target_value' => 800]),
+        'frequency' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'frequency', 'start_value' => 0, 'target_value' => 10]),
+        'measurement' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'measurement', 'measurement_type' => 'weight', 'start_value' => 90, 'target_value' => 80]),
+    ];
+
+    app(GoalService::class)->syncGoals($user);
+
+    return array_map(static fn (Goal $objectif): Goal => $objectif->refresh(), $objectifs);
+}
+
+it('laisse passer les objectifs que leur écrivain tient', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectifs = coherenceObjectifsTenus($user, $set);
+
+    // Le calcul a bien tourné : un objectif atteint, les autres en chemin.
+    expect($objectifs['weight']->current_value)->toBe(100.0)
+        ->and($objectifs['volume']->completed_at)->not->toBeNull()
+        ->and($objectifs['frequency']->current_value)->toBe(1.0);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(0)
+        ->expectsOutputToContain('OK avancement des objectifs');
+});
+
+it('signale un objectif dont la valeur et la barre stockées s’écartent de leur calcul, sans rien écrire', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['current_value' => 999, 'progress_pct' => 7]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs')
+        ->expectsOutputToContain("objectif {$objectif->id} du compte {$user->id} : stocké 999 (7 %, non atteint), calculé 100 (50 %, non atteint)")
+        ->expectsOutputToContain('1 écart(s)');
+
+    $stocke = DB::table('goals')->where('id', $objectif->id)->first(['current_value', 'progress_pct']);
+
+    expect(get_object_vars($stocke ?? new stdClass()))->toEqual(['current_value' => 999, 'progress_pct' => 7]);
+});
+
+it('signale un objectif que la base dit atteint ou non atteint à tort', function (string $sorte, ?string $atteintLe, string $attendu): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)[$sorte];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['completed_at' => $atteintLe]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs')
+        ->expectsOutputToContain("objectif {$objectif->id} du compte {$user->id} : {$attendu}");
+})->with([
+    'atteint, la date effacée' => ['volume', null, 'stocké 1000 (100 %, non atteint), calculé 1000 (100 %, atteint)'],
+    'en chemin, une date posée' => ['weight', '2026-01-01 10:00:00', 'stocké 100 (50 %, atteint), calculé 100 (50 %, non atteint)'],
+]);
+
+/*
+ * Le contrôle ne répare pas : `syncGoals()` est l'écrivain, et il recalcule
+ * l'objectif à la prochaine séance, série ou mesure du compte, ou au prochain
+ * enregistrement de l'objectif.
+ */
+it('ne touche pas à l’objectif signalé sous --repair', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['current_value' => 999]);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs');
+
+    $valeur = DB::table('goals')->where('id', $objectif->id)->value('current_value');
+
+    expect(is_numeric($valeur) ? (float) $valeur : null)->toBe(999.0);
 });
 
 /**

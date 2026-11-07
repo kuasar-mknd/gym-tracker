@@ -180,6 +180,12 @@ function projectionsLInventaire(): array
             domaine: 'La promesse tenue à jour',
             colonnes: ['current_value', 'progress_pct', 'completed_at'],
             ecrivains: [
+                /*
+                 * Un seul écrivain depuis #1513 : le panneau laissait taper la
+                 * valeur actuelle et la date d'atteinte, sans recalculer la
+                 * barre. Les deux champs y sont en lecture seule, et
+                 * l'enregistrement passe par `syncGoals()`.
+                 */
                 'le recalcul depuis l’activité' => [
                     'app/Services/GoalService.php' => [
                         'syncGoals',
@@ -192,12 +198,7 @@ function projectionsLInventaire(): array
                         'checkCompletion',
                     ],
                 ],
-                'la saisie dans le panneau d’administration' => [
-                    'app/Filament/Resources/Goals/Schemas/GoalForm.php' => ['getComponents'],
-                ],
             ],
-            dette: 'Le panneau laisse taper `current_value` et `completed_at` à la main, sans recalculer `progress_pct` : '
-                .'la valeur saisie tient jusqu’au prochain recalcul, qui l’écrase.',
         ),
         'les records personnels' => projectionsDecrire(
             genre: 'lignes',

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Enums\PersonalRecordType;
+use App\Models\Goal;
 use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Models\Workout;
+use App\Services\GoalService;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Console\Command;
@@ -54,6 +56,7 @@ class VerifyDataCoherence extends Command
             'série de jours' => $this->serieDeJours(...),
             'propriétaire recopié sur les lignes de séance' => $this->proprietaireDesLignes(...),
             'propriétaire recopié sur les séries' => $this->proprietaireDesSeries(...),
+            'avancement des objectifs' => $this->avancementDesObjectifs(...),
         ];
 
         if ($this->option('repair') === true) {
@@ -764,6 +767,100 @@ class VerifyDataCoherence extends Command
             $unite,
             $this->colonne($seance, 'copies'),
         ));
+    }
+
+    /**
+     * L'avancement de chaque objectif (`goals.current_value`, `progress_pct`,
+     * `completed_at`) contre le calcul de son écrivain (#1513).
+     *
+     * Le calcul est celui de `GoalService::syncGoals()`, lu par
+     * `objectifsRecalcules()`, qui ne persiste rien : le contrôle signale
+     * exactement les objectifs que l'écrivain réécrirait, à un centième près
+     * pour la valeur et la barre. La date d'atteinte se juge à sa présence,
+     * pas à sa valeur : l'écrivain garde la date d'un objectif qui reste
+     * atteint, et pose l'instant du recalcul sur celui qui le devient. Le
+     * panneau laissait taper la valeur et la date, et rien d'autre ne voyait
+     * un objectif que son calcul démentait.
+     *
+     * Il ne répare pas, à dessein : `syncGoals()` est l'écrivain, et il tourne
+     * à chaque séance, série ou mesure du compte (`SyncUserGoals`), comme à
+     * chaque enregistrement de l'objectif ; un objectif signalé se recale
+     * ainsi. Le compte se lit en entier : le calcul en lit les relations.
+     *
+     * @return array{int, list<string>}
+     */
+    private function avancementDesObjectifs(): array
+    {
+        $service = app(GoalService::class);
+        $nombre = 0;
+        $exemples = [];
+        $limite = $this->limite();
+
+        User::query()
+            ->whereHas('goals')
+            ->orderBy('id')
+            ->chunkById(200, function (\Illuminate\Database\Eloquent\Collection $comptes) use ($service, &$nombre, &$exemples, $limite): void {
+                foreach ($comptes as $compte) {
+                    foreach ($service->objectifsRecalcules($compte) as $objectif) {
+                        if (! $this->avancementEcarte($objectif)) {
+                            continue;
+                        }
+
+                        $nombre++;
+
+                        if (count($exemples) < $limite) {
+                            $exemples[] = $this->decrireLAvancement($objectif);
+                        }
+                    }
+                }
+            });
+
+        return [$nombre, $exemples];
+    }
+
+    /**
+     * L'objectif recalculé en mémoire s'écarte-t-il de ce que la base porte ?
+     */
+    private function avancementEcarte(Goal $objectif): bool
+    {
+        return abs($this->nombre($objectif->getOriginal('current_value')) - $objectif->current_value) > 0.01
+            || abs($this->nombre($objectif->getOriginal('progress_pct')) - $objectif->progress_pct) > 0.01
+            || ($objectif->getOriginal('completed_at') === null) !== ($objectif->completed_at === null);
+    }
+
+    /**
+     * L'avancement stocké d'un objectif, puis celui que son calcul donne.
+     */
+    private function decrireLAvancement(Goal $objectif): string
+    {
+        return sprintf(
+            'objectif %d du compte %d : stocké %s (%s %%, %s), calculé %s (%s %%, %s)',
+            $objectif->id,
+            $objectif->user_id,
+            $this->chiffre($this->nombre($objectif->getOriginal('current_value'))),
+            $this->chiffre($this->nombre($objectif->getOriginal('progress_pct'))),
+            $objectif->getOriginal('completed_at') === null ? 'non atteint' : 'atteint',
+            $this->chiffre($objectif->current_value),
+            $this->chiffre($objectif->progress_pct),
+            $objectif->completed_at === null ? 'non atteint' : 'atteint',
+        );
+    }
+
+    /**
+     * Un nombre lu tel que la base le rend, 0 s'il n'en est pas un.
+     */
+    private function nombre(mixed $valeur): float
+    {
+        return is_numeric($valeur) ? (float) $valeur : 0.0;
+    }
+
+    /**
+     * Un nombre à deux décimales au plus, sans zéros inutiles : « 100 »,
+     * « 33.33 ».
+     */
+    private function chiffre(float $valeur): string
+    {
+        return rtrim(rtrim(number_format($valeur, 2, '.', ''), '0'), '.');
     }
 
     /**

@@ -8,7 +8,6 @@ use App\Filament\Resources\Goals\GoalResource;
 use App\Models\Goal;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Arr;
 
 class CreateGoal extends CreateRecord
 {
@@ -25,36 +24,18 @@ class CreateGoal extends CreateRecord
      *
      * L'ajouter au `$fillable` aurait ouvert le changement de proprietaire a
      * tous les chemins d'assignation en masse, y compris ceux qui partent d'une
-     * requete utilisateur. C'est pourquoi il est ecrit ici, et declare dans
-     * `CHAMPS_ASSIGNES_EXPLICITEMENT` sur la ressource.
+     * requete utilisateur. C'est pourquoi il est ecrit a la main, et declare
+     * dans `CHAMPS_ASSIGNES_EXPLICITEMENT` sur la ressource.
+     *
+     * L'écriture est celle de la page de modification et de l'action de la
+     * table (`GoalResource::enregistrer()`) : l'avancement de l'objectif s'y
+     * recalcule par son écrivain, il ne se tape pas (#1513).
      *
      * @param  array<string, mixed>  $data
      */
     #[\Override]
     protected function handleRecordCreation(array $data): Model
     {
-        /*
-         * Les deux formes sont declarees, pas supposees : `$data` est le
-         * tableau deshydrate du formulaire, donc non type. Le champ vient d'un
-         * `Select` sur les comptes, il porte un identifiant.
-         */
-        /** @var int|string $identifiant */
-        $identifiant = $data['user_id'];
-
-        /*
-         * La liste vient de la ressource, elle n'est pas recopiee ici : c'est
-         * la meme que celle que le garde de convention lit pour verifier qu'un
-         * champ hors `$fillable` est bien assigne a la main. Deux copies
-         * finiraient par diverger.
-         */
-        /** @var array<string, mixed> $attributs */
-        $attributs = Arr::except($data, GoalResource::CHAMPS_ASSIGNES_EXPLICITEMENT);
-
-        $enregistrement = new Goal();
-        $enregistrement->user_id = (int) $identifiant;
-        $enregistrement->fill($attributs);
-        $enregistrement->save();
-
-        return $enregistrement;
+        return GoalResource::enregistrer(new Goal(), $data);
     }
 }

@@ -9,7 +9,6 @@ use App\Models\Goal;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Arr;
 
 class EditGoal extends EditRecord
 {
@@ -36,29 +35,15 @@ class EditGoal extends EditRecord
      * L'écriture de la page, que l'action de modification de la table reprend
      * (`GoalsTable`) : sans elle, l'action enregistrait par
      * `$record->update($data)`, que le mode strict refusait pour `user_id` et
-     * que la production faisait sans lui, en silence (#2071).
+     * que la production faisait sans lui, en silence (#2071). Elle passe par
+     * `GoalResource::enregistrer()`, qui recalcule l'avancement de l'objectif
+     * par son écrivain (#1513).
      *
      * @param  array<mixed>  $data
      */
     public static function modifier(Goal $record, array $data): Goal
     {
-        /** @var int|string $identifiant */
-        $identifiant = $data['user_id'];
-
-        /*
-         * La liste vient de la ressource, elle n'est pas recopiee ici : c'est
-         * la meme que celle que le garde de convention lit pour verifier qu'un
-         * champ hors `$fillable` est bien assigne a la main. Deux copies
-         * finiraient par diverger.
-         */
-        /** @var array<string, mixed> $attributs */
-        $attributs = Arr::except($data, GoalResource::CHAMPS_ASSIGNES_EXPLICITEMENT);
-
-        $record->user_id = (int) $identifiant;
-        $record->fill($attributs);
-        $record->save();
-
-        return $record;
+        return GoalResource::enregistrer($record, $data);
     }
 
     #[\Override]
