@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Support\TexteSansAdresse;
+use App\Support\TexteSansJeton;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -40,6 +41,17 @@ use Illuminate\Support\Str;
  * de courriel y devient « [adresse masquée] » (`TexteSansAdresse`). Les
  * erreurs d'envoi n'en citent plus (`CourrielleurQuiTaitLesAdresses`), et
  * c'est une défense contre celles d'un paquet qui en citerait une.
+ *
+ * Le jeton de diagnostic et la valeur d'un en-tête `Bearer …` se masquent
+ * par valeur, eux, dans chaque chaîne de chaque colonne, clefs comprises,
+ * avant tout le reste (#2032) : le masque par clef ne voit pas un jeton
+ * passé dans un autre en-tête, un champ, la chaîne de requête ou le chemin,
+ * ni ce qu'en recopient le message, la pile, les requêtes SQL et le texte
+ * Markdown, qui cite les en-têtes. Le jeton devient « [masqué] », la valeur
+ * « Bearer [masqué] », en entier, par le masque que le journal partage
+ * (`TexteSansJeton`), aux motifs de l'expurgation du diagnostic. Avant les
+ * budgets : coupé d'abord, un jeton à cheval sur la limite n'aurait plus sa
+ * forme entière, et son début resterait (`JetonsHorsDesExceptionsTest`).
  *
  * Et à taille bornée : le paquet garde le corps entier de la requête, le
  * message d'une exception peut recopier une valeur reçue, que le texte
@@ -111,6 +123,9 @@ final class ExceptionEnregistree extends Exception
     /** Au-delà de cette profondeur, un tableau imbriqué n'est plus gardé. */
     private const int PROFONDEUR_MAX = 16;
 
+    /** Ce qui remplace une valeur masquée. */
+    private const string MASQUE = '[masqué]';
+
     /**
      * Les clefs dont la valeur ne s'écrit jamais, sous leur forme comparable
      * (`formeComparable()`) : `_token` et `password_confirmation` s'y lisent
@@ -160,6 +175,15 @@ final class ExceptionEnregistree extends Exception
 
         self::saving(function (self $exception): void {
             $exception->cookies = null;
+
+            foreach (array_keys($exception->getAttributes()) as $colonne) {
+                $valeur = $exception->getAttribute($colonne);
+                $masquee = self::sansJetons($valeur);
+
+                if ($masquee !== $valeur) {
+                    $exception->setAttribute($colonne, $masquee);
+                }
+            }
 
             /** @var array<string, mixed>|null $corps */
             $corps = self::bornerLeJson(self::masquer($exception->body), self::OCTETS_MAX_PAR_COLONNE['body']);
@@ -243,7 +267,7 @@ final class ExceptionEnregistree extends Exception
             $forme = self::formeComparable($clef);
 
             if (in_array($forme, self::CLEFS_MASQUEES, true)) {
-                $valeurs[$clef] = '[masqué]';
+                $valeurs[$clef] = self::MASQUE;
             } elseif (is_array($valeur)) {
                 $valeurs[$clef] = self::masquer($valeur);
             } elseif (is_string($valeur) && in_array($forme, self::CLEFS_EN_JSON, true)) {
@@ -252,6 +276,30 @@ final class ExceptionEnregistree extends Exception
         }
 
         return $valeurs;
+    }
+
+    /**
+     * Une valeur où le jeton de diagnostic et la valeur d'un en-tête
+     * `Bearer …` sont masqués dans chaque chaîne, à toute profondeur, clefs
+     * comprises. Ce qui n'est ni un texte ni un tableau reste tel quel.
+     */
+    private static function sansJetons(mixed $valeur): mixed
+    {
+        if (is_string($valeur)) {
+            return TexteSansJeton::de($valeur);
+        }
+
+        if (! is_array($valeur)) {
+            return $valeur;
+        }
+
+        $masquees = [];
+
+        foreach ($valeur as $clef => $element) {
+            $masquees[is_string($clef) ? TexteSansJeton::de($clef) : $clef] = self::sansJetons($element);
+        }
+
+        return $masquees;
     }
 
     /**
@@ -275,7 +323,7 @@ final class ExceptionEnregistree extends Exception
         }
 
         return implode('/', array_map(
-            static fn (string $segment): string => in_array(rawurldecode($segment), $valeursMasquees, true) ? '[masqué]' : $segment,
+            static fn (string $segment): string => in_array(rawurldecode($segment), $valeursMasquees, true) ? self::MASQUE : $segment,
             explode('/', $chemin),
         ));
     }
@@ -304,7 +352,7 @@ final class ExceptionEnregistree extends Exception
         $document = json_decode($texte, true);
 
         if (! is_array($document)) {
-            return '[masqué]';
+            return self::MASQUE;
         }
 
         return (string) json_encode(self::masquer($document), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
