@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /*
  * `Show.vue:335` décide de la durée du repos ainsi :
@@ -30,10 +31,9 @@ it('envoie au client le temps de repos que l’utilisateur a choisi', function (
 
 it('envoie la valeur stockée, quelle qu’elle soit', function (): void {
     /*
-     * Sans affirmer un chiffre : la fabrique pose 60 là où la colonne a 90 pour
-     * défaut en base. Écrire « 90 » ici aurait fait un test qui décrit la
-     * fabrique et non le contrat — le contrat, c'est que le client lise ce qui
-     * est stocké, sans que le middleware s'en mêle.
+     * Sans affirmer un chiffre : écrire « 90 » ici aurait fait un test qui
+     * décrit la fabrique et non le contrat — le contrat, c'est que le client
+     * lise ce qui est stocké, sans que le middleware s'en mêle.
      */
     $user = User::factory()->create();
 
@@ -49,4 +49,19 @@ it('envoie la valeur stockée, quelle qu’elle soit', function (): void {
      */
     expect(data_get($partages, 'auth.user'))->toHaveKey('default_rest_time')
         ->and(data_get($partages, 'auth.user.default_rest_time'))->toBe($user->default_rest_time);
+});
+
+/*
+ * La fabrique posait 60 s quand la colonne vaut 90 par défaut (relevé dans
+ * #1514, réglé par #1513) : un compte de test n'était pas un compte ordinaire,
+ * et un test qui lisait le repos d'un compte sans le poser décrivait la
+ * fabrique, pas l'application.
+ */
+it('pose dans la fabrique des comptes le temps de repos par défaut de la colonne', function (): void {
+    $defaut = DB::scalar(
+        "select column_default from information_schema.columns where table_schema = database() and table_name = 'users' and column_name = 'default_rest_time'",
+    );
+
+    expect(is_numeric($defaut) ? (int) $defaut : null)->toBe(90)
+        ->and(User::factory()->make()->default_rest_time)->toBe(90);
 });
