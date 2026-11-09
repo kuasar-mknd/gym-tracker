@@ -1,6 +1,7 @@
 ---
 paths:
   - 'tests/**'
+  - 'phpstan-baseline.neon'
 ---
 
 # Tests
@@ -93,3 +94,6 @@ Réglé le 2026-11-05 (#2159). Carbon rebâtit le maintenant simulé depuis son 
 
 ## Les en-têtes d'une seule requête se passent à cette requête, jamais par `withHeaders()`
 Réglé le 2026-11-06 (#2148). `withHeaders()` et `withHeader()` posent des en-têtes par défaut sur le cas de test : toutes les requêtes suivantes du cas les portent. Le témoin de l'accueil (`AccueilBudgetDeRequetesTest`) préparait la prop différée par `withHeaders()` (`X-Inertia-Partial-Data`…), et la page « complète » demandée ensuite revenait en JSON partiel, sans que rien ne le dise. Un en-tête d'une seule requête passe en second argument (`get($uri, $enTetes)`), et un témoin de page complète vérifie qu'elle a été rendue par le gabarit (`data-page`). La version d'actifs d'une requête d'Inertia se lit sur la page complète (`viewData('page')['version']`) : sans elle, Inertia répond 409.
+
+## Un lot qui retire des entrées du baseline PHPStan resserre ses plafonds au nouveau compte
+Réglé le 2026-11-06 (#2151). `PhpstanBaselineRatchetTest` (tests/Feature/Conventions) plafonne les entrées et les erreurs que `phpstan-baseline.neon` masque (`BASELINE_BLOCS_MAX`, `BASELINE_ERREURS_MAX`), et ne rappelle de resserrer qu'à plus de vingt erreurs d'avance sur le compte réel. Cette tolérance ne dispense pas de le faire : un lot qui draine sans resserrer reporte l'écart sur le suivant, et celui qui le pousse à vingt et une fait tomber le garde sans avoir rien fait régresser. #2151 retirait trois erreurs et laissait les plafonds, de sorte que l'écart passait de 17 à 20, à la limite ; la raison donnée, ne pas croiser une autre PR, ne tenait à rien (aucune PR ouverte, aucune branche ne touchait au baseline). Le lot qui draine pose donc les deux plafonds au compte qu'il laisse, tel que le test le relit (les lignes `path:`, et la somme des `count:`, un bloc sans `count:` valant un) ; deux lots qui drainent en parallèle se rejoignent à la fusion, où le second prend le compte d'après les deux.

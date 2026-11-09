@@ -403,12 +403,6 @@ parameters:
 			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
 
 		-
-			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: tests/Feature/Actions/Workouts/CreateSetActionTest.php
-
-		-
 			message: '#^Call to an undefined method object\:\:splitProperties\(\)\.$#'
 			identifier: method.notFound
 			count: 3
@@ -515,12 +509,6 @@ parameters:
 			identifier: argument.templateType
 			count: 3
 			path: tests/Feature/CalendarDatesReachThePageTest.php
-
-		-
-			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: tests/Feature/Controllers/BodyMeasurementControllerTest.php
 
 		-
 			message: '#^Cannot access offset ''is_local'' on mixed\.$#'
