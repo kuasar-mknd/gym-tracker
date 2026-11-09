@@ -26,6 +26,8 @@ use Laravel\Sanctum\Guard;
 
 afterEach(function (): void {
     ini_restore('zend.exception_ignore_args');
+    ini_restore('pcre.jit');
+    ini_restore('pcre.backtrack_limit');
 });
 
 /**
@@ -293,6 +295,49 @@ it('garde l’exception quand le masque d’une valeur Bearer coupe un caractèr
     expect($exception->message)->toBe('Bearer [masqué]')
         ->and($entete)->toBe('Bearer [masqué]')
         ->and(mb_check_encoding(is_string($entete) ? $entete : '', 'UTF-8'))->toBeTrue();
+});
+
+/*
+ * Une expression qui échoue (ici, la limite de PCRE abaissée à rien, sans la
+ * compilation à la volée, qui l'ignorerait) rend `null` : la chaîne entière
+ * est alors masquée, jamais gardée telle quelle. Une chaîne où PCRE n'a rien
+ * à essayer, faute du début d'un motif (`/app/x.php`, une clef), ne le
+ * touche pas, et reste.
+ */
+it('masque toute la chaîne quand l’expression échoue', function (): void {
+    $jeton = jetonsHorsDesExceptionsJeton();
+    $porteur = 'Bearer '.jetonsHorsDesExceptionsSecretDuPorteur();
+
+    ini_set('pcre.jit', '0');
+    ini_set('pcre.backtrack_limit', '1');
+
+    ExceptionEnregistree::query()->create([
+        'type' => RuntimeException::class,
+        'code' => '0',
+        'message' => "Jeton refusé : {$jeton}",
+        'file' => '/app/x.php',
+        'line' => 1,
+        'trace' => [['file' => '/app/x.php', 'line' => 1, 'function' => 'verifier', 'args' => [['string', $jeton]]]],
+        'method' => 'GET',
+        'path' => "diagnostic/v1/{$jeton}",
+        'headers' => ['x-transmis' => [$porteur]],
+        'body' => ['note' => "jeton {$jeton}"],
+        'route_parameters' => ['reste' => $jeton],
+    ]);
+
+    ini_restore('pcre.jit');
+    ini_restore('pcre.backtrack_limit');
+
+    expect(jetonsHorsDesExceptionsColonnesQuiLesLaissentLire())->toBe([]);
+
+    $exception = ExceptionEnregistree::query()->sole();
+
+    expect($exception->message)->toBe('[masqué]')
+        ->and($exception->path)->toBe('[masqué]')
+        ->and($exception->trace)->toEqual([['file' => '/app/x.php', 'line' => 1, 'function' => 'verifier', 'args' => [['string', '[masqué]']]]])
+        ->and($exception->headers)->toEqual(['x-transmis' => ['[masqué]']])
+        ->and($exception->body)->toEqual(['note' => '[masqué]'])
+        ->and($exception->route_parameters)->toEqual(['reste' => '[masqué]']);
 });
 
 /*
