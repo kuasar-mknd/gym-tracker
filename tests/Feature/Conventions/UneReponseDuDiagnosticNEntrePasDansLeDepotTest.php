@@ -12,9 +12,10 @@ use Tests\Support\FichiersSuivis;
  * (`EnveloppeDeDiagnostic::NOTE`) : la trouver dans un fichier suivi, c'est y
  * trouver une réponse recopiée, donc des données de production, expurgées ou
  * non, et du texte venu de l'extérieur, dans un dépôt public. La note ne
- * s'écrit donc que dans sa classe et dans les tests de l'enveloppe
- * (`reponseDuDiagnosticFichiersPermis()`) ; ceux qui la comparent la lisent
- * par la constante.
+ * s'écrit donc que dans sa classe (`reponseDuDiagnosticFichiersPermis()`) ;
+ * les tests qui la comparent, ceux de l'enveloppe compris, la lisent par la
+ * constante. Un fichier permis qui ne l'écrit pas n'ouvre qu'un trou, là où
+ * une réponse collée en données de test passerait : la garde le refuse.
  *
  * La garde la cherche telle qu'elle se lit, telle que la classe l'écrit
  * (l'apostrophe échappée d'une chaîne PHP entre apostrophes), et telle
@@ -25,17 +26,13 @@ use Tests\Support\FichiersSuivis;
  */
 
 /**
- * Les seuls fichiers où la note peut s'écrire : sa classe, et les tests de
- * l'enveloppe.
+ * Les seuls fichiers où la note peut s'écrire : sa classe.
  *
  * @return list<string>
  */
 function reponseDuDiagnosticFichiersPermis(): array
 {
-    return [
-        'app/Services/Diagnostic/EnveloppeDeDiagnostic.php',
-        'tests/Feature/Services/Diagnostic/EnveloppeEtResumeDuDiagnosticTest.php',
-    ];
+    return ['app/Services/Diagnostic/EnveloppeDeDiagnostic.php'];
 }
 
 /**
@@ -99,12 +96,16 @@ it('reconnaît la note telle qu’elle se lit, telle que la classe l’écrit, e
     expect(reponseDuDiagnosticLignesQuiLaPortent('"note": "'.substr(EnveloppeDeDiagnostic::NOTE, 0, 40).'"'))->toBe([]);
 });
 
-it('n’écrit la note que dans sa classe et dans les tests de l’enveloppe', function (): void {
+it('n’écrit la note que dans sa classe', function (): void {
     $fichiers = FichiersSuivis::contenus();
 
     expect(count($fichiers))->toBeGreaterThan(500)
-        ->and($fichiers)->toHaveKeys(reponseDuDiagnosticFichiersPermis())
-        ->and(reponseDuDiagnosticLignesQuiLaPortent($fichiers['app/Services/Diagnostic/EnveloppeDeDiagnostic.php']))->not->toBe([]);
+        ->and($fichiers)->toHaveKeys(reponseDuDiagnosticFichiersPermis());
+
+    foreach (reponseDuDiagnosticFichiersPermis() as $permis) {
+        expect(reponseDuDiagnosticLignesQuiLaPortent($fichiers[$permis]))
+            ->not->toBe([], "{$permis} est permis sans écrire la note : la permission n'ouvre qu'un trou.");
+    }
 
     $mentions = [];
 
