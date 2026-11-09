@@ -64,6 +64,10 @@ it('ne suit aucun jeton de diagnostic complet', function (): void {
             'app/Services/Diagnostic/Expurgation/MasqueLesSecrets.php',
             'tests/Unit/Services/Diagnostic/ExpurgeLeTexteTest.php',
             'CHANGELOG.md',
+            'resources/views/vendor/mail/html/message.blade.php',
+            'lang/vendor/health/fr/notifications.php',
+            'public/robots.txt',
+            'storage/framework/.gitignore',
         ]);
 
     $mentions = [];

@@ -100,7 +100,13 @@ it('n’écrit la note que dans sa classe', function (): void {
     $fichiers = FichiersSuivis::contenus();
 
     expect(count($fichiers))->toBeGreaterThan(500)
-        ->and($fichiers)->toHaveKeys(reponseDuDiagnosticFichiersPermis());
+        ->and($fichiers)->toHaveKeys([
+            ...reponseDuDiagnosticFichiersPermis(),
+            'resources/views/vendor/mail/html/message.blade.php',
+            'lang/vendor/health/fr/notifications.php',
+            'public/robots.txt',
+            'storage/framework/.gitignore',
+        ]);
 
     foreach (reponseDuDiagnosticFichiersPermis() as $permis) {
         expect(reponseDuDiagnosticLignesQuiLaPortent($fichiers[$permis]))

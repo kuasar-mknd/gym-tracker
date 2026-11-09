@@ -102,7 +102,15 @@ it('ne nomme l\'infrastructure de production nulle part dans le dépôt', functi
     $fichiers = FichiersSuivis::contenus();
 
     expect(count($fichiers))->toBeGreaterThan(500)
-        ->and($fichiers)->toHaveKeys(['README.md', 'docker-compose.prod.yml', 'CHANGELOG.md']);
+        ->and($fichiers)->toHaveKeys([
+            'README.md',
+            'docker-compose.prod.yml',
+            'CHANGELOG.md',
+            'resources/views/vendor/mail/html/message.blade.php',
+            'lang/vendor/health/fr/notifications.php',
+            'public/robots.txt',
+            'storage/framework/.gitignore',
+        ]);
 
     $mentions = [];
 
