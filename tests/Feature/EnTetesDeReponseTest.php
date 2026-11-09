@@ -381,6 +381,11 @@ it('garde la séance en cours sous le budget', function (bool $tempsServeur): vo
 
     expect($reponse->baseResponse->headers->has('Server-Timing'))->toBe($tempsServeur)
         ->and(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+
+    // Allumé, le budget compte aussi la métrique du cache (#2148, étape 1).
+    if ($tempsServeur) {
+        expect((string) $reponse->baseResponse->headers->get('Server-Timing'))->toMatch('/, cache;dur=\d+\.\d;desc="\d+ lectures?"$/');
+    }
 })->with([
     'Server-Timing coupé' => [false],
     'Server-Timing allumé' => [true],

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Models\BodyMeasurement;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
+use App\Services\Stats\ClesDeStats;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('BodyMeasurementController', function (): void {
@@ -53,10 +53,8 @@ describe('BodyMeasurementController', function (): void {
         });
 
         it('clears cache after creating a body measurement', function (): void {
-            // Need to allow other Cache facade calls
-            Cache::spy();
-
             $user = User::factory()->create();
+            $cleAvant = ClesDeStats::mesures($user, 'latest_metrics');
             $data = [
                 'weight' => 75.5,
                 'measured_at' => now()->format('Y-m-d'),
@@ -66,8 +64,8 @@ describe('BodyMeasurementController', function (): void {
                 ->post(route('body-measurements.store'), $data)
                 ->assertRedirect();
 
-            // Invalider, c'est incrémenter la version des mesures (ClesDeStats).
-            Cache::shouldHaveReceived('increment')->atLeast()->once();
+            // Invalider, c'est tirer une version neuve des mesures (ClesDeStats, #2151).
+            expect(ClesDeStats::mesures($user, 'latest_metrics'))->not->toBe($cleAvant);
         });
 
         it('requires valid data', function (): void {
@@ -101,19 +99,18 @@ describe('BodyMeasurementController', function (): void {
         });
 
         it('clears cache after deleting a body measurement', function (): void {
-            Cache::spy();
-
             $user = User::factory()->create();
             $measurement = BodyMeasurement::factory()->create([
                 'user_id' => $user->id,
             ]);
+            $cleAvant = ClesDeStats::mesures($user, 'latest_metrics');
 
             $this->actingAs($user)
                 ->delete(route('body-measurements.destroy', $measurement))
                 ->assertRedirect();
 
-            // Invalider, c'est incrémenter la version des mesures (ClesDeStats).
-            Cache::shouldHaveReceived('increment')->atLeast()->once();
+            // Invalider, c'est tirer une version neuve des mesures (ClesDeStats, #2151).
+            expect(ClesDeStats::mesures($user, 'latest_metrics'))->not->toBe($cleAvant);
         });
 
         it('prevents deleting another users measurement', function (): void {

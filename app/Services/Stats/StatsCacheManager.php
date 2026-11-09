@@ -8,9 +8,10 @@ use App\Models\User;
 
 /**
  * Invalide les statistiques en cache d'un utilisateur. Les trois méthodes
- * de séance ne font plus qu'une chose, incrémenter la version des séances :
- * un renommage recalcule aussi le volume hebdomadaire à la prochaine lecture,
- * ce qui coûte une requête, contre une liste de clefs à tenir à jour.
+ * de séance ne font plus qu'une chose, tirer une version neuve des séances
+ * (un ULID, `VersionDeCache`, #2151) : un renommage recalcule aussi le volume
+ * hebdomadaire à la prochaine lecture, ce qui coûte une requête, contre une
+ * liste de clefs à tenir à jour.
  */
 final class StatsCacheManager
 {
