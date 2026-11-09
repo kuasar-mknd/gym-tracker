@@ -385,19 +385,20 @@ onUnmounted(() => {
                 />
             </div>
 
-            <Transition
-                enter-active-class="transition ease-out duration-300"
-                enter-from-class="opacity-0 translate-y-4"
-                enter-to-class="opacity-100 translate-y-0"
-                leave-active-class="transition ease-in duration-200"
-                leave-from-class="opacity-100 translate-y-0"
-                leave-to-class="opacity-0 -translate-y-4"
-                mode="out-in"
-            >
-                <div :key="$page.url" class="mx-auto" :class="LARGEURS[largeur]">
-                    <slot />
-                </div>
-            </Transition>
+            <!--
+                Ni transition ni clé sur l'adresse : le contenu se pose dès la
+                réponse (#2148, étape 2a). Un changement de page remonte la
+                page et ce layout, sans animation ; une transition `out-in`
+                clée sur `$page.url` ne jouait donc que pour une visite qui
+                garde l'état et change l'adresse (le mois du calendrier, la
+                période des statistiques), et faisait attendre sa sortie
+                (200 ms) avant de poser le nouveau contenu, puis son entrée
+                (300 ms). Une clé seule remonterait encore chaque carte à la
+                réponse, son animation d'entrée et le focus du bouton compris.
+            -->
+            <div class="mx-auto" :class="LARGEURS[largeur]">
+                <slot />
+            </div>
         </main>
 
         <!-- Bottom Navigation (mobile only) -->
