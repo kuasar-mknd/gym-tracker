@@ -32,8 +32,10 @@ final class MasqueLesSecrets
 {
     /**
      * La valeur d'un en-tête `Authorization: Bearer …` : le mot, quelle que
-     * soit sa casse, un à huit blancs, puis tout ce qui suit jusqu'au premier
-     * blanc, guillemet, apostrophe ou chevron. Le motif lit des octets.
+     * soit sa casse, un à huit blancs, puis ce qui suit jusqu'au premier
+     * blanc, guillemet, apostrophe ou chevron, 4 096 octets au plus. Le motif
+     * lit des octets. La table des exceptions retire elle-même la suite d'une
+     * valeur plus longue (`ExceptionEnregistree`).
      */
     public const string MOTIF_BEARER = '/\bBearer\s{1,8}[^\s"\'<>]{1,4096}/i';
 

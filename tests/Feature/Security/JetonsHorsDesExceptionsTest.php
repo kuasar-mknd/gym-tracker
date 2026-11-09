@@ -228,10 +228,49 @@ it('laisse lire, dans chaque colonne, ce qui ressemble au jeton ou à une valeur
 });
 
 /*
+ * Le motif de `Bearer` lit au plus 4 096 octets : la fin d'une valeur plus
+ * longue restait lisible après la marque, et un jeton collé à sa fin, dont il
+ * avalait le début, ne se reconnaissait plus. Le masque retire toute la
+ * valeur, jusqu'au premier blanc, guillemet ou chevron, et pas au-delà.
+ */
+it('masque toute une valeur Bearer de plus de 4 096 octets, jeton collé compris', function (string $valeur): void {
+    $texte = "Authorization: {$valeur} suite";
+
+    ExceptionEnregistree::query()->create([
+        'type' => RuntimeException::class,
+        'code' => '0',
+        'message' => $texte,
+        'file' => '/app/x.php',
+        'line' => 1,
+        'trace' => [['file' => '/app/x.php', 'line' => 1, 'function' => 'f', 'args' => [['string', $texte]]]],
+        'method' => 'POST',
+        'path' => '_boum',
+        'headers' => ['x-transmis' => [$valeur]],
+        'body' => ['note' => $texte],
+        'markdown' => "# RuntimeException\n\n{$texte}\n",
+    ]);
+
+    expect(jetonsHorsDesExceptionsColonnesQuiLesLaissentLire())->toBe([]);
+
+    $exception = ExceptionEnregistree::query()->sole();
+
+    expect($exception->message)->toBe('Authorization: Bearer [masqué] suite')
+        ->and($exception->trace[0]['args'] ?? null)->toBe([['string', 'Authorization: Bearer [masqué] suite']])
+        ->and($exception->headers)->toBe(['x-transmis' => ['Bearer [masqué]']])
+        ->and($exception->body)->toBe(['note' => 'Authorization: Bearer [masqué] suite'])
+        ->and($exception->markdown)->toBe("# RuntimeException\n\nAuthorization: Bearer [masqué] suite\n");
+})->with([
+    'un jeton collé après 4 090 octets' => ['Bearer '.str_repeat('a', 4_090).jetonsHorsDesExceptionsJeton()],
+    'le secret d’un porteur après 4 100 octets' => ['Bearer '.str_repeat('S', 4_100).jetonsHorsDesExceptionsSecretDuPorteur()],
+    'un jeton après 12 000 octets' => ['Bearer '.str_repeat('b', 12_000).jetonsHorsDesExceptionsJeton()],
+]);
+
+/*
  * Le motif de `Bearer` lit des octets : un secret de plus de 4 096 octets en
  * caractères accentués est coupé au milieu d'un caractère. Le reste de la
  * valeur commencerait alors par un octet que ni MySQL ni le JSON n'acceptent,
- * et le paquet perdrait l'exception sans rien dire.
+ * et le paquet perdrait l'exception sans rien dire. Le masque retire toute la
+ * valeur : aucun caractère n'est coupé.
  */
 it('garde l’exception quand le masque d’une valeur Bearer coupe un caractère', function (): void {
     $longue = 'Bearer a'.str_repeat('é', 3_000);
@@ -251,8 +290,8 @@ it('garde l’exception quand le masque d’une valeur Bearer coupe un caractèr
     $exception = ExceptionEnregistree::query()->sole();
     $entete = data_get($exception->headers, 'x-transmis.0');
 
-    expect($exception->message)->toBe('Bearer [masqué]?'.str_repeat('é', 952))
-        ->and($entete)->toBeString()->toStartWith('Bearer [masqué]?é')
+    expect($exception->message)->toBe('Bearer [masqué]')
+        ->and($entete)->toBe('Bearer [masqué]')
         ->and(mb_check_encoding(is_string($entete) ? $entete : '', 'UTF-8'))->toBeTrue();
 });
 
