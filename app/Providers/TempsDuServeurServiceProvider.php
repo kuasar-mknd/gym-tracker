@@ -17,6 +17,10 @@ use Illuminate\Auth\Events\PasswordResetLinkSent;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Validated;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Cache\Events\CacheHit;
+use Illuminate\Cache\Events\CacheMissed;
+use Illuminate\Cache\Events\RetrievingKey;
+use Illuminate\Cache\Events\RetrievingManyKeys;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\QueryExecuted;
@@ -25,12 +29,14 @@ use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * L'en-tête `Server-Timing` (#1315) : la mesure d'une requête, ses écouteurs.
+ * L'en-tête `Server-Timing` (#1315, #2148) : la mesure d'une requête, ses
+ * écouteurs.
  *
  * Les écouteurs se posent ici, une fois, au démarrage de l'application —
  * sous Octane, au démarrage du worker. Posés par le middleware, ils
  * s'empileraient : le répartiteur d'événements survit aux requêtes, et chaque
- * requête SQL serait comptée une fois de plus à chaque requête servie.
+ * requête SQL ou lecture du cache serait comptée une fois de plus à chaque
+ * requête servie.
  *
  * Coupée (`SERVER_TIMING_ENABLED` absente, vide ou fausse), rien ne se pose :
  * le coût par requête se réduit à la lecture de la configuration par le
@@ -79,6 +85,23 @@ final class TempsDuServeurServiceProvider extends ServiceProvider
 
         $evenements->listen(QueryExecuted::class, static function (QueryExecuted $requete): void {
             self::mesure()?->compterUneRequeteSql($requete->time ?? 0.0);
+        });
+
+        /*
+         * Chaque magasin du cache émet ces événements (`Repository::event()`),
+         * sessions en cache comprises ; seuls `Cache::memo()` et le magasin de
+         * repli n'en émettent pas eux-mêmes, et l'application ne s'en sert pas.
+         */
+        $evenements->listen(RetrievingKey::class, static function (): void {
+            self::mesure()?->noterUneDemandeAuCache(1);
+        });
+
+        $evenements->listen(RetrievingManyKeys::class, static function (RetrievingManyKeys $demande): void {
+            self::mesure()?->noterUneDemandeAuCache(count($demande->keys));
+        });
+
+        $evenements->listen([CacheHit::class, CacheMissed::class], static function (): void {
+            self::mesure()?->noterUneReponseDuCache();
         });
 
         $evenements->listen(RouteMatched::class, static function (): void {

@@ -16,24 +16,28 @@ use Symfony\Component\HttpFoundation\Response;
  * Dit à un utilisateur connecté ce que sa réponse a coûté au serveur (#1315).
  *
  * L'en-tête `Server-Timing` porte la durée de l'application, découpée en
- * trois étapes, et le nombre et la durée cumulée des requêtes SQL :
+ * trois étapes, puis le nombre et la durée cumulée des requêtes SQL et des
+ * lectures du cache (#2148, étape 1) :
  *
  *     app;dur=48.2, routage;dur=1.3, controleur;dur=20.1,
- *     rendu;dur=26.8, sql;dur=12.4;desc="7 requetes"
+ *     rendu;dur=26.8, sql;dur=12.4;desc="7 requetes",
+ *     cache;dur=1.9;desc="8 lectures"
  *
  * `routage` couvre la pile globale et le choix de la route ; `controleur`,
  * la pile de la route (session, connexion, liaison des modèles) et l'action ;
  * `rendu`, la préparation de la réponse — les props d'Inertia s'évaluent
  * là — et la sortie des piles. L'onglet réseau du navigateur l'affiche, et
- * `curl -I` ; environ 120 octets, sous le budget d'en-têtes que tient
- * `EnTetesDeReponseTest`.
+ * `curl -I`, comme le relevé des temps de la page
+ * (`resources/js/Utils/releveDesTemps.js`) ; environ 160 octets, sous le
+ * budget d'en-têtes que tient `EnTetesDeReponseTest`.
  *
  * Coupé par défaut (`SERVER_TIMING_ENABLED`) : coupé, ce middleware ne fait
  * que lire la configuration et passer la main.
  *
  * Allumé, il ne mesure que pour qui est déjà connecté, à l'application
  * (garde `web`, l'API de la séance comprise) ou au panneau (garde `admin`).
- * Une durée et un nombre de requêtes diraient sinon si un compte existe :
+ * Une durée, un nombre de requêtes ou de lectures du cache diraient sinon si
+ * un compte existe :
  * vérifier un mot de passe coûte une requête et un hachage qu'une adresse
  * inconnue ne coûte pas. D'où aussi trois exclusions, même pour un connecté
  * — et une requête sans route n'est jamais mesurée :

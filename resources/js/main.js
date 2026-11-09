@@ -18,6 +18,7 @@ import { installerLesMessagesDuWorker } from '@/Utils/messagesDuWorker'
 import { demarrerHorsLigne, estLaCoquille } from '@/Utils/demarrageHorsLigne'
 import { installerLInvitationDInstallation } from '@/composables/useInvitationDInstallation'
 import { installerLaPoliceDeRepliDesIcones } from '@/Utils/policeDeRepliDesIcones'
+import { installerLeReleveDesTemps } from '@/Utils/releveDesTemps'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -96,6 +97,15 @@ const demarrerLApplication = () => {
          * copie ou dont la copie a vieilli, une fois par demi-heure (#2048).
          */
         installerLePrechauffage({ routeur: router, ecriture: ecritureDesCopies })
+
+        /*
+         * Le relevé des temps : ce que chaque requête de la page a coûté, et
+         * le temps d'une navigation, du toucher à la première image. Dormant
+         * tant que le serveur n'envoie pas `Server-Timing` ; rien ne sort de
+         * l'appareil (#1315, #2148). Avant `createInertiaApp`, pour la
+         * première visite.
+         */
+        installerLeReleveDesTemps({ routeur: router })
     }
 
     // Expose router for testing (Dusk)
