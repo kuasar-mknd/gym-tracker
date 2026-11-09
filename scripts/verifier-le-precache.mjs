@@ -14,8 +14,12 @@ import { readFileSync, statSync } from 'node:fs'
  * pour lancer un modèle sans réseau (#2049), 62 et 853 Kio, mesurés le
  * 2026-10-19 sous le même plafond ; démarrer, terminer et lancer un modèle
  * par la file (#2049), 62 et 872 Kio le même jour : le plafond passe à 890
- * Kio, la mesure à l'appui ; 873 Kio après la relecture du 2026-10-21. Un
- * motif élargi, ou une
+ * Kio, la mesure à l'appui ; 873 Kio après la relecture du 2026-10-21. Le
+ * 2026-11-09 (#2205), 64 entrées et 897 Kio : Inertia 3.11 ajoute 9 Kio au
+ * morceau du cœur de Vue, et le relevé des temps (#2206) 7 Kio à l'entrée et
+ * un demi à sa feuille de style ; chacun passait seul sous le plafond, pas
+ * les deux. Le plafond passe à 915 Kio, la marge de 18 Kio de la relève du
+ * 2026-10-19, au-dessus de la mesure. Un motif élargi, ou une
  * fermeture qui suivrait l'entrée jusqu'à chaque page, referait grossir
  * l'installation sans que rien ne le dise.
  *
@@ -28,7 +32,7 @@ import { readFileSync, statSync } from 'node:fs'
  * construction, puis sur les actifs que les tests PHP téléchargent.
  */
 const MAX_ENTREES = 64
-const MAX_KIO = 890
+const MAX_KIO = 915
 
 /**
  * La taille du fichier de public/ qu'une entrée désigne, ou `null` quand le
