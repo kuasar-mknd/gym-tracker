@@ -44,6 +44,8 @@ Elle pose `draggable` sur le NODE — l'enfant direct du conteneur, donc la raci
 
 Elle déplace aussi le nœud elle-même sur le chemin tactile. Vue, restée sur l'ancien arrangement, écrit ensuite les numéros dans les mauvaises rangées. On reconstruit les rangées par une génération portée dans la clef du `v-for`.
 
+`onSort` n'est pas la fin du geste : la bibliothèque trie pendant le geste, à chaque rangée survolée, et un geste relâché à sa place ne trie rien. Ce qu'on pose au début (`onDragstart`, rappel `auDebut`) se lève dans `onDragend` (rappel `auBout` de `useListeReordonnable.js`), qu'elle appelle à la fin de chaque glisser, trié ou non, à la souris comme au doigt. Depuis la 0.6.3, `onDragstart` vient aussi au doigt (la 0.6.1 ne l'appelait que pour le glisser natif, à la souris) : la page levait l'exercice « en vol » dans `onSort`, et un glisser au doigt relâché sans tri laissait ses rangées de séries désactivées, sans glissement pour supprimer, jusqu'au tri suivant (#2205). `workoutShowUncovered.test.js` le tient : début puis fin sans tri, et tri pendant le geste.
+
 Corollaire de vérification, le plus coûteux : jsdom ne rejoue pas le chemin tactile, et des évènements de pointeur synthétiques dans un navigateur non plus. Ces défauts ne se reproduisent que sur simulateur, avec `touch_path` et une vraie temporisation — un appui trop court y passe pour un défilement et fait conclure à tort que rien ne marche. Un témoin utile porte sur le mécanisme (identité des éléments DOM, `defaultPrevented`, appel du rappel), jamais sur le rendu final.
 
 ## Un graphique déclare ses séries, `BaseChart` fait le reste

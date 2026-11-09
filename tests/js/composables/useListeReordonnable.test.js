@@ -15,7 +15,7 @@ vi.mock('@formkit/drag-and-drop/vue', () => ({
     dragAndDrop: (config) => configurations.push(config),
 }))
 
-import { useListeReordonnable } from '@/composables/useListeReordonnable'
+import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
 
 const monter = (options = {}) => {
     const rappels = { auDebut: vi.fn(), aLaFin: vi.fn(), estActif: () => true, ...options }
@@ -98,6 +98,25 @@ describe('une liste réordonnable', () => {
     })
 
     /**
+     * Un geste relâché à sa place ne trie rien : `onSort` ne vient pas, et ce
+     * qu'on a posé au départ ne se lève qu'à la fin du geste. La bibliothèque
+     * appelle `onDragend` à la fin de chaque glisser, trié ou non, à la souris
+     * comme au doigt.
+     */
+    it('prévient à la fin du glissement, même sans tri', async () => {
+        const wrapper = monter({ auBout: vi.fn() })
+
+        wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
+
+        configurations[0].onDragstart({})
+        configurations[0].onDragend({})
+
+        expect(wrapper.vm.rappels.auBout).toHaveBeenCalledOnce()
+        expect(wrapper.vm.rappels.aLaFin).not.toHaveBeenCalled()
+    })
+
+    /**
      * Une carte pleine dépasse souvent l'écran : sans défilement automatique
      * aux bords, on ne peut pas la sortir de la zone visible, donc pas la
      * déplacer loin. Et l'appui long est ce qui laisse le défilement de la page
@@ -177,5 +196,51 @@ describe('une liste réordonnable', () => {
         expect(configurations[0].longPress).toBe(true)
         expect(configurations[0].longPressDuration).toBe(220)
         expect(configurations[0].longPressClass).toBe('rangee-armee')
+    })
+})
+
+describe('des sous-listes réordonnables', () => {
+    const monterLesSousListes = (options) => {
+        const composant = {
+            setup() {
+                const premiere = ref(null)
+                const seconde = ref(null)
+
+                const outils = useSousListesReordonnables(
+                    () => [
+                        { cle: 10, element: premiere.value, valeurs: ref(['a', 'b']) },
+                        { cle: 11, element: seconde.value, valeurs: ref(['c', 'd']) },
+                    ],
+                    { handle: '[data-poignee]', estActif: () => true, ...options },
+                )
+
+                return { premiere, seconde, outils }
+            },
+            render() {
+                return h('div', {}, [h('div', { ref: 'premiere' }), h('div', { ref: 'seconde' })])
+            },
+        }
+
+        return mount(composant, { attachTo: document.body })
+    }
+
+    /**
+     * Chaque liste nomme la sienne : la page tient l'exercice dont une série
+     * est en vol, et le libère à la fin du geste de CETTE liste.
+     */
+    it('nomme la liste au début et à la fin du glissement', async () => {
+        const auDebut = vi.fn()
+        const auBout = vi.fn()
+        const wrapper = monterLesSousListes({ auDebut, auBout })
+
+        await wrapper.vm.outils.rafraichir()
+        expect(configurations).toHaveLength(2)
+
+        configurations[1].onDragstart({})
+        configurations[1].onDragend({})
+
+        expect(auDebut).toHaveBeenCalledWith(11)
+        expect(auBout).toHaveBeenCalledWith(11)
+        expect(auBout).toHaveBeenCalledOnce()
     })
 })
