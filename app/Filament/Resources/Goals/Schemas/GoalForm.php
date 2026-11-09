@@ -16,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Operation;
 use Illuminate\Database\Eloquent\Builder;
 
 class GoalForm
@@ -34,6 +35,11 @@ class GoalForm
         'measurement' => 'Mensuration',
     ];
 
+    /**
+     * Ce que le panneau dit sous les deux champs calculés.
+     */
+    private const string AVANCEMENT_CALCULE = 'Se recalcule depuis l’activité du compte, à chaque enregistrement.';
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -41,10 +47,10 @@ class GoalForm
     }
 
     /**
-     * L'échéance (`DATE`) et la date d'atteinte (`TIMESTAMP`) se bornent à la
-     * plage de leur colonne (`DateQueSaColonneTient`), le titre à ses 255
-     * caractères : au-delà, la base refusait l'écriture, et l'enregistrement
-     * finissait en 500 (#2071). La mensuration se choisit dans une liste.
+     * L'échéance (`DATE`) se borne à la plage de sa colonne
+     * (`DateQueSaColonneTient`), le titre à ses 255 caractères : au-delà, la
+     * base refusait l'écriture, et l'enregistrement finissait en 500 (#2071).
+     * La mensuration se choisit dans une liste.
      *
      * Un objectif de mensuration nomme sa mensuration, comme l'exige
      * `GoalStoreRequest` (`required_if:type,measurement`), que le panneau ne
@@ -65,6 +71,14 @@ class GoalForm
      * L'exercice se choisit parmi ceux du compte de l'objectif (#2166) : le
      * compte est `live()`, et les options suivent `exercicesDuCompte()`.
      *
+     * La valeur actuelle et la date d'atteinte se calculent, elles ne se
+     * tapent pas (#1513) : en lecture seule à la modification, absentes à la
+     * création, elles ne partent pas avec le formulaire, et l'enregistrement
+     * recalcule l'objectif par son écrivain (`GoalResource::enregistrer()`).
+     * Tapées ici, elles tenaient jusqu'à la prochaine activité du compte, sans
+     * que la barre suive, et une date d'atteinte tapée sur un objectif atteint
+     * restait pour de bon. L'échéance, elle, est une saisie.
+     *
      * @return array<int, \Illuminate\Contracts\Support\Htmlable|string>
      */
     private static function getComponents(): array
@@ -78,7 +92,8 @@ class GoalForm
                     fn (Get $get): CibleAuMoinsEgaleAuDepart => new CibleAuMoinsEgaleAuDepart($get('start_value')),
                     fn (Get $get): bool => $get('type') !== GoalType::Measurement->value,
                 ),
-            TextInput::make('current_value')->label('Valeur actuelle')->required()->numeric()->default(0),
+            TextInput::make('current_value')->label('Valeur actuelle')->numeric()->disabled()->hiddenOn(Operation::Create)
+                ->helperText(self::AVANCEMENT_CALCULE),
             TextInput::make('start_value')->label('Valeur de départ')->required()->numeric()->default(0),
             Select::make('exercise_id')->label('Exercice')
                 ->relationship('exercise', 'name', modifyQueryUsing: fn (Builder $query, Get $get): Builder => self::exercicesDuCompte($query, $get('user_id')))
@@ -90,9 +105,8 @@ class GoalForm
             DatePicker::make('deadline')->label('Échéance')
                 ->minDate(DateQueSaColonneTient::date()->premierJour)
                 ->maxDate(DateQueSaColonneTient::date()->dernierJour),
-            DateTimePicker::make('completed_at')->label('Atteint le')
-                ->minDate(DateQueSaColonneTient::horodatage()->premierInstant())
-                ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant()),
+            DateTimePicker::make('completed_at')->label('Atteint le')->disabled()->hiddenOn(Operation::Create)
+                ->helperText(self::AVANCEMENT_CALCULE),
         ];
     }
 

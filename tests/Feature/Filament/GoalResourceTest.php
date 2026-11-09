@@ -10,10 +10,14 @@ use App\Filament\Resources\Goals\Pages\ListGoals;
 use App\Http\Controllers\GoalController;
 use App\Models\Exercise;
 use App\Models\Goal;
+use App\Models\Set;
 use App\Models\User;
+use App\Models\Workout;
+use App\Models\WorkoutLine;
 use Filament\Actions\Testing\TestAction;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Select;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -559,9 +563,9 @@ it("charge l'objectif existant dans le formulaire d'édition", function (): void
 });
 
 /*
- * L'échéance est une colonne `DATE`, la date d'atteinte un horodatage : une
- * date hors de leur plage partait jusqu'à la base, ou jusqu'au formatage de
- * Filament pour l'an 10000, et l'enregistrement répondait 500 (#2071).
+ * L'échéance est une colonne `DATE` : une date hors de sa plage partait
+ * jusqu'à la base, ou jusqu'au formatage de Filament pour l'an 10000, et
+ * l'enregistrement répondait 500 (#2071).
  */
 it('refuse une date que la colonne de l’objectif ne tient pas', function (string $champ, string $date): void {
     $goal = Goal::factory()->create(['type' => 'frequency', 'completed_at' => null]);
@@ -573,10 +577,235 @@ it('refuse une date que la colonne de l’objectif ne tient pas', function (stri
 
     expect($goal->fresh()?->completed_at)->toBeNull();
 })->with([
-    'atteint après 2038' => ['completed_at', '2099-01-01 10:00:00'],
-    'atteint avant 1970' => ['completed_at', '1960-01-01 10:00:00'],
     'échéance en l’an 10000' => ['deadline', '+10000-01-01'],
 ]);
+
+/*
+ * La date d'atteinte ne se tape plus au panneau (#1513) : le champ est en
+ * lecture seule, et ce qu'on y écrirait ne part pas. Une date hors de la plage
+ * de sa colonne (un horodatage), que le panneau refusait (#2071), n'est donc ni
+ * refusée ni enregistrée : l'objectif reste tel que son calcul le dit.
+ */
+it('ne refuse ni ne garde une date d’atteinte tapée hors de la plage de sa colonne', function (string $date): void {
+    $goal = Goal::factory()->create(['type' => 'frequency', 'start_value' => 0, 'target_value' => 10, 'completed_at' => null]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm(['completed_at' => $date])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($goal->fresh()?->completed_at)->toBeNull();
+})->with([
+    'atteint après 2038' => ['2099-01-01 10:00:00'],
+    'atteint avant 1970' => ['1960-01-01 10:00:00'],
+]);
+
+/*
+ * L'avancement d'un objectif se calcule, il ne se tape pas (#1513).
+ *
+ * Le panneau laissait taper la valeur actuelle et la date d'atteinte, sans
+ * recalculer la barre : un objectif créé ou modifié là gardait ce qui était
+ * tapé jusqu'à la prochaine séance, série ou mesure du compte, et une date
+ * d'atteinte tapée sur un objectif atteint restait pour de bon, le recalcul ne
+ * réécrivant pas la date d'un objectif qui l'est encore. Les deux champs sont
+ * en lecture seule à la modification, absents à la création, et
+ * l'enregistrement recalcule l'objectif par son écrivain,
+ * `GoalService::syncGoals()`, comme le fait chaque activité du compte.
+ */
+
+/**
+ * Un compte qui a soulevé ce poids, une fois, sur un exercice du catalogue :
+ * son record de charge sur cet exercice.
+ *
+ * @return array{0: User, 1: Exercise}
+ */
+function objectifsDuPanneauCompteQuiSouleve(float $poids): array
+{
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => null, 'type' => 'strength']);
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'started_at' => now()->subDay(), 'ended_at' => now()->subDay()->addHour()]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => $poids, 'reps' => 5, 'is_warmup' => false, 'is_completed' => true]);
+
+    return [$compte, $exercice];
+}
+
+it('recalcule à la création au panneau la valeur actuelle, la barre et l’atteinte, sans garder ce qui est tapé', function (): void {
+    [$compte, $exercice] = objectifsDuPanneauCompteQuiSouleve(80);
+
+    Livewire::test(CreateGoal::class)
+        ->assertFormFieldHidden('current_value')
+        ->assertFormFieldHidden('completed_at')
+        ->fillForm([
+            'user_id' => $compte->getKey(),
+            'title' => 'Cent kilos',
+            'type' => 'weight',
+            'exercise_id' => $exercice->getKey(),
+            'start_value' => 60,
+            'target_value' => 100,
+            'current_value' => 999,
+            'completed_at' => '2020-01-01 10:00:00',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $goal = Goal::query()->where('title', 'Cent kilos')->sole();
+
+    expect($goal->current_value)->toBe(80.0)
+        ->and((float) $goal->progress_pct)->toBe(50.0)
+        ->and($goal->completed_at)->toBeNull();
+});
+
+it('recalcule l’objectif enregistré au panneau, par la page et par la table', function (string $chemin): void {
+    [$compte, $exercice] = objectifsDuPanneauCompteQuiSouleve(80);
+    $goal = Goal::factory()->create([
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+
+    // L'objectif tel qu'une valeur tapée au panneau l'a laissé.
+    DB::table('goals')->where('id', $goal->id)->update(['current_value' => 999, 'progress_pct' => 3, 'completed_at' => null]);
+
+    if ($chemin === 'page') {
+        Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+            ->assertFormFieldDisabled('current_value')
+            ->assertFormFieldDisabled('completed_at')
+            ->fillForm(['title' => 'Cent kilos, renommé'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+    } else {
+        Livewire::test(ListGoals::class)
+            ->callAction(TestAction::make('edit')->table($goal), ['title' => 'Cent kilos, renommé'])
+            ->assertHasNoFormErrors();
+    }
+
+    $goal->refresh();
+
+    expect($goal->title)->toBe('Cent kilos, renommé')
+        ->and($goal->current_value)->toBe(80.0)
+        ->and((float) $goal->progress_pct)->toBe(50.0)
+        ->and($goal->completed_at)->toBeNull();
+})->with([
+    'par la page' => ['page'],
+    'par l’action de la table' => ['table'],
+]);
+
+it('ne garde ni la valeur actuelle ni la date d’atteinte tapées à la modification au panneau', function (string $chemin): void {
+    $this->freezeSecond();
+    [$compte, $exercice] = objectifsDuPanneauCompteQuiSouleve(120);
+    $goal = Goal::factory()->create([
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+    DB::table('goals')->where('id', $goal->id)->update(['current_value' => 120, 'progress_pct' => 100, 'completed_at' => null]);
+    $tape = ['current_value' => 5, 'completed_at' => '2020-01-01 10:00:00'];
+
+    if ($chemin === 'page') {
+        Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+            ->fillForm($tape)
+            ->call('save')
+            ->assertHasNoFormErrors();
+    } else {
+        Livewire::test(ListGoals::class)
+            ->callAction(TestAction::make('edit')->table($goal), $tape)
+            ->assertHasNoFormErrors();
+    }
+
+    $goal->refresh();
+
+    expect($goal->current_value)->toBe(120.0)
+        ->and((float) $goal->progress_pct)->toBe(100.0)
+        ->and($goal->completed_at?->toDateTimeString())->toBe(now()->toDateTimeString());
+})->with([
+    'par la page' => ['page'],
+    'par l’action de la table' => ['table'],
+]);
+
+/*
+ * La page de modification ne recharge pas son formulaire après
+ * l'enregistrement : `EditRecord::save()` garde l'état envoyé, sans redirection.
+ * La valeur actuelle et la date d'atteinte montraient donc ce qui était chargé
+ * à l'ouverture de la page, comme si l'enregistrement n'avait rien recalculé,
+ * jusqu'à ce que l'administrateur la recharge (#1513). L'action de la table
+ * n'en a pas besoin : sa modale se ferme, et la table relit la base.
+ */
+it('montre sur la page de modification l’avancement que l’enregistrement vient de recalculer', function (): void {
+    $this->freezeSecond();
+    [$compte, $exercice] = objectifsDuPanneauCompteQuiSouleve(80);
+    $goal = Goal::factory()->create([
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+    DB::table('goals')->where('id', $goal->id)->update(['current_value' => 999, 'progress_pct' => 3, 'completed_at' => null]);
+
+    $page = Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->assertSchemaStateSet(['current_value' => 999.0, 'completed_at' => null])
+        // La cible passe sous le record de 80 kg : l'objectif devient atteint.
+        ->fillForm(['target_value' => 70])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $goal->refresh();
+
+    expect($goal->current_value)->toBe(80.0)
+        ->and($goal->completed_at?->toDateTimeString())->toBe(now()->toDateTimeString());
+
+    $page->assertSchemaStateSet([
+        'current_value' => 80.0,
+        'completed_at' => now()->toDateTimeString(),
+    ]);
+});
+
+/*
+ * Le formulaire n'envoie pas les champs calculés, et l'écriture du panneau les
+ * retire encore des données qu'elle reçoit (`GoalResource::CHAMPS_CALCULES`) :
+ * des données qui passeraient outre le champ désactivé n'écrivent pas
+ * l'avancement. Sans ce retrait, la date d'atteinte reçue restait sur un
+ * objectif atteint, que l'écrivain ne redate pas.
+ */
+it('retire de l’écriture du panneau l’avancement reçu dans les données', function (): void {
+    $this->freezeSecond();
+    [$compte, $exercice] = objectifsDuPanneauCompteQuiSouleve(120);
+    $goal = Goal::factory()->create([
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+    DB::table('goals')->where('id', $goal->id)->update(['current_value' => 120, 'progress_pct' => 100, 'completed_at' => null]);
+
+    EditGoal::modifier($goal->refresh(), [
+        'user_id' => $compte->id,
+        'title' => 'Cent kilos',
+        'type' => 'weight',
+        'exercise_id' => $exercice->id,
+        'start_value' => 60,
+        'target_value' => 100,
+        'current_value' => 5,
+        'progress_pct' => 7,
+        'completed_at' => '2020-01-01 10:00:00',
+    ]);
+
+    $goal->refresh();
+
+    expect($goal->current_value)->toBe(120.0)
+        ->and((float) $goal->progress_pct)->toBe(100.0)
+        ->and($goal->completed_at?->toDateTimeString())->toBe(now()->toDateTimeString());
+});
 
 it('interdit la gestion des objectifs à un admin sans les permissions Goal', function (): void {
     $goal = Goal::factory()->create();

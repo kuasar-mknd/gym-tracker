@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { nombre, poids, volume, variation, pourcentage, entier, compte, accord } from '@/Utils/nombre'
 
 describe('les nombres affichés', () => {
@@ -40,6 +40,25 @@ describe('les nombres affichés', () => {
             expect(volume(vide)).toBe('—')
             expect(variation(vide)).toBe('—')
             expect(nombre(vide)).toBe('—')
+        }
+    })
+
+    /*
+     * Bâtir un `Intl.NumberFormat` coûte bien plus que de s'en servir : un
+     * formateur neuf par nombre faisait l'essentiel des dizaines de
+     * millisecondes d'un tableau du relevé des temps (#2148).
+     */
+    it('ne bâtit qu’un formateur par jeu de décimales, quel que soit le nombre de valeurs', () => {
+        const formateurs = vi.spyOn(Intl, 'NumberFormat')
+
+        try {
+            const ecrits = Array.from({ length: 50 }, (_, rang) => nombre(rang + 0.125, 3, 2))
+
+            expect(ecrits.slice(0, 2)).toEqual(['0,125', '1,125'])
+            expect(nombre(2, 3, 2)).toBe('2,00')
+            expect(formateurs.mock.calls.length).toBeLessThanOrEqual(1)
+        } finally {
+            formateurs.mockRestore()
         }
     })
 })

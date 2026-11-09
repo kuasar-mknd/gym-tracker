@@ -35,36 +35,7 @@ final class GoalService
      */
     public function syncGoals(User $user): void
     {
-        /*
-         * TOUS les objectifs, y compris ceux deja marques atteints.
-         *
-         * Le filtre `whereNull('completed_at')` qui etait ici rendait
-         * inatteignable la moitie de `checkCompletion()` : celle qui DE-marque
-         * un objectif dont le critere n'est plus rempli. Un objectif atteint le
-         * restait donc definitivement, meme apres suppression de la seance ou
-         * de la mesure qui l'avait declenche. La branche existait, elle etait
-         * testable, et aucun chemin n'y menait (#1501).
-         *
-         * Le cout est borne : un pratiquant a quelques objectifs, pas quelques
-         * milliers, et les metriques sont deja pre-calculees en lot juste
-         * dessous.
-         */
-        $goals = $user->goals()->get();
-
-        /*
-         * Les métriques sont calculées en un lot pour tous les objectifs : sans
-         * cela, chacun repartait chercher les siennes, une requête par
-         * objectif. Le lot couvre chaque sorte d'objectif, parties du corps
-         * comprises depuis #2131 : aucun ne repasse par son compte
-         * (`$goal->user`), qu'il n'est donc plus utile de lui rattacher.
-         */
-        $mesures = $this->preCalculateMetrics($user, $goals);
-
-        foreach ($goals as $goal) {
-            $this->updateGoalProgress($goal, $mesures);
-        }
-
-        $dirtyGoals = $goals->filter->isDirty();
+        $dirtyGoals = $this->objectifsRecalcules($user)->filter->isDirty();
 
         if ($dirtyGoals->isEmpty()) {
             return;
@@ -112,6 +83,52 @@ final class GoalService
             $user->id,
             ...$identifiants,
         ]);
+    }
+
+    /**
+     * Les objectifs d'un utilisateur, recalculés en mémoire depuis son
+     * activité, sans rien écrire : un objectif modifié (`isDirty()`) est un
+     * objectif que `syncGoals()` réécrirait.
+     *
+     * C'est le calcul de l'écrivain, que le contrôle nocturne lit aussi
+     * (`app:verify-data-coherence`, « avancement des objectifs », #1513) : une
+     * seconde définition pourrait donner tort à l'écrivain.
+     *
+     * @param  User  $user  L'utilisateur concerné.
+     * @return \Illuminate\Database\Eloquent\Collection<int, Goal>
+     */
+    public function objectifsRecalcules(User $user): \Illuminate\Database\Eloquent\Collection
+    {
+        /*
+         * TOUS les objectifs, y compris ceux deja marques atteints.
+         *
+         * Le filtre `whereNull('completed_at')` qui etait ici rendait
+         * inatteignable la moitie de `checkCompletion()` : celle qui DE-marque
+         * un objectif dont le critere n'est plus rempli. Un objectif atteint le
+         * restait donc definitivement, meme apres suppression de la seance ou
+         * de la mesure qui l'avait declenche. La branche existait, elle etait
+         * testable, et aucun chemin n'y menait (#1501).
+         *
+         * Le cout est borne : un pratiquant a quelques objectifs, pas quelques
+         * milliers, et les metriques sont deja pre-calculees en lot juste
+         * dessous.
+         */
+        $goals = $user->goals()->get();
+
+        /*
+         * Les métriques sont calculées en un lot pour tous les objectifs : sans
+         * cela, chacun repartait chercher les siennes, une requête par
+         * objectif. Le lot couvre chaque sorte d'objectif, parties du corps
+         * comprises depuis #2131 : aucun ne repasse par son compte
+         * (`$goal->user`), qu'il n'est donc plus utile de lui rattacher.
+         */
+        $mesures = $this->preCalculateMetrics($user, $goals);
+
+        foreach ($goals as $goal) {
+            $this->updateGoalProgress($goal, $mesures);
+        }
+
+        return $goals;
     }
 
     /**

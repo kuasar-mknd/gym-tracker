@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Enums\PersonalRecordType;
+use App\Models\Goal;
 use App\Models\PersonalRecord;
 use App\Models\User;
+use App\Models\Workout;
+use App\Services\GoalService;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -35,7 +37,7 @@ class VerifyDataCoherence extends Command
     #[\Override]
     protected $signature = 'app:verify-data-coherence
         {--limit=5 : Nombre d\'identifiants cités par écart}
-        {--repair : Retire les records d\'un type que l\'application ne tient plus, puis reconstruit les records détachés ou en écart, les volumes de séance et les séries de jours depuis leurs sources}';
+        {--repair : Retire les records d\'un type que l\'application ne tient plus, puis reconstruit les records détachés ou en écart, les objectifs de leurs comptes, les volumes de séance et les séries de jours depuis leurs sources}';
 
     #[\Override]
     protected $description = 'Compare les valeurs dérivées (volumes, records, séries, objectifs) à leur source';
@@ -54,11 +56,13 @@ class VerifyDataCoherence extends Command
             'série de jours' => $this->serieDeJours(...),
             'propriétaire recopié sur les lignes de séance' => $this->proprietaireDesLignes(...),
             'propriétaire recopié sur les séries' => $this->proprietaireDesSeries(...),
+            'avancement des objectifs' => $this->avancementDesObjectifs(...),
         ];
 
         if ($this->option('repair') === true) {
-            $this->retirerLesTypesNonSuivis();
-            $this->reconstruireLesRecords();
+            $comptesAuxRecordsRefaits = $this->retirerLesTypesNonSuivis();
+            $comptesAuxRecordsRefaits += $this->reconstruireLesRecords();
+            $this->recalculerLesObjectifs($comptesAuxRecordsRefaits);
             $this->recalculerLesVolumes();
             $this->recalculerLesSeries();
         }
@@ -172,32 +176,46 @@ class VerifyDataCoherence extends Command
      * sans chemin de reparation, le controle nocturne le signalerait chaque
      * nuit sans recours. Le volume d'un utilisateur, lui, n'est plus stocke :
      * il se lit dans ses seances.
+     *
+     * La réparation passe par l'écrivain du modèle, `recalculerLeVolume()`,
+     * et seulement sur les séances que le contrôle trouve en écart (#1513).
+     * Elle refaisait la somme par sa propre requête et l'écrivait sans le
+     * verrou de la séance : une série enregistrée entre sa lecture et son
+     * écriture repartait sous l'ancien total. L'écrivain relit le total sous
+     * ce verrou, une séance après l'autre.
      */
     private function recalculerLesVolumes(): void
     {
         $recalees = 0;
 
-        DB::table('workouts')->orderBy('id')->chunkById(500, function (Collection $seances) use (&$recalees): void {
-            foreach ($seances as $seance) {
-                $reel = (float) DB::table('workout_lines')
-                    ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
-                    ->where('workout_lines.workout_id', $seance->id)
-                    ->where('sets.is_completed', true)
-                    ->sum(DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
-
-                $stocke = is_numeric($seance->workout_volume) ? (float) $seance->workout_volume : 0.0;
-
-                if (abs($stocke - $reel) <= 0.01) {
-                    continue;
+        Workout::query()
+            ->whereIn('id', $this->seancesAuVolumeEcarte()->select('workouts.id'))
+            ->chunkById(500, function (\Illuminate\Database\Eloquent\Collection $seances) use (&$recalees): void {
+                foreach ($seances as $seance) {
+                    if ($seance->recalculerLeVolume()) {
+                        $recalees++;
+                    }
                 }
-
-                DB::table('workouts')->where('id', $seance->id)->update(['workout_volume' => $reel]);
-                $recalees++;
-            }
-        });
+            });
 
         $this->line(sprintf('  <fg=yellow>%d</> séance(s) dont le volume a été recalé', $recalees));
         $this->newLine();
+    }
+
+    /**
+     * Les séances dont le volume stocké s'écarte de plus d'un centime de celui
+     * de leurs séries, jointes à ce volume (`calcul.volume`, absent pour une
+     * séance sans série cochée).
+     *
+     * Le volume vient de `Workout::volumesDesSeries()`, la somme que lit
+     * l'écrivain : le contrôle et la réparation ne peuvent pas lui donner tort
+     * sur une séance qu'il vient d'écrire.
+     */
+    private function seancesAuVolumeEcarte(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('workouts')
+            ->leftJoinSub(Workout::volumesDesSeries(), 'calcul', 'calcul.workout_id', '=', 'workouts.id')
+            ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.volume, 0)) > 0.01');
     }
 
     /**
@@ -212,8 +230,10 @@ class VerifyDataCoherence extends Command
      * « type des records » ; `retirerLesTypesNonSuivis()` du service retire
      * et reconstruit chacun sous son verrou. Un couple dont le compte a
      * disparu est laissé, comme dans la reconstruction des records.
+     *
+     * @return array<int, User> Les comptes dont des records ont été refaits, par identifiant : leurs objectifs se recalculent ensuite (`recalculerLesObjectifs()`).
      */
-    private function retirerLesTypesNonSuivis(): void
+    private function retirerLesTypesNonSuivis(): array
     {
         $couples = DB::table('personal_records')
             ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)
@@ -231,13 +251,14 @@ class VerifyDataCoherence extends Command
             $this->line("  <fg=green>OK</> aucun record d'un type que l'application ne tient plus");
             $this->newLine();
 
-            return;
+            return [];
         }
 
         $service = app(PersonalRecordService::class);
         $comptes = User::query()->whereKey($couples->pluck(0)->unique()->values()->all())->get()->keyBy('id');
         $retires = 0;
         $refaits = 0;
+        $comptesRefaits = [];
 
         foreach ($couples as [$idUtilisateur, $idExercice]) {
             $user = $comptes->get($idUtilisateur);
@@ -248,6 +269,7 @@ class VerifyDataCoherence extends Command
 
             $retires += $service->retirerLesTypesNonSuivis($user, $idExercice);
             $refaits++;
+            $comptesRefaits[$user->id] = $user;
         }
 
         $this->line(sprintf(
@@ -256,6 +278,8 @@ class VerifyDataCoherence extends Command
             $refaits,
         ));
         $this->newLine();
+
+        return $comptesRefaits;
     }
 
     /**
@@ -276,8 +300,10 @@ class VerifyDataCoherence extends Command
      * serie eligible (#1984) : un tel record designe une serie qui existe, qui
      * compte et qui porte son poids, et aucun des criteres ci-dessous ne le
      * voit.
+     *
+     * @return array<int, User> Les comptes dont des records ont été refaits, par identifiant : leurs objectifs se recalculent ensuite (`recalculerLesObjectifs()`).
      */
-    private function reconstruireLesRecords(): void
+    private function reconstruireLesRecords(): array
     {
         $detaches = PersonalRecord::query()
             ->where(function (\Illuminate\Database\Eloquent\Builder $arefaire): void {
@@ -332,12 +358,13 @@ class VerifyDataCoherence extends Command
             $this->line('  <fg=green>OK</> aucun record à reconstruire');
             $this->newLine();
 
-            return;
+            return [];
         }
 
         $service = app(PersonalRecordService::class);
         $comptes = User::query()->whereKey(array_unique(array_column($aRefaire, 0)))->get()->keyBy('id');
         $faits = [];
+        $comptesRefaits = [];
 
         foreach ($aRefaire as $cle => [$idUtilisateur, $idExercice]) {
             $user = $comptes->get($idUtilisateur);
@@ -348,11 +375,46 @@ class VerifyDataCoherence extends Command
 
             $service->reparer($user, $idExercice);
             $faits[$cle] = true;
+            $comptesRefaits[$user->id] = $user;
         }
 
         $this->line(sprintf(
             '  <fg=yellow>%d</> exercice(s) reconstruit(s) depuis les séries restantes',
             count($faits),
+        ));
+        $this->newLine();
+
+        return $comptesRefaits;
+    }
+
+    /**
+     * Recalcule, par leur écrivain, les objectifs des comptes dont la
+     * réparation vient de refaire des records (#1513).
+     *
+     * Le poids maximum est la source de l'objectif de charge, et l'application
+     * recalcule les objectifs d'un compte après chaque recalcul de ses records
+     * (#1953 : `SyncPersonalRecord`, les écouteurs des séances et des séries).
+     * Les records refaits ici ne passaient par aucun : la réparation corrigeait
+     * le record, le contrôle « avancement des objectifs » signalait aussitôt
+     * l'objectif qui lisait l'ancien, et la commande sortait en erreur sur un
+     * écart qu'elle venait de créer, sans pouvoir repasser au vert. L'appel est
+     * celui de l'écrivain, `GoalService::syncGoals()` : aucun écrivain ne
+     * s'ajoute. Les objectifs des autres comptes restent au contrôle, qui ne
+     * répare pas (`avancementDesObjectifs()`).
+     *
+     * @param  array<int, User>  $comptes  Les comptes aux records refaits, par identifiant.
+     */
+    private function recalculerLesObjectifs(array $comptes): void
+    {
+        $service = app(GoalService::class);
+
+        foreach ($comptes as $compte) {
+            $service->syncGoals($compte);
+        }
+
+        $this->line(sprintf(
+            '  <fg=yellow>%d</> compte(s) dont les objectifs ont été recalculés sur leurs records refaits',
+            count($comptes),
         ));
         $this->newLine();
     }
@@ -370,28 +432,17 @@ class VerifyDataCoherence extends Command
     /**
      * `workouts.workout_volume` contre la somme des series de la seance.
      *
+     * La somme est celle de l'écrivain, `Workout::volumesDesSeries()` : les
+     * séries faites seulement, pas celles qui attendent (#1499). Une seconde
+     * définition écrite ici pouvait signaler divergente une séance juste, ou
+     * laisser passer une séance fausse (#1513).
+     *
      * @return array{int, list<string>}
      */
     private function volumeSeances(): array
     {
-        $requete = DB::table('workouts')
-            ->leftJoinSub(
-                DB::table('workout_lines')
-                    ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    // Meme filtre que `Workout::recalculerLeVolume()` : le volume
-                    // compte les series faites, pas celles qui attendent (#1499).
-                    // Sans lui, une seance dont une serie n'est pas cochee
-                    // serait signalee divergente alors qu'elle est juste.
-                    ->where('sets.is_completed', true)
-                    ->selectRaw('workout_lines.workout_id, SUM(COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)) as reel')
-                    ->groupBy('workout_lines.workout_id'),
-                'calcul',
-                'calcul.workout_id',
-                '=',
-                'workouts.id',
-            )
-            ->selectRaw('workouts.id, workouts.workout_volume as stocke, COALESCE(calcul.reel, 0) as reel')
-            ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.reel, 0)) > 0.01');
+        $requete = $this->seancesAuVolumeEcarte()
+            ->selectRaw('workouts.id, workouts.workout_volume as stocke, COALESCE(calcul.volume, 0) as reel');
 
         return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             'séance %s : stocké %s, calculé %s',
@@ -824,6 +875,103 @@ class VerifyDataCoherence extends Command
             $unite,
             $this->colonne($seance, 'copies'),
         ));
+    }
+
+    /**
+     * L'avancement de chaque objectif (`goals.current_value`, `progress_pct`,
+     * `completed_at`) contre le calcul de son écrivain (#1513).
+     *
+     * Le calcul est celui de `GoalService::syncGoals()`, lu par
+     * `objectifsRecalcules()`, qui ne persiste rien : le contrôle signale
+     * exactement les objectifs que l'écrivain réécrirait, à un centième près
+     * pour la valeur et la barre. La date d'atteinte se juge à sa présence,
+     * pas à sa valeur : l'écrivain garde la date d'un objectif qui reste
+     * atteint, et pose l'instant du recalcul sur celui qui le devient. Le
+     * panneau laissait taper la valeur et la date, et rien d'autre ne voyait
+     * un objectif que son calcul démentait.
+     *
+     * Il ne répare pas, à dessein : `syncGoals()` est l'écrivain, et il tourne
+     * à chaque séance, série ou mesure du compte (`SyncUserGoals`), comme à
+     * chaque enregistrement de l'objectif ; un objectif signalé se recale
+     * ainsi. Seuls les comptes dont `--repair` refait des records voient leurs
+     * objectifs recalculés par la réparation (`recalculerLesObjectifs()`),
+     * comme l'application après chaque recalcul de records. Le compte se lit
+     * en entier : le calcul en lit les relations.
+     *
+     * @return array{int, list<string>}
+     */
+    private function avancementDesObjectifs(): array
+    {
+        $service = app(GoalService::class);
+        $nombre = 0;
+        $exemples = [];
+        $limite = $this->limite();
+
+        User::query()
+            ->whereHas('goals')
+            ->orderBy('id')
+            ->chunkById(200, function (\Illuminate\Database\Eloquent\Collection $comptes) use ($service, &$nombre, &$exemples, $limite): void {
+                foreach ($comptes as $compte) {
+                    foreach ($service->objectifsRecalcules($compte) as $objectif) {
+                        if (! $this->avancementEcarte($objectif)) {
+                            continue;
+                        }
+
+                        $nombre++;
+
+                        if (count($exemples) < $limite) {
+                            $exemples[] = $this->decrireLAvancement($objectif);
+                        }
+                    }
+                }
+            });
+
+        return [$nombre, $exemples];
+    }
+
+    /**
+     * L'objectif recalculé en mémoire s'écarte-t-il de ce que la base porte ?
+     */
+    private function avancementEcarte(Goal $objectif): bool
+    {
+        return abs($this->nombre($objectif->getOriginal('current_value')) - $objectif->current_value) > 0.01
+            || abs($this->nombre($objectif->getOriginal('progress_pct')) - $objectif->progress_pct) > 0.01
+            || ($objectif->getOriginal('completed_at') === null) !== ($objectif->completed_at === null);
+    }
+
+    /**
+     * L'avancement stocké d'un objectif, puis celui que son calcul donne.
+     */
+    private function decrireLAvancement(Goal $objectif): string
+    {
+        return sprintf(
+            'objectif %d du compte %d : stocké %s (%s %%, %s), calculé %s (%s %%, %s)',
+            $objectif->id,
+            $objectif->user_id,
+            $this->chiffre($this->nombre($objectif->getOriginal('current_value'))),
+            $this->chiffre($this->nombre($objectif->getOriginal('progress_pct'))),
+            $objectif->getOriginal('completed_at') === null ? 'non atteint' : 'atteint',
+            $this->chiffre($objectif->current_value),
+            $this->chiffre($objectif->progress_pct),
+            $objectif->completed_at === null ? 'non atteint' : 'atteint',
+        );
+    }
+
+    /**
+     * Un nombre lu tel que la base le rend, 0 s'il n'en est pas un.
+     */
+    private function nombre(mixed $valeur): float
+    {
+        return is_numeric($valeur) ? (float) $valeur : 0.0;
+    }
+
+    /**
+     * Un nombre à deux décimales au plus, sans zéros inutiles : « 100 »,
+     * « 33.33 ».
+     */
+    private function chiffre(float $valeur): string
+    {
+        return rtrim(rtrim(number_format($valeur, 2, '.', ''), '0'), '.');
     }
 
     /**

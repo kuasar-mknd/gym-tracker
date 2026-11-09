@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\Habit;
+use App\Models\HabitLog;
 use App\Models\Set;
 use App\Models\Supplement;
 use App\Models\SupplementLog;
@@ -118,8 +119,16 @@ describe('creating a child row against a parent', function (): void {
         $policy = new HabitLogPolicy();
 
         expect($policy->create($owner, $habit))->toBeTrue()
-            ->and($policy->create($intruder, $habit))->toBeFalse()
-            ->and($policy->create($owner))->toBeTrue();
+            ->and($policy->create($intruder, $habit))->toBeFalse();
+
+        /*
+         * Sans habitude, la politique ne répond plus « oui » (#1513) : aucun
+         * appelant ne la demande sans habitude (le cochage autorise
+         * `update` sur l'habitude), et cette branche, que rien n'atteignait,
+         * accordait un journal sans dire à quoi. L'habitude est exigée.
+         */
+        expect(fn (): bool => Gate::forUser($owner)->allows('create', HabitLog::class))
+            ->toThrow(ArgumentCountError::class);
     });
 
     it('allows a template line on the owner\'s template only', function (): void {
