@@ -50,15 +50,23 @@ final readonly class FormateurSansAdresse implements FormatterInterface
     private static function masquer(mixed $formate): mixed
     {
         if (is_string($formate)) {
-            return TexteSansAdresse::de(TexteSansJeton::de($formate));
+            return self::texteMasque($formate);
         }
 
         if (is_array($formate)) {
             array_walk_recursive($formate, static function (mixed &$valeur): void {
-                $valeur = is_string($valeur) ? TexteSansAdresse::de(TexteSansJeton::de($valeur)) : $valeur;
+                $valeur = is_string($valeur) ? self::texteMasque($valeur) : $valeur;
             });
         }
 
         return $formate;
+    }
+
+    /**
+     * Un texte sans jeton ni valeur `Bearer`, puis sans adresse.
+     */
+    private static function texteMasque(string $texte): string
+    {
+        return TexteSansAdresse::de(TexteSansJeton::de($texte));
     }
 }
