@@ -3,12 +3,15 @@
 declare(strict_types=1);
 
 use App\Models\Exercise;
+use App\Models\Goal;
 use App\Models\NotificationPreference;
 use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Services\GoalService;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
@@ -478,6 +481,243 @@ it('repasse au vert après réparation', function (): void {
     // Une seconde passe, sans réparer : plus rien ne doit être signalé.
     $this->artisan('app:verify-data-coherence')->assertExitCode(0);
 });
+
+/**
+ * Les requêtes SQL envoyées pendant l'appel, dans l'ordre. L'écoute reste
+ * posée après lui, sur un tableau que plus rien ne lit.
+ *
+ * @return list<string>
+ */
+function coherenceRequetesPendant(callable $appel): array
+{
+    $requetes = [];
+
+    DB::listen(static function (QueryExecuted $requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
+    $appel();
+
+    return $requetes;
+}
+
+/**
+ * Les requêtes qui verrouillent ou réécrivent une séance.
+ *
+ * @param  list<string>  $requetes
+ * @return list<string>
+ */
+function coherenceEcrituresDesSeances(array $requetes): array
+{
+    return array_values(array_filter(
+        $requetes,
+        static fn (string $sql): bool => preg_match('/^update `workouts`|from `workouts`.* for update$/i', $sql) === 1,
+    ));
+}
+
+/*
+ * La réparation du volume passe par l'écrivain de la séance (#1513). Elle
+ * refaisait la somme par sa propre requête et l'écrivait sans verrou : une
+ * série enregistrée entre sa lecture et son écriture repartait sous l'ancien
+ * total. `Workout::recalculerLeVolume()` relit le total sous le verrou de la
+ * ligne, comme à chaque série enregistrée.
+ */
+it('recale par --repair un volume faussé en base, par l’écrivain de la séance et sous son verrou', function (): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['workout_volume' => 42]);
+
+    $requetes = coherenceRequetesPendant(function (): void {
+        $this->artisan('app:verify-data-coherence', ['--repair' => true])
+            ->expectsOutputToContain('1 séance(s) dont le volume a été recalé')
+            ->expectsOutputToContain('OK volume des séances')
+            ->assertExitCode(0)
+            ->run();
+    });
+
+    $volume = DB::table('workouts')->where('id', $idSeance)->value('workout_volume');
+
+    expect(is_numeric($volume) ? (float) $volume : null)->toBe(1000.0)
+        ->and(array_values(array_filter(coherenceEcrituresDesSeances($requetes), static fn (string $sql): bool => str_ends_with($sql, 'for update'))))
+        ->toHaveCount(1);
+});
+
+it('ne verrouille ni ne réécrit par --repair une séance dont le volume est juste', function (): void {
+    compteCoherent();
+
+    $requetes = coherenceRequetesPendant(function (): void {
+        $this->artisan('app:verify-data-coherence', ['--repair' => true])
+            ->expectsOutputToContain('0 séance(s) dont le volume a été recalé')
+            ->assertExitCode(0)
+            ->run();
+    });
+
+    expect(coherenceEcrituresDesSeances($requetes))->toBe([]);
+});
+
+/*
+ * L'avancement d'un objectif (#1513) : sa valeur actuelle, sa barre et son
+ * atteinte. Le contrôle les compare au calcul de leur écrivain,
+ * `GoalService::syncGoals()`, sans rien écrire. Le panneau laissait taper la
+ * valeur et la date, et rien ne voyait un objectif que son calcul démentait.
+ */
+
+/**
+ * Un objectif de chaque sorte sur le compte de `compteCoherent()`, tenus par
+ * leur écrivain : la charge et le volume sur l'exercice de sa série (record de
+ * 100 kg, séance de 1000), la fréquence sur sa séance faite, une mensuration
+ * qu'aucune pesée ne porte.
+ *
+ * @return array{weight: Goal, volume: Goal, frequency: Goal, measurement: Goal}
+ */
+function coherenceObjectifsTenus(User $user, Set $set): array
+{
+    $exercice = $set->workoutLine->exercise_id;
+    $objectifs = [
+        'weight' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'weight', 'exercise_id' => $exercice, 'start_value' => 50, 'target_value' => 150]),
+        'volume' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'volume', 'exercise_id' => $exercice, 'start_value' => 0, 'target_value' => 800]),
+        'frequency' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'frequency', 'start_value' => 0, 'target_value' => 10]),
+        'measurement' => Goal::factory()->create(['user_id' => $user->id, 'type' => 'measurement', 'measurement_type' => 'weight', 'start_value' => 90, 'target_value' => 80]),
+    ];
+
+    app(GoalService::class)->syncGoals($user);
+
+    return array_map(static fn (Goal $objectif): Goal => $objectif->refresh(), $objectifs);
+}
+
+it('laisse passer les objectifs que leur écrivain tient', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectifs = coherenceObjectifsTenus($user, $set);
+
+    // Le calcul a bien tourné : un objectif atteint, les autres en chemin.
+    expect($objectifs['weight']->current_value)->toBe(100.0)
+        ->and($objectifs['volume']->completed_at)->not->toBeNull()
+        ->and($objectifs['frequency']->current_value)->toBe(1.0);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(0)
+        ->expectsOutputToContain('OK avancement des objectifs');
+});
+
+it('signale un objectif dont la valeur et la barre stockées s’écartent de leur calcul, sans rien écrire', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['current_value' => 999, 'progress_pct' => 7]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs')
+        ->expectsOutputToContain("objectif {$objectif->id} du compte {$user->id} : stocké 999 (7 %, non atteint), calculé 100 (50 %, non atteint)")
+        ->expectsOutputToContain('1 écart(s)');
+
+    $stocke = DB::table('goals')->where('id', $objectif->id)->first(['current_value', 'progress_pct']);
+
+    expect(get_object_vars($stocke ?? new stdClass()))->toEqual(['current_value' => 999, 'progress_pct' => 7]);
+});
+
+/*
+ * La barre se compare à part de la valeur : une barre fausse sous une valeur
+ * juste est un écart, que le cas précédent, où les deux s'écartent, ne
+ * distingue pas. Au centième près, comme la valeur et les autres contrôles.
+ */
+it('signale un objectif dont seule la barre stockée s’écarte de son calcul', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['progress_pct' => 7]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs')
+        ->expectsOutputToContain("objectif {$objectif->id} du compte {$user->id} : stocké 100 (7 %, non atteint), calculé 100 (50 %, non atteint)");
+});
+
+it('laisse passer une barre stockée à moins d’un centième de son calcul', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['progress_pct' => 50.004]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(0)
+        ->expectsOutputToContain('OK avancement des objectifs');
+});
+
+it('signale un objectif que la base dit atteint ou non atteint à tort', function (string $sorte, ?string $atteintLe, string $attendu): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)[$sorte];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['completed_at' => $atteintLe]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs')
+        ->expectsOutputToContain("objectif {$objectif->id} du compte {$user->id} : {$attendu}");
+})->with([
+    'atteint, la date effacée' => ['volume', null, 'stocké 1000 (100 %, non atteint), calculé 1000 (100 %, atteint)'],
+    'en chemin, une date posée' => ['weight', '2026-01-01 10:00:00', 'stocké 100 (50 %, atteint), calculé 100 (50 %, non atteint)'],
+]);
+
+/*
+ * Le contrôle ne répare pas : `syncGoals()` est l'écrivain, et il recalcule
+ * l'objectif à la prochaine séance, série ou mesure du compte, ou au prochain
+ * enregistrement de l'objectif. Seul un compte dont la réparation refait des
+ * records voit ses objectifs recalculés (cas suivant) ; celui-ci n'en a aucun
+ * à refaire.
+ */
+it('ne touche pas à l’objectif signalé sous --repair', function (): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    DB::table('goals')->where('id', $objectif->id)->update(['current_value' => 999]);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 avancement des objectifs');
+
+    $valeur = DB::table('goals')->where('id', $objectif->id)->value('current_value');
+
+    expect(is_numeric($valeur) ? (float) $valeur : null)->toBe(999.0);
+});
+
+/*
+ * Le record de poids maximum est la source de l'objectif de charge. Quand
+ * `--repair` refait des records, il recalcule les objectifs de leurs comptes
+ * par leur écrivain, comme l'application après chaque recalcul de records
+ * (#1953). Sans cela, la réparation corrigeait le record, le contrôle signalait
+ * aussitôt l'objectif qui lisait l'ancien, et la commande sortait en erreur sur
+ * un écart qu'elle venait de créer, sans le recaler (#1513). Deux chemins
+ * refont des records : un record en écart de sa série, et un record d'un type
+ * que l'application ne tient plus, que la base confond avec le poids maximum.
+ */
+it('recalcule par --repair les objectifs des comptes dont il refait les records', function (string $type): void {
+    [$user, $set] = compteCoherent();
+    $objectif = coherenceObjectifsTenus($user, $set)['weight'];
+
+    // Un poids maximum faux, 500 au lieu des 100 de la série, que l'objectif lit.
+    DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_weight')->update(['type' => $type, 'value' => 500]);
+    app(GoalService::class)->syncGoals($user);
+
+    expect($objectif->refresh()->current_value)->toBe(500.0)
+        ->and($objectif->completed_at)->not->toBeNull();
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->expectsOutputToContain('OK avancement des objectifs')
+        ->expectsOutputToContain('1 compte(s) dont les objectifs ont été recalculés sur leurs records refaits')
+        ->assertExitCode(0)
+        ->run();
+
+    $objectif->refresh();
+
+    expect($objectif->current_value)->toBe(100.0)
+        ->and((float) $objectif->progress_pct)->toBe(50.0)
+        ->and($objectif->completed_at)->toBeNull();
+})->with([
+    'un record en écart de sa série' => ['max_weight'],
+    'un record d’un type que l’application ne tient plus' => ['MAX_WEIGHT'],
+]);
 
 /**
  * Un record qui désigne une série existante, éligible et de même poids, mais

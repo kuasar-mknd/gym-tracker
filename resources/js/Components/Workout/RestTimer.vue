@@ -22,7 +22,11 @@ import GlassToggle from '@/Components/UI/GlassToggle.vue'
  * Component Props
  *
  * @property {Number} duration - The initial duration of the timer in seconds (default: 90).
- * @property {Boolean} autoStart - Whether to start the timer immediately upon mounting (default: false).
+ * @property {Boolean} autoStart - Whether to start the timer immediately upon mounting (default: true).
+ *
+ * Le composant se monte seul (tests/js/components/restTimer.test.js) : ce qui
+ * suit vaut pour tout parent, pas seulement pour la page de séance. Celle-ci
+ * ne passe pas `autoStart`, et le remonte à chaque repos (`:key="timerRun"`).
  */
 const props = defineProps({
     duration: {
@@ -127,7 +131,15 @@ const formatTime = (seconds) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-/** Starts the countdown timer. */
+/**
+ * Starts the countdown timer.
+ *
+ * La garde tient l'invariant d'un seul intervalle à la fois, contrat du
+ * composant monté seul (#1513). Aucun chemin d'aujourd'hui ne la franchit : le
+ * montage ne démarre qu'une fois, et la bascule ne démarre qu'à l'arrêt, quand
+ * `pauseTimer()` a déjà vidé `timer`. Un second intervalle ferait tomber deux
+ * secondes par seconde : elle reste, sans coût.
+ */
 const startTimer = () => {
     if (timer.value) return
     isActive.value = true
@@ -249,7 +261,13 @@ onUnmounted(() => {
     pauseTimer()
 })
 
-// Watchers
+/*
+ * Une durée qui change pendant que le minuteur attend se prend ; pendant un
+ * décompte, elle ne le touche pas. La page de séance remonte le minuteur à
+ * chaque repos et n'y passe jamais : c'est le contrat du composant monté seul,
+ * qu'un parent peut garder monté (#1513), et que
+ * tests/js/components/restTimer.test.js éprouve.
+ */
 watch(
     () => props.duration,
     (newVal) => {
