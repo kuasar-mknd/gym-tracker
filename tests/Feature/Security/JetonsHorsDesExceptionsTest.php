@@ -263,7 +263,10 @@ it('garde l’exception quand le masque d’une valeur Bearer coupe un caractèr
  * pile le recopient. La pile garde ses arguments, comme hors de l'image.
  * Avec `APP_DEBUG`, celui de la CI (`.ai/rules/tests.md`), les requêtes SQL
  * et le Markdown, qui cite les en-têtes et le chemin, sont remplis aussi, et
- * vérifiés de même ; sans lui, ils restent vides.
+ * vérifiés de même ; sans lui, ils restent vides. La requête SQL du test n'est
+ * pas cherchée pour elle-même : quand le test est le premier de son processus,
+ * les requêtes de la migration la précèdent, et le budget de la colonne la
+ * coupe.
  */
 it('masque le jeton et la valeur Bearer qu’une vraie requête recopie dans l’exception', function (): void {
     ini_set('zend.exception_ignore_args', '0');
@@ -300,7 +303,6 @@ it('masque le jeton et la valeur Bearer qu’une vraie requête recopie dans l�
 
     if (config()->boolean('app.debug')) {
         expect((string) $exception->markdown)->toContain('* **authorization**: Bearer [masqué]')
-            ->and((string) $exception->markdown)->toContain('POST /_boum/[masqué]')
-            ->and((string) json_encode($exception->query, JSON_UNESCAPED_UNICODE))->toContain("select '[masqué]' as jeton");
+            ->and((string) $exception->markdown)->toContain('POST /_boum/[masqué]');
     }
 });
