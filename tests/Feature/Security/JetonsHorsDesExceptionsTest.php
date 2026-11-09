@@ -368,9 +368,11 @@ it('masque le jeton et la valeur Bearer qu’une vraie requête recopie dans l�
         $verifier($requete->string('jeton')->toString(), (string) $requete->headers->get('X-Transmis'));
     });
 
-    $this->withHeaders(['Authorization' => 'Bearer '.$jeton, 'X-Transmis' => $porteur, 'X-Jeton' => $jeton])
-        ->post("/_boum/{$jeton}?jeton={$jeton}", ['note' => $porteur, 'profond' => ['jeton' => $jeton]])
-        ->assertStatus(500);
+    $this->post(
+        "/_boum/{$jeton}?jeton={$jeton}",
+        ['note' => $porteur, 'profond' => ['jeton' => $jeton]],
+        ['Authorization' => 'Bearer '.$jeton, 'X-Transmis' => $porteur, 'X-Jeton' => $jeton],
+    )->assertStatus(500);
 
     expect(jetonsHorsDesExceptionsColonnesQuiLesLaissentLire())->toBe([]);
 
