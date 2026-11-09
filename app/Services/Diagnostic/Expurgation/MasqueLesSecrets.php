@@ -21,17 +21,37 @@ namespace App\Services\Diagnostic\Expurgation;
  * ainsi en entier un secret où une telle suite figure. Chaque motif ne
  * s'essaie qu'au début d'un mot : une longue suite n'est parcourue qu'une
  * fois.
+ *
+ * Les deux premiers motifs sont publics : la table des exceptions masque
+ * aussi, par valeur, le jeton de diagnostic et la valeur d'un en-tête
+ * `Bearer …` (`ExceptionEnregistree`), et la garde des fichiers suivis
+ * reconnaît un jeton au même motif (`AucunJetonDeDiagnosticNEstSuiviTest`).
+ * Ils ne s'écrivent qu'ici.
  */
 final class MasqueLesSecrets
 {
+    /**
+     * La valeur d'un en-tête `Authorization: Bearer …` : le mot, quelle que
+     * soit sa casse, un à huit blancs, puis tout ce qui suit jusqu'au premier
+     * blanc, guillemet, apostrophe ou chevron. Le motif lit des octets.
+     */
+    public const string MOTIF_BEARER = '/\bBearer\s{1,8}[^\s"\'<>]{1,4096}/i';
+
+    /**
+     * Le jeton de diagnostic (#2032) : `gtdiag_`, un identifiant de douze
+     * caractères `[a-z0-9]`, `_`, un secret de quarante-huit caractères
+     * `[A-Za-z0-9]`.
+     */
+    public const string MOTIF_DU_JETON = '/gtdiag_[a-z0-9]{12}_[A-Za-z0-9]{48}/';
+
     /**
      * Chaque motif et sa marque, dans l'ordre où ils s'appliquent.
      *
      * @var array<string, string>
      */
     private const array MOTIFS = [
-        '/\bBearer\s{1,8}[^\s"\'<>]{1,4096}/i' => 'Bearer [secret]',
-        '/gtdiag_[a-z0-9]{12}_[A-Za-z0-9]{48}/' => '[secret]',
+        self::MOTIF_BEARER => 'Bearer [secret]',
+        self::MOTIF_DU_JETON => '[secret]',
         '/(?<![\w-])eyJ[\w-]{2,4096}\.[\w-]{2,4096}\.[\w-]{0,4096}/' => '[secret]',
         '/(?<![\w+\/=-])(?=[\w+-]{0,4096}[a-z])(?=[\w+-]{0,4096}[A-Z])(?=[\w+-]{0,4096}\d)[\w+-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
         '/(?<![\w+\/=-])(?=[\w+\/-]{0,4096}(?:\+|=))[\w+\/-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
