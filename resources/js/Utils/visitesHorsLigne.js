@@ -39,7 +39,9 @@ import {
  *   (DELETE) dit que la suppression n'est pas confirmée, les autres méthodes
  *   que l'enregistrement ne l'est pas ;
  * - un rechargement en arrière-plan (props différées, rechargement partiel,
- *   préchargement) : rien.
+ *   préchargement) : rien. Un préchargement en échec vide en plus le cache
+ *   des préchargements, entrées en vol comprises, sans quoi la visite
+ *   suivante vers son adresse s'accrochait à lui sans rien envoyer (#2148).
  * Une autre erreur que celle du réseau, levée pendant le traitement de la
  * réponse, n'est pas avalée : Inertia la fait aussi passer par `networkError`,
  * et le rapporteur doit la voir.
@@ -389,6 +391,7 @@ export const seanceEnregistreeDansLaFile = async () => {
  *   routeur: {
  *     on: (evenement: string, rappel: (evenement: CustomEvent) => unknown) => unknown,
  *     cancelAll: (options?: { async?: boolean, prefetch?: boolean, sync?: boolean }) => void,
+ *     flushAll: () => void,
  *     push?: (page: object) => void,
  *     resolveComponent?: (composant: string) => Promise<unknown>,
  *   },
@@ -924,11 +927,31 @@ export const installerLesVisitesHorsLigne = ({
 
         // L'erreur ne dit que l'adresse : chaque visite en vol vers elle a pu échouer, sa fin le dira.
         const adresseEnEchec = erreur?.url ? adresseSansFragment(erreur.url) : null
+        let prechargementEnEchec = false
 
         for (const [enCours, suivi] of enVol) {
             if (!suivi.repondue && adresseSansFragment(enCours.url) === adresseEnEchec) {
                 suivi.echecDuReseau = true
+                prechargementEnEchec ||= enCours.prefetch === true
             }
+        }
+
+        /*
+         * Un préchargement en échec (#2148, étape 2b). Le `false` que le filet
+         * rend plus bas annule l'évènement : Inertia n'appelle alors pas
+         * `onPrefetchError`, qui retire l'entrée de celles en vol, et aucune
+         * réponse n'appelle `onPrefetchResponse`. L'entrée restait en vol pour
+         * toujours, et la visite suivante vers cette adresse s'y accrochait
+         * sans rien envoyer ni finir. Laisser passer l'évènement ferait lever
+         * à Inertia deux rejets que personne n'attend. Le cache entier se vide
+         * donc ici, entrées en vol comprises : `router.flush(adresse)` ne
+         * retire que celles qui sont en cache. Les autres pages préchargées
+         * partent avec, ce qui ne coûte rien sans réseau. Le filet suit chaque
+         * visite de `start` à `finish`, préchargements compris : il voit aussi
+         * celui qu'un `<Link>` lance au survol.
+         */
+        if (prechargementEnEchec) {
+            routeur.flushAll()
         }
 
         const visite = visiteEnEchec(erreur)
