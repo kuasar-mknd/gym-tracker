@@ -6,6 +6,7 @@ use App\Models\ExceptionEnregistree;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\Guard;
 
 /*
  * Ni le jeton de diagnostic ni la valeur d'un en-tête `Bearer …` ne
@@ -200,7 +201,7 @@ it('laisse lire, dans chaque colonne, ce qui ressemble au jeton ou à une valeur
 
     $colonnes = [
         'message' => $texte,
-        'trace' => [['file' => '/app/vendor/laravel/framework/src/Illuminate/Http/Concerns/InteractsWithInput.php', 'line' => 1, 'class' => 'Laravel\Sanctum\Guard', 'function' => 'bearerToken', 'args' => [['string', $texte]]]],
+        'trace' => [['file' => '/app/vendor/laravel/framework/src/Illuminate/Http/Concerns/InteractsWithInput.php', 'line' => 1, 'class' => Guard::class, 'function' => 'bearerToken', 'args' => [['string', $texte]]]],
         'path' => "diagnostic/v1/erreurs-navigateur/{$empreinte}",
         'query' => [['connectionName' => 'mysql', 'sql' => "select * from erreurs_navigateur where empreinte = '{$empreinte}'", 'time' => 1.0]],
         'headers' => ['x-note' => [$texte], 'user-agent' => ['Mozilla/5.0 (X11; Linux x86_64)']],
