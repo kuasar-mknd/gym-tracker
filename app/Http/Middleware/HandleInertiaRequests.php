@@ -232,6 +232,18 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Les props que chaque page porte.
+     *
+     * `auth` et `flash` sont des fermetures (#2148, étape 3b) : Inertia ne les
+     * résout que pour une réponse qui les porte. En valeurs, chaque requête du
+     * groupe `web` lisait le compte des notifications non lues, le dernier
+     * badge et la séance en cours, redirections d'écriture, routes JSON et
+     * réponses partielles qui ne les demandent pas comprises, pour les jeter
+     * ensuite. `auth` reste partagé sur toute page, invité compris, où il vaut
+     * `['user' => null]` : la garde de l'historique y lit le titulaire.
+     * Jamais `Inertia::once()` : d'autres écrivains changent `auth` (travaux
+     * en file, autre appareil), et un flash ne vaut qu'une fois.
+     *
      * @return array<string, mixed>
      */
     #[\Override]
@@ -239,10 +251,10 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            'auth' => [
+            'auth' => fn (): array => [
                 'user' => $this->getUserData($request),
             ],
-            'flash' => [
+            'flash' => fn (): array => [
                 'success' => $request->hasSession() ? $request->session()->get('success') : null,
                 'error' => $request->hasSession() ? $request->session()->get('error') : null,
             ],

@@ -73,7 +73,8 @@ class NotificationServiceTest extends TestCase
         $request->setUserResolver(fn () => $user);
 
         $middleware = new \App\Http\Middleware\HandleInertiaRequests();
-        $sharedData = $middleware->share($request);
+        // `auth` est une fermeture qu'Inertia résout pour la réponse (#2148, étape 3b).
+        $sharedData = array_map(value(...), $middleware->share($request));
 
         $this->assertEquals(1, $sharedData['auth']['user']['unread_notifications_count']);
         $this->assertNotNull($sharedData['auth']['user']['latest_achievement']);
