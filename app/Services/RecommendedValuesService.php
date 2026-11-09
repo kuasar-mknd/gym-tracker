@@ -105,27 +105,47 @@ final class RecommendedValuesService
      * fois qu'il y a d'exercices à l'écran. Les valeurs sont posées au passage
      * sur les modèles reçus.
      *
-     * @param  Collection<int, WorkoutLine>  $lines  Les lignes à pré-remplir.
+     * La séance des lignes borne l'historique dans le temps. L'appelant qui
+     * l'a déjà chargée la passe : la page de la séance la tient de la route,
+     * et la relire par son identifiant coûtait une requête de plus à chaque
+     * visite et à chaque rechargement de la prop `workout` (#2148, étape 3c).
+     * Sans elle, c'est celle de la première ligne, lue au besoin. L'historique
+     * reste celui de `$idUtilisateur`, quelle que soit la séance.
+     *
+     * @param  Collection<int, WorkoutLine>  $lines  Les lignes à pré-remplir, d'une même séance.
      * @param  int  $idUtilisateur  Le propriétaire des lignes.
+     * @param  Workout|null  $seance  La séance des lignes, quand l'appelant l'a déjà chargée.
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> Indexé par exercice.
+     *
+     * @throws \InvalidArgumentException Si la séance passée n'est pas celle des lignes.
      */
-    public function batchRecommendedValues(Collection $lines, int $idUtilisateur): array
+    public function batchRecommendedValues(Collection $lines, int $idUtilisateur, ?Workout $seance = null): array
     {
-        if ($lines->isEmpty()) {
+        $premiere = $lines->first();
+
+        if ($premiere === null) {
             return [];
         }
 
-        $idSeance = $lines->first()->workout_id;
+        // Une ligne qu'on vient de fabriquer peut n'avoir encore aucune séance.
+        $idDeLaSeance = $premiere->getAttribute('workout_id');
         /** @var array<int, int> $idsExercices */
         $idsExercices = $lines->pluck('exercise_id')->unique()->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)->values()->all();
 
-        $workout = $this->resolveWorkout($idSeance, $idsExercices);
+        // Sans séance ou sans exercice à servir, il n'y a rien à chercher : aucune requête.
+        if (! is_numeric($idDeLaSeance) || count($idsExercices) === 0) {
+            return [];
+        }
+
+        $idSeance = (int) $idDeLaSeance;
+        $workout = $this->seanceDesLignes($premiere, $idSeance, $seance);
+
         if ($workout === null) {
             return [];
         }
 
         $defaults = $this->getDefaultValues();
-        $results = $this->getResultsFromCacheOrFetch($idsExercices, $idUtilisateur, (int) $idSeance, $workout);
+        $results = $this->getResultsFromCacheOrFetch($idsExercices, $idUtilisateur, $idSeance, $workout);
 
         $this->applyRecommendedValuesToLines($lines, $results, $defaults);
 
@@ -133,21 +153,30 @@ final class RecommendedValuesService
     }
 
     /**
-     * La séance visée, si la question a un sens.
+     * La séance des lignes : celle que l'appelant a passée, qui doit être la
+     * leur, sinon celle de la première ligne, chargée seulement si elle ne
+     * l'est pas déjà.
      *
-     * Sans identifiant de séance ou sans exercice à servir, il n'y a rien à
-     * chercher : la requête est évitée plutôt que lancée pour rien.
+     * @param  WorkoutLine  $premiere  La première des lignes.
+     * @param  int  $idSeance  L'identifiant de la séance des lignes.
+     * @param  Workout|null  $seance  La séance que l'appelant a passée.
      *
-     * @param  int|null  $idSeance  L'identifiant de la séance.
-     * @param  array<int, int>  $idsExercices  Les exercices à servir.
+     * @throws \InvalidArgumentException Si la séance passée n'est pas celle des lignes.
      */
-    private function resolveWorkout(?int $idSeance, array $idsExercices): ?Workout
+    private function seanceDesLignes(WorkoutLine $premiere, int $idSeance, ?Workout $seance): ?Workout
     {
-        if ($idSeance === null || count($idsExercices) === 0) {
-            return null;
+        if ($seance !== null) {
+            if ($seance->id !== $idSeance) {
+                throw new \InvalidArgumentException('La séance passée n’est pas celle des lignes.');
+            }
+
+            return $seance;
         }
 
-        return Workout::find($idSeance);
+        $premiere->loadMissing('workout');
+        $seanceDeLaLigne = $premiere->getRelation('workout');
+
+        return $seanceDeLaLigne instanceof Workout ? $seanceDeLaLigne : null;
     }
 
     /**

@@ -142,12 +142,16 @@ class WorkoutLine extends Model
     }
 
     /**
+     * Les valeurs proposées pour les lignes d'une séance, en un lot
+     * (`RecommendedValuesService::batchRecommendedValues()`).
+     *
      * @param  \Illuminate\Database\Eloquent\Collection<int, WorkoutLine>  $lines
+     * @param  Workout|null  $seance  La séance des lignes, quand l'appelant l'a déjà chargée : elle n'est pas relue.
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
      */
-    public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $idUtilisateur): array
+    public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $idUtilisateur, ?Workout $seance = null): array
     {
-        return app(RecommendedValuesService::class)->batchRecommendedValues($lines, $idUtilisateur);
+        return app(RecommendedValuesService::class)->batchRecommendedValues($lines, $idUtilisateur, $seance);
     }
 
     #[\Override]

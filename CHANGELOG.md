@@ -22,6 +22,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Optimisé
 - **Le mois du calendrier et la période des statistiques se posent dès la réponse** (#2148, #PR) : étape 2a de #2148. À chaque changement de mois ou de période, le layout faisait d'abord sortir l'ancien contenu (200 ms), puis entrer le nouveau (300 ms). Le contenu se pose désormais tel quel à la réponse, sans être remonté : les cartes restent en place, le bouton du mois ou de la période garde le focus, et chaque graphique prend les données de la nouvelle période.
+- **La séance en cours ne relit plus sa propre séance pour proposer les valeurs de ses séries** (#2148, #PR) : étape 3c de #2148. Le calcul groupé des valeurs proposées relisait la séance par son identifiant alors que la page la tenait déjà de la route : une requête SQL de moins à chaque ouverture de la séance et à chaque rechargement de la séance après un vidage de la file, six au lieu de sept. L'historique lu reste celui du compte connecté.
 
 ## [1.7.0] - 2026-11-06
 
