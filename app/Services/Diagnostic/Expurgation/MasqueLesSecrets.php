@@ -22,11 +22,11 @@ namespace App\Services\Diagnostic\Expurgation;
  * s'essaie qu'au début d'un mot : une longue suite n'est parcourue qu'une
  * fois.
  *
- * Les deux premiers motifs sont publics : la table des exceptions masque
- * aussi, par valeur, le jeton de diagnostic et la valeur d'un en-tête
- * `Bearer …` (`ExceptionEnregistree`), et la garde des fichiers suivis
- * reconnaît un jeton au même motif (`AucunJetonDeDiagnosticNEstSuiviTest`).
- * Ils ne s'écrivent qu'ici.
+ * Les deux premiers motifs sont publics : la table des exceptions et le
+ * journal masquent aussi, par valeur, le jeton de diagnostic et la valeur
+ * d'un en-tête `Bearer …` (`TexteSansJeton`), et la garde des fichiers
+ * suivis reconnaît un jeton au même motif
+ * (`AucunJetonDeDiagnosticNEstSuiviTest`). Ils ne s'écrivent qu'ici.
  */
 final class MasqueLesSecrets
 {
@@ -34,8 +34,8 @@ final class MasqueLesSecrets
      * La valeur d'un en-tête `Authorization: Bearer …` : le mot, quelle que
      * soit sa casse, un à huit blancs, puis ce qui suit jusqu'au premier
      * blanc, guillemet, apostrophe ou chevron, 4 096 octets au plus. Le motif
-     * lit des octets. La table des exceptions retire elle-même la suite d'une
-     * valeur plus longue (`ExceptionEnregistree`).
+     * lit des octets. La table des exceptions et le journal retirent
+     * eux-mêmes la suite d'une valeur plus longue (`TexteSansJeton`).
      */
     public const string MOTIF_BEARER = '/\bBearer\s{1,8}[^\s"\'<>]{1,4096}/i';
 

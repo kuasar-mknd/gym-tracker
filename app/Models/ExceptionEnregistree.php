@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Services\Diagnostic\Expurgation\MasqueLesSecrets;
 use App\Support\TexteSansAdresse;
+use App\Support\TexteSansJeton;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -48,16 +48,10 @@ use Illuminate\Support\Str;
  * passé dans un autre en-tête, un champ, la chaîne de requête ou le chemin,
  * ni ce qu'en recopient le message, la pile, les requêtes SQL et le texte
  * Markdown, qui cite les en-têtes. Le jeton devient « [masqué] », la valeur
- * « Bearer [masqué] », par les deux motifs de l'expurgation du diagnostic
- * (`MasqueLesSecrets::MOTIF_DU_JETON`, `MOTIF_BEARER`), une seule source,
- * et la valeur en entier, au-delà des 4 096 octets que lit son motif
- * (`texteSansJetons()`) ; ses autres motifs (suites hexadécimales, base64,
- * JWT) n'en sont pas, qui prendraient pour des secrets les empreintes et
- * les fichiers du build qu'une exception cite. Un mot qui suit `Bearer` et
- * un blanc est masqué aussi, faute de pouvoir le distinguer d'un secret.
- * Avant les budgets : coupé d'abord, un jeton à cheval sur la limite
- * n'aurait plus sa forme entière, et son début resterait
- * (`JetonsHorsDesExceptionsTest`).
+ * « Bearer [masqué] », en entier, par le masque que le journal partage
+ * (`TexteSansJeton`), aux motifs de l'expurgation du diagnostic. Avant les
+ * budgets : coupé d'abord, un jeton à cheval sur la limite n'aurait plus sa
+ * forme entière, et son début resterait (`JetonsHorsDesExceptionsTest`).
  *
  * Et à taille bornée : le paquet garde le corps entier de la requête, le
  * message d'une exception peut recopier une valeur reçue, que le texte
@@ -292,7 +286,7 @@ final class ExceptionEnregistree extends Exception
     private static function sansJetons(mixed $valeur): mixed
     {
         if (is_string($valeur)) {
-            return self::texteSansJetons($valeur);
+            return TexteSansJeton::de($valeur);
         }
 
         if (! is_array($valeur)) {
@@ -302,36 +296,10 @@ final class ExceptionEnregistree extends Exception
         $masquees = [];
 
         foreach ($valeur as $clef => $element) {
-            $masquees[is_string($clef) ? self::texteSansJetons($clef) : $clef] = self::sansJetons($element);
+            $masquees[is_string($clef) ? TexteSansJeton::de($clef) : $clef] = self::sansJetons($element);
         }
 
         return $masquees;
-    }
-
-    /**
-     * Un texte où le jeton de diagnostic devient « [masqué] » et la valeur
-     * d'un en-tête `Bearer …` « Bearer [masqué] », en entier.
-     *
-     * Le motif de `Bearer` lit au plus 4 096 octets : la suite qu'il n'a pas
-     * lue est retirée ensuite, jusqu'au premier blanc, guillemet, apostrophe
-     * ou chevron, d'un trait et sans retour en arrière. Sans quoi la fin
-     * d'une valeur plus longue resterait lisible, avec un jeton collé à sa
-     * fin, dont le motif avalait le début et que le motif du jeton ne
-     * reconnaissait plus, et le motif, qui lit des octets, laisserait un
-     * caractère coupé, que ni MySQL ni le JSON n'accepteraient. Un texte que
-     * l'expression ne sait pas lire est masqué en entier.
-     */
-    private static function texteSansJetons(string $texte): string
-    {
-        return preg_replace(
-            [
-                MasqueLesSecrets::MOTIF_BEARER,
-                '/\bBearer '.preg_quote(self::MASQUE, '/').'\K[^\s"\'<>]++/',
-                MasqueLesSecrets::MOTIF_DU_JETON,
-            ],
-            ['Bearer '.self::MASQUE, '', self::MASQUE],
-            $texte,
-        ) ?? self::MASQUE;
     }
 
     /**
