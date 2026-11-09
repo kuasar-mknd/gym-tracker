@@ -55,17 +55,27 @@ function clesDeStatistiques(): array
     ));
 }
 
-it('n’oublie aucune clé de statistique qu’il a fait écrire', function (): void {
+/**
+ * Un compte avec une séance terminée, une ligne et une série, pour que chaque
+ * lecteur ait de quoi écrire.
+ */
+function compteAvecSeancePourLesStatistiques(): User
+{
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
     $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
     Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 100, 'reps' => 10, 'is_warmup' => false]);
 
-    Cache::flush();
+    return $user;
+}
 
-    // On fait écrire l'application par ses vrais points d'entrée, sur toutes
-    // les périodes qu'elle sait servir.
+/**
+ * Fait écrire l'application par ses vrais points d'entrée, sur toutes les
+ * périodes qu'elle sait servir.
+ */
+function faireEcrireLesStatistiquesDe(User $user): void
+{
     $tableauDeBord = app(GetStatsDashboardAction::class);
     $volume = app(VolumeStatsService::class);
     $seances = app(WorkoutStatsService::class);
@@ -78,6 +88,14 @@ it('n’oublie aucune clé de statistique qu’il a fait écrire', function (): 
     $seances->getDurationHistory($user, 20);
     $seances->getDurationHistory($user, 30);
     $volume->getWeeklyVolumeComparison($user);
+}
+
+it('n’oublie aucune clé de statistique qu’il a fait écrire', function (): void {
+    $user = compteAvecSeancePourLesStatistiques();
+
+    Cache::flush();
+
+    faireEcrireLesStatistiquesDe($user);
 
     $ecrites = clesDeStatistiques();
     expect($ecrites)->not->toBeEmpty('rien n’a été mis en cache : le test ne prouverait rien');
@@ -88,20 +106,45 @@ it('n’oublie aucune clé de statistique qu’il a fait écrire', function (): 
     // Les lecteurs rejouent : chacun doit écrire une clef neuve. Un lecteur
     // qui n'a pas pris la version retomberait sur son ancienne entrée et
     // n'en écrirait aucune.
-    foreach ([7, 30, 90, 365] as $jours) {
-        $tableauDeBord->performanceOverview($user, $jours);
-        $volume->getVolumeTrend($user, $jours);
-    }
-    $volume->getVolumeHistory($user, 20);
-    $volume->getVolumeHistory($user, 30);
-    $seances->getDurationHistory($user, 20);
-    $seances->getDurationHistory($user, 30);
-    $volume->getWeeklyVolumeComparison($user);
+    faireEcrireLesStatistiquesDe($user);
 
     $nouvelles = array_values(array_diff(clesDeStatistiques(), $avantRelecture));
     expect(count($nouvelles))->toBe(count($ecrites), sprintf(
         "%d clés écrites avant l'invalidation, %d clés neuves après : un lecteur relit une ancienne entrée",
         count($ecrites),
+        count($nouvelles)
+    ));
+});
+
+/*
+ * La version elle-même vit dans le cache, sans échéance, et Redis l'évince
+ * comme le reste quand il manque de place. Un compteur évincé repartait de
+ * zéro et remontait au numéro déjà servi : après une invalidation, chaque
+ * lecteur retombait sur son entrée d'avant, et n'en écrivait aucune (#2151).
+ */
+it('n’oublie aucune clé de statistique qu’il a fait écrire quand la version des séances a été évincée', function (): void {
+    $user = compteAvecSeancePourLesStatistiques();
+    $version = "stats-version.seances.{$user->id}";
+
+    Cache::flush();
+
+    faireEcrireLesStatistiquesDe($user);
+    $ecrites = count(clesDeStatistiques());
+    app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
+    faireEcrireLesStatistiquesDe($user);
+
+    expect(Cache::has($version))->toBeTrue('la version n’est pas en cache : l’effacer ne prouverait rien');
+    Cache::forget($version);
+    app()->forgetScopedInstances();
+
+    app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
+    $avantRelecture = clesDeStatistiques();
+    faireEcrireLesStatistiquesDe($user);
+
+    $nouvelles = array_values(array_diff(clesDeStatistiques(), $avantRelecture));
+    expect(count($nouvelles))->toBe($ecrites, sprintf(
+        "%d clés écrites avant l'éviction, %d clés neuves après : un lecteur relit une entrée d'avant l'invalidation",
+        $ecrites,
         count($nouvelles)
     ));
 });

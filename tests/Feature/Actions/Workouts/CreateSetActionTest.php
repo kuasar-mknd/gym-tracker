@@ -7,7 +7,9 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Support\Facades\Cache;
+use App\Services\Stats\ClesDeStats;
+use Illuminate\Cache\Events\KeyWritten;
+use Illuminate\Support\Facades\Event;
 
 it('creates a set and clears volume stats', function (): void {
     $user = User::factory()->create();
@@ -22,7 +24,13 @@ it('creates a set and clears volume stats', function (): void {
         'is_completed' => true,
     ];
 
-    Cache::spy();
+    $cleAvant = ClesDeStats::seances($user, 'volume_history.20');
+    $versionsEcrites = 0;
+    Event::listen(KeyWritten::class, function (KeyWritten $ecriture) use (&$versionsEcrites, $user): void {
+        if ($ecriture->key === "stats-version.seances.{$user->id}") {
+            $versionsEcrites++;
+        }
+    });
 
     $action = app(CreateSetAction::class);
     $set = $action->execute($user, $workoutLine, $data);
@@ -43,9 +51,9 @@ it('creates a set and clears volume stats', function (): void {
         'is_completed' => true,
     ]);
 
-    Cache::shouldHaveReceived('increment')
-        ->with("stats-version.seances.{$user->id}")
-        ->once();
+    // Invalider, c'est tirer une version neuve des séances, une fois (#2151).
+    expect($versionsEcrites)->toBe(1)
+        ->and(ClesDeStats::seances($user, 'volume_history.20'))->not->toBe($cleAvant);
     // L'assertion sur `stats.monthly_volume_comparison` est partie : cette
     // entree n'est jamais ecrite, donc l'oublier ne prouvait rien (#1502).
 });

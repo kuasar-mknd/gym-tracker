@@ -50,7 +50,9 @@ it('n’invalide pas la liste d’un autre utilisateur pour un exercice personne
     $listeDuPremier = Exercise::enCachePourUtilisateur($premier->id);
     Exercise::factory()->create(['user_id' => $second->id, 'name' => 'Rowing']);
 
-    expect(Cache::has('exercices_liste_'.$premier->id.'_r0'))->toBeTrue()
+    // La clef se lit par la fonction du code : la révision est un ULID tiré
+    // par l'application, qu'aucun littéral ne connaît d'avance (#2151).
+    expect(Cache::has(Exercise::cleDeListe($premier->id)))->toBeTrue()
         ->and($listeDuPremier->pluck('name')->all())->not->toContain('Tirage');
 });
 
