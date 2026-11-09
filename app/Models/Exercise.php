@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ExerciseCategory;
+use App\Support\VersionDeCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -90,8 +91,8 @@ class Exercise extends Model
      * Vide la liste en cache du propriétaire de cet exercice.
      *
      * Un exercice du catalogue commun apparaît dans la liste de tout le monde :
-     * plutôt que d'énumérer les utilisateurs, la révision du catalogue avance
-     * d'un cran et toutes les clefs deviennent caduques d'un coup.
+     * plutôt que d'énumérer les utilisateurs, le catalogue tire une révision
+     * neuve et toutes les clefs deviennent caduques d'un coup.
      */
     public function invalidateCache(): void
     {
@@ -101,26 +102,32 @@ class Exercise extends Model
             return;
         }
 
-        Cache::forever('exercises_catalogue_revision', self::revisionDuCatalogue() + 1);
+        VersionDeCache::renouveler('exercises_catalogue_revision');
     }
 
     /**
-     * La revision du catalogue partage, un compteur et non une horloge.
-     *
-     * `time()` marquait deux modifications faites dans la meme seconde de la
-     * meme valeur : la seconde n'invalidait plus rien, et les listes deja
-     * reconstruites entre les deux restaient servies une heure durant.
+     * La clef de la liste d'un utilisateur, sous la révision du catalogue
+     * partagé. Publique pour qu'un test la relise par la même fonction que le
+     * code : la révision n'est connue d'aucun littéral.
      */
-    private static function revisionDuCatalogue(): int
-    {
-        $revision = Cache::get('exercises_catalogue_revision', 0);
-
-        return is_numeric($revision) ? (int) $revision : 0;
-    }
-
-    private static function cleDeListe(int $idUtilisateur): string
+    public static function cleDeListe(int $idUtilisateur): string
     {
         return 'exercices_liste_'.$idUtilisateur.'_r'.self::revisionDuCatalogue();
+    }
+
+    /**
+     * La révision du catalogue partagé, un ULID jamais réutilisé.
+     *
+     * `time()` marquait deux modifications faites dans la même seconde de la
+     * même valeur : la seconde n'invalidait plus rien, et les listes déjà
+     * reconstruites entre les deux restaient servies une heure durant. Le
+     * compteur qui l'a remplacé repartait de zéro quand le cache l'évinçait,
+     * et remontait vers des révisions déjà servies (#2151). Un ULID porte
+     * l'heure, mais deux tirés dans la même milliseconde diffèrent.
+     */
+    private static function revisionDuCatalogue(): string
+    {
+        return VersionDeCache::lire('exercises_catalogue_revision');
     }
 
     #[\Override]

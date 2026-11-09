@@ -1,6 +1,7 @@
 ---
 paths:
   - 'tests/**'
+  - 'phpstan-baseline.neon'
 ---
 
 # Tests
@@ -90,3 +91,6 @@ Réglé le 2026-11-04 (#2173). `now()->subMonth()` garde le jour du mois et lais
 
 ## Un instant de la première occurrence de l'heure répétée ne se pose pas par `setTestNow()`
 Réglé le 2026-11-05 (#2159). Carbon rebâtit le maintenant simulé depuis son heure murale, dans le fuseau demandé (`Carbon\Traits\Test::mockConstructorParameters()`, format `Y-m-d H:i:s.u`) : après `Carbon::setTestNow(Carbon::parse('2026-10-25T00:30:00Z'))`, `now()` rend `2026-10-25T01:30:00Z`, la seconde occurrence de l'heure que le passage à l'heure d'hiver répète à Paris, et un test du défaut passerait sans rien prouver. Un instant de la première occurrence vient d'un envoi qui porte son décalage, d'un âge du geste retranché d'un maintenant pris hors de cette occurrence (`X-Heure-De-L-Appareil`), ou d'un `Carbon` construit à cet instant (`Carbon::parse('…Z')->setTimezone(…)`). Une horloge posée près de l'heure répétée se vérifie, comme `heureRepeteeHorlogeA()` dans `InstantsDeLHeureRepeteeTest`, qui compare `now()` à l'instant voulu. Une ligne d'avant le décalage s'écrit sans lui (`DB::table()->insert()`, ou la fabrique `sansDecalage()`), et un cas qui doit rester juste (seconde occurrence, hors de l'heure répétée, ligne d'avant) se joue à côté de chaque cas du défaut.
+
+## Un lot qui retire des entrées du baseline PHPStan resserre ses plafonds au nouveau compte
+Réglé le 2026-11-06 (#2151). `PhpstanBaselineRatchetTest` (tests/Feature/Conventions) plafonne les entrées et les erreurs que `phpstan-baseline.neon` masque (`BASELINE_BLOCS_MAX`, `BASELINE_ERREURS_MAX`), et ne rappelle de resserrer qu'à plus de vingt erreurs d'avance sur le compte réel. Cette tolérance ne dispense pas de le faire : un lot qui draine sans resserrer reporte l'écart sur le suivant, et celui qui le pousse à vingt et une fait tomber le garde sans avoir rien fait régresser. #2151 retirait trois erreurs et laissait les plafonds, de sorte que l'écart passait de 17 à 20, à la limite ; la raison donnée, ne pas croiser une autre PR, ne tenait à rien (aucune PR ouverte, aucune branche ne touchait au baseline). Le lot qui draine pose donc les deux plafonds au compte qu'il laisse, tel que le test le relit (les lignes `path:`, et la somme des `count:`, un bloc sans `count:` valant un) ; deux lots qui drainent en parallèle se rejoignent à la fusion, où le second prend le compte d'après les deux.
