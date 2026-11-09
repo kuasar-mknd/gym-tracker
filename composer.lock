@@ -8122,16 +8122,16 @@
         },
         {
             "name": "spatie/laravel-schedule-monitor",
-            "version": "4.3.1",
+            "version": "4.3.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/spatie/laravel-schedule-monitor.git",
-                "reference": "be461457fb6e4e41ee7ccaadd62cc1eafc9be014"
+                "reference": "d1d95aa81d789d599403fe287bc3c6107420e84c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-schedule-monitor/zipball/be461457fb6e4e41ee7ccaadd62cc1eafc9be014",
-                "reference": "be461457fb6e4e41ee7ccaadd62cc1eafc9be014",
+                "url": "https://api.github.com/repos/spatie/laravel-schedule-monitor/zipball/d1d95aa81d789d599403fe287bc3c6107420e84c",
+                "reference": "d1d95aa81d789d599403fe287bc3c6107420e84c",
                 "shasum": ""
             },
             "require": {
@@ -8188,7 +8188,7 @@
             ],
             "support": {
                 "issues": "https://github.com/spatie/laravel-schedule-monitor/issues",
-                "source": "https://github.com/spatie/laravel-schedule-monitor/tree/4.3.1"
+                "source": "https://github.com/spatie/laravel-schedule-monitor/tree/4.3.2"
             },
             "funding": [
                 {
@@ -8196,7 +8196,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-06-25T11:33:01+00:00"
+            "time": "2026-11-04T15:39:25+00:00"
         },
         {
             "name": "spatie/laravel-signal-aware-command",
