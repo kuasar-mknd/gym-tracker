@@ -22,7 +22,10 @@ declare(strict_types=1);
  *
  * Une majeure fautive sans correctif publié ne se corrige qu'en changeant de
  * majeure : minimatch 10 et glob 11 et 13 n'en ont pas, et leurs consommateurs
- * n'acceptent pas encore minimatch 11 ni glob 14. Un tel override n'est admis
+ * n'acceptent pas encore minimatch 11 ni glob 14. Au 2026-11-06, glob 13.0.7
+ * reporte le correctif sur la 13, mais l'avis ne nomme que 14.0.2 : OSV et
+ * `avisNpmTenusSurLeVerrou()` la tiennent pour vulnérable, et l'override reste
+ * en 14 jusqu'à la mise à jour de l'avis. Un tel override n'est admis
  * que relu : chaque consommateur qui charge l'autre majeure est inscrit, à sa
  * version, dans `overridesNpmHorsDeLeurMajeureRelus()`, après relecture de ce
  * qu'il appelle contre l'API de la majeure imposée. Un consommateur absent de
@@ -46,14 +49,17 @@ declare(strict_types=1);
  * `globSync()` et `hasMagic()`. Tout cela existe à l'identique dans la majeure
  * imposée ; ce que minimatch 11 retire (`makeRe()`, `AST`, `debug`,
  * `matchOne()`…) et ce que glob 14 change (ses classes internes, les motifs
- * d'`ignore` qui commencent par `/`), aucun ne s'en sert.
+ * d'`ignore` qui commencent par `/`), aucun ne s'en sert. ESLint 10.14.0,
+ * relu le 2026-11-06 : `lib/eslint/eslint-helpers.js`, seul fichier qui prend
+ * minimatch, est identique à celui de 10.13.0, et ESLint rend les mêmes
+ * fichiers et les mêmes messages sur le dépôt.
  *
  * @return array<string, array{majeure: int, consommateurs: list<string>}>
  */
 function overridesNpmHorsDeLeurMajeureRelus(): array
 {
     return [
-        'minimatch@10' => ['majeure' => 11, 'consommateurs' => ['@eslint/config-array@0.23.5', 'editorconfig@3.0.2', 'eslint@10.13.0']],
+        'minimatch@10' => ['majeure' => 11, 'consommateurs' => ['@eslint/config-array@0.23.5', 'editorconfig@3.0.2', 'eslint@10.14.0']],
         'glob@11' => ['majeure' => 14, 'consommateurs' => ['workbox-build@7.4.1']],
         'glob@13' => ['majeure' => 14, 'consommateurs' => ['js-beautify@2.0.3']],
     ];

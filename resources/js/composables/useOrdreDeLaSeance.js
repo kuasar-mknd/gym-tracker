@@ -107,7 +107,9 @@ export const useOrdreDeLaSeance = ({
 
     /**
      * L'exercice dont une serie est en vol. Sa rangee cesse alors d'ecouter le
-     * glissement lateral : les deux gestes partent du meme endroit.
+     * glissement lateral : les deux gestes partent du meme endroit. Il se pose
+     * au debut du geste et se leve a sa fin, trie ou non : un geste relache a
+     * sa place ne trie rien, et un tri vient pendant le geste.
      */
     const serieEnDeplacement = ref(null)
 
@@ -146,9 +148,11 @@ export const useOrdreDeLaSeance = ({
                 triggerHaptic('tap')
             },
             aLaFin: (lineId) => {
-                serieEnDeplacement.value = null
                 reconstruireLesSeries(lineId)
                 persisterLOrdreDesSeries(lineId)
+            },
+            auBout: () => {
+                serieEnDeplacement.value = null
             },
         },
     )

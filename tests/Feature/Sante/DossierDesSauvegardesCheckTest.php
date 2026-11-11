@@ -204,7 +204,7 @@ it('borne chaque accès de la sonde à dix secondes', function (): void {
 });
 
 it('dit que le partage ne répond pas quand le délai de la sonde est dépassé', function (): void {
-    Processus::fake(fn () => throw new ProcessTimedOutException(
+    Processus::fake(fn (): never => throw new ProcessTimedOutException(
         new DelaiDepasse(new Process(['touch', '/sauvegardes/.sonde']), DelaiDepasse::TYPE_GENERAL),
         new FakeProcessResult(),
     ));
@@ -241,7 +241,7 @@ it('dit si le dossier répond, présent ou non, et pas s’il ne répond plus', 
 it('ne parcourt pas les archives d’un partage qui ne répond plus', function (): void {
     expect(sauvegardesControleDesArchives()->shouldRun())->toBeTrue();
 
-    Processus::fake(fn () => throw new ProcessTimedOutException(
+    Processus::fake(fn (): never => throw new ProcessTimedOutException(
         new DelaiDepasse(new Process(['ls', '-A', '/sauvegardes']), DelaiDepasse::TYPE_GENERAL),
         new FakeProcessResult(),
     ));

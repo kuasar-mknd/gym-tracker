@@ -164,12 +164,16 @@ describe('se déconnecter sans réseau', () => {
 
     /*
      * Une visite annulée en route passe par `onCancel`, puis par `onFinish` :
-     * la déconnexion se libère par là, sans rappel à part.
+     * la déconnexion se libère par là, sans rappel à part. En route : sa
+     * requête est partie, ce qui, depuis Inertia 3.11, n'arrive plus avant la
+     * fin de `seDeconnecter()`, mais une microtâche après. Annulée avant ce
+     * départ : cas suivant.
      */
     it('repart quand la visite précédente a été annulée en route', async () => {
         reseau.mode = 'muet'
         let fin = await attendreLaFinDeLaVisite()
         await seDeconnecter()
+        await vi.waitUntil(() => logouts().length === 1)
         routeur.cancelAll()
         await fin()
 
@@ -188,6 +192,45 @@ describe('se déconnecter sans réseau', () => {
         await fin()
 
         expect(logouts()).toHaveLength(2)
+        expect(annonces).toEqual([])
+    })
+
+    /*
+     * Depuis Inertia 3.11, la visite démarre (`onStart`) dans l'appel même,
+     * mais sa requête ne part qu'une microtâche plus tard : annulée entre les
+     * deux, elle n'envoie rien. `onFinish` passe quand même, et la
+     * déconnexion se libère par lui, comme celle annulée en route.
+     */
+    it('repart quand la visite précédente a été annulée avant le départ de sa requête', async () => {
+        reseau.mode = 'muet'
+        let fin = await attendreLaFinDeLaVisite()
+        await seDeconnecter()
+
+        // Démarrée, sans requête encore partie.
+        expect(logouts()).toHaveLength(0)
+        routeur.cancelAll()
+        await fin()
+
+        expect(logouts()).toHaveLength(0)
+        // Toujours connectée : rien n'est effacé, et rien n'est annoncé.
+        expect(laisse.comptesOublies).toEqual([])
+        expect(annonces).toEqual([])
+        expect(relais.rejets).toEqual([])
+
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia({
+            component: 'Auth/Login',
+            url: '/login',
+            version: 'v',
+            props: { texte: 'Connexion' },
+        })
+        fin = await attendreLaFinDeLaVisite()
+        await seDeconnecter()
+        await fin()
+
+        expect(logouts()).toHaveLength(1)
+        expect(document.getElementById('contenu').textContent).toBe('Connexion')
+        expect(laisse.comptesOublies).toEqual(['1'])
         expect(annonces).toEqual([])
     })
 

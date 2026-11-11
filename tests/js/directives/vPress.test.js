@@ -201,17 +201,23 @@ describe('v-press', () => {
         }
     })
 
+    /*
+     * La transition d'origine se lit telle que l'élément la sérialise. Depuis
+     * jsdom 31, comme un navigateur, le raccourci omet ses valeurs initiales :
+     * « opacity 200ms ease » se relit « opacity 200ms ». La courbe `linear`,
+     * qui n'est pas la valeur initiale, se relit telle qu'elle s'écrit.
+     */
     it('gives the element back the transition it arrived with', () => {
-        const wrapper = mountPressable({ style: 'transition: opacity 200ms ease' })
+        const wrapper = mountPressable({ style: 'transition: opacity 200ms linear' })
         const element = wrapper.element
 
         // The directive appends its own transform transition to whatever was there.
-        expect(element.style.transition).toContain('opacity 200ms ease')
+        expect(element.style.transition).toContain('opacity 200ms linear')
         expect(element.style.transition).toContain('transform 100ms ease-out')
 
         wrapper.unmount()
 
-        expect(element.style.transition).toBe('opacity 200ms ease')
+        expect(element.style.transition).toBe('opacity 200ms linear')
         expect(element.style.willChange).toBe('')
     })
 })

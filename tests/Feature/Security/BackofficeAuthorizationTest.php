@@ -112,10 +112,13 @@ it('ne divulgue aucune donnee au visiteur anonyme et le depose sur le formulaire
         ->assertDontSee('victime-anonyme@example.test');
 
     forgetBackofficeThrottle();
+    // Depuis Filament 5.11.1, le mot de passe, champ qu'on peut révéler, se lie
+    // par `wire:model.fill` : ce qui est tapé avant le chargement de Livewire
+    // est gardé.
     $this->get(route('filament.admin.auth.login'))
         ->assertOk()
         ->assertSee('wire:model="data.email"', escape: false)
-        ->assertSee('wire:model="data.password"', escape: false)
+        ->assertSee('wire:model.fill="data.password"', escape: false)
         ->assertDontSee('victime-anonyme@example.test');
 });
 

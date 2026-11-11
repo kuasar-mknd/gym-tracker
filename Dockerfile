@@ -30,10 +30,11 @@ RUN mkdir -p /etc/mysql/conf.d && printf '[client]\nskip-ssl-verify-server-cert\
 
 
 # 2. Builder stage for Frontend assets
-# 24 is the active LTS line, and the one CI builds with. 25 and 26 are not LTS
-# yet, and the image was on 25 while CI tested on 24 — so the assets that
-# shipped were never the assets that were tested.
-FROM --platform=$BUILDPLATFORM node:24-slim AS frontend-builder
+# La ligne LTS active de Node, celle sous laquelle la CI construit et teste :
+# l'image a tourne sur 25, qui n'etait pas LTS, quand la CI testait sur 24, et
+# les actifs livres n'etaient pas ceux qui avaient ete testes.
+# `LeMemeNodePartoutTest` tient la meme majeure ici, en CI et sur le poste.
+FROM --platform=$BUILDPLATFORM node:26-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 # Meme commande que la CI (`npm ci` nu) : le lock qui a ete teste est celui

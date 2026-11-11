@@ -59,9 +59,9 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 5 740 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
-| **Tests frontend** | 4 280 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
-| **Tests navigateur** | 192 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
+| **Tests backend** | 5 732 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
+| **Tests frontend** | 4 277 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
+| **Tests navigateur** | 191 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
 | **Mutation testing** | ≥ 82 % `App\Services\PersonalRecordService`, 94 % le reste d'`App\Services`, 83 % `App\Services\Stats`, 88 % le reste d'`App\Services\Diagnostic`, 91 % `App\Services\Diagnostic\Projections`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
@@ -79,7 +79,7 @@ La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand 
 **Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
 
 1. les tests backend, frontend et navigateur, le lint, l'audit et la construction multi-architecture sont verts ;
-2. l'image démarre sur une base MySQL vide, en 8.4 comme en 9.7.2, et répond sur `/up` (job `demarrage`) ;
+2. l'image démarre sur une base MySQL vide, en 8.4 comme en 9.7.4, et répond sur `/up` (job `demarrage`) ;
 3. la **passe nocturne** est verte, chacune de ses parts, seuils de mutation compris (job `promotion`).
 
 La release GitHub exige en plus la CI entière, `semgrep`, `secrets` et `workflows` compris.
@@ -333,7 +333,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 
 | Catégorie | Technologies |
 | --- | --- |
-| **Backend** | Laravel 13, PHP 8.5 (8.5.12 au moins, que l'image et `composer.json` exigent, Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.2, la LTS suivante), Redis et Laravel Horizon |
+| **Backend** | Laravel 13, PHP 8.5 (8.5.12 au moins, que l'image et `composer.json` exigent, Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.4, la LTS suivante), Redis et Laravel Horizon |
 | **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4, Vite 8 |
 | **Backoffice** | Filament 5 |
 | **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |
