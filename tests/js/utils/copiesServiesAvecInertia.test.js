@@ -590,12 +590,12 @@ describe('ce qui ne reçoit jamais de copie', () => {
         await visiter('/workouts', { preserveState: true })
         await vi.waitUntil(() => annonces.length === 2)
 
-        // Un préchargement échoue sans un mot ; le cache qu'il laisse ne doit pas servir aux cas suivants.
+        // Un préchargement échoue sans un mot, et le filet vide le cache qu'il laissait en vol (#2148).
         const parties = requetes.length
         routeur.prefetch('/workouts')
         await vi.waitUntil(() => requetes.length === parties + 1)
         await uneTache()
-        routeur.flushAll()
+        expect(routeur.getPrefetching('/workouts')).toBeFalsy()
 
         expect(annonces.map((annonce) => annonce.message)).toEqual([
             visites.ECRITURE_NON_CONFIRMEE,

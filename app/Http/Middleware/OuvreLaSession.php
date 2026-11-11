@@ -54,6 +54,23 @@ use Symfony\Component\HttpFoundation\Response;
  * La marque ne sert qu'à qui la pose : elle ne change que le sort de la
  * session de la requête qui la porte.
  *
+ * Un GET d'un préchargement (#2148, décision D2 du propriétaire). Inertia
+ * marque chaque préchargement `Purpose: prefetch`, un navigateur les siens
+ * `Sec-Purpose: prefetch` ; `Request::prefetch()` reconnaît l'un et l'autre.
+ * Laravel n'en sautait que l'adresse précédente : un préchargement, que la
+ * personne ne voit pas, enregistrait et prolongeait la session, reposait ses
+ * cookies et vieillissait le flash qu'une écriture laissait à la page
+ * suivante. Un GET ou un HEAD préchargé suit désormais le sort du
+ * préchauffage : session lue, jamais enregistrée, aucun cookie posé. Sa page
+ * ne porte pas non plus le flash en attente
+ * (`HandleInertiaRequests::masquerLeFlashDUnPrechargement()`). Sauf quand le
+ * préchargement ouvre une session neuve (un invité sans cookie, une session
+ * expirée, que le magasin ne tient plus) : elle s'enregistre et pose ses
+ * cookies comme chez Laravel. Sa page porte son jeton, qu'aucune session ne
+ * tiendrait sinon : la page de connexion préchargée, puis montrée au
+ * toucher, échouerait en 419 à son premier envoi. Elle ne prolonge rien,
+ * puisqu'elle est neuve.
+ *
  * Branché à la place de `StartSession` dans le groupe `web`
  * (bootstrap/app.php, `web(replace:)`) : l'ordre de priorité de Laravel le
  * classe à la même place, par sa classe parente. Le panneau le nomme dans sa
@@ -89,8 +106,9 @@ final class OuvreLaSession extends StartSession
 
     /**
      * Ouvre la session, et l'enregistre à la fin comme Laravel, sauf sur un
-     * GET marqué du préchauffage ou quand elle a été détruite ailleurs
-     * pendant la requête : la réponse ne pose alors aucun cookie.
+     * GET marqué du préchauffage, sur un GET préchargé qui l'a trouvée au
+     * magasin, ou quand elle a été détruite ailleurs pendant la requête : la
+     * réponse ne pose alors aucun cookie.
      *
      * @param  Session  $session
      */
@@ -99,7 +117,7 @@ final class OuvreLaSession extends StartSession
     {
         $request->setLaravelSession($this->startSession($request, $session));
 
-        if (self::estUnPrechauffage($request)) {
+        if (self::laisseLaSessionTelleQuelle($request, $session)) {
             return $this->sansRienPoser($next($request));
         }
 
@@ -149,6 +167,31 @@ final class OuvreLaSession extends StartSession
     {
         return in_array($request->getMethod(), [Request::METHOD_GET, Request::METHOD_HEAD], true)
             && $request->headers->get(self::ENTETE) === self::PRECHAUFFAGE;
+    }
+
+    /**
+     * Un GET ou un HEAD préchargé : `Purpose: prefetch` (Inertia),
+     * `Sec-Purpose: prefetch` (un navigateur), ce que `Request::prefetch()`
+     * reconnaît. Une écriture qui porterait la marque reste une écriture.
+     */
+    public static function estUnPrechargement(Request $request): bool
+    {
+        return in_array($request->getMethod(), [Request::METHOD_GET, Request::METHOD_HEAD], true)
+            && $request->prefetch();
+    }
+
+    /**
+     * Un GET du préchauffage, ou un GET préchargé qui a lu une session que le
+     * magasin tenait : la session ne s'enregistre pas. Un préchargement qui
+     * en ouvre une neuve l'enregistre. Un magasin qui ne sait pas le dire
+     * (aucun dans l'application : `GestionnaireDesSessions` bâtit chacun) la
+     * tient pour lue.
+     */
+    private static function laisseLaSessionTelleQuelle(Request $request, Session $session): bool
+    {
+        return self::estUnPrechauffage($request)
+            || (self::estUnPrechargement($request)
+                && (! $session instanceof SessionQuiNeRenaitPas || $session->aEteLueAuMagasin()));
     }
 
     /**

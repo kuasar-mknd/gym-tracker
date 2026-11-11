@@ -170,6 +170,56 @@ it('ne relit aucun historique quand toutes les recommandations du lot sont en ca
     expect($lues)->toBe([]);
 });
 
+/*
+ * La séance en cours est déjà chargée par la route quand la page la montre :
+ * le calcul groupé la relisait par son identifiant (`Workout::find`), une
+ * requête de plus à chaque visite de la séance et à chaque rechargement de la
+ * prop `workout` (#2148, étape 3c).
+ */
+it('ne relit pas la séance que l’appelant a déjà chargée', function (): void {
+    [$user, $exercice, , $ligneDuJour] = historiquePourRecommandation(50.0);
+    $seance = Workout::query()->findOrFail($ligneDuJour->workout_id);
+    $lignes = new Collection([$ligneDuJour]);
+
+    $seancesLues = [];
+    DB::listen(function (QueryExecuted $requete) use (&$seancesLues): void {
+        if (preg_match('/\bfrom [`"]?workouts[`"]?\s/i', $requete->sql) === 1) {
+            $seancesLues[] = $requete->sql;
+        }
+    });
+
+    $valeurs = app(RecommendedValuesService::class)->batchRecommendedValues($lignes, $user->id, $seance);
+
+    expect($valeurs[$exercice->id]['weight'])->toBe(50.0)
+        ->and($seancesLues)->toBe([]);
+});
+
+it('relit la séance des lignes quand l’appelant n’en passe aucune', function (): void {
+    [$user, $exercice, , $ligneDuJour] = historiquePourRecommandation(50.0);
+    $ligneSansSaSeance = WorkoutLine::query()->findOrFail($ligneDuJour->id);
+
+    $seancesLues = [];
+    DB::listen(function (QueryExecuted $requete) use (&$seancesLues): void {
+        if (preg_match('/\bfrom [`"]?workouts[`"]?\s/i', $requete->sql) === 1) {
+            $seancesLues[] = $requete->sql;
+        }
+    });
+
+    $valeurs = app(RecommendedValuesService::class)->batchRecommendedValues(new Collection([$ligneSansSaSeance]), $user->id);
+
+    expect($valeurs[$exercice->id]['weight'])->toBe(50.0)
+        ->and($seancesLues)->toHaveCount(1);
+});
+
+it('refuse une séance qui n’est pas celle des lignes', function (): void {
+    [$user, , , $ligneDuJour] = historiquePourRecommandation(50.0);
+    $autreSeance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subWeek()]);
+
+    expect(fn (): array => app(RecommendedValuesService::class)
+        ->batchRecommendedValues(new Collection([$ligneDuJour]), $user->id, $autreSeance))
+        ->toThrow(new \InvalidArgumentException('La séance passée n’est pas celle des lignes.'));
+});
+
 it('sert le lot en cache pendant cinq minutes, puis le recalcule', function (): void {
     [$user, $exercice, $ligneHier, $ligneDuJour] = historiquePourRecommandation(50.0);
     $service = app(RecommendedValuesService::class);
@@ -187,8 +237,9 @@ it('sert le lot en cache pendant cinq minutes, puis le recalcule', function (): 
 });
 
 it('ne va pas en base pour une ligne qui ne porte aucune séance', function (): void {
-    // `resolveWorkout()` écarte ce cas avant la requête : sans séance il n'y a
-    // ni date de référence ni propriétaire, donc rien à chercher.
+    // `batchRecommendedValues()` écarte ce cas avant toute requête : sans
+    // séance il n'y a ni date de référence ni propriétaire, donc rien à
+    // chercher, pas même la séance de la ligne.
     $orpheline = WorkoutLine::factory()->make(['workout_id' => null]);
 
     $requetes = [];

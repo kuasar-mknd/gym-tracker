@@ -30,8 +30,9 @@ class FetchWorkoutShowAction
         $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']);
 
         // Les valeurs recommandées sont chargées en bloc, une ou deux requêtes,
-        // et non une par ligne.
-        WorkoutLine::batchRecommendedValues($workout->workoutLines, $user->id);
+        // et non une par ligne. La séance, déjà chargée par la route, n'est
+        // pas relue (#2148, étape 3c).
+        WorkoutLine::batchRecommendedValues($workout->workoutLines, $user->id, $workout);
 
         return [
             'workout' => $workout,
