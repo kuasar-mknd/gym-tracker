@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 /*
  * Chaque clé étrangère du schéma refuse une ligne dont le parent n'existe
  * pas, sur le serveur qui fait tourner la suite : en CI, MySQL 8.4 et 9.7.4
- * (#2095 ; 9.7.2 jusqu'au 2026-11-06).
+ * (#2095 ; 9.7.2 jusqu'au lot du 9 novembre, #2205).
  *
  * MySQL 9.7.2 ne vérifie plus une clé étrangère quand l'index qui la porte a
  * une colonne nulle dans la ligne écrite, même une colonne hors de la clé :

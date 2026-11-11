@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Schema;
  * ligne écrite sans elles se lit comme avant une fois remontée, un passage
  * arrêté entre deux colonnes reprend, et chaque ajout se fait sans recopier la
  * table (`ALGORITHM=INSTANT`), sous MySQL 8.4 comme 9.7.4 en CI (9.7.2
- * jusqu'au 2026-11-06).
+ * jusqu'au lot du 9 novembre, #2205).
  *
  * Ces cas passent par des ordres DDL, qui valident la transaction de
  * `RefreshDatabase` : ce fichier fait lui-même ce que le `migrate:fresh` qui
