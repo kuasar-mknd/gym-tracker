@@ -87,18 +87,37 @@ final class HeureDeLAppareil
      */
     private static function estUnInstant(mixed $valeur): bool
     {
-        if (! is_string($valeur) || preg_match(self::FORME_D_UN_INSTANT, $valeur) !== 1) {
-            return false;
-        }
+        return is_string($valeur)
+            && preg_match(self::FORME_D_UN_INSTANT, $valeur) === 1
+            && self::seLitCommeUnInstant(date_parse($valeur));
+    }
 
-        $analyse = date_parse($valeur);
-
+    /**
+     * L'analyse de `date_parse()` est sans erreur, et donne un jour du
+     * calendrier, une heure et un fuseau.
+     *
+     * @param  array<string, mixed>  $analyse
+     */
+    private static function seLitCommeUnInstant(array $analyse): bool
+    {
         return $analyse['error_count'] === 0
-            && is_int($analyse['year'])
-            && is_int($analyse['month'])
-            && is_int($analyse['day'])
-            && checkdate($analyse['month'], $analyse['day'], $analyse['year'])
+            && self::estUnJourDuCalendrier($analyse)
             && is_int($analyse['hour'])
             && ($analyse['is_localtime'] ?? false) === true;
+    }
+
+    /**
+     * L'analyse de `date_parse()` donne une année, un mois et un jour qui
+     * existent au calendrier (pas de 31 avril ni de 29 février hors d'une
+     * année bissextile).
+     *
+     * @param  array<string, mixed>  $analyse
+     */
+    private static function estUnJourDuCalendrier(array $analyse): bool
+    {
+        return is_int($analyse['year'])
+            && is_int($analyse['month'])
+            && is_int($analyse['day'])
+            && checkdate($analyse['month'], $analyse['day'], $analyse['year']);
     }
 }
