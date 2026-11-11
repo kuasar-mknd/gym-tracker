@@ -50,7 +50,8 @@ final readonly class CreeUnJetonDeDiagnosticAction
         string $nom,
         array $portees,
         int $jours,
-        #[SensitiveParameter] string $codeTotp,
+        #[SensitiveParameter]
+        string $codeTotp,
     ): array {
         if (config('app.diagnostic_enabled') !== true) {
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::INTERRUPTEUR_COUPE);
