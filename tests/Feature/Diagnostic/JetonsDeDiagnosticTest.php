@@ -120,6 +120,9 @@ it('refuse la création côté serveur, un motif par cause', function (array $re
     'interrupteur coupé' => [['app.diagnostic_enabled' => false], [PorteeDeDiagnostic::Sante], 7, null, CreationDeJetonRefusee::INTERRUPTEUR_COUPE],
     'interrupteur « 1 » lu comme texte' => [['app.diagnostic_enabled' => '1'], [PorteeDeDiagnostic::Sante], 7, null, CreationDeJetonRefusee::INTERRUPTEUR_COUPE],
     'adresse des alertes vide' => [['health.notifications.mail.to' => ''], [PorteeDeDiagnostic::Sante], 7, null, CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE],
+    'adresse des alertes absente' => [['health.notifications.mail.to' => null], [PorteeDeDiagnostic::Sante], 7, null, CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE],
+    'adresse des alertes en blancs' => [['health.notifications.mail.to' => '  '], [PorteeDeDiagnostic::Sante], 7, null, CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE],
+    'liste d’adresses vides' => [['health.notifications.mail.to' => ['', ' ']], [PorteeDeDiagnostic::Sante], 7, null, CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE],
     'code faux' => [[], [PorteeDeDiagnostic::Sante], 7, '000000', CreationDeJetonRefusee::CODE_REFUSE],
     'durée hors liste' => [[], [PorteeDeDiagnostic::Sante], 8, null, CreationDeJetonRefusee::DUREE_INVALIDE],
     'texte brut au-delà d’un jour' => [[], [PorteeDeDiagnostic::Sante, PorteeDeDiagnostic::TexteBrut], 7, null, CreationDeJetonRefusee::DUREE_INVALIDE],
@@ -160,6 +163,20 @@ it('coupe après cinq essais de code dans la minute', function (): void {
 
     expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
         ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::TROP_D_ESSAIS));
+});
+
+it('ne consomme pas le code quand deux jetons sont déjà actifs', function (): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+    JetonDeDiagnostic::factory()->count(2)->create();
+    $code = new Google2FA()->getCurrentOtp($secretTotp);
+
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: $code))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::JETONS_ACTIFS_AU_MAXIMUM))
+        ->and(RateLimiter::attempts('diagnostic:creation:'.$admin->id))->toBe(0);
+
+    JetonDeDiagnostic::query()->update(['revoque_le' => now()]);
+
+    expect(jetonsDeDiagnosticCreer($admin, $secretTotp, code: $code)['jeton'])->toBeInstanceOf(JetonDeDiagnostic::class);
 });
 
 it('refuse un troisième jeton actif', function (): void {
@@ -255,6 +272,8 @@ it('révoque en console : tous, par identifiant, et rien sans désignation', fun
 
     $this->artisan('diagnostic:revoquer')->assertExitCode(2);
     $this->artisan('diagnostic:revoquer', ['--tous' => true, '--identifiant' => $a->identifiant])->assertExitCode(2);
+    $this->artisan('diagnostic:revoquer', ['--si-coupe' => true, '--identifiant' => $a->identifiant])->assertExitCode(2);
+    $this->artisan('diagnostic:revoquer', ['--si-coupe' => true, '--tous' => true])->assertExitCode(2);
 
     expect(jetonsDeDiagnosticEstActif($a))->toBeTrue()
         ->and(jetonsDeDiagnosticEstActif($b))->toBeTrue();

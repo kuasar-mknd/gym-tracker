@@ -29,8 +29,10 @@ final class RevoquerLesJetonsDeDiagnostic extends Command
         $identifiant = $this->option('identifiant');
         $aUnIdentifiant = is_string($identifiant) && $identifiant !== '';
 
-        if ($this->option('tous') === true && $aUnIdentifiant) {
-            $this->components->error('Choisis l\'un des deux : --tous ou --identifiant=.');
+        $designations = array_filter([$this->option('si-coupe') === true, $this->option('tous') === true, $aUnIdentifiant]);
+
+        if (count($designations) > 1) {
+            $this->components->error('Choisis une seule désignation : --tous, --identifiant= ou --si-coupe.');
 
             return self::INVALID;
         }

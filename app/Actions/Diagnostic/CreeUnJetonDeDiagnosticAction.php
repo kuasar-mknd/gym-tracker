@@ -22,8 +22,9 @@ use SensitiveParameter;
  * Refus, dans l'ordre : l'interrupteur coupé ; la capacité ou le rôle de
  * super administrateur absents ; la double authentification non activée ;
  * `HEALTH_TO_ADDRESS` vide (une alerte qui ne part nulle part ne protège
- * rien) ; une durée ou des portées hors liste ; cinq essais de code dans la
- * minute ; un code faux ou déjà accepté ; deux jetons déjà actifs.
+ * rien) ; une durée ou des portées hors liste ; deux jetons déjà actifs (lus
+ * avant le code, qu'un refus ne doit pas consommer, puis relus sous le
+ * verrou) ; cinq essais de code dans la minute ; un code faux ou déjà accepté.
  *
  * Le jeton en clair n'est rendu qu'ici, une fois : l'appelant le garde
  * chiffré (`encrypt()`) le temps d'un rendu, jamais dans un champ de
@@ -67,14 +68,19 @@ final readonly class CreeUnJetonDeDiagnosticAction
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::DOUBLE_AUTHENTIFICATION_ABSENTE);
         }
 
-        if (config('health.notifications.mail.to') === '' || config('health.notifications.mail.to') === []) {
+        if ($this->adresseDesAlertesVide()) {
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE);
         }
 
         $this->verifierLaDemande($portees, $jours);
-        $this->verifierLeCode($createur, $secretTotp, $codeTotp);
 
         $instant = now();
+
+        if (JetonDeDiagnostic::query()->actifs($instant)->count() >= JetonDeDiagnostic::ACTIFS_AU_PLUS) {
+            throw new CreationDeJetonRefusee(CreationDeJetonRefusee::JETONS_ACTIFS_AU_MAXIMUM);
+        }
+
+        $this->verifierLeCode($createur, $secretTotp, $codeTotp);
 
         /** @var array{jeton: JetonDeDiagnostic, en_clair: string} $cree */
         $cree = Cache::lock('diagnostic:creation', self::VIE_DU_VERROU)
@@ -106,6 +112,13 @@ final readonly class CreeUnJetonDeDiagnosticAction
         ]);
 
         return ['jeton' => $jeton, 'en_clair' => JetonDeDiagnostic::composer($identifiant, $secret)];
+    }
+
+    private function adresseDesAlertesVide(): bool
+    {
+        $adresses = config('health.notifications.mail.to');
+
+        return array_all(is_array($adresses) ? $adresses : [$adresses], fn ($adresse): bool => ! (is_string($adresse) && trim($adresse) !== ''));
     }
 
     /**
