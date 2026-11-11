@@ -89,13 +89,70 @@ class HandleInertiaRequests extends Middleware
         Inertia::encryptHistory($pageDUnCompte && self::leNavigateurPeutChiffrer($request));
         $request->attributes->set(self::PAGE_QUI_PORTE_UN_COMPTE, $pageDUnCompte);
 
-        $reponse = parent::handle($request, $next);
+        $flashMasque = $this->masquerLeFlashDUnPrechargement($request);
+
+        try {
+            $reponse = parent::handle($request, $next);
+        } finally {
+            $this->rendreLeFlashMasque($request, $flashMasque);
+        }
 
         if ($request->attributes->getBoolean(self::PAGE_QUI_PORTE_UN_COMPTE)) {
             $reponse->headers->set('Cache-Control', self::CACHE_D_UNE_PAGE_DE_COMPTE);
         }
 
         return $reponse;
+    }
+
+    /**
+     * Retire de la session, le temps de la réponse, ce qu'une requête
+     * précédente y a laissé à la page suivante, quand cette requête est un
+     * préchargement (#2148, décision D2 du propriétaire : flash vide).
+     *
+     * Un préchargement lit la session sans l'enregistrer (`OuvreLaSession`) :
+     * le flash y reste pour la page suivante. Sa page ne doit pas le porter
+     * pour autant : elle serait montrée avec lui au toucher, et la page que
+     * la personne ouvre ensuite le montrerait une seconde fois. Tout ce que
+     * Laravel a flashé pour cette requête (`_flash.old`) est donc masqué :
+     * `flash.success` et `flash.error` de `share()`, les erreurs de
+     * validation, le flash d'Inertia (`Inertia::flash()`, que la réponse
+     * retire elle-même de la session) et le `status` que lisent certains
+     * contrôleurs. Rien n'est masqué pour une autre requête.
+     *
+     * @return array<string, mixed> les valeurs masquées, par clé
+     */
+    private function masquerLeFlashDUnPrechargement(Request $request): array
+    {
+        if (! $request->hasSession() || ! OuvreLaSession::estUnPrechargement($request)) {
+            return [];
+        }
+
+        $session = $request->session();
+        $masque = [];
+
+        foreach ((array) $session->get('_flash.old', []) as $cle) {
+            if (is_string($cle) && $session->has($cle)) {
+                $masque[$cle] = $session->get($cle);
+                $session->forget($cle);
+            }
+        }
+
+        return $masque;
+    }
+
+    /**
+     * Remet en session, la réponse faite, ce que
+     * `masquerLeFlashDUnPrechargement()` a retiré : la session d'un
+     * préchargement n'est jamais enregistrée, mais elle reste telle qu'elle
+     * a été lue pour qui la regarderait encore.
+     *
+     * @param  array<string, mixed>  $masque
+     */
+    private function rendreLeFlashMasque(Request $request, array $masque): void
+    {
+        foreach ($masque as $cle => $valeur) {
+            $request->session()->put($cle, $valeur);
+        }
     }
 
     /**
@@ -242,7 +299,9 @@ class HandleInertiaRequests extends Middleware
      * ensuite. `auth` reste partagé sur toute page, invité compris, où il vaut
      * `['user' => null]` : la garde de l'historique y lit le titulaire.
      * Jamais `Inertia::once()` : d'autres écrivains changent `auth` (travaux
-     * en file, autre appareil), et un flash ne vaut qu'une fois.
+     * en file, autre appareil), et un flash ne vaut qu'une fois. Pour un
+     * préchargement, le flash est vide : `handle()` l'a masqué
+     * (`masquerLeFlashDUnPrechargement()`, décision D2 de #2148).
      *
      * @return array<string, mixed>
      */
