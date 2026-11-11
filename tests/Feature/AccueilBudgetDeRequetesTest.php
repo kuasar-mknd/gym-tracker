@@ -28,10 +28,11 @@ use function Pest\Laravel\actingAs;
  *
  * Chaque compte est figé à la valeur mesurée le 2026-11-06, en égalité : un
  * compte qui monte est une requête de trop, un compte qui baisse est un gain à
- * consigner. L'étape 3a de #2148 (les props immédiates en fermetures) doit
- * baisser celui de la prop différée, qui rejoue aujourd'hui tout le
- * contrôleur ; elle met alors ici le nouveau compte, et retourne le dernier
- * cas.
+ * consigner. L'étape 3b de #2148 (`auth` et `flash` partagés en fermetures)
+ * a baissé celui de la prop différée, de douze à neuf. L'étape 3a (les props
+ * immédiates en fermetures) doit le baisser encore, la requête rejouant
+ * aujourd'hui tout le contrôleur ; elle met alors ici le nouveau compte, et
+ * retourne le dernier cas.
  *
  * On compte des instructions et leur forme, jamais des lectures
  * `Handler_read` ni un plan (`.ai/rules/services.md`) : le même nombre tient
@@ -187,8 +188,11 @@ it('compte à part les instructions SQL de sa prop différée', function (): voi
         ->assertJsonPath('component', 'Dashboard')
         ->assertJsonMissingPath('props.recentWorkouts');
 
+    // Douze le 2026-11-06, neuf depuis que `auth` est une fermeture (#2148,
+    // étape 3b) : la requête de la prop différée ne le demande pas, et ne lit
+    // plus le compte des non-lus, le dernier badge ni la séance en cours.
     expect($reponse->json('props.analyticalStats'))->toBeArray()
-        ->and(count($instructions))->toBe(12, accueilBudgetMessage('La prop différée de l’accueil', $instructions));
+        ->and(count($instructions))->toBe(9, accueilBudgetMessage('La prop différée de l’accueil', $instructions));
 });
 
 /*
