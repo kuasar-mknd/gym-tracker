@@ -116,6 +116,7 @@ it('compare une version à l’étiquette attendue, partie par partie', function
     'la version exacte' => ['9.7.4', '9.7.4', true],
     'la version exacte, au rang de mise à jour' => ['9.7.4', '9.7.4.0', true],
     'un suffixe du serveur' => ['8.4', '8.4.13-log', true],
+    'la version exacte, suffixe du serveur' => ['9.7.4', '9.7.4-log', true],
     'une autre ligne au même début' => ['8.4', '8.40.1', false],
     'la version suivante' => ['8.4', '9.7.4', false],
     'un correctif plus ancien' => ['9.7.4', '9.7.2', false],
@@ -151,6 +152,10 @@ it('met un écart à l’orange pendant le délai d’une mise à jour, puis au 
         ->toContain('Redis rend 8.10.2, la composition attend 8.10.3 depuis le 11/11/2026 à 10:00');
 });
 
+/*
+ * Le même écart qui revient après un retour au vert (un retour en arrière,
+ * une mise à jour refaite) rouvre lui aussi ses dix minutes.
+ */
 it('rouvre le délai quand l’écart change ou disparaît', function (): void {
     versionsDesServicesServies('8.4.13.0', '8.10.2');
     versionsDesServicesEnProduction()->run();
@@ -160,10 +165,19 @@ it('rouvre le délai quand l’écart change ou disparaît', function (): void {
     expect(versionsDesServicesEnProduction()->run()->status->value)->toBe('ok');
 
     Carbon::setTestNow('2026-11-11 10:30:00');
-    versionsDesServicesServies('9.7.4.0', '8.10.3');
-    expect(versionsDesServicesEnProduction()->run()->status->value)->toBe('warning');
+    versionsDesServicesServies('8.4.13.0', '8.10.2');
+    $revenu = versionsDesServicesEnProduction()->run();
+    expect($revenu->status->value)->toBe('warning')
+        ->and($revenu->notificationMessage)->toContain('depuis le 11/11/2026 à 10:30');
 
     Carbon::setTestNow('2026-11-11 10:41:00');
+    expect(versionsDesServicesEnProduction()->run()->status->value)->toBe('failed');
+
+    Carbon::setTestNow('2026-11-11 10:45:00');
+    versionsDesServicesServies('9.7.4.0', '8.10.2');
+    expect(versionsDesServicesEnProduction()->run()->status->value)->toBe('warning');
+
+    Carbon::setTestNow('2026-11-11 10:56:00');
     expect(versionsDesServicesEnProduction()->run()->status->value)->toBe('failed');
 });
 
