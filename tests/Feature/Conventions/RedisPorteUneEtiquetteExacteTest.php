@@ -156,3 +156,69 @@ it('refuse un autre service de Redis à une étiquette flottante ou à une autre
     'redis-cache à une autre version' => ['redis-cache', 'redis:8.10.2-alpine', 'redis-cache lance redis:8.10.2-alpine, redis lance {production}'],
     'image qualifiée sous un autre nom' => ['cache', 'docker.io/library/redis:alpine', 'cache lance docker.io/library/redis:alpine, une étiquette qui n\'est pas exacte'],
 ]);
+
+/**
+ * Les services de Redis des jobs des workflows et leur image, par
+ * `fichier › job › service`.
+ *
+ * @param  array<string, array<array-key, mixed>>  $workflows
+ * @return array<string, mixed>
+ */
+function redisServicesDesWorkflows(array $workflows): array
+{
+    $images = [];
+
+    foreach ($workflows as $fichier => $workflow) {
+        foreach (is_array($workflow['jobs'] ?? null) ? $workflow['jobs'] : [] as $job => $definition) {
+            foreach (redisServicesDeLaComposition(is_array($definition) ? $definition : []) as $service => $image) {
+                $images["{$fichier} › {$job} › {$service}"] = $image;
+            }
+        }
+    }
+
+    return $images;
+}
+
+/**
+ * Les workflows du dépôt, lus.
+ *
+ * @return array<string, array<array-key, mixed>>
+ */
+function redisWorkflowsLus(): array
+{
+    $workflows = [];
+
+    foreach (glob(base_path('.github/workflows/*.yml')) ?: [] as $chemin) {
+        $lu = Yaml::parseFile($chemin);
+        $workflows[basename($chemin)] = is_array($lu) ? $lu : [];
+    }
+
+    return $workflows;
+}
+
+/*
+ * La CI lance Redis en service : le job `demarrage`, contre lequel l'image
+ * démarre, et `laravel-tests-mysql`, où le groupe `redis` de la suite parle à
+ * un vrai serveur (#2151). Chacun lance l'image de la production, à la même
+ * étiquette exacte : un test passé contre une autre version ne dirait rien
+ * de celle qui sert.
+ */
+it('lance chaque service de Redis de la CI à l’image du service redis de la production', function (): void {
+    $production = redisImageDuService('docker-compose.prod.yml');
+    $services = redisServicesDesWorkflows(redisWorkflowsLus());
+
+    expect($services)->toHaveKeys(['ci.yml › demarrage › redis', 'ci.yml › laravel-tests-mysql › redis']);
+
+    foreach ($services as $nom => $image) {
+        expect($image)->toBe($production, "{$nom} lance ".(is_string($image) ? $image : 'une image sans nom').", la production {$production}.");
+    }
+});
+
+it('reconnaît un service de Redis de la CI sous un autre nom ou à une étiquette flottante', function (): void {
+    $workflows = ['essai.yml' => ['jobs' => ['tests' => ['services' => [
+        'cache' => ['image' => 'redis:8-alpine'],
+        'mysql' => ['image' => 'mysql:8.4'],
+    ]]]]];
+
+    expect(redisServicesDesWorkflows($workflows))->toBe(['essai.yml › tests › cache' => 'redis:8-alpine']);
+});

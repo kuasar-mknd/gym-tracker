@@ -12,6 +12,14 @@
             <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
+    <!-- Le groupe redis (tests/Feature/Redis) parle à un vrai Redis, qu'il
+         vide : écarté de toute passe, il ne tourne que demandé
+         (artisan test avec le groupe redis, l’étape à part de la CI, #2151). -->
+    <groups>
+        <exclude>
+            <group>redis</group>
+        </exclude>
+    </groups>
     <source>
         <include>
             <directory>app</directory>
