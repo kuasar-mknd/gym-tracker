@@ -71,7 +71,13 @@ return [
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
-            'block_for' => null,
+            // Une file vide se lit en attendant sur le serveur, deux secondes au
+            // plus : le travail neuf part dès son arrivée, et Horizon (`sleep` à
+            // 0) relit aussitôt après. Nul, la lecture rendait la main tout de
+            // suite et le processus dormait trois secondes ; zéro bloquerait sans
+            // fin, signaux compris. En dur : une variable vide donnerait zéro
+            // (#2151, `LaFileDeHorizonPrendUnTravailSansAttendreTest`).
+            'block_for' => 2,
             'after_commit' => false,
         ],
 
