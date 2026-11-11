@@ -125,16 +125,16 @@ function prechargementRoutesQuiLaissentUnFlash(): void
 }
 
 dataset('marques d’un préchargement', [
-    'Purpose, comme Inertia' => [['Purpose' => 'prefetch']],
-    'Sec-Purpose, comme un navigateur' => [['Sec-Purpose' => 'prefetch']],
+    'Purpose, comme Inertia' => ['Purpose'],
+    'Sec-Purpose, comme un navigateur' => ['Sec-Purpose'],
 ]);
 
-it('lit la session d’un GET préchargé sans l’enregistrer ni la prolonger, et sa réponse ne pose aucun cookie', function (array $marque): void {
+it('lit la session d’un GET préchargé sans l’enregistrer ni la prolonger, et sa réponse ne pose aucun cookie', function (string $entete): void {
     $espion = prechargementEspionner();
     $compte = User::factory()->create();
     $appareil = prechargementAppareilConnecte($compte, $espion);
 
-    $reponse = $appareil->envoyer('GET', '/dashboard', [], prechargementEntetes($marque));
+    $reponse = $appareil->envoyer('GET', '/dashboard', [], prechargementEntetes([$entete => 'prefetch']));
 
     $reponse->assertOk()->assertHeader('X-Inertia', 'true');
     expect($reponse->json('component'))->toBe('Dashboard')
@@ -148,12 +148,12 @@ it('lit la session d’un GET préchargé sans l’enregistrer ni la prolonger, 
  * Inertia prend le corps vide d'un HEAD pour une réponse vide et renvoie
  * en arrière.
  */
-it('n’enregistre pas non plus la session d’un HEAD préchargé', function (array $marque): void {
+it('n’enregistre pas non plus la session d’un HEAD préchargé', function (string $entete): void {
     $espion = prechargementEspionner();
     $compte = User::factory()->create();
     $appareil = prechargementAppareilConnecte($compte, $espion);
 
-    $reponse = $appareil->envoyer('HEAD', '/dashboard', [], $marque);
+    $reponse = $appareil->envoyer('HEAD', '/dashboard', [], [$entete => 'prefetch']);
 
     $reponse->assertOk();
     expect($espion->ecritures)->toBe([])
