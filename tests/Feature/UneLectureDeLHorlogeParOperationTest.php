@@ -165,6 +165,31 @@ it('range la comparaison mensuelle de la page Statistiques sous le mois qu elle 
 })->with(range(1, 12));
 
 /**
+ * La page des habitudes rend sa grille et les suivis de sa semaine en
+ * fermetures (#2148, étape 3a), qu'Inertia résout au rendu, bien après
+ * l'action. L'action lit l'horloge une fois, et les fermetures gardent cet
+ * instant : quand lundi commence entre l'action et leur résolution, ou entre
+ * deux fermetures, la grille reste celle de la semaine qui s'achève, avec ses
+ * suivis et son dimanche mis en avant. Une fermeture qui relirait l'horloge
+ * dessinerait la semaine suivante, ou chargerait ses suivis.
+ */
+it('garde la semaine lue par l’action dans la grille et les suivis des habitudes quand lundi commence avant leur résolution', function (int $lectures): void {
+    $user = User::factory()->create();
+    $habitude = \App\Models\Habit::factory()->create(['user_id' => $user->id, 'archived' => false]);
+    \App\Models\HabitLog::create(['habit_id' => $habitude->id, 'date' => '2026-10-11']);
+    \App\Models\HabitLog::create(['habit_id' => $habitude->id, 'date' => '2026-10-12']);
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+
+    $page = app(\App\Actions\Habits\FetchHabitsIndexAction::class)->getImmediateData($user);
+    $semaine = $page['weekDates']();
+    $suivis = $page['habits']()->firstOrFail()->logs->map(fn (\App\Models\HabitLog $suivi): string => $suivi->date->toDateString())->all();
+
+    expect(array_column($semaine, 'date'))->toBe(['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'])
+        ->and(array_column(array_filter($semaine, static fn (array $jour): bool => $jour['is_today']), 'date'))->toBe(['2026-10-11'])
+        ->and($suivis)->toBe(['2026-10-11']);
+})->with([1]);
+
+/**
  * Le calendrier ouvert sans mois demandé montre le mois courant de l'année
  * courante, lus d'une seule lecture.
  *

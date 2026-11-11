@@ -18,7 +18,9 @@ class StatsController extends Controller
 
     /**
      * La page part avec le strict nécessaire ; les calculs lourds — tendances,
-     * répartitions — arrivent en prop différée, une fois l'écran affiché.
+     * répartitions — arrivent en prop différée, une fois l'écran affiché. Les
+     * chiffres immédiats sont des fermetures, que la requête de la prop
+     * différée, qui rejoue ce contrôleur, ne calcule plus (#2148, étape 3a).
      */
     public function index(Request $request, GetStatsDashboardAction $getStatsDashboard): \Inertia\Response
     {
@@ -27,11 +29,10 @@ class StatsController extends Controller
         // ⚡ Bolt : une seule prop différée plutôt que deux — une requête XHR au
         // lieu de deux, et des graphiques apparentés qui apparaissent ensemble
         // au lieu de s'afficher l'un après l'autre.
-        /** @var callable(): mixed $deferredDataCallable */
-        $deferredDataCallable = $data['deferredData'];
-        $data['deferredData'] = Inertia::defer($deferredDataCallable);
-
-        return Inertia::render('Stats/Index', $data);
+        return Inertia::render('Stats/Index', [
+            ...$data,
+            'deferredData' => Inertia::defer($data['deferredData']),
+        ]);
     }
 
     /**

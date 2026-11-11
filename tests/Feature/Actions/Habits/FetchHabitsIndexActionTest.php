@@ -202,15 +202,17 @@ it('ne charge que les suivis de la semaine affichee', function (): void {
     ]);
 
     $donnees = app(FetchHabitsIndexAction::class)->getImmediateData($user);
+    $semaine = $donnees['weekDates']();
+    $habitudes = $donnees['habits']();
 
     // La semaine que la page dessine, et donc la fenetre que le chargement
     // anticipe doit respecter.
-    expect($donnees['weekDates'][0]['date'])->toBe('2026-06-15');
-    expect($donnees['weekDates'][6]['date'])->toBe('2026-06-21');
+    expect($semaine[0]['date'])->toBe('2026-06-15');
+    expect($semaine[6]['date'])->toBe('2026-06-21');
 
     // L'habitude archivee n'est pas la : une seule habitude rendue.
-    expect($donnees['habits'])->toHaveCount(1);
-    $habitude = $donnees['habits']->firstOrFail();
+    expect($habitudes)->toHaveCount(1);
+    $habitude = $habitudes->firstOrFail();
 
     expect($habitude->relationLoaded('logs'))->toBeTrue();
 
@@ -229,7 +231,7 @@ it('ne charge que les suivis de la semaine affichee', function (): void {
 it('rend la grille de la semaine, du lundi au dimanche, avec ses six cles', function (): void {
     $user = scenePourHabitudes();
 
-    $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates'];
+    $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates']();
 
     /*
      * Les sept jours en entier, compares a un litteral.

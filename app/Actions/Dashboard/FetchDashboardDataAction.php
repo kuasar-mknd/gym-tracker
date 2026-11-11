@@ -35,26 +35,31 @@ final class FetchDashboardDataAction
      * Les données immédiates : des lectures légères, ou d'une seule ligne,
      * tenables au premier rendu de la page.
      *
+     * Chacune est une fermeture, qu'Inertia ne résout que si sa prop part dans
+     * la réponse : la requête de la prop différée `analyticalStats`, qui
+     * rejoue le contrôleur, relisait sinon la pesée, les séances, les records
+     * et les objectifs pour les jeter aussitôt (#2148, étape 3a). Aucune ne tire
+     * de l'horloge ce qu'elle rend : seule l'échéance de l'entrée de la pesée en
+     * dépend, lue par le service (`.ai/rules/horloge.md`).
+     *
      * @return array{
-     *     latestWeight: float|string|null,
-     *     recentWorkouts: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
-     *     recentPRs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
-     *     activeGoals: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
+     *     latestWeight: \Closure(): (float|string|null),
+     *     recentWorkouts: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
+     *     recentPRs: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
+     *     activeGoals: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
      * }
      */
     public function chiffresImmediats(User $user): array
     {
-        // Les mesures passent par le cache : sinon la base est lue à chaque
-        // ouverture du tableau de bord.
-        $latestMetrics = $this->bodyStats->getLatestBodyMetrics($user);
-
         return [
             // `workoutsCount` et `thisWeekCount` sont partis : rien ne les
-            // lisait, et ils coûtaient deux requêtes à chaque ouverture.
-            'latestWeight' => $latestMetrics->latest_weight ?? null,
-            'recentWorkouts' => $this->getRecentWorkouts($user),
-            'recentPRs' => $this->getRecentPRs($user),
-            'activeGoals' => $this->getActiveGoals($user),
+            // lisait, et ils coûtaient deux requêtes à chaque ouverture. Les
+            // mesures passent par le cache : sinon la base est lue à chaque
+            // ouverture du tableau de bord.
+            'latestWeight' => fn (): float|string|null => $this->bodyStats->getLatestBodyMetrics($user)->latest_weight ?? null,
+            'recentWorkouts' => fn (): \Illuminate\Database\Eloquent\Collection => $this->getRecentWorkouts($user),
+            'recentPRs' => fn (): \Illuminate\Database\Eloquent\Collection => $this->getRecentPRs($user),
+            'activeGoals' => fn (): \Illuminate\Database\Eloquent\Collection => $this->getActiveGoals($user),
         ];
     }
 

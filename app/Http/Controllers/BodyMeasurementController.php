@@ -22,24 +22,28 @@ class BodyMeasurementController extends Controller
     }
 
     /**
+     * Les cent dernières pesées arrivent en fermeture, que la requête de la
+     * prop différée, qui rejoue ce contrôleur, ne calcule plus (#2148,
+     * étape 3a).
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de consulter les mensurations.
      */
     public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', BodyMeasurement::class);
 
-        $measurements = $this->user()->bodyMeasurements()
-            ->orderBy('measured_at', 'desc')
-            ->limit(100)
-            ->get();
+        $user = $this->user();
 
         return Inertia::render('Measurements/Index', [
-            'measurements' => $measurements,
+            'measurements' => fn (): \Illuminate\Database\Eloquent\Collection => $user->bodyMeasurements()
+                ->orderBy('measured_at', 'desc')
+                ->limit(100)
+                ->get(),
             // ⚡ Bolt : les statistiques corporelles tiennent en une seule prop
             // différée plutôt que deux — une requête asynchrone au lieu de deux,
             // et une seule requête SQL et clef de cache pour l'historique du
             // poids comme pour celui de la masse grasse.
-            'bodyStats' => Inertia::defer(fn (): array => $this->bodyStats->getBodyProgressOverview($this->user(), 365)),
+            'bodyStats' => Inertia::defer(fn (): array => $this->bodyStats->getBodyProgressOverview($user, 365)),
         ]);
     }
 
