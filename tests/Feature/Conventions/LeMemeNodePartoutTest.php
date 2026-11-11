@@ -46,13 +46,20 @@ function nodePartoutVersionsDuDepot(): array
     $paquet = json_decode((string) file_get_contents(base_path('package.json')), true, flags: JSON_THROW_ON_ERROR);
     $versions['package.json, engines.node'] = nodePartoutMajeure(data_get($paquet, 'engines.node'));
 
-    foreach (file(base_path('Dockerfile')) ?: [] as $rang => $ligne) {
+    $lignesDuDockerfile = file(base_path('Dockerfile'));
+
+    foreach ($lignesDuDockerfile === false ? [] : $lignesDuDockerfile as $rang => $ligne) {
         if (preg_match('/^\s*FROM\s+(?:--\S+\s+)*(?:docker\.io\/)?(?:library\/)?node:(\S+)/i', $ligne, $parties) === 1) {
             $versions['Dockerfile, ligne '.($rang + 1)] = nodePartoutMajeure($parties[1]);
         }
     }
 
-    $workflows = [...(glob(base_path('.github/workflows/*.yml')) ?: []), ...(glob(base_path('.github/workflows/*.yaml')) ?: [])];
+    $workflows = [];
+
+    foreach (['yml', 'yaml'] as $extension) {
+        $trouves = glob(base_path('.github/workflows/*.'.$extension));
+        $workflows = [...$workflows, ...($trouves === false ? [] : $trouves)];
+    }
 
     foreach ($workflows as $chemin) {
         /** @var array<string, mixed> $workflow */
@@ -60,7 +67,9 @@ function nodePartoutVersionsDuDepot(): array
 
         foreach ((array) ($workflow['jobs'] ?? []) as $job => $definition) {
             foreach ((array) data_get($definition, 'steps', []) as $rang => $etape) {
-                if (! str_starts_with((string) data_get($etape, 'uses', ''), 'actions/setup-node@')) {
+                $action = data_get($etape, 'uses');
+
+                if (! is_string($action) || ! str_starts_with($action, 'actions/setup-node@')) {
                     continue;
                 }
 
@@ -76,7 +85,7 @@ function nodePartoutVersionsDuDepot(): array
 
     /** @var array<string, mixed> $compose */
     $compose = Yaml::parseFile(base_path('compose.yaml'));
-    $versions['compose.yaml, NODE_VERSION de Sail'] = nodePartoutMajeure($compose['services']['laravel.test']['build']['args']['NODE_VERSION'] ?? null);
+    $versions['compose.yaml, NODE_VERSION de Sail'] = nodePartoutMajeure(data_get($compose, ['services', 'laravel.test', 'build', 'args', 'NODE_VERSION']));
 
     return $versions;
 }
