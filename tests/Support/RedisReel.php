@@ -19,13 +19,19 @@ use Throwable;
  * production, dans une étape à part (`.github/workflows/ci.yml`), et
  * phpunit.xml les écarte de toute autre passe.
  *
- * `tests/Pest.php` appelle `exiger()` avant chaque test du dossier et
- * `vider()` après : un test du groupe lancé sans vrai Redis échoue en le
- * disant, jamais en passant sur un magasin `array`. Chaque test part de deux
- * bases vides et de compteurs remis à zéro : le serveur doit être jetable.
+ * `tests/Pest.php` range chaque test du dossier au groupe, et
+ * `Tests\TestCase::setUpTraits()` appelle, pour un test du groupe,
+ * `exiger()` avant `RefreshDatabase`, puis `vider()` une fois la base migrée
+ * et à la fin du test : un test du groupe lancé sans vrai Redis échoue en le
+ * disant, avant toute migration, jamais en passant sur un magasin `array`.
+ * Chaque test part de deux bases vides et de compteurs remis à zéro : le
+ * serveur doit être jetable.
  */
 final class RedisReel
 {
+    /** Le groupe Pest des tests qui parlent à un vrai Redis. */
+    public const string GROUPE = 'redis';
+
     /**
      * Ce que le groupe exige de la configuration : chaque magasin sur Redis,
      * comme en production (`x-app-env` de `docker-compose.prod.yml`).
@@ -55,7 +61,9 @@ final class RedisReel
 
     /**
      * Fait échouer le test, en disant pourquoi, quand le groupe ne peut pas
-     * tourner ; sinon vide les deux bases et remet les compteurs à zéro.
+     * tourner. Ne lit que la configuration et le serveur :
+     * `Tests\TestCase::setUpTraits()` l'appelle avant que `RefreshDatabase` ne
+     * migre la base, qui touche déjà le magasin du cache.
      */
     public static function exiger(): void
     {
@@ -70,7 +78,6 @@ final class RedisReel
         }
 
         self::$exige = true;
-        self::vider();
     }
 
     /**

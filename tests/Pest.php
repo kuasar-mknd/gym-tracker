@@ -37,13 +37,8 @@ pest()->extend(TestCase::class)
 | Les tests de tests/Feature/Redis parlent à un vrai Redis (#2151) : groupe
 | `redis`, que phpunit.xml écarte de toute autre passe et que la CI lance à
 | part, contre un service à l'image de la production. Sans vrai Redis, chacun
-| échoue en le disant ; avec, il part de deux bases vides (`RedisReel`).
+| échoue en le disant, avant que `RefreshDatabase` ne migre la base ; avec, il
+| part de deux bases vides (`Tests\TestCase::setUpTraits()`, `RedisReel`).
 */
-pest()->group('redis')
-    ->beforeEach(function (): void {
-        RedisReel::exiger();
-    })
-    ->afterEach(function (): void {
-        RedisReel::vider();
-    })
+pest()->group(RedisReel::GROUPE)
     ->in('Feature/Redis');

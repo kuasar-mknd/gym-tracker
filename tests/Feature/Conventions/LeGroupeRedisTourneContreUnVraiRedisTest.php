@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Redis;
 use PHPUnit\Framework\AssertionFailedError;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 use Tests\Support\RedisReel;
 
@@ -19,8 +20,9 @@ use Tests\Support\RedisReel;
  * - phpunit.xml écarte le groupe de toute passe qui ne le demande pas : les
  *   éclats parallèles de la CI ne partagent pas un serveur que chaque test
  *   vide, et une passe locale sans Redis ne les lance pas ;
- * - tests/Pest.php les lie au groupe et à `RedisReel::exiger()`, qui fait
- *   échouer, en le disant, un test lancé sans vrai Redis ;
+ * - tests/Pest.php les range au groupe, et `Tests\TestCase::setUpTraits()`
+ *   y appelle `RedisReel::exiger()`, qui fait échouer, en le disant et avant
+ *   toute migration, un test lancé sans vrai Redis ;
  * - la CI les lance dans une étape à part, sans condition, contre un service
  *   à l'image de la production, magasins sur Redis comme en production.
  *
@@ -245,9 +247,11 @@ it('lie chaque test de tests/Feature/Redis au groupe et à la garde du vrai Redi
     $source = File::get(base_path('tests/Pest.php'));
 
     expect(preg_match(
-        "/pest\\(\\)->group\\('redis'\\)\\s*->beforeEach\\(function \\(\\): void \\{\\s*RedisReel::exiger\\(\\);\\s*\\}\\)\\s*->afterEach\\(function \\(\\): void \\{\\s*RedisReel::vider\\(\\);\\s*\\}\\)\\s*->in\\('".preg_quote(GROUPE_REDIS_DOSSIER, '/')."'\\);/",
+        "/pest\\(\\)->group\\(RedisReel::GROUPE\\)\\s*->in\\('".preg_quote(GROUPE_REDIS_DOSSIER, '/')."'\\);/",
         $source,
-    ))->toBe(1, 'tests/Pest.php ne lie plus tests/Feature/Redis au groupe redis et à RedisReel::exiger().');
+    ))->toBe(1, 'tests/Pest.php ne range plus tests/Feature/Redis au groupe redis, dont Tests\\TestCase exige un vrai Redis.');
+
+    expect(RedisReel::GROUPE)->toBe('redis');
 
     $fichiers = File::allFiles(base_path('tests/'.GROUPE_REDIS_DOSSIER));
     expect($fichiers)->not->toBeEmpty();
@@ -270,7 +274,7 @@ it('ne range au groupe redis aucun test hors de tests/Feature/Redis', function (
             continue;
         }
 
-        if (preg_match('/->group\([^)]*[\'"]redis[\'"]|#\[Group\([\'"]redis[\'"]\)\]/', $fichier->getContents()) === 1) {
+        if (preg_match('/->group\([^)]*(?:[\'"]redis[\'"]|RedisReel::GROUPE)|#\[Group\((?:[\'"]redis[\'"]|RedisReel::GROUPE)\)\]/', $fichier->getContents()) === 1) {
             $dehors[] = $fichier->getRelativePathname();
         }
     }
@@ -375,3 +379,47 @@ it('fait échouer en le disant un test du groupe lancé sans vrai Redis', functi
         Config::set('database.redis.client', 'aucun');
     }, 'le client « aucun » n\'est ni phpredis ni predis'],
 ]);
+
+/*
+ * `exiger()` doit passer avant `RefreshDatabase` : la migration touche déjà
+ * le magasin du cache (`forgetCachedPermissions()`), et contre un Redis muet
+ * chaque test tombait sur l'erreur brute de la connexion, sans son message.
+ * Ce test lance un fichier du groupe dans un processus à part, magasins sur
+ * Redis comme l'étape de la CI, vers un port où rien n'écoute, et sur une
+ * base SQLite en mémoire que rien ne doit atteindre.
+ */
+it('fait échouer en le disant chaque test du groupe lancé contre un Redis muet, avant toute migration', function (): void {
+    $fichier = 'tests/'.GROUPE_REDIS_DOSSIER.'/LecteurDeRedisReelTest.php';
+    $processus = new Process(
+        [PHP_BINARY, base_path('vendor/bin/pest'), '--group=redis', '--colors=never', $fichier],
+        base_path(),
+        [
+            'CACHE_STORE' => 'redis',
+            'SESSION_DRIVER' => 'redis',
+            'QUEUE_CONNECTION' => 'redis',
+            'REDIS_CLIENT' => 'phpredis',
+            'REDIS_HOST' => '127.0.0.1',
+            'REDIS_PORT' => '1',
+            'REDIS_MAX_RETRIES' => '0',
+            'DB_CONNECTION' => 'sqlite',
+            'DB_DATABASE' => ':memory:',
+            'PARATEST' => false,
+            'TEST_TOKEN' => false,
+            'UNIQUE_TEST_TOKEN' => false,
+            'LARAVEL_PARALLEL_TESTING' => false,
+            'COLUMNS' => '1000',
+        ],
+        timeout: 120,
+    );
+    $processus->run();
+    $sortie = $processus->getOutput().$processus->getErrorOutput();
+
+    $compte = preg_match('/Tests:\s+(\d+) failed \((\d+) assertions?\)/', $sortie, $resume);
+    $attendu = extension_loaded('redis') ? 'la connexion default (127.0.0.1:1) ne répond pas' : 'l\'extension redis (phpredis) n\'est pas chargée';
+
+    expect($processus->isSuccessful())->toBeFalse($sortie)
+        ->and($compte)->toBe(1, "Le fichier n'a pas échoué en entier :\n{$sortie}")
+        ->and((int) ($resume[1] ?? 0))->toBeGreaterThan(0)
+        ->and($resume[2] ?? null)->toBe($resume[1] ?? null, "Un test du groupe est tombé sur une erreur au lieu du message de RedisReel::exiger() :\n{$sortie}")
+        ->and(substr_count($sortie, 'Ce test du groupe redis exige un vrai Redis : '.$attendu))->toBe((int) ($resume[1] ?? 0), $sortie);
+});
