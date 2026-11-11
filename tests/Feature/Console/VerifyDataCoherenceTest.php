@@ -296,8 +296,8 @@ it('signale une copie du propriétaire restée vide', function (): void {
 /*
  * La date recopiée sur les lignes (#1513). `workout_lines.workout_started_at`
  * recopie le début de la séance, pour qu'un index serve à la fois le filtre et
- * l'ordre des lectures par compte (#1601) : les statistiques fenêtrées, le
- * calendrier, les valeurs proposées. Deux écrivains la tiennent, la copie
+ * l'ordre des lectures par compte (#1601) : les statistiques fenêtrées et les
+ * valeurs proposées. Deux écrivains la tiennent, la copie
  * posée à l'enregistrement de la ligne et la propagation quand la séance
  * change de date ; aucun contrôle ne la comparait au début de sa séance, et
  * une ligne écrite en base sans elle, ou restée à l'ancienne date, sortait de

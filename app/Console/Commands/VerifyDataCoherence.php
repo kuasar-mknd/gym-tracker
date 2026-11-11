@@ -891,7 +891,7 @@ class VerifyDataCoherence extends Command
      *
      * La copie existe pour que l'index `(user_id, workout_started_at)` serve
      * le filtre et l'ordre des lectures par compte, sans jointure (#1601) :
-     * les statistiques fenêtrées, le calendrier, les valeurs proposées. Une
+     * les statistiques fenêtrées et les valeurs proposées. Une
      * ligne restée à une autre date, ou sans date, sort de leurs fenêtres ou
      * s'y range ailleurs, et rien d'autre ne le voit. Deux écrivains la
      * tiennent : la copie posée à l'enregistrement de la ligne et la
