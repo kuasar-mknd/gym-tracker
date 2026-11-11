@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { reactive } from 'vue'
+import { h, nextTick, reactive, ref } from 'vue'
 
 const page = reactive({ props: {}, url: '/dashboard' })
 
@@ -84,6 +84,7 @@ const mountLayout = ({
     onPage = 'dashboard',
     url = `/${onPage}`,
     component = COMPOSANTS[onPage] ?? 'Dashboard',
+    autresStubs = {},
 } = {}) => {
     currentRoute = onPage
     page.props = { flash, auth }
@@ -93,7 +94,7 @@ const mountLayout = ({
     const wrapper = mount(AuthenticatedLayout, {
         props,
         slots: { default: '<p data-testid="page-content">contenu</p>', ...slots },
-        global: { directives: { press: {} }, mocks: { route, $page: page }, stubs },
+        global: { directives: { press: {} }, mocks: { route, $page: page }, stubs: { ...stubs, ...autresStubs } },
     })
     mountedLayouts.push(wrapper)
 
@@ -171,6 +172,80 @@ describe('la largeur du contenu', () => {
 
         expect(rendu).toContain(classe)
         expect(rendu).not.toContain('max-w-7xl')
+    })
+})
+
+describe('une visite qui garde l’état et change l’adresse (#2148, étape 2a)', () => {
+    /*
+     * Le mois du calendrier et la période des statistiques changent l'adresse
+     * de la page sans la remonter (`preserveState`) : Inertia garde la page et
+     * son layout, et ne change que `$page.url` et les props. Le contenu était
+     * enveloppé dans une transition `out-in` clée sur l'adresse : l'ancien
+     * contenu sortait d'abord, deux images au moins même sans CSS (`nextFrame`
+     * de Vue), puis le nouveau entrait en 300 ms. Les images sont retenues
+     * ici : le contenu de la nouvelle adresse doit être là sans qu'aucune passe.
+     * Test Utils remplace d'office `<Transition>` par un bouchon qui rend ses
+     * enfants tels quels : les deux cas le rendent pour de vrai.
+     */
+    it('pose le contenu de la nouvelle adresse dès la réponse, sans attendre une image', async () => {
+        const images = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0)
+        // Rendu par le layout, comme le contenu qu'une page lui passe : un rendu figé par réponse.
+        const contenu = () => h('p', { 'data-testid': 'adresse' }, page.url)
+
+        try {
+            const wrapper = mountLayout({
+                onPage: 'calendar.index',
+                url: '/calendar?year=2026&month=3',
+                component: 'Calendar/Index',
+                slots: { default: contenu },
+                autresStubs: { transition: false },
+            })
+
+            page.url = '/calendar?year=2026&month=4'
+            await nextTick()
+
+            expect(wrapper.findAll('[data-testid="adresse"]').map((adresse) => adresse.text())).toEqual([
+                '/calendar?year=2026&month=4',
+            ])
+        } finally {
+            images.mockRestore()
+        }
+    })
+
+    /*
+     * Une clé sur l'adresse, même sans transition, remonterait chaque carte à
+     * la réponse : l'animation d'entrée des cartes des statistiques repartirait
+     * de l'opacité nulle, et le focus quitterait le bouton du mois ou de la
+     * période. Les images passent ici, comme dans le navigateur.
+     */
+    it('garde les composants de la page montés, avec leur état', async () => {
+        const Compteur = {
+            setup: () => {
+                const appuis = ref(0)
+
+                return () => h('button', { 'data-testid': 'compteur', onClick: () => appuis.value++ }, appuis.value)
+            },
+        }
+        const wrapper = mountLayout({
+            onPage: 'stats.index',
+            url: '/stats',
+            component: 'Stats/Index',
+            slots: { default: Compteur },
+            autresStubs: { transition: false },
+        })
+        const avant = wrapper.get('[data-testid="compteur"]')
+
+        await avant.trigger('click')
+        page.url = '/stats?period=7j'
+        await nextTick()
+        // Plusieurs images, de quoi finir une sortie animée sans CSS.
+        await new Promise((resoudre) => setTimeout(resoudre, 100))
+
+        const apres = wrapper.findAll('[data-testid="compteur"]')
+
+        expect(apres).toHaveLength(1)
+        expect(apres[0].element).toBe(avant.element)
+        expect(apres[0].text()).toBe('1')
     })
 })
 

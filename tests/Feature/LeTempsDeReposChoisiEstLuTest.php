@@ -18,13 +18,17 @@ use Illuminate\Support\Facades\DB;
  * Le défaut était invisible tant qu'on ne changeait pas la valeur — la colonne
  * vaut 90 par défaut en base, soit exactement le repli.
  */
+/*
+ * `auth` est une fermeture qu'Inertia résout pour la réponse (#2148, étape
+ * 3b) : les partages se résolvent ici comme Inertia le ferait.
+ */
 it('envoie au client le temps de repos que l’utilisateur a choisi', function (): void {
     $user = User::factory()->create(['default_rest_time' => 150]);
 
     $requete = Request::create('/dashboard');
     $requete->setUserResolver(fn (): User => $user);
 
-    $partages = new HandleInertiaRequests()->share($requete);
+    $partages = array_map(value(...), new HandleInertiaRequests()->share($requete));
 
     expect(data_get($partages, 'auth.user.default_rest_time'))->toBe(150);
 });
@@ -40,7 +44,7 @@ it('envoie la valeur stockée, quelle qu’elle soit', function (): void {
     $requete = Request::create('/dashboard');
     $requete->setUserResolver(fn (): User => $user);
 
-    $partages = new HandleInertiaRequests()->share($requete);
+    $partages = array_map(value(...), new HandleInertiaRequests()->share($requete));
 
     /*
      * La CLÉ, et pas seulement la valeur : `data_get` rend `null` aussi bien

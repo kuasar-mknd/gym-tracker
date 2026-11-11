@@ -34,6 +34,10 @@ namespace App\Support\Sessions;
  * le magasin tire l'identifiant, n'en lit aucune : personne d'autre ne connaît
  * cet identifiant, que seule sa réponse donnera au navigateur.
  *
+ * Elle retient aussi si le magasin tenait la session lue en entrant
+ * (`aEteLueAuMagasin()`) : un préchargement n'enregistre que la session
+ * neuve qu'il ouvre (#2148).
+ *
  * L'état de la requête (l'identifiant lu, et s'il a été détruit par elle) se
  * remet à zéro à chaque ouverture : sous Octane, la session sert le worker
  * d'une requête à l'autre. `StartSession` donne à la session l'identifiant du
@@ -63,6 +67,11 @@ trait NeRenaitPasDeSaDestruction
     private bool $identifiantRecu = false;
 
     /**
+     * Le magasin tenait la session que la requête a lue en entrant.
+     */
+    private bool $lueAuMagasin = false;
+
+    /**
      * Pose l'identifiant de la session, ou en tire un s'il n'est pas valide,
      * et retient lequel des deux.
      *
@@ -90,8 +99,30 @@ trait NeRenaitPasDeSaDestruction
 
         $this->identifiantLu = $this->identifiantRecu ? $this->getId() : null;
         $this->detruiteParLaRequete = false;
+        $this->lueAuMagasin = false;
 
         return parent::start();
+    }
+
+    /**
+     * Lit la session au magasin, comme Laravel, et retient s'il la tenait.
+     *
+     * @return array<array-key, mixed>
+     */
+    #[\Override]
+    protected function readFromHandler(): array
+    {
+        $donnees = parent::readFromHandler();
+
+        $this->lueAuMagasin = $donnees !== [];
+
+        return $donnees;
+    }
+
+    #[\Override]
+    public function aEteLueAuMagasin(): bool
+    {
+        return $this->lueAuMagasin;
     }
 
     /**

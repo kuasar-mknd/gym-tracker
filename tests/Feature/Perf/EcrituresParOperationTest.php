@@ -216,6 +216,12 @@ function serieDeJoursEcritures(array $sql): array
  * pour une séance vide. Une séance faite coûte en tout une requête de plus (17
  * puis 18) pour autant d'écritures (3) ; une séance vide, une requête et une
  * écriture de moins.
+ *
+ * Depuis #2148 (étape 3b), la redirection qui suit chaque écriture de la page
+ * ne calcule plus `auth.user`, qu'elle jetait : trois lectures de moins (les
+ * notifications non lues, le dernier badge, la séance en cours), soit 3
+ * requêtes au démarrage, 9 et 7 à la fin, 9 à la suppression. La fin par la
+ * file, route de l'API, ne le calculait pas.
  */
 it('démarre une séance sans lire ni écrire la série de jours', function (): void {
     $user = User::factory()->create();
@@ -226,7 +232,7 @@ it('démarre une séance sans lire ni écrire la série de jours', function (): 
     expect(serieDeJoursLectures($sql))->toBe([])
         ->and(serieDeJoursEcritures($sql))->toBe([])
         ->and(count($ecritures))->toBe(1, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(6, implode("\n", $sql));
+        ->and(count($sql))->toBe(3, implode("\n", $sql));
 });
 
 it('termine une séance faite en une lecture de ses séances faites et une écriture de la série', function (): void {
@@ -241,7 +247,7 @@ it('termine une séance faite en une lecture de ses séances faites et une écri
     expect(serieDeJoursLectures($sql))->toHaveCount(1)
         ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
         ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(12, implode("\n", $sql));
+        ->and(count($sql))->toBe(9, implode("\n", $sql));
 });
 
 it('termine une séance vide en une lecture de ses séances faites, sans écrire la série', function (): void {
@@ -255,7 +261,7 @@ it('termine une séance vide en une lecture de ses séances faites, sans écrire
     expect(serieDeJoursLectures($sql))->toHaveCount(1)
         ->and(serieDeJoursEcritures($sql))->toBe([])
         ->and(count($ecritures))->toBe(1, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(10, implode("\n", $sql));
+        ->and(count($sql))->toBe(7, implode("\n", $sql));
 });
 
 /*
@@ -296,7 +302,7 @@ it('supprime une séance faite en une lecture des séances faites qui restent et
     expect(serieDeJoursLectures($sql))->toHaveCount(1)
         ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
         ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(12, implode("\n", $sql));
+        ->and(count($sql))->toBe(9, implode("\n", $sql));
 });
 
 /*

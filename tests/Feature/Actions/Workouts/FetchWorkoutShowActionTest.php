@@ -147,11 +147,13 @@ it('lit la seance entiere en un nombre de requetes qui ne depend pas de sa longu
 
     app(FetchWorkoutShowAction::class)->execute($user, $workout);
 
-    // Sept, et pas « au plus sept » : la liste des exercices, les lignes,
-    // leurs exercices, leurs series, les records de ces series, puis les deux
-    // requetes du calcul groupe des recommandations. Retirer une entree du
-    // chargement anticipe en fait six, cinq, ou quatre — jamais sept.
-    expect($requetes)->toBe(7);
+    // Six, et pas « au plus six » : la liste des exercices, les lignes,
+    // leurs exercices, leurs series, les records de ces series, puis la seule
+    // requete du calcul groupe des recommandations, qui lit l'historique. La
+    // seance n'est plus relue : l'action la passe au calcul, deja chargee par
+    // la route (#2148, etape 3c). Retirer une entree du chargement anticipe en
+    // fait cinq, quatre ou trois ; relire la seance, sept.
+    expect($requetes)->toBe(6);
 });
 
 it('pose les valeurs recommandees sur chaque ligne avant que la vue ne les lise', function (): void {

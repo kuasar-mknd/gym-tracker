@@ -19,7 +19,8 @@ function partagesDuMinuteur(User $utilisateur): array
     $requete = Request::create('/dashboard');
     $requete->setUserResolver(fn (): User => $utilisateur);
 
-    return new HandleInertiaRequests()->share($requete);
+    // `auth` est une fermeture qu'Inertia résout pour la réponse (#2148, étape 3b).
+    return array_map(value(...), new HandleInertiaRequests()->share($requete));
 }
 
 it('demarre automatiquement par defaut', function (): void {
