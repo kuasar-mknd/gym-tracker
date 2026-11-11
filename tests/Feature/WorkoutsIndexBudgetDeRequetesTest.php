@@ -151,6 +151,18 @@ it('tient sous quinze requêtes à froid, quel que soit le nombre d’exercices'
     expect(count($requetes))->toBeLessThanOrEqual(15, implode("\n", $requetes));
 });
 
+/**
+ * Les props immédiates de la page, résolues comme Inertia le fait pour la
+ * page complète : chacune est une fermeture depuis #2148 (étape 3a).
+ *
+ * @param  array<string, mixed>  $props
+ * @return array<string, mixed>
+ */
+function seancesBudgetResoudreLesProps(array $props): array
+{
+    return array_map(fn (mixed $prop): mixed => $prop instanceof Closure ? $prop() : $prop, $props);
+}
+
 /*
  * Compter les requêtes ne voyait pas le coût de la seule : l'expression de
  * table récursive qui comptait les exercices tenait en une instruction, mais
@@ -181,13 +193,13 @@ it('compte les exercices sans sous-requête dépendante, en une lecture d’inde
 
     // Un premier passage à vide : la première lecture d'une table fausserait le relevé.
     Cache::flush();
-    $action->execute($user);
+    seancesBudgetResoudreLesProps($action->execute($user));
     Cache::flush();
 
     $aFroid = budgetReleverUnGeste(function () use ($action, $user, &$compte): void {
-        $compte = $action->execute($user)['totalExercises'];
+        $compte = seancesBudgetResoudreLesProps($action->execute($user))['totalExercises'];
     });
-    $aChaud = budgetReleverUnGeste(fn (): array => $action->execute($user));
+    $aChaud = budgetReleverUnGeste(fn (): array => seancesBudgetResoudreLesProps($action->execute($user)));
 
     $requetesDuCompte = array_values(array_udiff(
         $aFroid['requetes'],
@@ -207,4 +219,67 @@ it('compte les exercices sans sous-requête dépendante, en une lecture d’inde
 
     expect(str_contains(mb_strtolower($arbre), 'dependent'))->toBeFalse($arbre)
         ->and($aFroid['lectures'] - $aChaud['lectures'])->toBeLessThanOrEqual($lignesDuCompte + 1, $arbre);
+});
+
+/**
+ * Les instructions SQL de la requête de la prop différée de la page des
+ * séances, telle que la page l'envoie : une visite partielle qui ne demande
+ * que `deferredData`, le cache vidé juste avant.
+ *
+ * @return list<string>
+ */
+function seancesBudgetInstructionsDeLaPropDifferee(User $user): array
+{
+    $page = test()->actingAs($user)->get(route('workouts.index'))->assertOk()->viewData('page');
+    $version = is_array($page) && is_string($page['version'] ?? null) ? $page['version'] : '';
+
+    Cache::flush();
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    // Les en-têtes passent à la seule requête (`.ai/rules/tests.md`).
+    test()->actingAs($user)->get(route('workouts.index'), [
+        'X-Inertia' => 'true',
+        'X-Inertia-Version' => $version,
+        'X-Inertia-Partial-Component' => 'Workouts/Index',
+        'X-Inertia-Partial-Data' => 'deferredData',
+    ])->assertOk()
+        ->assertJsonPath('component', 'Workouts/Index')
+        ->assertJsonMissingPath('props.workouts')
+        ->assertJsonPath('props.deferredData.exercises.0.id', fn (mixed $id): bool => is_int($id));
+
+    $requetes = array_values(array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog()));
+    DB::disableQueryLog();
+
+    return $requetes;
+}
+
+/*
+ * La requête de la prop différée rejouait tout le contrôleur (#2148, étape
+ * 3a) : Inertia ne saute, dans une réponse partielle, que les props encore à
+ * calculer, et le contrôleur étalait la page de séances et le compte des
+ * exercices déjà calculés, que la réponse jetait. La pagination (son compte
+ * et sa page, avec les lignes, leurs exercices et le compte de leurs séries)
+ * et le compte des exercices partaient donc deux fois par affichage. Ce sont
+ * désormais des fermetures : la requête différée ne lit plus aucune de leurs
+ * instructions.
+ */
+it('ne relit ni la pagination ni le compte des exercices dans la requête de la prop différée', function (): void {
+    $user = User::factory()->create();
+    semerUneGrandeBibliotheque($user);
+
+    Cache::flush();
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    seancesBudgetResoudreLesProps(app(FetchWorkoutsIndexAction::class)->execute($user));
+
+    $propsImmediates = array_values(array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog()));
+    DB::disableQueryLog();
+
+    $propDifferee = seancesBudgetInstructionsDeLaPropDifferee($user);
+
+    // Le compte et la page des séances, leurs lignes, leurs exercices, et le compte des exercices distincts.
+    expect($propsImmediates)->toHaveCount(5, implode("\n", $propsImmediates))
+        ->and(array_values(array_intersect($propsImmediates, $propDifferee)))->toBe([], implode("\n", $propDifferee));
 });

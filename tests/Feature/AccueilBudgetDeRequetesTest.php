@@ -29,10 +29,9 @@ use function Pest\Laravel\actingAs;
  * Chaque compte est figé à la valeur mesurée le 2026-11-06, en égalité : un
  * compte qui monte est une requête de trop, un compte qui baisse est un gain à
  * consigner. L'étape 3b de #2148 (`auth` et `flash` partagés en fermetures)
- * a baissé celui de la prop différée, de douze à neuf. L'étape 3a (les props
- * immédiates en fermetures) doit le baisser encore, la requête rejouant
- * aujourd'hui tout le contrôleur ; elle met alors ici le nouveau compte, et
- * retourne le dernier cas.
+ * a baissé celui de la prop différée, de douze à neuf ; l'étape 3a (les props
+ * immédiates en fermetures), de neuf à trois : la requête ne rejoue plus les
+ * chiffres immédiats, et le dernier cas, qui le constatait, est retourné.
  *
  * On compte des instructions et leur forme, jamais des lectures
  * `Handler_read` ni un plan (`.ai/rules/services.md`) : le même nombre tient
@@ -191,26 +190,34 @@ it('compte à part les instructions SQL de sa prop différée', function (): voi
     // Douze le 2026-11-06, neuf depuis que `auth` est une fermeture (#2148,
     // étape 3b) : la requête de la prop différée ne le demande pas, et ne lit
     // plus le compte des non-lus, le dernier badge ni la séance en cours.
+    // Trois depuis que les chiffres immédiats sont des fermetures (étape 3a) :
+    // elle ne relit plus la pesée, les séances, les records ni les objectifs.
     expect($reponse->json('props.analyticalStats'))->toBeArray()
-        ->and(count($instructions))->toBe(9, accueilBudgetMessage('La prop différée de l’accueil', $instructions));
+        ->and(count($instructions))->toBe(3, accueilBudgetMessage('La prop différée de l’accueil', $instructions));
 });
 
 /*
- * Ce que l'étape 3a de #2148 retirera : Inertia ne saute, dans une réponse
- * partielle, que les props encore à calculer, et le contrôleur étale des
- * chiffres déjà calculés. La requête de la prop différée relit donc chaque
- * chiffre immédiat avant de le jeter. Le jour où ce cas tombe, c'est que les
- * chiffres immédiats sont passés en fermetures : le retourner.
+ * Ce que l'étape 3a de #2148 a retiré : Inertia ne saute, dans une réponse
+ * partielle, que les props encore à calculer, et le contrôleur étalait des
+ * chiffres déjà calculés. La requête de la prop différée relisait donc chaque
+ * chiffre immédiat avant de le jeter. Les chiffres immédiats sont désormais
+ * des fermetures, qu'Inertia ne résout que pour une prop demandée : aucune de
+ * leurs instructions ne part avec la prop différée. Elles sont résolues ici
+ * une à une, comme Inertia le fait pour la page complète.
  */
-it('rejoue les chiffres immédiats dans la requête de la prop différée', function (): void {
+it('ne rejoue pas les chiffres immédiats dans la requête de la prop différée', function (): void {
     ['compte' => $compte, 'version' => $version] = accueilBudgetPreparer();
-    $chiffresImmediats = accueilBudgetInstructionsDe(
-        fn (): array => app(FetchDashboardDataAction::class)->chiffresImmediats($compte),
-    );
+    $chiffresImmediats = accueilBudgetInstructionsDe(function () use ($compte): void {
+        foreach (app(FetchDashboardDataAction::class)->chiffresImmediats($compte) as $chiffre) {
+            if ($chiffre instanceof Closure) {
+                $chiffre();
+            }
+        }
+    });
     $propDifferee = accueilBudgetInstructionsDe(
         fn (): TestResponse => accueilBudgetDemanderLaPropDifferee($compte, $version)->assertOk(),
     );
 
-    expect($chiffresImmediats)->not->toBeEmpty()
-        ->and(array_values(array_diff($chiffresImmediats, $propDifferee)))->toBe([]);
+    expect($chiffresImmediats)->toHaveCount(6)
+        ->and(array_values(array_intersect($chiffresImmediats, $propDifferee)))->toBe([]);
 });

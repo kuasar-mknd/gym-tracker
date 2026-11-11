@@ -300,7 +300,7 @@ it('pagine par vingt et precharge les lignes, leur exercice et leur compte de se
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $derniere->id]);
     Set::factory()->count(3)->create(['workout_line_id' => $workoutLine->id]);
 
-    $workouts = app(FetchWorkoutsIndexAction::class)->execute($user)['workouts'];
+    $workouts = app(FetchWorkoutsIndexAction::class)->execute($user)['workouts']();
 
     // Vingt par page, pas dix-neuf ni vingt-et-une.
     expect($workouts->perPage())->toBe(20);
