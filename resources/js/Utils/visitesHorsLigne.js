@@ -42,6 +42,8 @@ import {
  *   préchargement) : rien. Un préchargement en échec vide en plus le cache
  *   des préchargements, entrées en vol comprises, sans quoi la visite
  *   suivante vers son adresse s'accrochait à lui sans rien envoyer (#2148).
+ *   Une visite au premier plan déjà accrochée à lui, partie pendant son vol,
+ *   est suivie dès `before` : sa lenteur, puis son échec, sont les siens.
  * Une autre erreur que celle du réseau, levée pendant le traitement de la
  * réponse, n'est pas avalée : Inertia la fait aussi passer par `networkError`,
  * et le rapporteur doit la voir.
@@ -838,15 +840,136 @@ export const installerLesVisitesHorsLigne = ({
         setTimeout(() => rechargerCeQuiAttend(reponse), 0)
     })
 
-    routeur.on('start', (evenement) => {
-        const visite = evenement.detail.visit
+    /**
+     * Suit une visite de son départ à sa fin : le toast de lenteur au bout de
+     * son délai, puis la copie, pour une visite qui quitte la page.
+     *
+     * Une visite accrochée à un préchargement en vol (`accrocheeA`, son
+     * adresse) n'émet ni `start` ni `finish` : « Annuler » et la copie
+     * l'oublient donc eux-mêmes, et la fin du préchargement aussi.
+     *
+     * @param {object} visite
+     * @param {{ accrocheeA?: string | null }} [options]
+     */
+    const suivreUneVisite = (visite, { accrocheeA = null } = {}) => {
         const suivi = {
             minuteur: null,
             minuteurDeLaCopie: null,
             lenteurAnnoncee: false,
             echecDuReseau: false,
             repondue: false,
+            // Inertia remet `prefetch` à faux en recevant la réponse : `finish` ne le dit plus.
+            prechargement: visite.prefetch === true,
+            accrocheeA,
         }
+
+        /** @param {{ async?: boolean, prefetch?: boolean }} annulation */
+        const arreterLaVisite = (annulation) => {
+            if (accrocheeA !== null) {
+                oublierLaVisite(visite)
+            }
+
+            routeur.cancelAll(annulation)
+        }
+
+        if (!visite.async && !visite.prefetch) {
+            gestes += 1
+        }
+
+        if (visiteQuiQuitteLaPage(visite)) {
+            suivi.minuteur = setTimeout(() => {
+                suivi.lenteurAnnoncee = true
+                annoncerSansReseau(RESEAU_LENT, {
+                    // La visite au premier plan seulement : un rechargement en arrière-plan suit son cours.
+                    annuler: () => arreterLaVisite({ async: false }),
+                    fenetre,
+                })
+            }, delaiDuReseauLent)
+
+            const adresse = adresseDeLaVisite(visite, fenetre)
+
+            if (adresse !== null && adressePeutAvoirUneCopie(adresse)) {
+                const gesteDeLaVisite = gestes
+
+                suivi.minuteurDeLaCopie = setTimeout(() => {
+                    servirUneCopie({
+                        adresse,
+                        raison: RAISON_RESEAU_LENT,
+                        // Une réponse arrivée se pose encore (morceau, historique) : elle passe avant la copie.
+                        toujoursVoulue: () => enVol.has(visite) && !suivi.repondue && gestes === gesteDeLaVisite,
+                        // La visite au premier plan seulement, comme « Annuler ».
+                        avantDePousser: () => arreterLaVisite({ async: false, prefetch: false }),
+                    })
+                }, delaiAvantUneCopie)
+            }
+        }
+
+        enVol.set(visite, suivi)
+    }
+
+    /** Cesse de suivre une visite : ses minuteurs, et sa place parmi celles en vol. */
+    const oublierLaVisite = (visite) => {
+        arreterLesMinuteurs(visite)
+        enVol.delete(visite)
+    }
+
+    /** Les visites accrochées à un préchargement en vol, toutes, ou celles de `adresse`. */
+    const oublierLesAccrochees = (adresse = null) => {
+        for (const [enCours, suivi] of [...enVol]) {
+            if (suivi.accrocheeA !== null && (adresse === null || suivi.accrocheeA === adresse)) {
+                oublierLaVisite(enCours)
+            }
+        }
+    }
+
+    /*
+     * Une visite au premier plan lancée pendant qu'un préchargement de la
+     * même adresse est en vol (#2148, étape 2b) : un survol suivi d'un clic,
+     * un toucher pendant un préchargement au repos. Inertia l'accroche à la
+     * promesse du préchargement (`get()` puis `use()`) : elle n'envoie rien,
+     * et n'émet ni `start` ni `finish`. Sans ceci, le filet ne la voyait pas :
+     * sur un réseau qui ne répond plus, ni toast de lenteur ni copie ; et
+     * quand le préchargement échouait, la promesse à laquelle elle s'était
+     * accrochée ne se réglait jamais, puisque le filet annule l'évènement : le
+     * toucher se perdait sans un mot. Le filet la suit donc dès `before`, une
+     * fois l'évènement passé par tous ses écouteurs : ni annulée, ni partie
+     * avec sa propre requête (`start` l'aurait suivie). L'échec du
+     * préchargement devient le sien (`visiteEnEchec` la préfère, au premier
+     * plan, à son adresse) : sa copie, ou « page indisponible ». La fin du
+     * préchargement, quelle qu'elle soit, la rend à Inertia, qui pose sa
+     * réponse ; une visite au premier plan plus récente la remplace.
+     */
+    const suivreSiElleSAccroche = (evenement) => {
+        const visite = evenement.detail.visit
+
+        if (visite.async || visite.prefetch || visite.component) {
+            return
+        }
+
+        const adresse = adresseSansFragment(visite.url)
+        const prechargementEnVol = [...enVol].some(
+            ([enCours, suivi]) =>
+                suivi.prechargement && !suivi.echecDuReseau && adresseSansFragment(enCours.url) === adresse,
+        )
+
+        if (!prechargementEnVol) {
+            return
+        }
+
+        queueMicrotask(() => {
+            const partie = [...enVol.keys()].some((enCours) => enCours.id === visite.id)
+
+            if (evenement.defaultPrevented || partie) {
+                return
+            }
+
+            oublierLesAccrochees()
+            suivreUneVisite(visite, { accrocheeA: adresse })
+        })
+    }
+
+    routeur.on('start', (evenement) => {
+        const visite = evenement.detail.visit
 
         /*
          * Les props différées d'une page ne partent qu'une fois la page posée :
@@ -868,48 +991,25 @@ export const installerLesVisitesHorsLigne = ({
             (visite.only ?? []).length > 0 || (visite.except ?? []).length > 0 || (visite.reset ?? []).length > 0,
         )
 
+        // Une visite au premier plan qui part remplace celle qui attendait un préchargement.
         if (!visite.async && !visite.prefetch) {
-            gestes += 1
+            oublierLesAccrochees()
         }
 
-        if (visiteQuiQuitteLaPage(visite)) {
-            suivi.minuteur = setTimeout(() => {
-                suivi.lenteurAnnoncee = true
-                annoncerSansReseau(RESEAU_LENT, {
-                    // La visite au premier plan seulement : un rechargement en arrière-plan suit son cours.
-                    annuler: () => routeur.cancelAll({ async: false }),
-                    fenetre,
-                })
-            }, delaiDuReseauLent)
-
-            const adresse = adresseDeLaVisite(visite, fenetre)
-
-            if (adresse !== null && adressePeutAvoirUneCopie(adresse)) {
-                const gesteDeLaVisite = gestes
-
-                suivi.minuteurDeLaCopie = setTimeout(() => {
-                    servirUneCopie({
-                        adresse,
-                        raison: RAISON_RESEAU_LENT,
-                        // Une réponse arrivée se pose encore (morceau, historique) : elle passe avant la copie.
-                        toujoursVoulue: () => enVol.has(visite) && !suivi.repondue && gestes === gesteDeLaVisite,
-                        // La visite au premier plan seulement, comme « Annuler ».
-                        avantDePousser: () => routeur.cancelAll({ async: false, prefetch: false }),
-                    })
-                }, delaiAvantUneCopie)
-            }
-        }
-
-        enVol.set(visite, suivi)
+        suivreUneVisite(visite)
     })
 
     routeur.on('finish', (evenement) => {
         const visite = evenement.detail.visit
         const suivi = enVol.get(visite)
 
-        arreterLesMinuteurs(visite)
-        enVol.delete(visite)
+        oublierLaVisite(visite)
         partielles.delete(visite?.id)
+
+        // Le préchargement fini rend la visite accrochée à Inertia : sa réponse, ou son échec, déjà dit.
+        if (suivi?.prechargement) {
+            oublierLesAccrochees(adresseSansFragment(visite.url))
+        }
 
         if (suivi?.echecDuReseau && visite.deferredProps === true && !visite.cancelled && !visite.interrupted) {
             secourirLesPropsDifferees(visite)
@@ -1051,15 +1151,21 @@ export const installerLesVisitesHorsLigne = ({
         }
     })
 
-    // Aucune écriture ne part d'une copie, sauf la déconnexion : la page se recharge d'abord.
+    /*
+     * Une visite en GET peut s'accrocher à un préchargement en vol. Aucune
+     * écriture ne part d'une copie, sauf la déconnexion : la page se recharge
+     * d'abord.
+     */
     routeur.on('before', (evenement) => {
         const visite = evenement.detail.visit
 
-        if (
-            String(visite.method).toLowerCase() === 'get' ||
-            !estUneCopie(pageCourante) ||
-            visitesExemptees.has(visite)
-        ) {
+        if (String(visite.method).toLowerCase() === 'get') {
+            suivreSiElleSAccroche(evenement)
+
+            return undefined
+        }
+
+        if (!estUneCopie(pageCourante) || visitesExemptees.has(visite)) {
             return undefined
         }
 

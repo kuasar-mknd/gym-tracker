@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
-import { installerLesVisitesHorsLigne } from '@/Utils/visitesHorsLigne'
+import {
+    EVENEMENT_SANS_RESEAU,
+    PAGE_INDISPONIBLE,
+    RESEAU_LENT,
+    installerLesVisitesHorsLigne,
+} from '@/Utils/visitesHorsLigne'
 import { installerLeRapporteurDErreurs } from '@/Utils/rapporteurDErreurs'
 import { noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
 import {
@@ -32,7 +37,13 @@ import {
  *
  * Le rapporteur est le vrai, avec son envoi par `fetch` vers
  * `erreurs-navigateur.store`, sur le réseau simulé : un envoi s'y verrait.
+ *
+ * Le filet attend ici 300 ms avant le toast de lenteur et 200 ms avant une
+ * copie, et le magasin n'en a aucune : une visite qu'il suit dit sa lenteur
+ * puis son échec sans faire attendre le test.
  */
+
+const DELAI_DU_RESEAU_LENT_MS = 300
 
 /** La page de départ, telle que le serveur l'a rendue. */
 const accueil = () => ({
@@ -53,6 +64,19 @@ const pageDe = (adresse, texte) => ({
 let routeur
 let application
 let relais
+
+/** Les messages des toasts que le filet a montrés, dans l'ordre, et leur bouton « Annuler ». */
+let annonces = []
+
+const ecouterLesAnnonces = (evenement) => {
+    if (evenement.detail.message !== null) {
+        annonces.push({ message: evenement.detail.message, annuler: evenement.detail.annuler })
+    }
+}
+
+const messages = () => annonces.map((annonce) => annonce.message)
+
+const attendre = (millisecondes) => new Promise((resoudre) => setTimeout(resoudre, millisecondes))
 
 const contenu = () => document.getElementById('contenu').textContent
 
@@ -95,7 +119,13 @@ beforeAll(async () => {
     const inertia = await import('@inertiajs/vue3')
     routeur = inertia.router
 
-    installerLesVisitesHorsLigne({ routeur })
+    installerLesVisitesHorsLigne({
+        routeur,
+        delaiDuReseauLent: DELAI_DU_RESEAU_LENT_MS,
+        delaiAvantUneCopie: 200,
+        lireUneCopie: async () => null,
+    })
+    window.addEventListener(EVENEMENT_SANS_RESEAU, ecouterLesAnnonces)
 
     const Page = {
         props: ['texte'],
@@ -129,6 +159,7 @@ beforeEach(async () => {
     reseau.reponse = null
     noterQueLeServeurRepond()
     relais = relayerLesRejetsNonGeres()
+    annonces = []
 })
 
 afterEach(() => {
@@ -138,6 +169,7 @@ afterEach(() => {
 })
 
 afterAll(() => {
+    window.removeEventListener(EVENEMENT_SANS_RESEAU, ecouterLesAnnonces)
     application.unmount()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
@@ -192,6 +224,145 @@ describe('un préchargement qui échoue sans réseau', () => {
 
         expect(routeur.getCached('/workouts')).toBeFalsy()
         expect(relais.rejets).toEqual([])
+    })
+})
+
+/*
+ * Une visite au premier plan lancée pendant qu'un préchargement de la même
+ * adresse est en vol : un survol suivi d'un clic, ou un toucher pendant un
+ * préchargement au repos, sur un réseau de salle qui ne répond plus. Inertia
+ * l'accroche à la promesse du préchargement (`get()` puis `use()`) : elle
+ * n'envoie rien, n'émet ni `start` ni `finish`, et ne finit que par la
+ * réponse du préchargement. Quand il échouait, le filet vidait bien le cache,
+ * mais la promesse à laquelle la visite s'était accrochée ne se réglait
+ * jamais : le toucher se perdait sans un mot, sans copie ni toast de lenteur.
+ * Le filet la suit donc dès `before`, comme une visite partie, et son échec
+ * est celui du préchargement.
+ */
+describe('une visite partie pendant le vol du préchargement', () => {
+    /** Précharge `/stats` sur un réseau qui ne répond plus, puis la visite s'y accroche. */
+    const visiterPendantLeVol = async () => {
+        const visite = { finie: false, reussie: false }
+
+        reseau.mode = 'muet'
+        routeur.prefetch('/stats')
+        await vi.waitUntil(() => requetes.length === 1, { interval: 1 })
+        routeur.visit('/stats', {
+            onSuccess: () => (visite.reussie = true),
+            onFinish: () => (visite.finie = true),
+        })
+        await uneTache()
+
+        return visite
+    }
+
+    it('n’envoie rien, et dit que la page n’est pas disponible quand le préchargement échoue', async () => {
+        await visiterPendantLeVol()
+
+        expect(chemins()).toEqual(['/stats'])
+
+        requetes[0].onerror()
+        await vi.waitUntil(() => annonces.length > 0, { timeout: 1000, interval: 1 }).catch(() => {})
+
+        expect(messages()).toEqual([PAGE_INDISPONIBLE])
+        expect(routeur.getPrefetching('/stats')).toBeFalsy()
+        expect(contenu()).toBe('Accueil')
+        expect(relais.rejets).toEqual([])
+        expect(envoisDErreurs()).toEqual([])
+
+        // Réseau revenu, le toucher suivant part et aboutit ; la visite accrochée n'annonce plus rien.
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDe('/stats', 'Statistiques'))
+
+        const suivante = await visiter('/stats')
+        await attendre(DELAI_DU_RESEAU_LENT_MS + 100)
+
+        expect(suivante).toEqual({ finie: true, reussie: true })
+        expect(contenu()).toBe('Statistiques')
+        expect(chemins()).toEqual(['/stats', '/stats'])
+        expect(messages()).toEqual([PAGE_INDISPONIBLE])
+    })
+
+    it('a son toast de lenteur tant que le préchargement ne répond pas', async () => {
+        await visiterPendantLeVol()
+        await vi
+            .waitUntil(() => annonces.length > 0, { timeout: DELAI_DU_RESEAU_LENT_MS + 500, interval: 5 })
+            .catch(() => {})
+
+        expect(messages()).toEqual([RESEAU_LENT])
+        expect(annonces[0].annuler).toBeTypeOf('function')
+    })
+
+    it('« Annuler » l’arrête : l’échec du préchargement, ensuite, ne dit plus rien', async () => {
+        await visiterPendantLeVol()
+        await vi
+            .waitUntil(() => annonces.length > 0, { timeout: DELAI_DU_RESEAU_LENT_MS + 500, interval: 5 })
+            .catch(() => {})
+
+        expect(messages()).toEqual([RESEAU_LENT])
+
+        annonces[0].annuler()
+        requetes[0].onerror?.()
+        await attendre(DELAI_DU_RESEAU_LENT_MS + 100)
+
+        expect(messages()).toEqual([RESEAU_LENT])
+        expect(relais.rejets).toEqual([])
+    })
+
+    /*
+     * Le témoin : le préchargement répond, la visite accrochée pose sa page
+     * sans autre requête. Le filet cesse alors de la suivre : ni toast de
+     * lenteur ni copie après coup.
+     */
+    it('pose la page quand le préchargement répond, sans rien annoncer après', async () => {
+        const visite = await visiterPendantLeVol()
+
+        requetes[0].repondre(reponseInertia(pageDe('/stats', 'Statistiques')))
+        await vi.waitUntil(() => visite.reussie, { timeout: 1000, interval: 1 })
+        await attendre(DELAI_DU_RESEAU_LENT_MS + 100)
+
+        expect(contenu()).toBe('Statistiques')
+        expect(chemins()).toEqual(['/stats'])
+        expect(messages()).toEqual([])
+    })
+
+    /*
+     * Une visite que le préchargement ne sert pas (d'autres en-têtes) part
+     * avec sa propre requête : `start` la suit, et le filet ne la suit pas
+     * une seconde fois comme accrochée, ce qui annoncerait sa lenteur après
+     * sa fin.
+     */
+    it('ne suit qu’une fois une visite de la même adresse qui part avec sa propre requête', async () => {
+        reseau.mode = 'muet'
+        routeur.prefetch('/stats')
+        await vi.waitUntil(() => requetes.length === 1, { interval: 1 })
+
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDe('/stats', 'Statistiques'))
+        let finie = false
+        routeur.visit('/stats', { headers: { 'X-Autre': '1' }, onFinish: () => (finie = true) })
+        await vi.waitUntil(() => finie, { timeout: 1000, interval: 1 })
+        await attendre(DELAI_DU_RESEAU_LENT_MS + 100)
+
+        expect(chemins()).toEqual(['/stats', '/stats'])
+        expect(contenu()).toBe('Statistiques')
+        expect(messages()).toEqual([])
+    })
+
+    it('ne suit pas une visite qu’un autre écouteur de `before` annule', async () => {
+        reseau.mode = 'muet'
+        routeur.prefetch('/stats')
+        await vi.waitUntil(() => requetes.length === 1, { interval: 1 })
+
+        const retirer = routeur.on('before', () => false)
+        routeur.visit('/stats')
+        retirer()
+        await attendre(DELAI_DU_RESEAU_LENT_MS + 100)
+        requetes[0].onerror()
+        await uneTache()
+
+        expect(chemins()).toEqual(['/stats'])
+        expect(messages()).toEqual([])
     })
 })
 
