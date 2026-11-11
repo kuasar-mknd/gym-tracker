@@ -19,6 +19,7 @@ import { onBeforeUnmount } from 'vue'
  *   appuiLong?: boolean,
  *   auDebut?: () => void,
  *   aLaFin?: (ancien: number, nouveau: number) => void,
+ *   auBout?: () => void,
  * }} options
  */
 /**
@@ -37,7 +38,7 @@ const bibliotheque = () => {
  * Les réglages du geste, partagés par toutes les listes de la page.
  *
  * @param {string} handle
- * @param {{ auDebut?: () => void, aLaFin?: (ancien: number, nouveau: number) => void }} rappels
+ * @param {{ auDebut?: () => void, aLaFin?: (ancien: number, nouveau: number) => void, auBout?: () => void }} rappels
  */
 const reglages = (handle, rappels, appuiLong) => ({
     dragHandle: handle,
@@ -68,6 +69,14 @@ const reglages = (handle, rappels, appuiLong) => ({
      * qu'écrire. Muter ici appliquerait le déplacement deux fois.
      */
     onSort: ({ previousPosition, position }) => rappels.aLaFin?.(previousPosition, position),
+
+    /*
+     * La fin du geste, trié ou non : la bibliothèque trie PENDANT le geste, à
+     * chaque rangée survolée, et un geste relâché à sa place ne trie rien.
+     * Depuis la 0.6.3, `onDragstart` vient aussi au doigt : ce qu'il pose ne
+     * se lève qu'ici.
+     */
+    onDragend: () => rappels.auBout?.(),
 })
 
 /**
@@ -168,6 +177,7 @@ export const useListeReordonnable = (conteneur, options) => {
  *   appuiLong?: boolean,
  *   auDebut?: (cle: string | number) => void,
  *   aLaFin?: (cle: string | number, ancien: number, nouveau: number) => void,
+ *   auBout?: (cle: string | number) => void,
  * }} options
  */
 export const useSousListesReordonnables = (entrees, options) => {
@@ -201,6 +211,7 @@ export const useSousListesReordonnables = (entrees, options) => {
                     {
                         auDebut: () => options.auDebut?.(cle),
                         aLaFin: (ancien, nouveau) => options.aLaFin?.(cle, ancien, nouveau),
+                        auBout: () => options.auBout?.(cle),
                     },
                     options.appuiLong === true,
                 ),

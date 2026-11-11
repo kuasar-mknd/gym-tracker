@@ -2316,6 +2316,67 @@ describe('reordering the sets of an exercise', () => {
         expect(apres.some((n) => avant.includes(n.element))).toBe(false)
     })
 
+    /**
+     * Depuis @formkit/drag-and-drop 0.6.3, le glisser au doigt passe aussi par
+     * `onDragstart`, qui écarte les rangées de l'exercice du glissement
+     * latéral. Un geste relâché à sa place ne trie rien : sans `onDragend`,
+     * les rangées restaient désactivées jusqu'au prochain tri réussi, sans
+     * glissement pour supprimer.
+     */
+    it('frees the set rows when a drag ends without a sort', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxSeries())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-serie]')
+        const desactivees = () => wrapper.findAllComponents(RangeeDeSerie).map((r) => r.props('disabled'))
+
+        expect(desactivees()).toEqual([false, false])
+
+        config.onDragstart({})
+        await flushPromises()
+
+        expect(desactivees()).toEqual([true, true])
+
+        config.onDragend({})
+        await flushPromises()
+
+        expect(desactivees()).toEqual([false, false])
+        expect(patch).not.toHaveBeenCalledWith(expect.stringContaining('workout-lines.set-order'), expect.anything())
+    })
+
+    /**
+     * La bibliothèque trie PENDANT le geste, à chaque rangée survolée : le tri
+     * écrit et reconstruit les rangées, mais le doigt est encore posé. Les
+     * rangées reconstruites restent écartées du glissement jusqu'à la fin du
+     * geste.
+     */
+    it('keeps the set rows out of the swipe until the drag ends, sorted or not', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxSeries())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-serie]')
+        const desactivees = () => wrapper.findAllComponents(RangeeDeSerie).map((r) => r.props('disabled'))
+
+        config.onDragstart({})
+
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([90, 80])
+        expect(desactivees()).toEqual([true, true])
+
+        config.onDragend({})
+        await flushPromises()
+
+        expect(desactivees()).toEqual([false, false])
+    })
+
     it('binds one draggable list per exercise', async () => {
         reordonnancements.length = 0
 

@@ -92,7 +92,7 @@ it('ne supprime pas le rôle du super administrateur par l’action de sa ligne,
 
     expect(Role::query()->whereKey($role->getKey())->exists())->toBeTrue()
         ->and(Role::query()->whereKey($autre->getKey())->exists())->toBeFalse()
-        ->and($titulaire->fresh()?->canAccessPanel(Filament::getPanel('admin')))->toBeTrue();
+        ->and($titulaire->fresh()?->canAccessPanel(FilamentAdminPanel::panel()))->toBeTrue();
 });
 
 it('ne supprime pas le rôle du super administrateur en groupe, et supprime les autres lignes choisies', function (): void {

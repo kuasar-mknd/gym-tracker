@@ -202,7 +202,7 @@ it('ne met plus de sauvegarde en file quand le dossier cesse de répondre', func
 
     Queue::assertPushed(CreateBackupJob::class, 1);
 
-    Processus::fake(fn () => throw new ProcessTimedOutException(
+    Processus::fake(fn (): never => throw new ProcessTimedOutException(
         new DelaiDepasse(new Process(['ls', '-A', 'sauvegardes']), DelaiDepasse::TYPE_GENERAL),
         new FakeProcessResult(),
     ));
@@ -229,7 +229,7 @@ it('ne liste plus rien au rafraîchissement d’un tableau quand le dossier cess
             ->assertSee($temoin($archive))
             ->assertDontSee('Le dossier des sauvegardes ne répond pas');
 
-        Processus::fake(fn () => throw new ProcessTimedOutException(
+        Processus::fake(fn (): never => throw new ProcessTimedOutException(
             new DelaiDepasse(new Process(['ls', '-A', $racine]), DelaiDepasse::TYPE_GENERAL),
             new FakeProcessResult(),
         ));
