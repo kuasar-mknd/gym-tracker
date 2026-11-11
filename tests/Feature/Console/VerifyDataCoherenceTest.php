@@ -349,8 +349,8 @@ it('laisse passer une date recopiée égale au début de sa séance', function (
  * `Workout::recopierLeDebutSurSesLignes()`, celui que la séance appelle quand
  * elle change de date : aucun écrivain ne s'ajoute. Elle ne touche que les
  * séances en écart, et oublie ensuite les statistiques et les valeurs
- * proposées de leur compte, comme l'application quand une séance change de
- * date : les unes et les autres se lisent sur la copie.
+ * proposées de leur compte, qui se lisent les unes et les autres sur la
+ * copie.
  */
 it('recopie par --repair le début de la séance sur ses lignes, par l’écrivain de la propagation, sur les seules séances en écart', function (): void {
     [$user, $set] = compteCoherent();

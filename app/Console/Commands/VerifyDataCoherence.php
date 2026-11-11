@@ -181,9 +181,11 @@ class VerifyDataCoherence extends Command
      * quand elle change de date : la réparation n'ajoute pas d'écrivain à la
      * copie, et ne touche que les séances que le contrôle trouve en écart.
      * Les statistiques et les valeurs proposées des comptes réparés lisent la
-     * copie : elles sont oubliées ensuite, comme quand une séance change de
-     * date (`UpdateWorkoutAction`), sans quoi leur cache servirait encore,
-     * jusqu'à son échéance, ce que la copie fausse leur avait fait calculer.
+     * copie : elles sont oubliées ensuite, sans quoi leur cache servirait
+     * encore, jusqu'à son échéance, ce que la copie fausse leur avait fait
+     * calculer. Les statistiques le sont comme quand une séance change de
+     * date (`UpdateWorkoutAction`) ; les valeurs proposées, dont l'historique
+     * se borne et s'ordonne sur la copie, aussi.
      */
     private function recopierLesDebutsSurLesLignes(): void
     {
