@@ -15,7 +15,9 @@ use App\Models\Admin;
  *
  * Dans l'évènement du modèle plutôt que dans chaque écran : chaque chemin,
  * présent ou futur (panneau, commande, console), change un mot de passe ou
- * retire un secret, et aucun n'a à y penser.
+ * retire un secret, et aucun n'a à y penser. Une suppression en masse
+ * (`Admin::query()->delete()`) n'émet pas l'évènement : ses jetons restent actifs
+ * sans créateur, jusqu'à leur expiration ou `diagnostic:revoquer --tous`.
  */
 trait RevoqueLesJetonsDeDiagnostic
 {

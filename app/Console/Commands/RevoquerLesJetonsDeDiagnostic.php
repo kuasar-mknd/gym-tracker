@@ -27,6 +27,13 @@ final class RevoquerLesJetonsDeDiagnostic extends Command
     public function handle(RevoqueLesJetonsDeDiagnosticAction $revocation): int
     {
         $identifiant = $this->option('identifiant');
+        $aUnIdentifiant = is_string($identifiant) && $identifiant !== '';
+
+        if ($this->option('tous') === true && $aUnIdentifiant) {
+            $this->components->error('Choisis l\'un des deux : --tous ou --identifiant=.');
+
+            return self::INVALID;
+        }
 
         if ($this->option('si-coupe') === true) {
             if (config('app.diagnostic_enabled') === true) {
@@ -36,10 +43,10 @@ final class RevoquerLesJetonsDeDiagnostic extends Command
             $revoques = $revocation->execute(RaisonDeRevocationDuJeton::Interrupteur);
         } elseif ($this->option('tous') === true) {
             $revoques = $revocation->execute(RaisonDeRevocationDuJeton::Manuelle);
-        } elseif (is_string($identifiant) && $identifiant !== '') {
+        } elseif ($aUnIdentifiant) {
             $revoques = $revocation->execute(RaisonDeRevocationDuJeton::Manuelle, null, $identifiant);
         } else {
-            $this->components->error('Désignez ce qui se révoque : --tous ou --identifiant=.');
+            $this->components->error('Désigne ce qui se révoque : --tous ou --identifiant=.');
 
             return self::INVALID;
         }

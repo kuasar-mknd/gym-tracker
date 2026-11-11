@@ -89,6 +89,13 @@ parameters:
         - identifier: shipmonk.deadMethod
           path: app/Policies/*
           message: '#::deleteAny\b#'
+        # Le jeton de diagnostic (#2032) arrive sans route : sa creation et son
+        # motif de refus ne sont appeles que par les tests jusqu'a la route qui
+        # les consomme, qui retire cette entree.
+        - identifier: shipmonk.deadMethod
+          path: app/Actions/Diagnostic/*
+        - identifier: shipmonk.deadProperty.neverRead
+          path: app/Actions/Diagnostic/*
         # Les cas d'enum sont instancies a l'execution par from(), via les casts
         # Eloquent — jamais ecrits en toutes lettres hors des tests. Le detecteur
         # ne peut pas voir cette voie. Ce n'est pas une hypothese : #899 rapporte

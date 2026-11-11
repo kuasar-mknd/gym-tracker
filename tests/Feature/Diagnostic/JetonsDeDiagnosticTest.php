@@ -38,7 +38,7 @@ function jetonsDeDiagnosticSuperAdministrateur(bool $avecLaDoubleAuthentificatio
 {
     $admin = FilamentAdminPanel::admin(['view-diagnostic']);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
-    $secret = (new Google2FA())->generateSecretKey();
+    $secret = new Google2FA()->generateSecretKey();
 
     if ($avecLaDoubleAuthentification) {
         $admin->forceFill(['app_authentication_secret' => $secret])->save();
@@ -65,7 +65,7 @@ function jetonsDeDiagnosticCreer(Admin $admin, string $secretTotp, array $portee
         'Agent de maintenance',
         $portees,
         $jours,
-        $code ?? (new Google2FA())->getCurrentOtp($secretTotp),
+        $code ?? new Google2FA()->getCurrentOtp($secretTotp),
     );
 }
 
@@ -108,7 +108,7 @@ it('refuse la création côté serveur, un motif par cause', function (array $re
     config()->set($reglages);
 
     try {
-        jetonsDeDiagnosticCreer($admin, $secretTotp, $portees, $jours, $code);
+        jetonsDeDiagnosticCreer($admin, $secretTotp, array_values(array_filter($portees, static fn (mixed $portee): bool => $portee instanceof PorteeDeDiagnostic)), $jours, $code);
         $obtenu = null;
     } catch (CreationDeJetonRefusee $refus) {
         $obtenu = $refus->motif;
@@ -130,23 +130,23 @@ it('refuse la création côté serveur, un motif par cause', function (array $re
 it('refuse sans double authentification, et à qui n’est pas super administrateur', function (): void {
     [$sansDouble] = jetonsDeDiagnosticSuperAdministrateur(avecLaDoubleAuthentification: false);
 
-    expect(fn () => jetonsDeDiagnosticCreer($sansDouble, 'AAAA', code: '123456'))
-        ->toThrow(CreationDeJetonRefusee::class, CreationDeJetonRefusee::DOUBLE_AUTHENTIFICATION_ABSENTE);
+    expect(fn (): array => jetonsDeDiagnosticCreer($sansDouble, 'AAAA', code: '123456'))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::DOUBLE_AUTHENTIFICATION_ABSENTE));
 
     $simple = FilamentAdminPanel::admin(['view-diagnostic']);
 
-    expect(fn () => jetonsDeDiagnosticCreer($simple, 'AAAA', code: '123456'))
-        ->toThrow(CreationDeJetonRefusee::class, CreationDeJetonRefusee::CAPACITE_ABSENTE);
+    expect(fn (): array => jetonsDeDiagnosticCreer($simple, 'AAAA', code: '123456'))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::CAPACITE_ABSENTE));
 });
 
 it('refuse un code déjà accepté', function (): void {
     [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
-    $code = (new Google2FA())->getCurrentOtp($secretTotp);
+    $code = new Google2FA()->getCurrentOtp($secretTotp);
 
     jetonsDeDiagnosticCreer($admin, $secretTotp, code: $code);
 
-    expect(fn () => jetonsDeDiagnosticCreer($admin, $secretTotp, code: $code))
-        ->toThrow(CreationDeJetonRefusee::class, CreationDeJetonRefusee::CODE_REFUSE);
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: $code))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::CODE_REFUSE));
 });
 
 it('coupe après cinq essais de code dans la minute', function (): void {
@@ -154,20 +154,20 @@ it('coupe après cinq essais de code dans la minute', function (): void {
     RateLimiter::clear('diagnostic:creation:'.$admin->id);
 
     foreach (range(1, CreeUnJetonDeDiagnosticAction::ESSAIS_PAR_MINUTE) as $essai) {
-        expect(fn () => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
-            ->toThrow(CreationDeJetonRefusee::class, CreationDeJetonRefusee::CODE_REFUSE);
+        expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
+            ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::CODE_REFUSE));
     }
 
-    expect(fn () => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
-        ->toThrow(CreationDeJetonRefusee::class, CreationDeJetonRefusee::TROP_D_ESSAIS);
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::TROP_D_ESSAIS));
 });
 
 it('refuse un troisième jeton actif', function (): void {
     [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
     JetonDeDiagnostic::factory()->count(2)->create();
 
-    expect(fn () => jetonsDeDiagnosticCreer($admin, $secretTotp))
-        ->toThrow(CreationDeJetonRefusee::class, CreationDeJetonRefusee::JETONS_ACTIFS_AU_MAXIMUM);
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::JETONS_ACTIFS_AU_MAXIMUM));
 });
 
 it('crée un jeton quand les deux autres sont expirés ou révoqués', function (): void {
@@ -254,6 +254,11 @@ it('révoque en console : tous, par identifiant, et rien sans désignation', fun
     $b = JetonDeDiagnostic::factory()->create();
 
     $this->artisan('diagnostic:revoquer')->assertExitCode(2);
+    $this->artisan('diagnostic:revoquer', ['--tous' => true, '--identifiant' => $a->identifiant])->assertExitCode(2);
+
+    expect(jetonsDeDiagnosticEstActif($a))->toBeTrue()
+        ->and(jetonsDeDiagnosticEstActif($b))->toBeTrue();
+
     $this->artisan('diagnostic:revoquer', ['--identifiant' => $a->identifiant])->assertSuccessful();
 
     expect(jetonsDeDiagnosticEstActif($a))->toBeFalse()
@@ -277,6 +282,51 @@ it('ne révoque au démarrage que si l’interrupteur est coupé, avec la raison
     expect($jeton->refresh()->raison_de_revocation)->toBe('interrupteur');
 });
 
-it('lit l’interrupteur strictement dans la configuration', function (): void {
-    expect(config('app.diagnostic_enabled'))->toBeBool();
+it('lit l’interrupteur strictement dans l’environnement', function (?string $valeur, bool $attendu): void {
+    $envAvant = $_ENV['DIAGNOSTIC_ENABLED'] ?? null;
+    $serveurAvant = $_SERVER['DIAGNOSTIC_ENABLED'] ?? null;
+
+    if ($valeur === null) {
+        unset($_ENV['DIAGNOSTIC_ENABLED'], $_SERVER['DIAGNOSTIC_ENABLED']);
+    } else {
+        $_ENV['DIAGNOSTIC_ENABLED'] = $_SERVER['DIAGNOSTIC_ENABLED'] = $valeur;
+    }
+
+    $reglages = require config_path('app.php');
+
+    unset($_ENV['DIAGNOSTIC_ENABLED'], $_SERVER['DIAGNOSTIC_ENABLED']);
+
+    if ($envAvant !== null) {
+        $_ENV['DIAGNOSTIC_ENABLED'] = $envAvant;
+    }
+
+    if ($serveurAvant !== null) {
+        $_SERVER['DIAGNOSTIC_ENABLED'] = $serveurAvant;
+    }
+
+    expect(is_array($reglages) ? ($reglages['diagnostic_enabled'] ?? null) : null)->toBe($attendu);
+})->with([
+    'vrai' => ['true', true],
+    '« 1 » n’est pas vrai' => ['1', false],
+    'faux' => ['false', false],
+    'absent' => [null, false],
+]);
+
+it('tient le verrou de création le temps d’une création, puis le rend', function (): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+
+    jetonsDeDiagnosticCreer($admin, $secretTotp);
+
+    $verrou = Cache::lock('diagnostic:creation', CreeUnJetonDeDiagnosticAction::VIE_DU_VERROU);
+
+    expect($verrou->get())->toBeTrue();
+
+    $verrou->release();
+});
+
+it('purge les jetons de diagnostic par la tâche planifiée', function (): void {
+    $planifiees = collect(app(Illuminate\Console\Scheduling\Schedule::class)->events())
+        ->filter(fn ($evenement): bool => str_contains((string) $evenement->command, 'model:prune') && str_contains((string) $evenement->command, 'JetonDeDiagnostic'));
+
+    expect($planifiees)->toHaveCount(1);
 });
