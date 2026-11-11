@@ -261,12 +261,20 @@ function projectionsLInventaire(): array
                 'la copie posée à l’enregistrement de la ligne' => [
                     'app/Models/WorkoutLine.php' => ['booted'],
                 ],
+                /*
+                 * Une méthode nommée depuis #1513 : la séance l'appelle quand
+                 * elle change de date, et `app:verify-data-coherence --repair`
+                 * aussi, sur les seules séances dont le contrôle nocturne
+                 * trouve une ligne en écart. La réparation n'est pas un
+                 * écrivain de plus.
+                 */
                 'la propagation quand la séance change de date' => [
-                    'app/Models/Workout.php' => ['booted'],
+                    'app/Models/Workout.php' => ['recopierLeDebutSurSesLignes'],
                 ],
             ],
             dette: 'La copie se pose quand la ligne s’écrit et se propage quand la séance change de date : '
-                .'deux écrivains, le prix de toute copie dénormalisée tant qu’elle est stockée.',
+                .'deux écrivains, le prix de toute copie dénormalisée tant qu’elle est stockée. Le contrôle '
+                .'nocturne la compare au début de sa séance, et `--repair` la refait par la propagation.',
         ),
         'le propriétaire recopié sur les séries' => projectionsDecrire(
             genre: 'copie',
@@ -328,15 +336,17 @@ function projectionsLInventaire(): array
             domaine: 'La conduite de l’effort',
             marqueur: '/\bcleDeCache\s*\(/',
             ecrivains: [
-                'le calcul pour une ligne' => [
-                    'app/Services/RecommendedValuesService.php' => ['getRecommendedValues'],
-                ],
-                'le calcul en lot pour une séance' => [
+                /*
+                 * Un seul écrivain depuis #1513 : la ligne seule
+                 * (`getRecommendedValues()`, que demande l'accesseur de la
+                 * ligne) avait son calcul et son écriture de la même clef, et
+                 * les deux chemins avaient déjà répondu différemment sur les
+                 * mêmes séances. Elle passe désormais par le calcul du lot.
+                 */
+                'le calcul, pour une ligne comme pour une séance' => [
                     'app/Services/RecommendedValuesService.php' => ['fetchUncachedRecommendedValues'],
                 ],
             ],
-            dette: 'Deux chemins remplissent la même clef, ligne par ligne et en lot ; ils ont déjà répondu '
-                .'différemment sur les mêmes séances (voir `fetchUncachedRecommendedValues()`).',
         ),
     ];
 }

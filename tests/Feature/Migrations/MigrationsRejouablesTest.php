@@ -6,10 +6,11 @@ declare(strict_types=1);
  * Une migration qui supprime doit d'abord demander si la chose existe.
  *
  * Le 31/08, `drop_is_pr_from_sets_table` a interrompu un deploiement de
- * production : `sets.is_pr` n'est cree par AUCUNE migration — il vient du dump
- * `database/schema/mysql-schema.sql`, que seule une base construite a neuf
- * charge. Une base migree pas a pas ne l'a jamais eue, et la suppression a
- * echoue, laissant les quinze migrations suivantes non appliquees.
+ * production : `sets.is_pr` n'etait cree par AUCUNE migration — il venait du
+ * dump `database/schema/mysql-schema.sql`, que seule une base construite a
+ * neuf charge (le dump ne le declare plus depuis #1513). Une base migree pas a
+ * pas ne l'a jamais eue, et la suppression a echoue, laissant les quinze
+ * migrations suivantes non appliquees.
  *
  * Le controle est statique, sur le TEXTE des migrations : un test qui
  * migrerait vraiment sur un schema divergent devrait fabriquer ce schema, donc

@@ -193,7 +193,13 @@ class WorkoutLine extends Model
             }
 
             $line->user_id = $seance->user_id;
-            $line->workout_started_at = $seance->started_at;
+
+            /*
+             * L'heure murale de la séance, posée sans le cast `datetime` : il
+             * relirait « 2026-03-29 02:30:00 », que l'heure d'été saute, 03:30
+             * (`Workout::debutALHeureMurale()`, #1513).
+             */
+            $line->setRawAttributes(['workout_started_at' => $seance->debutALHeureMurale()] + $line->getAttributes());
         });
 
         static::saved($clearCache);
