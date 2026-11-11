@@ -116,8 +116,17 @@ final readonly class ConnecterLeCompte
             return false;
         }
 
-        return ($marque['compte'] ?? null) === $compte->getKey()
-            && hash_equals(sha1($compte->getEmailForVerification()), $marque['empreinte'])
-            && $marque['expire'] >= Date::now()->getTimestamp();
+        return $this->marqueValablePour($compte, $marque['compte'] ?? null, $marque['empreinte'], $marque['expire']);
+    }
+
+    /**
+     * La marque, bien formée, désigne-t-elle ce compte, sous son adresse
+     * actuelle, et n'a-t-elle pas encore expiré ?
+     */
+    private function marqueValablePour(User $compte, mixed $compteDeLaMarque, string $empreinte, int $expire): bool
+    {
+        return $compteDeLaMarque === $compte->getKey()
+            && hash_equals(sha1($compte->getEmailForVerification()), $empreinte)
+            && $expire >= Date::now()->getTimestamp();
     }
 }

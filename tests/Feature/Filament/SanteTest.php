@@ -107,11 +107,12 @@ it('ouvre la page de santé au super administrateur, et à lui seul', function (
 });
 
 /**
- * Trois contrôles disent ce que le dépôt ne peut pas corriger seul sur le
- * serveur de production : les réglages de MySQL (#1668), les versions des conteneurs (#1813) et
- * le dossier des sauvegardes (#1812).
+ * Cinq contrôles disent ce que le dépôt ne peut pas corriger seul sur le
+ * serveur de production : les réglages de MySQL (#1668) et ceux de Redis
+ * (#2151), les versions des conteneurs (#1813) et celles des services
+ * (#2152), et le dossier des sauvegardes (#1812).
  */
-it('regarde la base et ses réglages, le cache, la file, le planificateur, Horizon, les versions, le disque, les sauvegardes et la configuration', function (): void {
+it('regarde la base et ses réglages, Redis et ses réglages, le cache, la file, le planificateur, Horizon, les versions, le disque, les sauvegardes et la configuration', function (): void {
     $noms = Health::registeredChecks()
         ->map(fn (Check $check): string => $check->getName())
         ->all();
@@ -120,12 +121,14 @@ it('regarde la base et ses réglages, le cache, la file, le planificateur, Horiz
         'Database',
         'ReglagesDeLaBase',
         'Redis',
+        'ReglagesDeRedis',
         'Cache',
         'Queue',
         'Schedule',
         'TachesPlanifiees',
         'Horizon',
         'VersionsDesConteneurs',
+        'VersionsDesServices',
         'UsedDiskSpace',
         'DossierDesSauvegardes',
         'Backups',
@@ -159,12 +162,14 @@ it('donne à chaque contrôle un libellé français, jamais celui que le paquet 
         'Connexion à la base',
         'Réglages de la base',
         'Connexion à Redis',
+        'Réglages de Redis',
         "Cache de l'application",
         "File d'attente",
         'Planificateur',
         'Tâches planifiées',
         'Travailleurs Horizon',
         'Versions des conteneurs',
+        'Versions des services',
         'Espace disque utilisé',
         'Dossier des sauvegardes',
         'Archives des sauvegardes',
