@@ -170,6 +170,7 @@ return [
         App\Enums\MotifDeLaTentative::class,
         App\Enums\PersonalRecordType::class,
         App\Enums\PorteeDeDiagnostic::class,
+        App\Enums\VerdictDeLaBase::class,
 
         // What Eloquent results are actually built out of.
         Illuminate\Database\Eloquent\Collection::class,
