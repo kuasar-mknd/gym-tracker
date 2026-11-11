@@ -601,7 +601,6 @@ CREATE TABLE `sets` (
   `distance_km` decimal(8,3) DEFAULT NULL,
   `is_warmup` tinyint(1) NOT NULL DEFAULT '0',
   `is_completed` tinyint(1) NOT NULL DEFAULT '0',
-  `is_pr` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
