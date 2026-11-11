@@ -103,6 +103,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Accès de diagnostic (#2032)
+    |--------------------------------------------------------------------------
+    |
+    | L'interrupteur de l'accès en lecture seule sous /diagnostic/v1. Lu
+    | strictement : seule la valeur booléenne vraie l'ouvre, jamais « 1 »
+    | ni un texte. Coupé, aucun jeton ne se crée et ceux qui restent sont
+    | révoqués au démarrage (entrypoint.sh).
+    |
+    */
+
+    'diagnostic_enabled' => env('DIAGNOSTIC_ENABLED', false) === true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |
