@@ -10,6 +10,7 @@ use App\Support\Sante\ReglagesDeLaBaseCheck;
 use App\Support\Sante\ReglagesDeRedisCheck;
 use App\Support\Sante\TachesPlanifieesCheck;
 use App\Support\Sante\VersionsDesConteneursCheck;
+use App\Support\Sante\VersionsDesServicesCheck;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Foundation\Events\DiagnosingHealth as SondageDeSante;
 use Illuminate\Queue\Events\JobProcessed;
@@ -59,6 +60,7 @@ final class SanteServiceProvider extends ServiceProvider
             TachesPlanifieesCheck::new(),
             HorizonCheck::new()->label('Travailleurs Horizon'),
             VersionsDesConteneursCheck::new(),
+            VersionsDesServicesCheck::new(),
             UsedDiskSpaceCheck::new()->label('Espace disque utilisé')->warnWhenUsedSpaceIsAbovePercentage(70)->failWhenUsedSpaceIsAbovePercentage(90),
             // Le délai du script de démarrage : au-delà, le partage est tenu pour endormi.
             DossierDesSauvegardesCheck::new()->delai(DossierDesSauvegardesCheck::DELAI_EN_SECONDES),

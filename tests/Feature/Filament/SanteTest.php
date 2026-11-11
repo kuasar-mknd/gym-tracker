@@ -107,10 +107,10 @@ it('ouvre la page de santé au super administrateur, et à lui seul', function (
 });
 
 /**
- * Quatre contrôles disent ce que le dépôt ne peut pas corriger seul sur le
+ * Cinq contrôles disent ce que le dépôt ne peut pas corriger seul sur le
  * serveur de production : les réglages de MySQL (#1668) et ceux de Redis
- * (#2151), les versions des conteneurs (#1813) et le dossier des sauvegardes
- * (#1812).
+ * (#2151), les versions des conteneurs (#1813) et celles des services
+ * (#2152), et le dossier des sauvegardes (#1812).
  */
 it('regarde la base et ses réglages, Redis et ses réglages, le cache, la file, le planificateur, Horizon, les versions, le disque, les sauvegardes et la configuration', function (): void {
     $noms = Health::registeredChecks()
@@ -128,6 +128,7 @@ it('regarde la base et ses réglages, Redis et ses réglages, le cache, la file,
         'TachesPlanifiees',
         'Horizon',
         'VersionsDesConteneurs',
+        'VersionsDesServices',
         'UsedDiskSpace',
         'DossierDesSauvegardes',
         'Backups',
@@ -168,6 +169,7 @@ it('donne à chaque contrôle un libellé français, jamais celui que le paquet 
         'Tâches planifiées',
         'Travailleurs Horizon',
         'Versions des conteneurs',
+        'Versions des services',
         'Espace disque utilisé',
         'Dossier des sauvegardes',
         'Archives des sauvegardes',
