@@ -59,7 +59,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 5 868 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4, et 14 contre un vrai Redis à l'image de la production (groupe `redis`, étape à part) | bloquant par PR |
+| **Tests backend** | 5 882 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4, et 14 contre un vrai Redis à l'image de la production (groupe `redis`, étape à part) | bloquant par PR |
 | **Tests frontend** | 4 292 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 192 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
