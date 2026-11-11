@@ -28,7 +28,9 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 use function PHPUnit\Framework\assertNotNull;
@@ -102,15 +104,15 @@ it('rend la seance et la liste des exercices', function (): void {
     $donnees = app(FetchWorkoutShowAction::class)->execute($user, $workout);
 
     expect(array_keys($donnees))->toBe(['workout', 'exercises']);
-    expect($donnees['workout']->id)->toBe($workout->id);
-    expect($donnees['exercises'])->toHaveCount(3);
+    expect($donnees['workout']()->id)->toBe($workout->id);
+    expect($donnees['exercises']())->toHaveCount(3);
 });
 
 it('rapporte les exercices, les series et leurs records avec la seance', function (): void {
     [$user, $workout] = seancePourAffichage();
 
     $donnees = app(FetchWorkoutShowAction::class)->execute($user, $workout);
-    $lignes = $donnees['workout']->workoutLines;
+    $lignes = $donnees['workout']()->workoutLines;
 
     expect($lignes)->toHaveCount(3);
 
@@ -145,21 +147,47 @@ it('lit la seance entiere en un nombre de requetes qui ne depend pas de sa longu
         $requetes++;
     });
 
-    app(FetchWorkoutShowAction::class)->execute($user, $workout);
+    $donnees = app(FetchWorkoutShowAction::class)->execute($user, $workout);
+    $donnees['workout']();
+    $donnees['exercises']();
 
-    // Six, et pas « au plus six » : la liste des exercices, les lignes,
-    // leurs exercices, leurs series, les records de ces series, puis la seule
-    // requete du calcul groupe des recommandations, qui lit l'historique. La
+    // Six, et pas « au plus six » : les lignes, leurs exercices, leurs series,
+    // les records de ces series, la seule requete du calcul groupe des
+    // recommandations, qui lit l'historique, puis la liste des exercices. La
     // seance n'est plus relue : l'action la passe au calcul, deja chargee par
     // la route (#2148, etape 3c). Retirer une entree du chargement anticipe en
     // fait cinq, quatre ou trois ; relire la seance, sept.
     expect($requetes)->toBe(6);
 });
 
+/*
+ * Le rechargement de la seule séance après le vidage de la file
+ * (`router.reload({ only: ['workout'] })`) ne résout que sa fermeture
+ * (#2148, étape 3a) : la bibliothèque d'exercices n'est pas lue, ni rien
+ * avant que la page ne demande une prop.
+ */
+it('ne lit rien tant qu’aucune prop n’est résolue, et pas la bibliothèque pour la seule séance', function (): void {
+    [$user, $workout] = seancePourAffichage();
+    Cache::flush();
+
+    $requetes = [];
+    DB::listen(function (QueryExecuted $requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
+    $donnees = app(FetchWorkoutShowAction::class)->execute($user, $workout);
+    expect($requetes)->toBe([]);
+
+    $donnees['workout']();
+
+    expect($requetes)->toHaveCount(5)
+        ->and(array_filter($requetes, static fn (string $sql): bool => str_contains($sql, 'from `exercises` where (`user_id` is null')))->toBe([]);
+});
+
 it('pose les valeurs recommandees sur chaque ligne avant que la vue ne les lise', function (): void {
     [$user, $workout] = seancePourAffichage();
 
-    $donnees = app(FetchWorkoutShowAction::class)->execute($user, $workout);
+    $seance = app(FetchWorkoutShowAction::class)->execute($user, $workout)['workout']();
 
     // Le rendu Inertia serialise chaque ligne et lit `recommended_values`.
     // Sans le calcul groupe, cet acces retombe sur l'accesseur, qui interroge
@@ -170,7 +198,7 @@ it('pose les valeurs recommandees sur chaque ligne avant que la vue ne les lise'
         $requetes++;
     });
 
-    foreach ($donnees['workout']->workoutLines as $workoutLine) {
+    foreach ($seance->workoutLines as $workoutLine) {
         // Aucun entrainement anterieur : la recommandation est la valeur par
         // defaut du service, posee ici plutot que recalculee.
         expect($workoutLine->recommended_values['reps'])->toBe(10);

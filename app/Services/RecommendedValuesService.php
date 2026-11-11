@@ -51,6 +51,13 @@ final class RecommendedValuesService
     /**
      * Les valeurs proposées pour une ligne de séance.
      *
+     * Le même calcul que le lot, pour le seul exercice de la ligne (#1513) :
+     * la ligne seule avait sa requête, son calcul et son écriture de la même
+     * clef, et les deux chemins avaient déjà répondu différemment sur les
+     * mêmes séances. L'historique est celui du propriétaire de la séance de
+     * la ligne ; la ligne ne reçoit pas les valeurs en attribut, que
+     * l'accesseur qui l'appelle lirait ensuite comme une colonne modifiée.
+     *
      * @param  WorkoutLine  $line  La ligne à pré-remplir.
      * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int}
      */
@@ -63,39 +70,10 @@ final class RecommendedValuesService
             return $this->getDefaultValues();
         }
 
-        $cacheKey = self::cleDeCache((int) $workout->user_id, (int) $line->exercise_id, (int) $line->workout_id);
+        $idExercice = (int) $line->exercise_id;
+        $results = $this->getResultsFromCacheOrFetch([$idExercice], (int) $workout->user_id, (int) $line->workout_id, $workout);
 
-        /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null $cached */
-        $cached = Cache::get($cacheKey);
-        if ($cached !== null) {
-            return $cached;
-        }
-
-        /*
-         * Sans jointure : le filtre et l'ordre portent desormais sur la meme
-         * table, donc `workout_lines(user_id, exercise_id, workout_started_at)`
-         * les sert tous les deux et le `LIMIT` s'arrete aux premieres lignes.
-         *
-         * La jointure d'avant filtrait sur `workout_lines` et ordonnait sur
-         * `workouts` : aucun index ne pouvant servir les deux, MySQL
-         * materialisait toute la jointure et la triait. Mesure sur un exercice
-         * present dans chaque seance : 601 lignes lues a 600 seances.
-         */
-        $candidates = WorkoutLine::query()
-            ->with(['sets'])
-            ->where('user_id', $workout->user_id)
-            ->where('exercise_id', $line->exercise_id)
-            ->where('workout_started_at', '<', $workout->started_at)
-            ->where('workout_id', '!=', $workout->id)
-            ->orderByDesc('workout_started_at')
-            ->orderByDesc('id')
-            ->limit(self::PROFONDEUR)
-            ->get();
-
-        $values = $this->calculateFromLines($candidates);
-        Cache::put($cacheKey, $values, 300);
-
-        return $values;
+        return $results[$idExercice] ?? $this->getDefaultValues();
     }
 
     /**
@@ -320,7 +298,9 @@ final class RecommendedValuesService
      *
      * Les lignes précédentes de chaque exercice demandé sont classées par date,
      * les plus récentes retenues, et la première qui dit quelque chose donne les
-     * valeurs, qui sont mises en cache au passage.
+     * valeurs, qui sont mises en cache au passage. C'est le seul endroit qui
+     * écrit la clef (#1513, `LesProjectionsGardentLeursEcrivainsTest`) : la
+     * ligne seule et le lot y passent tous les deux.
      *
      * @param  array<int, int>  $uncachedExerciseIds  Les exercices absents du cache.
      * @param  int  $idSeance  La séance en cours, exclue de la recherche.
@@ -331,36 +311,7 @@ final class RecommendedValuesService
     private function fetchUncachedRecommendedValues(array $uncachedExerciseIds, int $idSeance, int $idUtilisateur, Workout $workout): array
     {
         $results = [];
-
-        /*
-         * La meme question que le chemin unitaire, et la meme reponse.
-         *
-         * Ce lot prenait `MAX(workout_lines.id)` quand l'unitaire triait par
-         * `workouts.started_at` : sur une seance saisie apres coup, les deux
-         * designaient des lignes differentes. L'ordre porte sur la date des
-         * deux cotes, departage par la clef primaire dans le meme sens, et
-         * chaque exercice remonte ses dernieres lignes, pas seulement une.
-         */
-        $classement = WorkoutLine::query()
-            ->select(['id', 'exercise_id'])
-            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY workout_started_at DESC, id DESC) AS rang')
-            ->where('user_id', $idUtilisateur)
-            ->whereIn('exercise_id', $uncachedExerciseIds)
-            ->where('workout_id', '!=', $idSeance)
-            ->where('workout_started_at', '<', $workout->started_at);
-
-        $retenues = DB::query()
-            ->select('id')
-            ->fromSub($classement, 'classement')
-            ->where('rang', '<=', self::PROFONDEUR);
-
-        $candidatesByExercise = WorkoutLine::query()
-            ->with('sets')
-            ->whereIn('id', $retenues)
-            ->orderByDesc('workout_started_at')
-            ->orderByDesc('id')
-            ->get()
-            ->groupBy('exercise_id');
+        $candidatesByExercise = $this->lignesPrecedentes($uncachedExerciseIds, $idSeance, $idUtilisateur, $workout)->groupBy('exercise_id');
 
         $cacheData = [];
         foreach ($uncachedExerciseIds as $idExercice) {
@@ -377,5 +328,70 @@ final class RecommendedValuesService
         }
 
         return $results;
+    }
+
+    /**
+     * Les `PROFONDEUR` dernières lignes de chaque exercice demandé, d'avant la
+     * séance et hors d'elle, la plus récente en tête, séries chargées.
+     *
+     * L'ordre porte sur la date recopiée sur la ligne, départagée par la clef
+     * primaire dans le même sens : une séance saisie après coup a
+     * l'identifiant le plus grand et la date la plus ancienne. Le lot prenait
+     * `MAX(workout_lines.id)` quand la ligne seule triait par la date, et les
+     * deux désignaient alors des lignes différentes.
+     *
+     * Deux formes, que le nombre d'exercices choisit, et qui rendent les mêmes
+     * lignes. Pour un seul (une ligne seule, ou un seul exercice absent du
+     * cache), l'index `(user_id, exercise_id, workout_started_at)` sert le
+     * filtre et l'ordre, et le `LIMIT` s'arrête aux dernières lignes ; la
+     * fenêtre lisait tout l'historique de l'exercice pour en garder cinq.
+     * Pour plusieurs, une seule requête, qui classe les lignes de chacun par
+     * `ROW_NUMBER()`, plutôt qu'une requête par exercice. Mesuré le
+     * 2026-11-11 sur 8.4.13 et 9.7.2 (deltas de `Handler_read%`, 400 séances
+     * du compte et autant d'un voisin) : un seul exercice lit 6 entrées
+     * d'index, 15 suivantes et 14 à rebours, quand la fenêtre en lisait 11,
+     * 816 suivantes et 407 de table ; à 100 séances, 6 entrées et 216
+     * suivantes contre 11, 216 et 107 de table, le serveur prenant un autre
+     * parcours sur une table aussi petite (`.ai/rules/services.md`, piège 2).
+     * La ligne seule lit comme avant, et le lot de trois exercices aussi.
+     *
+     * @param  array<int, int>  $idsExercices  Les exercices demandés.
+     * @param  int  $idSeance  La séance en cours, exclue de la recherche.
+     * @param  int  $idUtilisateur  Le propriétaire des lignes.
+     * @param  Workout  $seance  La séance en cours, qui borne l'historique dans le temps.
+     * @return Collection<int, WorkoutLine>
+     */
+    private function lignesPrecedentes(array $idsExercices, int $idSeance, int $idUtilisateur, Workout $seance): Collection
+    {
+        $precedentes = WorkoutLine::query()
+            ->where('user_id', $idUtilisateur)
+            ->whereIn('exercise_id', $idsExercices)
+            ->where('workout_id', '!=', $idSeance)
+            ->where('workout_started_at', '<', $seance->started_at);
+
+        if (count($idsExercices) === 1) {
+            return $precedentes
+                ->with('sets')
+                ->orderByDesc('workout_started_at')
+                ->orderByDesc('id')
+                ->limit(self::PROFONDEUR)
+                ->get();
+        }
+
+        $classement = $precedentes
+            ->select(['id', 'exercise_id'])
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY workout_started_at DESC, id DESC) AS rang');
+
+        $retenues = DB::query()
+            ->select('id')
+            ->fromSub($classement, 'classement')
+            ->where('rang', '<=', self::PROFONDEUR);
+
+        return WorkoutLine::query()
+            ->with('sets')
+            ->whereIn('id', $retenues)
+            ->orderByDesc('workout_started_at')
+            ->orderByDesc('id')
+            ->get();
     }
 }

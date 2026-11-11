@@ -32,17 +32,27 @@ class GetStatsDashboardAction
     public const string PERIODE_PAR_DEFAUT = '30j';
 
     /**
-     * @return array<string, mixed>
+     * Les props de la page : les chiffres immédiats, en fermetures que la
+     * requête de la prop différée ne résout pas (#2148, étape 3a), et la
+     * fermeture de la prop différée, que le contrôleur passe à
+     * `Inertia::defer()`.
+     *
+     * @return array{
+     *     latestWeight: \Closure(): (float|string|null),
+     *     weightChange: \Closure(): float,
+     *     bodyFat: \Closure(): (float|string|null),
+     *     exercises: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>,
+     *     selectedPeriod: string,
+     *     deferredData: \Closure(): array<string, mixed>
+     * }
      */
     public function execute(User $user, Request $request): array
     {
         $period = self::periodeDemandee($request);
         $jours = $this->fetchStatsOverview->parsePeriod($period);
 
-        $immediateData = $this->fetchStatsOverview->chiffresImmediats($user, $period);
-
         return [
-            ...$immediateData,
+            ...$this->fetchStatsOverview->chiffresImmediats($user, $period),
             'deferredData' => fn (): array => [
                 'performance' => $this->performanceOverview($user, $jours),
                 'body' => $this->bodyStats->getBodyProgressOverview($user, $jours),

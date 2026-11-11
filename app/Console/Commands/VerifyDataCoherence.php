@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Services\GoalService;
 use App\Services\PersonalRecordService;
+use App\Services\RecommendedValuesService;
+use App\Services\Stats\StatsCacheManager;
 use App\Services\StreakService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -37,10 +39,10 @@ class VerifyDataCoherence extends Command
     #[\Override]
     protected $signature = 'app:verify-data-coherence
         {--limit=5 : Nombre d\'identifiants cités par écart}
-        {--repair : Retire les records d\'un type que l\'application ne tient plus, puis reconstruit les records détachés ou en écart, les objectifs de leurs comptes, les volumes de séance et les séries de jours depuis leurs sources}';
+        {--repair : Retire les records d\'un type que l\'application ne tient plus, puis reconstruit les records détachés ou en écart, les objectifs de leurs comptes, les volumes de séance, les séries de jours et la date recopiée sur les lignes de séance depuis leurs sources}';
 
     #[\Override]
-    protected $description = 'Compare les valeurs dérivées (volumes, records, séries, objectifs) à leur source';
+    protected $description = 'Compare les valeurs dérivées (volumes, records, séries, objectifs, copies) à leur source';
 
     public function handle(): int
     {
@@ -56,6 +58,7 @@ class VerifyDataCoherence extends Command
             'série de jours' => $this->serieDeJours(...),
             'propriétaire recopié sur les lignes de séance' => $this->proprietaireDesLignes(...),
             'propriétaire recopié sur les séries' => $this->proprietaireDesSeries(...),
+            'date de séance recopiée sur ses lignes' => $this->debutRecopieSurLesLignes(...),
             'avancement des objectifs' => $this->avancementDesObjectifs(...),
         ];
 
@@ -65,6 +68,7 @@ class VerifyDataCoherence extends Command
             $this->recalculerLesObjectifs($comptesAuxRecordsRefaits);
             $this->recalculerLesVolumes();
             $this->recalculerLesSeries();
+            $this->recopierLesDebutsSurLesLignes();
         }
 
         $total = 0;
@@ -167,6 +171,62 @@ class VerifyDataCoherence extends Command
                     }
                 }
             });
+    }
+
+    /**
+     * Recopie le début de chaque séance dont une ligne s'en écarte, par
+     * l'écrivain de la propagation (#1513).
+     *
+     * `Workout::recopierLeDebutSurSesLignes()` est celui que la séance appelle
+     * quand elle change de date : la réparation n'ajoute pas d'écrivain à la
+     * copie, et ne touche que les séances que le contrôle trouve en écart.
+     * Les statistiques et les valeurs proposées des comptes réparés lisent la
+     * copie : elles sont oubliées ensuite, sans quoi leur cache servirait
+     * encore, jusqu'à son échéance, ce que la copie fausse leur avait fait
+     * calculer. Les statistiques le sont comme quand une séance change de
+     * date (`UpdateWorkoutAction`) ; les valeurs proposées, dont l'historique
+     * se borne et s'ordonne sur la copie, aussi.
+     */
+    private function recopierLesDebutsSurLesLignes(): void
+    {
+        $recopiees = 0;
+        /** @var array<int, User> $comptes */
+        $comptes = [];
+
+        Workout::query()
+            ->with('user')
+            ->whereIn('id', $this->lignesAuDebutEcarte()->select('workouts.id'))
+            ->chunkById(500, function (\Illuminate\Database\Eloquent\Collection $seances) use (&$recopiees, &$comptes): void {
+                foreach ($seances as $seance) {
+                    $seance->recopierLeDebutSurSesLignes();
+                    $recopiees++;
+                    $comptes[$seance->user->id] = $seance->user;
+                }
+            });
+
+        $statistiques = app(StatsCacheManager::class);
+        $valeursProposees = app(RecommendedValuesService::class);
+
+        foreach ($comptes as $compte) {
+            $statistiques->clearWorkoutRelatedStats($compte);
+            $valeursProposees->invaliderPour($compte->id);
+        }
+
+        $this->line(sprintf('  <fg=yellow>%d</> séance(s) dont le début a été recopié sur les lignes', $recopiees));
+        $this->newLine();
+    }
+
+    /**
+     * Les lignes de séance dont la date recopiée n'est pas le début de leur
+     * séance, jointes à leur séance. Une copie nulle en est une aussi : `<=>`
+     * la compte, là où `!=` seul la laisserait passer, et `workouts.started_at`
+     * n'est jamais nul.
+     */
+    private function lignesAuDebutEcarte(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('workout_lines')
+            ->join('workouts', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->whereRaw('NOT (workout_lines.workout_started_at <=> workouts.started_at)');
     }
 
     /**
@@ -824,6 +884,51 @@ class VerifyDataCoherence extends Command
             'sets.user_id',
             'série(s)',
         );
+    }
+
+    /**
+     * `workout_lines.workout_started_at` contre le début de la séance (#1513).
+     *
+     * La copie existe pour que l'index `(user_id, workout_started_at)` serve
+     * le filtre et l'ordre des lectures par compte, sans jointure (#1601) :
+     * les statistiques fenêtrées et les valeurs proposées. Une
+     * ligne restée à une autre date, ou sans date, sort de leurs fenêtres ou
+     * s'y range ailleurs, et rien d'autre ne le voit. Deux écrivains la
+     * tiennent : la copie posée à l'enregistrement de la ligne et la
+     * propagation quand la séance change de date ; un enregistrement qui saute
+     * les événements, une écriture par le constructeur de requêtes ou une
+     * migration y échappent.
+     *
+     * Le décompte est celui des SÉANCES, unité de la réparation
+     * (`recopierLesDebutsSurLesLignes()`) ; chacune dit son début, combien de
+     * lignes s'en écartent, et quelles copies elles portent (NULL pour une
+     * copie vide). La lecture a la forme de celle du propriétaire recopié :
+     * chaque ligne et sa séance, une fois chacune, sans tri. Mesuré le
+     * 2026-11-11 sur 8.4.13 et 9.7.2 (deltas de `Handler_read%`, le compte
+     * et les exemples ensemble, aucun écart) : 1 002 lectures d'index et
+     * 5 000 suivantes pour 500 séances de quatre lignes, 4 002 lectures
+     * d'index et 16 004 de table pour 2 000 séances, le même plan sur les
+     * deux serveurs, linéaire en lignes.
+     *
+     * @return array{int, list<string>}
+     */
+    private function debutRecopieSurLesLignes(): array
+    {
+        $parSeance = $this->lignesAuDebutEcarte()
+            ->groupBy('workouts.id', 'workouts.started_at')
+            ->selectRaw(
+                "workouts.id, workouts.started_at as debut, COUNT(*) as ecartees, GROUP_CONCAT(DISTINCT COALESCE(CAST(workout_lines.workout_started_at AS CHAR), 'NULL') ORDER BY workout_lines.workout_started_at SEPARATOR ', ') as copies",
+            );
+
+        $requete = DB::query()->fromSub($parSeance, 'par_seance')->orderBy('id');
+
+        return $this->ecarts($requete, fn (array $seance): string => sprintf(
+            'séance %s (début %s) : %s ligne(s) dont la copie vaut %s',
+            $this->colonne($seance, 'id'),
+            $this->colonne($seance, 'debut'),
+            $this->colonne($seance, 'ecartees'),
+            $this->colonne($seance, 'copies'),
+        ));
     }
 
     /**

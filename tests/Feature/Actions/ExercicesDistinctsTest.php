@@ -65,7 +65,7 @@ it('compte les exercices sur le préfixe de l’index, que MySQL peut parcourir 
     DB::flushQueryLog();
     DB::enableQueryLog();
     $action = app(FetchWorkoutsIndexAction::class);
-    $compte = $action->execute($user)['totalExercises'];
+    $compte = $action->execute($user)['totalExercises']();
     $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
     DB::disableQueryLog();
 
@@ -86,7 +86,7 @@ it('compte les exercices sans les répétitions', function (): void {
     Cache::flush();
     $action = app(FetchWorkoutsIndexAction::class);
 
-    expect($action->execute($user)['totalExercises'])->toBe(4);
+    expect($action->execute($user)['totalExercises']())->toBe(4);
 });
 
 it('rend zéro pour un compte sans aucune ligne', function (): void {
@@ -95,7 +95,7 @@ it('rend zéro pour un compte sans aucune ligne', function (): void {
     Cache::flush();
     $action = app(FetchWorkoutsIndexAction::class);
 
-    expect($action->execute($user)['totalExercises'])->toBe(0);
+    expect($action->execute($user)['totalExercises']())->toBe(0);
 });
 
 /**
@@ -113,5 +113,31 @@ it('rend un entier quand le cache rend le compte en chaîne, comme Redis', funct
     Cache::put(ClesDeStats::seances($user, 'total_exercises'), '6', now()->addHour());
     $action = app(FetchWorkoutsIndexAction::class);
 
-    expect($action->execute($user)['totalExercises'])->toBe(6);
+    expect($action->execute($user)['totalExercises']())->toBe(6);
+});
+
+/*
+ * Le compte est une fermeture depuis #2148 (étape 3a) : Inertia la résout
+ * après le contrôleur, au rendu de la réponse. L'échéance de son entrée vient
+ * de l'instant que l'action a lu, gardé par la fermeture, jamais d'une seconde
+ * lecture de l'horloge au moment où elle est résolue (`.ai/rules/horloge.md`) :
+ * le compte rangé vit une heure depuis cet instant, ni plus ni moins.
+ */
+it('garde le compte une heure depuis l’instant que l’action a lu, même résolu plus tard', function (): void {
+    $user = User::factory()->create();
+    semerLignesPourExercices($user, 4, 2);
+    Cache::flush();
+    $this->travelTo(Carbon::parse('2026-11-04 20:00:00'));
+
+    $compte = app(FetchWorkoutsIndexAction::class)->execute($user)['totalExercises'];
+    $this->travelTo(Carbon::parse('2026-11-04 20:30:00'));
+
+    expect($compte())->toBe(2);
+
+    $clef = ClesDeStats::seances($user, 'total_exercises');
+    $this->travelTo(Carbon::parse('2026-11-04 20:59:59'));
+    expect(Cache::has($clef))->toBeTrue();
+
+    $this->travelTo(Carbon::parse('2026-11-04 21:00:01'));
+    expect(Cache::has($clef))->toBeFalse();
 });
