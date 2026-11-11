@@ -65,14 +65,18 @@ function propsImmediatesSemerUnCompte(User $compte): Workout
 }
 
 /**
- * Les instructions SQL d'une visite d'Inertia, le cache vidé juste avant.
+ * Les instructions SQL d'une visite d'Inertia, le cache vidé juste avant, sauf
+ * pour une visite à cache chaud.
  *
  * @param  array<string, string>  $enPlus  les en-têtes d'une réponse partielle
  * @return array{reponse: TestResponse<Response>, instructions: list<string>}
  */
-function propsImmediatesVisiter(User $compte, string $adresse, array $enPlus = []): array
+function propsImmediatesVisiter(User $compte, string $adresse, array $enPlus = [], bool $cacheFroid = true): array
 {
-    Cache::flush();
+    if ($cacheFroid) {
+        Cache::flush();
+    }
+
     DB::flushQueryLog();
     DB::enableQueryLog();
 
@@ -176,3 +180,23 @@ it('ne lit aucune prop immédiate pour une réponse partielle qui ne la demande 
     expect($props)->toBeArray()->toHaveKey($demandee)
         ->and(propsImmediatesLues($instructions, $fragments))->toBe([], implode("\n", $instructions));
 })->with('pages aux props immédiates');
+
+/*
+ * Le compte de la requête entière, liaison de route comprise : c'est celui que
+ * le CHANGELOG donne. La fermeture de l'action seule en lit une de moins
+ * (`FetchWorkoutShowActionTest`), la séance que la route a déjà liée.
+ */
+it('recharge la seule séance en six instructions à cache froid, et en cinq à cache chaud', function (): void {
+    $compte = User::factory()->create();
+    $seance = propsImmediatesSemerUnCompte($compte);
+    $partielle = [
+        'X-Inertia-Partial-Component' => 'Workouts/Show',
+        'X-Inertia-Partial-Data' => 'workout',
+    ];
+
+    ['instructions' => $aFroid] = propsImmediatesVisiter($compte, route('workouts.show', $seance), $partielle);
+    ['instructions' => $aChaud] = propsImmediatesVisiter($compte, route('workouts.show', $seance), $partielle, cacheFroid: false);
+
+    expect($aFroid)->toHaveCount(6, implode("\n", $aFroid))
+        ->and($aChaud)->toHaveCount(5, implode("\n", $aChaud));
+});
