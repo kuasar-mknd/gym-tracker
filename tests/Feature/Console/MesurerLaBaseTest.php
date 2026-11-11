@@ -369,6 +369,21 @@ it('écrit les attentes en cours à l’un des relevés dans les lignes lisibles
         ->and(Artisan::output())->not->toContain('en cours :');
 });
 
+it('dit « non rendu » du maximum quand le premier relevé ne l’a pas rendu', function (): void {
+    $avant = mesureDeLaBaseCompteurs(['Uptime' => 1_000]);
+    unset($avant['Innodb_row_lock_time_max']);
+
+    mesureDeLaBaseReleves([
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => $avant],
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs(['Uptime' => 1_200, 'Innodb_row_lock_time_max' => 900])],
+    ]);
+
+    $mesure = mesureDeLaBaseEnJson();
+
+    expect($mesure['attentes_de_verrou'])->toMatchArray(['maximum_ms' => null, 'maximum_atteint_pendant_la_fenetre' => false])
+        ->and($mesure['non_rendus'])->toBe(['Innodb_row_lock_time_max']);
+});
+
 it('ne compte pas le maximum d’avant la fenêtre comme une attente de la fenêtre', function (): void {
     mesureDeLaBaseReleves([
         ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs(['Uptime' => 1_000, 'Innodb_row_lock_time_max' => 10_100])],
@@ -464,7 +479,19 @@ it('refuse de conclure quand la base a redémarré pendant la fenêtre, sans jam
     // Démarrée 50 s avant le premier relevé, redémarrée pendant l'attente :
     // Uptime monte, mais de moins que l'attente.
     'Uptime qui monte de moins que l’attente' => [50, 150],
+    // Uptime compte en secondes entières et en perd une au plus : pour 200 s
+    // d'attente, 198 s ne suffisent plus.
+    'Uptime qui monte de l’attente moins deux secondes' => [1_000, 1_198],
 ]);
+
+it('accepte une fenêtre d’une seconde de moins que l’attente, la seconde qu’Uptime peut perdre', function (): void {
+    mesureDeLaBaseReleves([
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs(['Uptime' => 1_000])],
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs(['Uptime' => 1_199])],
+    ]);
+
+    expect(mesureDeLaBaseEnJson()['fenetre_s'])->toBe(199);
+});
 
 it('refuse de conclure quand un compteur recule sans redémarrage', function (): void {
     mesureDeLaBaseReleves([
