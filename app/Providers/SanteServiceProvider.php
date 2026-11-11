@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Support\Sante\AnnonceDeVersion;
 use App\Support\Sante\DossierDesSauvegardesCheck;
 use App\Support\Sante\ReglagesDeLaBaseCheck;
+use App\Support\Sante\ReglagesDeRedisCheck;
 use App\Support\Sante\TachesPlanifieesCheck;
 use App\Support\Sante\VersionsDesConteneursCheck;
 use Illuminate\Console\Events\ScheduledTaskStarting;
@@ -50,6 +51,7 @@ final class SanteServiceProvider extends ServiceProvider
             DatabaseCheck::new()->label('Connexion à la base'),
             ReglagesDeLaBaseCheck::new(),
             RedisCheck::new()->label('Connexion à Redis'),
+            ReglagesDeRedisCheck::new(),
             CacheCheck::new()->label("Cache de l'application"),
             // Le battement passe par la file « default », celle qu'Horizon sert.
             QueueCheck::new()->label("File d'attente")->onQueue('default')->failWhenHealthJobTakesLongerThanMinutes(5),
