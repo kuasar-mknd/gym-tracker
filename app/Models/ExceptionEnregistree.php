@@ -156,6 +156,10 @@ final class ExceptionEnregistree extends Exception
         'adresse',
         'identifiant',
         'referer',
+        'keys',
+        'auth',
+        'p256dh',
+        'endpoint',
     ];
 
     /**

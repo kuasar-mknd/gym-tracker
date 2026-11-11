@@ -5,12 +5,23 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\User;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 
 class RecentUsersTable extends TableWidget
 {
+    /**
+     * Ces encarts montrent des comptes (noms, adresses, effectifs) : ils
+     * suivent la capacité qui ouvre la liste des utilisateurs.
+     */
+    #[\Override]
+    public static function canView(): bool
+    {
+        return auth()->user()?->can('ViewAny:User') === true;
+    }
+
     #[\Override]
     protected static ?int $sort = 3;
 
