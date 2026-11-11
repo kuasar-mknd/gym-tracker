@@ -38,8 +38,9 @@ final class FetchDashboardDataAction
      * Chacune est une fermeture, qu'Inertia ne résout que si sa prop part dans
      * la réponse : la requête de la prop différée `analyticalStats`, qui
      * rejoue le contrôleur, relisait sinon la pesée, les séances, les records
-     * et les objectifs pour les jeter aussitôt (#2148, étape 3a). Aucune ne lit
-     * l'horloge.
+     * et les objectifs pour les jeter aussitôt (#2148, étape 3a). Aucune ne tire
+     * de l'horloge ce qu'elle rend : seule l'échéance de l'entrée de la pesée en
+     * dépend, lue par le service (`.ai/rules/horloge.md`).
      *
      * @return array{
      *     latestWeight: \Closure(): (float|string|null),

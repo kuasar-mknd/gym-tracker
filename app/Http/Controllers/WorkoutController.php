@@ -57,7 +57,7 @@ class WorkoutController extends Controller
 
         return Inertia::render('Workouts/Show', [
             ...$fetchWorkoutShow->execute($this->user(), $workout),
-            'bornesDUneSerie' => fn (): array => Set::bornes(),
+            'bornesDUneSerie' => Set::bornes(...),
         ]);
     }
 

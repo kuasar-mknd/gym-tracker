@@ -30,7 +30,8 @@ class FetchStatsOverviewAction
      * contrôleur, relisait sinon la pesée et la bibliothèque pour les jeter
      * aussitôt (#2148, étape 3a). Les trois chiffres de la pesée viennent d'une
      * seule lecture du cache, faite par la première fermeture résolue. Aucune
-     * ne lit l'horloge.
+     * ne tire de l'horloge ce qu'elle rend : seule l'échéance de l'entrée de la
+     * pesée en dépend, lue par le service (`.ai/rules/horloge.md`).
      *
      * @param  string  $period  La période demandée, telle qu'elle arrive de la requête (« 30j »).
      * @return array{

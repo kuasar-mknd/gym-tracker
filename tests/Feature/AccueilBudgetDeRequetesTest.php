@@ -127,7 +127,7 @@ function accueilBudgetMessage(string $quoi, array $instructions): string
 {
     return "{$quoi} a changé de nombre d'instructions SQL (compte à froid, figé le 2026-11-06). "
         .'Une requête de plus est à expliquer ou à retirer ; une de moins, à consigner ici avec le nouveau compte, '
-        ."en le disant dans la PR (#2148, étape 3a).\n".implode("\n", $instructions);
+        ."en le disant dans la PR (#2148).\n".implode("\n", $instructions);
 }
 
 /**
