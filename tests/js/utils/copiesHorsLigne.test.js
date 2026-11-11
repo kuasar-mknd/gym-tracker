@@ -23,7 +23,7 @@ import { PLAFOND_DES_COPIES_EN_OCTETS, VERSION_DU_CONTRAT } from '@/Utils/pagesG
  * du témoin que le serveur pose et efface avec la session, gardées pour un
  * seul compte, et derrière une purge qui fait barrière. La base est celle,
  * en mémoire, de `baseIndexeeEnMemoire.js` (jsdom n'a pas IndexedDB) ; le
- * chiffrement, le `crypto.subtle` de Node 24, que jsdom laisse passer.
+ * chiffrement, le `crypto.subtle` de Node, que jsdom laisse passer.
  */
 
 /** Une clé de 32 octets tirés au hasard, en base64url, comme le serveur la tire. */
