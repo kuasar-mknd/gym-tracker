@@ -6,7 +6,7 @@ namespace App\Enums;
 
 /**
  * Pourquoi un jeton de diagnostic a été révoqué (#2032). La raison s'écrit
- * avec la révocation et se lit dans la page des accès.
+ * avec la révocation.
  */
 enum RaisonDeRevocationDuJeton: string
 {

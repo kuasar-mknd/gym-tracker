@@ -40,7 +40,7 @@ if echo "$@" | grep -q "octane:frankenphp"; then
     php artisan schedule-monitor:sync
     # Un accès de diagnostic coupé ne laisse aucun jeton actif (#2032). Après
     # les migrations, qui créent la table ; un échec avertit sans arrêter le
-    # conteneur, comme la sauvegarde : l'interrupteur coupé refuse déjà tout.
+    # conteneur, comme la sauvegarde : l'interrupteur coupé refuse déjà toute création.
     if ! php artisan diagnostic:revoquer --si-coupe; then
         echo "ATTENTION : les jetons de diagnostic n'ont pas pu être révoqués alors que l'accès est coupé ; lancez « php artisan diagnostic:revoquer --tous »." >&2
     fi

@@ -14,8 +14,8 @@ use Illuminate\Console\Command;
  * Révoque des jetons de diagnostic (#2032), en console : le retour arrière le
  * plus court quand le panneau ne répond plus.
  *
- * `--tous` ou `--identifiant=` désigne ce qui se révoque, l'un des deux est
- * exigé. `--si-coupe` est celui du démarrage (`entrypoint.sh`) : il ne fait
+ * Une seule désignation, exigée : `--tous`, `--identifiant=` ou `--si-coupe` ;
+ * deux ensemble sont refusés. `--si-coupe` est celle du démarrage (`entrypoint.sh`) : il ne fait
  * rien tant que `DIAGNOSTIC_ENABLED` est vrai, et révoque tout, avec la
  * raison `interrupteur`, quand il est faux. La commande n'affiche jamais un
  * jeton : elle n'en connaît que l'identifiant.
