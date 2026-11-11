@@ -9,7 +9,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | tests/Browser/**, tests/DuskTestCase.php, tests/Support/PiloteDesParcours.php, tests/Support/NavigateurDesParcours.php, tests/Support/ParcoursHorsLigne.php | .ai/rules/browser.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/**, app/**, config/**, routes/** | .ai/rules/database.md |
-| package.json, package-lock.json, composer.json, composer.lock | .ai/rules/dependencies.md |
+| package.json, package-lock.json, composer.json, composer.lock, docker-compose.prod.yml, compose.yaml | .ai/rules/dependencies.md |
 | app/Filament/**, app/Support/AvatarDesInitiales.php, app/Support/ComptesVusParPulse.php, app/Providers/TelescopeServiceProvider.php, app/Policies/**, config/filament-shield.php, app/Providers/Filament/AdminPanelProvider.php | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
 | app/** | .ai/rules/horloge.md |

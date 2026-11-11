@@ -27,7 +27,7 @@ x-app-env: &app-env
     # les serveurs (#2152). Elles suivent l'étiquette `image:` de chaque
     # service, et montent avec elle (LesVersionsAttenduesSuiventLesImagesTest).
     VERSION_ATTENDUE_DE_MYSQL: '8.4'
-    VERSION_ATTENDUE_DE_REDIS: '8'
+    VERSION_ATTENDUE_DE_REDIS: '8.10.3'
 
     # Email Configuration
     MAIL_MAILER: smtp
@@ -206,8 +206,15 @@ services:
         networks:
             - backend
 
+    # Une étiquette exacte, sans `pull_policy` : Compose ne tire l'image que si
+    # elle manque, et une étiquette flottante restait sur la version tirée la
+    # première fois (#2152). La montée se fait par la composition de la
+    # release, en suivant la marche « Redis » de .ai/rules/dependencies.md
+    # (application arrêtée, copie du volume redis_data, retour par la copie).
+    # Les reconstructions de l'image à la même version n'arrivent pas seules :
+    # l'étiquette monte avec le lot de dépendances suivant.
     redis:
-        image: redis:8-alpine
+        image: redis:8.10.3-alpine
         restart: always
         command: >
             redis-server

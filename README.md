@@ -59,7 +59,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 5 732 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
+| **Tests backend** | 5 803 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
 | **Tests frontend** | 4 277 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 191 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -75,6 +75,8 @@ Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](d
 ## 📦 Mise en production
 
 La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml up -d` (ou la mise à jour de la pile) : `pull_policy: always` retélécharge l'image et recrée les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé, et un simple redémarrage ne télécharge rien (#1813). Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
+
+La base et Redis ne suivent pas `v1` : `db` et `redis` lancent l'étiquette de la composition (`redis:8.10.3-alpine`, une version exacte), et retélécharger l'image de l'application ne les change pas. **À chaque release, la pile reçoit la composition de son tag** (`docker-compose.prod.yml`), puis se met à jour ; « Versions des services », dans la page « Santé », dit ensuite si `db` et `redis` servent la version qu'elle attend. Une release qui monte `redis` se déploie par la marche « Redis » de `.ai/rules/dependencies.md`, à une heure creuse : application arrêtée, Redis arrêté, copie du volume de données de redis, mise à jour, vérification, et retour par la copie si besoin ; la version d'avant ne relit plus le volume une fois l'AOF réécrit par la nouvelle. Une bascule de MySQL a sa propre marche, dans le même fichier.
 
 **Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
 
@@ -248,7 +250,7 @@ Apple renvoie l'utilisateur par un POST depuis son site, sans cookie de session 
 | `ASSET_URL` | la valeur d'`APP_URL` | Les actifs se servent depuis l'adresse publique. |
 | `DB_CONNECTION`, `DB_HOST`, `DB_PORT` | `mysql`, `db`, `3306` | Le service `db` ; `entrypoint.sh` l'attend jusqu'à vingt minutes avant d'abandonner. |
 | `REDIS_HOST`, `REDIS_PORT` | `redis`, `6379` | Le service `redis`. |
-| `VERSION_ATTENDUE_DE_MYSQL`, `VERSION_ATTENDUE_DE_REDIS` | l'étiquette de `image:` de `db` et de `redis`, sans sa variante : `8.4` et `8` | Les versions que « Versions des services » attend des deux serveurs (#2152). Elles montent avec l'étiquette, dans la même PR (`LesVersionsAttenduesSuiventLesImagesTest`) ; une pile qui ne les a pas n'a pas reçu la composition de la release. |
+| `VERSION_ATTENDUE_DE_MYSQL`, `VERSION_ATTENDUE_DE_REDIS` | l'étiquette de `image:` de `db` et de `redis`, sans sa variante : `8.4` et `8.10.3` | Les versions que « Versions des services » attend des deux serveurs (#2152). Elles montent avec l'étiquette, dans la même PR (`LesVersionsAttenduesSuiventLesImagesTest`) ; une pile qui ne les a pas n'a pas reçu la composition de la release. |
 | `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions, cache, résultats des contrôles de santé, versions annoncées par les conteneurs et file d'Horizon, partagés par les trois conteneurs de l'application. |
 | `MAIL_MAILER` | `smtp` | Les courriels partent par le serveur de `MAIL_HOST`. |
 | `GOMAXPROCS` | `2` | Plafonne les threads Go de FrankenPHP dans `app` ; `worker` et `scheduler`, en PHP CLI, l'ignorent. |
@@ -336,7 +338,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 
 | Catégorie | Technologies |
 | --- | --- |
-| **Backend** | Laravel 13, PHP 8.5 (8.5.12 au moins, que l'image et `composer.json` exigent, Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.4, la LTS suivante), Redis et Laravel Horizon |
+| **Backend** | Laravel 13, PHP 8.5 (8.5.12 au moins, que l'image et `composer.json` exigent, Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.4, la LTS suivante), Redis 8.10.3 et Laravel Horizon |
 | **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4, Vite 8 |
 | **Backoffice** | Filament 5 |
 | **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |
