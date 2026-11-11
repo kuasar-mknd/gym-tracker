@@ -61,7 +61,13 @@ function propsDiffereesControleurs(): array
         }
 
         $source = (string) file_get_contents($fichier->getPathname());
-        $controleurs[$fichier->getBasename('.php')] = str_contains($source, 'Inertia::defer(');
+        $nom = $fichier->getBasename('.php');
+
+        // Deux contrôleurs peuvent partager un nom court (WorkoutController
+        // de la page et celui de l'API) : l'ordre du parcours du disque ne
+        // doit pas décider lequel compte. Le nom pose une prop différée dès
+        // que l'un de ses fichiers en pose une.
+        $controleurs[$nom] = ($controleurs[$nom] ?? false) || str_contains($source, 'Inertia::defer(');
     }
 
     ksort($controleurs);
