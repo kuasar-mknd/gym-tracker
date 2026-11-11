@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\File;
 use Laravel\Horizon\MasterSupervisor;
 use Laravel\Horizon\ProvisioningPlan;
 use Laravel\Horizon\SupervisorOptions;
@@ -25,7 +26,95 @@ use Laravel\Horizon\SupervisorOptions;
  * des files de Laravel 13). La valeur s'écrit en dur : une variable vide
  * donnerait zéro. Le blocage reste sous le `timeout` du superviseur et le
  * `retry_after` de la connexion.
+ *
+ * La configuration résolue ne suffit pas à tenir « en dur » : les tests ne
+ * posent aucune variable, et `(int) env('REDIS_QUEUE_BLOCK_FOR', 2)` y vaut
+ * 2. La garde lit donc aussi ce qu'écrivent config/queue.php et
+ * config/horizon.php : un entier, sans `env()`.
  */
+
+/**
+ * L'expression écrite d'une clé d'un fichier de configuration, telle quelle,
+ * trouvée par son chemin de tableaux (`connections`, `redis`, `block_for`),
+ * chaque bloc à son retrait (le fichier est formaté par Pint). `null` quand
+ * le chemin ne s'y lit pas.
+ *
+ * @param  non-empty-list<string>  $chemin
+ */
+function fileExpressionEcrite(string $source, array $chemin): ?string
+{
+    $lignes = explode("\n", $source);
+    $debut = 0;
+    $fin = count($lignes);
+    $retrait = '';
+    $cle = array_pop($chemin);
+
+    foreach ($chemin as $bloc) {
+        $ouverture = null;
+
+        for ($rang = $debut; $rang < $fin; $rang++) {
+            if (preg_match('/^'.preg_quote($retrait.'    ', '/').'\''.preg_quote($bloc, '/').'\'\s*=>\s*\[\s*$/', $lignes[$rang]) === 1) {
+                $ouverture = $rang;
+
+                break;
+            }
+        }
+
+        if ($ouverture === null) {
+            return null;
+        }
+
+        $debut = $ouverture + 1;
+        $retrait .= '    ';
+
+        for ($rang = $debut; $rang < $fin; $rang++) {
+            if (preg_match('/^'.preg_quote($retrait, '/').'\],?\s*$/', $lignes[$rang]) === 1) {
+                $fin = $rang;
+
+                break;
+            }
+        }
+    }
+
+    for ($rang = $debut; $rang < $fin; $rang++) {
+        if (preg_match('/^'.preg_quote($retrait.'    ', '/').'\''.preg_quote($cle, '/').'\'\s*=>\s*(.*?),?\s*$/', $lignes[$rang], $trouve) === 1) {
+            return $trouve[1];
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Ce que la garde refuse dans ce qu'écrivent config/queue.php et
+ * config/horizon.php : `block_for` de la connexion `redis` et `sleep` de
+ * chaque superviseur doivent être des entiers écrits en dur.
+ *
+ * @return list<string>
+ */
+function fileEcrituresRefusees(string $queue, string $horizon): array
+{
+    $refus = [];
+    $bloque = fileExpressionEcrite($queue, ['connections', 'redis', 'block_for']);
+
+    if ($bloque === null) {
+        $refus[] = 'config/queue.php n’écrit pas block_for dans la connexion redis.';
+    } elseif (preg_match('/^\d+$/', $bloque) !== 1) {
+        $refus[] = sprintf('config/queue.php écrit block_for « %s » : un entier en dur, car une variable vide donnerait zéro, qui bloque sans fin.', $bloque);
+    }
+
+    if (fileExpressionEcrite($horizon, ['defaults', 'supervisor-1', 'sleep']) === null) {
+        $refus[] = 'config/horizon.php n’écrit pas sleep dans defaults.supervisor-1 : Horizon dormirait trois secondes après chaque lecture vide.';
+    }
+
+    foreach (explode("\n", $horizon) as $rang => $ligne) {
+        if (preg_match('/^\s*\'sleep\'\s*=>\s*(.*?),?\s*$/', $ligne, $trouve) === 1 && preg_match('/^\d+$/', $trouve[1]) !== 1) {
+            $refus[] = sprintf('config/horizon.php écrit sleep « %s » à la ligne %d : un entier en dur, sans variable.', $trouve[1], $rang + 1);
+        }
+    }
+
+    return $refus;
+}
 
 /**
  * Ce que la garde refuse dans le réglage d'une connexion de file et d'un
@@ -118,6 +207,30 @@ it('refuse un blocage nul, nul en secondes, trop long, ou un sommeil entre deux 
     'block_for au timeout du superviseur' => [['block_for' => 60, 'retry_after' => 90], 0, 'block_for (60 s) doit rester sous'],
     'block_for au retry_after' => [['block_for' => 30, 'retry_after' => 30], 0, 'block_for (30 s) doit rester sous'],
     'sommeil du défaut de Horizon' => [['block_for' => 2, 'retry_after' => 90], 3, 'sleep vaut 3'],
+]);
+
+it('écrit en dur block_for et sleep, sans variable qu’une valeur vide ferait tomber à zéro', function (): void {
+    expect(fileEcrituresRefusees(File::get(base_path('config/queue.php')), File::get(base_path('config/horizon.php'))))->toBe([]);
+});
+
+it('refuse block_for ou sleep lus d’une variable, ou absents', function (string $fichier, string $avant, string $apres, string $refus): void {
+    $queue = File::get(base_path('config/queue.php'));
+    $horizon = File::get(base_path('config/horizon.php'));
+    $retouche = $fichier === 'queue' ? $queue : $horizon;
+    expect(substr_count($retouche, $avant))->toBe(1, "« {$avant} » ne se trouve plus une seule fois dans config/{$fichier}.php.");
+    $retouche = str_replace($avant, $apres, $retouche);
+
+    $refuses = $fichier === 'queue' ? fileEcrituresRefusees($retouche, $horizon) : fileEcrituresRefusees($queue, $retouche);
+
+    expect($refuses)->toHaveCount(1)
+        ->and(str_starts_with($refuses[0] ?? '', $refus))->toBeTrue(implode("\n", $refuses));
+})->with([
+    'block_for venu d’une variable, la forme de l’issue' => ['queue', "'block_for' => 2,", "'block_for' => (int) env('REDIS_QUEUE_BLOCK_FOR', 2),", 'config/queue.php écrit block_for « (int) env('],
+    'block_for venu d’une variable, sur plusieurs lignes' => ['queue', "'block_for' => 2,", "'block_for' => (int) env(\n                'REDIS_QUEUE_BLOCK_FOR',\n                2,\n            ),", 'config/queue.php écrit block_for « (int) env('],
+    'block_for retiré de la connexion redis' => ['queue', "            'block_for' => 2,\n", '', 'config/queue.php n’écrit pas block_for'],
+    'sleep des défauts venu d’une variable' => ['horizon', "'sleep' => 0,", "'sleep' => (int) env('HORIZON_SLEEP', 0),", 'config/horizon.php écrit sleep « (int) env('],
+    'sleep des défauts retiré' => ['horizon', "            'sleep' => 0,\n", '', 'config/horizon.php n’écrit pas sleep'],
+    'sleep de la production venu d’une variable' => ['horizon', "                'balanceCooldown' => 3,\n", "                'balanceCooldown' => 3,\n                'sleep' => (int) env('HORIZON_SLEEP', 0),\n", 'config/horizon.php écrit sleep « (int) env('],
 ]);
 
 it('accepte un blocage de deux secondes sans sommeil', function (): void {
