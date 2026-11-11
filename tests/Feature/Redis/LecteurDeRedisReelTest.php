@@ -74,8 +74,8 @@ it('lit dans INFO les champs de sa liste blanche, et eux seuls', function (): vo
         ->and(LecteurDeRedis::entier($champs['used_memory']))->toBeGreaterThan(0)
         ->and(LecteurDeRedis::entier($champs['keyspace_hits']))->toBeGreaterThanOrEqual(50);
 
-    foreach ($champs as $valeur) {
-        expect($valeur)->not->toContain('ada')->not->toContain('203.0.113.7');
+    foreach ($champs as $champ => $valeur) {
+        expect(str_contains($valeur, 'ada') || str_contains($valeur, '203.0.113.7'))->toBeFalse("{$champ} recopie le nom d'une clé.");
     }
 });
 
@@ -92,17 +92,17 @@ it('relève les compteurs sans la mémoire de l’hôte ni aucun nom de clé, la
         return [$code, Artisan::output()];
     });
 
-    $lignes = array_values(array_filter(explode("\n", trim($sortie))));
+    assert(is_string($sortie));
+    $lignes = array_values(array_filter(explode("\n", trim($sortie)), static fn (string $ligne): bool => $ligne !== ''));
 
     expect($code)->toBe(0)
         ->and($lignes[0])->toBe('Instance des données (connexion default)')
         ->and($lignes[1])->toBe('redis_version: '.redisReelVersionDeLaProduction())
-        ->and($lignes[2])->toMatch('/^memoire: \d+ % du plafond$/')
-        ->and($sortie)->not->toContain('total_system_memory')
-        ->not->toContain('used_memory')
-        ->not->toContain('os:')
-        ->not->toContain('ada')
-        ->not->toContain('203.0.113.7');
+        ->and($lignes[2])->toMatch('/^memoire: \d+ % du plafond$/');
+
+    foreach (['total_system_memory', 'used_memory', 'os:', 'ada', '203.0.113.7'] as $interdit) {
+        expect(str_contains($sortie, $interdit))->toBeFalse("Le relevé recopie « {$interdit} ».");
+    }
 
     $permis = ['memoire', 'memoire_au_pic', ...LecteurDeRedis::CHAMPS];
 

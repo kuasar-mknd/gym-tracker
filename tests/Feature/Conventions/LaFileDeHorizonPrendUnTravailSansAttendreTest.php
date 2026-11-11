@@ -37,6 +37,7 @@ use Laravel\Horizon\SupervisorOptions;
 function fileReglagesRefuses(array $connexion, SupervisorOptions $superviseur): array
 {
     $bloque = $connexion['block_for'] ?? null;
+    $relance = $connexion['retry_after'] ?? null;
     $refus = [];
 
     if (! is_int($bloque) || $bloque < 1) {
@@ -44,12 +45,12 @@ function fileReglagesRefuses(array $connexion, SupervisorOptions $superviseur): 
             'block_for vaut %s : un entier d’au moins une seconde fait attendre la lecture sur le serveur ; nul, elle rend la main aussitôt, et zéro bloque sans fin.',
             var_export($bloque, true),
         );
-    } elseif ($bloque >= $superviseur->timeout || $bloque >= (int) ($connexion['retry_after'] ?? 0)) {
+    } elseif ($bloque >= $superviseur->timeout || ! is_int($relance) || $bloque >= $relance) {
         $refus[] = sprintf(
             'block_for (%d s) doit rester sous le timeout du superviseur (%d s) et le retry_after de la connexion (%s s).',
             $bloque,
             $superviseur->timeout,
-            var_export($connexion['retry_after'] ?? null, true),
+            var_export($relance, true),
         );
     }
 
@@ -73,9 +74,11 @@ function fileSuperviseursDeHorizon(): array
 {
     $superviseurs = [];
 
-    foreach (ProvisioningPlan::get(MasterSupervisor::name())->toSupervisorOptions() as $environnement => $options) {
+    /** @var array<string, array<string, SupervisorOptions>> $plan */
+    $plan = ProvisioningPlan::get(MasterSupervisor::name())->toSupervisorOptions();
+
+    foreach ($plan as $environnement => $options) {
         foreach ($options as $nom => $superviseur) {
-            assert($superviseur instanceof SupervisorOptions);
             $superviseurs["{$environnement}.{$nom}"] = $superviseur;
         }
     }
@@ -104,8 +107,10 @@ it('refuse un blocage nul, nul en secondes, trop long, ou un sommeil entre deux 
         'sleep' => $sommeil,
     ]);
 
-    expect(fileReglagesRefuses($connexion, $superviseur))->toHaveCount(1)
-        ->and(fileReglagesRefuses($connexion, $superviseur)[0])->toStartWith($refus);
+    $refuses = fileReglagesRefuses($connexion, $superviseur);
+
+    expect($refuses)->toHaveCount(1)
+        ->and(str_starts_with($refuses[0] ?? '', $refus))->toBeTrue(implode("\n", $refuses));
 })->with([
     'block_for nul, sommeil à zéro : relecture à vide sans fin' => [['block_for' => null, 'retry_after' => 90], 0, 'block_for vaut NULL'],
     'block_for à zéro : blocage sans fin' => [['block_for' => 0, 'retry_after' => 90], 0, 'block_for vaut 0'],
@@ -136,9 +141,12 @@ it('range un instantané des métriques de Horizon toutes les cinq minutes, avan
         static fn (Event $evenement): bool => preg_match("/artisan'?\\s+horizon:snapshot\$/", (string) $evenement->command) === 1,
     ));
 
+    $dernier = end($evenements);
+    assert($dernier instanceof Event);
+
     expect($instantanes)->toHaveCount(1)
         ->and($instantanes[0]->expression)->toBe('*/5 * * * *')
         ->and(config('horizon.metrics.trim_snapshots.queue'))->toBe(24)
         ->and(config('horizon.metrics.trim_snapshots.job'))->toBe(24)
-        ->and((string) end($evenements)->command)->toEndWith('health:schedule-check-heartbeat');
+        ->and((string) $dernier->command)->toEndWith('health:schedule-check-heartbeat');
 });

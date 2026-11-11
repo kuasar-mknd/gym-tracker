@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Redis;
@@ -36,7 +37,7 @@ const GROUPE_REDIS_DOSSIER = 'Feature/Redis';
  */
 function groupeRedisLanceLeGroupe(string $commande): bool
 {
-    return preg_match('/(?:\bartisan\s+test|\bvendor\/bin\/(?:pest|phpunit))\b[^\n]*\s--group(?:=|\s+)[\'"]?redis\b/', $commande) === 1;
+    return preg_match('/(?:\bartisan\s+test|\bvendor\/bin\/(?:pest|phpunit))\b[^\n]*\s\--group(?:=|\s+)[\'"]?redis\b/', $commande) === 1;
 }
 
 /**
@@ -44,7 +45,7 @@ function groupeRedisLanceLeGroupe(string $commande): bool
  */
 function groupeRedisChoisitSesGroupes(string $commande): bool
 {
-    return preg_match('/(?:\bartisan\s+test|\bvendor\/bin\/(?:pest|phpunit))\b[^\n]*\s--(?:exclude-)?group\b/', $commande) === 1;
+    return preg_match('/(?:\bartisan\s+test|\bvendor\/bin\/(?:pest|phpunit))\b[^\n]*\s\--(?:exclude-)?group\b/', $commande) === 1;
 }
 
 /**
@@ -67,7 +68,9 @@ function groupeRedisWorkflows(): array
 {
     $workflows = [];
 
-    foreach (File::glob(base_path('.github/workflows/*.yml')) as $chemin) {
+    $chemins = glob(base_path('.github/workflows/*.yml'));
+
+    foreach ($chemins === false ? [] : $chemins as $chemin) {
         $lu = Yaml::parseFile($chemin);
         $workflows[basename($chemin)] = is_array($lu) ? $lu : [];
     }
@@ -149,8 +152,10 @@ function groupeRedisEcartsDeLEtape(string $nom, array $job, array $etape, string
     $extensions = '';
 
     foreach (is_array($job['steps'] ?? null) ? $job['steps'] : [] as $autre) {
-        if (is_array($autre) && is_string($autre['uses'] ?? null) && str_starts_with($autre['uses'], 'shivammathur/setup-php@')) {
-            $extensions .= ','.(string) data_get($autre, 'with.extensions', '');
+        $liste = data_get($autre, 'with.extensions');
+
+        if (is_array($autre) && is_string($autre['uses'] ?? null) && str_starts_with($autre['uses'], 'shivammathur/setup-php@') && is_string($liste)) {
+            $extensions .= ','.$liste;
         }
     }
 
@@ -170,9 +175,40 @@ function groupeRedisEcartsDeLEtape(string $nom, array $job, array $etape, string
 function groupeRedisEcartsApres(Closure $retouche): array
 {
     $workflows = groupeRedisWorkflows();
-    $workflows['ci.yml']['jobs']['laravel-tests-mysql'] = $retouche($workflows['ci.yml']['jobs']['laravel-tests-mysql']);
+    $ci = $workflows['ci.yml'] ?? [];
+    $jobs = is_array($ci['jobs'] ?? null) ? $ci['jobs'] : [];
+    $jobs['laravel-tests-mysql'] = $retouche(is_array($jobs['laravel-tests-mysql'] ?? null) ? $jobs['laravel-tests-mysql'] : []);
+    $ci['jobs'] = $jobs;
+    $workflows['ci.yml'] = $ci;
 
     return groupeRedisEcartsDeLaCi($workflows, groupeRedisImageDeLaProduction());
+}
+
+/**
+ * Le job, avec la valeur donnée posée au chemin donné.
+ *
+ * @param  array<array-key, mixed>  $job
+ * @return array<array-key, mixed>
+ */
+function groupeRedisPoser(array $job, string $chemin, mixed $valeur): array
+{
+    data_set($job, $chemin, $valeur);
+    assert(is_array($job));
+
+    return $job;
+}
+
+/**
+ * Les étapes d'un job, par rang.
+ *
+ * @param  array<array-key, mixed>  $job
+ * @return array<int, mixed>
+ */
+function groupeRedisEtapes(array $job): array
+{
+    $etapes = $job['steps'] ?? [];
+
+    return is_array($etapes) ? array_values($etapes) : [];
 }
 
 /**
@@ -182,8 +218,10 @@ function groupeRedisEcartsApres(Closure $retouche): array
  */
 function groupeRedisRangDeLEtape(array $job): int
 {
-    foreach ($job['steps'] as $rang => $etape) {
-        if (is_string($etape['run'] ?? null) && groupeRedisLanceLeGroupe($etape['run'])) {
+    foreach (groupeRedisEtapes($job) as $rang => $etape) {
+        $commande = data_get($etape, 'run');
+
+        if (is_string($commande) && groupeRedisLanceLeGroupe($commande)) {
             return $rang;
         }
     }
@@ -195,11 +233,12 @@ it('écarte le groupe redis de toute passe qui ne le demande pas', function (): 
     $configuration = simplexml_load_file(base_path('phpunit.xml'));
     assert($configuration instanceof SimpleXMLElement);
 
-    $exclus = array_map(strval(...), $configuration->xpath('/phpunit/groups/exclude/group') ?: []);
-    $inclus = $configuration->xpath('/phpunit/groups/include/group') ?: [];
+    $exclus = $configuration->xpath('/phpunit/groups/exclude/group');
+    $inclus = $configuration->xpath('/phpunit/groups/include/group');
+    $exclus = is_array($exclus) ? array_map(strval(...), $exclus) : [];
 
     expect($exclus)->toContain('redis')
-        ->and($inclus)->toBe([]);
+        ->and(is_array($inclus) ? $inclus : [])->toBe([]);
 });
 
 it('lie chaque test de tests/Feature/Redis au groupe et à la garde du vrai Redis', function (): void {
@@ -250,41 +289,27 @@ it('refuse une étape du groupe sans service, sans extension, sous condition, ou
         ->and($ecarts[0])->toContain($ecart);
 })->with([
     'sans service redis' => [static function (array $job): array {
-        unset($job['services']['redis']);
+        Arr::forget($job, 'services.redis');
 
         return $job;
     }, 'pas de service à l\'image de la production'],
-    'service à une autre image' => [static function (array $job): array {
-        $job['services']['redis']['image'] = 'redis:8-alpine';
-
-        return $job;
-    }, 'pas de service à l\'image de la production'],
+    'service à une autre image' => [static fn (array $job): array => groupeRedisPoser($job, 'services.redis.image', 'redis:8-alpine'), 'pas de service à l\'image de la production'],
     'sans phpredis' => [static function (array $job): array {
-        foreach ($job['steps'] as $rang => $etape) {
-            if (str_starts_with((string) ($etape['uses'] ?? ''), 'shivammathur/setup-php@')) {
-                $job['steps'][$rang]['with']['extensions'] = str_replace(', redis', '', (string) $etape['with']['extensions']);
+        foreach (groupeRedisEtapes($job) as $rang => $etape) {
+            $extensions = data_get($etape, 'with.extensions');
+
+            if (is_string($extensions)) {
+                $job = groupeRedisPoser($job, "steps.{$rang}.with.extensions", str_replace(', redis', '', $extensions));
             }
         }
 
         return $job;
     }, 'n\'installe pas l\'extension redis'],
-    'sous condition' => [static function (array $job): array {
-        $job['steps'][groupeRedisRangDeLEtape($job)]['if'] = "github.event_name == 'push'";
-
-        return $job;
-    }, 'porte une condition'],
-    'qui peut tomber sans rien faire tomber' => [static function (array $job): array {
-        $job['steps'][groupeRedisRangDeLEtape($job)]['continue-on-error'] = true;
-
-        return $job;
-    }, 'porte une condition ou continue-on-error'],
-    'cache sur array' => [static function (array $job): array {
-        $job['steps'][groupeRedisRangDeLEtape($job)]['env']['CACHE_STORE'] = 'array';
-
-        return $job;
-    }, 'ne pose pas CACHE_STORE à redis'],
+    'sous condition' => [static fn (array $job): array => groupeRedisPoser($job, 'steps.'.groupeRedisRangDeLEtape($job).'.if', "github.event_name == 'push'"), 'porte une condition'],
+    'qui peut tomber sans rien faire tomber' => [static fn (array $job): array => groupeRedisPoser($job, 'steps.'.groupeRedisRangDeLEtape($job).'.continue-on-error', true), 'porte une condition ou continue-on-error'],
+    'cache sur array' => [static fn (array $job): array => groupeRedisPoser($job, 'steps.'.groupeRedisRangDeLEtape($job).'.env.CACHE_STORE', 'array'), 'ne pose pas CACHE_STORE à redis'],
     'sans hôte' => [static function (array $job): array {
-        unset($job['steps'][groupeRedisRangDeLEtape($job)]['env']['REDIS_HOST']);
+        Arr::forget($job, 'steps.'.groupeRedisRangDeLEtape($job).'.env.REDIS_HOST');
 
         return $job;
     }, 'ne pose pas REDIS_HOST'],
@@ -297,17 +322,21 @@ it('refuse une étape qui retire le groupe, ou qui choisit ses groupes', functio
         ->and($ecarts[0])->toContain($ecart);
 })->with([
     'groupe retiré' => [static function (array $job): array {
-        unset($job['steps'][groupeRedisRangDeLEtape($job)]);
+        $etapes = groupeRedisEtapes($job);
+        unset($etapes[groupeRedisRangDeLEtape($job)]);
+        $job['steps'] = array_values($etapes);
 
         return $job;
     }, '0 étapes lancent le groupe redis'],
     'groupe lancé deux fois' => [static function (array $job): array {
-        $job['steps'][] = $job['steps'][groupeRedisRangDeLEtape($job)];
+        $etapes = groupeRedisEtapes($job);
+        $etapes[] = $etapes[groupeRedisRangDeLEtape($job)];
+        $job['steps'] = $etapes;
 
         return $job;
     }, '2 étapes lancent le groupe redis'],
     'suite principale qui exclut un autre groupe' => [static function (array $job): array {
-        $job['steps'][] = ['name' => 'Autre passe', 'run' => 'php artisan test -p --exclude-group=lent'];
+        $job['steps'] = [...groupeRedisEtapes($job), ['name' => 'Autre passe', 'run' => 'php artisan test -p --exclude-group=lent']];
 
         return $job;
     }, 'Autre passe choisit ses groupes'],

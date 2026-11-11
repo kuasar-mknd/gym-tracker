@@ -188,7 +188,9 @@ function redisWorkflowsLus(): array
 {
     $workflows = [];
 
-    foreach (glob(base_path('.github/workflows/*.yml')) ?: [] as $chemin) {
+    $chemins = glob(base_path('.github/workflows/*.yml'));
+
+    foreach ($chemins === false ? [] : $chemins as $chemin) {
         $lu = Yaml::parseFile($chemin);
         $workflows[basename($chemin)] = is_array($lu) ? $lu : [];
     }
@@ -205,6 +207,7 @@ function redisWorkflowsLus(): array
  */
 it('lance chaque service de Redis de la CI à l’image du service redis de la production', function (): void {
     $production = redisImageDuService('docker-compose.prod.yml');
+    assert(is_string($production));
     $services = redisServicesDesWorkflows(redisWorkflowsLus());
 
     expect($services)->toHaveKeys(['ci.yml › demarrage › redis', 'ci.yml › laravel-tests-mysql › redis']);

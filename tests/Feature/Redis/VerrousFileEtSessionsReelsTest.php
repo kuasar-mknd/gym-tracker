@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -30,8 +29,10 @@ function redisReelEnregistrerUneSession(): string
     $session->start();
     $session->put('redis-reel', 'gardée');
     $session->save();
+    $identifiant = $session->getId();
+    assert(is_string($identifiant));
 
-    return $session->getId();
+    return $identifiant;
 }
 
 it('vide le cache par cache:clear sans toucher aux sessions, à la file ni aux verrous', function (): void {
@@ -64,14 +65,13 @@ it('tient un verrou réel : un seul propriétaire, rendu par lui seul, libre à 
         ->and(Cache::lock('redis-reel:verrou', 1)->get())->toBeFalse();
 
     $repris = Cache::restoreLock('redis-reel:verrou', $premier->owner());
-    assert($repris instanceof Lock);
 
     expect($repris->release())->toBeTrue()
         ->and($second->get())->toBeTrue();
 
     // Une seconde d'échéance : le serveur la rend sans que personne ne la rende.
     $echeance = microtime(true) + 3;
-    while (! Cache::lock('redis-reel:verrou', 1)->get() && microtime(true) < $echeance) {
+    while (Cache::lock('redis-reel:verrou', 1)->get() !== true && microtime(true) < $echeance) {
         usleep(50_000);
     }
 

@@ -13,7 +13,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Filament/**, app/Support/AvatarDesInitiales.php, app/Support/ComptesVusParPulse.php, app/Providers/TelescopeServiceProvider.php, app/Policies/**, config/filament-shield.php, app/Providers/Filament/AdminPanelProvider.php | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
 | app/** | .ai/rules/horloge.md |
-| app/Jobs/**, app/Notifications/**, app/Listeners/**, app/Mail/**, resources/views/vendor/notifications/** | .ai/rules/jobs.md |
+| app/Jobs/**, app/Notifications/**, app/Listeners/**, app/Mail/**, resources/views/vendor/notifications/**, config/queue.php, config/horizon.php | .ai/rules/jobs.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/**, public/*.svg, public/manifest.webmanifest, pwa-assets.config.js | .ai/rules/js.md |
 | bootstrap/app.php, app/Http/Middleware/**, app/Support/Csp/**, app/Support/Sessions/**, app/Support/CleDesCopiesEnSession.php, app/Support/RappelDeLAppareil.php, app/Support/EcheanceDuCookie.php, config/sanctum.php, app/Providers/Filament/AdminPanelProvider.php, app/Http/Controllers/SanteController.php, resources/views/errors/** | .ai/rules/middleware.md |
 | app/Models/**, app/Support/TexteSansJeton.php | .ai/rules/models.md |

@@ -33,7 +33,9 @@ function redisReelVersionDeLaRecommandation(int $compte): string
  */
 function redisReelCleDuCacheExiste(string $cle): bool
 {
-    return (int) Redis::connection('cache')->command('exists', [Cache::getPrefix().$cle]) === 1;
+    $existe = Redis::connection('cache')->command('exists', [Cache::getPrefix().$cle]);
+
+    return $existe === 1 || $existe === true;
 }
 
 /**

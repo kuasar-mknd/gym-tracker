@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Process\FakeInvokedProcess;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\WorkerIdle;
@@ -31,7 +32,9 @@ use Tests\Support\RedisReel;
  */
 function redisReelOptionsDuSuperviseur(): SupervisorOptions
 {
-    $options = ProvisioningPlan::get(MasterSupervisor::name())->toSupervisorOptions()['production']['supervisor-1'] ?? null;
+    /** @var array<string, array<string, SupervisorOptions>> $plan */
+    $plan = ProvisioningPlan::get(MasterSupervisor::name())->toSupervisorOptions();
+    $options = $plan['production']['supervisor-1'] ?? null;
     assert($options instanceof SupervisorOptions);
 
     return $options;
@@ -45,7 +48,7 @@ function redisReelOptionsDuSuperviseur(): SupervisorOptions
  *
  * @param  list<float>  $instants
  */
-function redisReelPousserAuxInstants(string $attente, string $file, array $instants): InvokedProcess
+function redisReelPousserAuxInstants(string $attente, string $file, array $instants): InvokedProcess|FakeInvokedProcess
 {
     $code = <<<'PHP'
         [, $hote, $port, $motDePasse, $base, $attente, $file] = $argv;
@@ -67,14 +70,18 @@ function redisReelPousserAuxInstants(string $attente, string $file, array $insta
         echo json_encode($poussees);
         PHP;
 
-    $motDePasse = config('database.redis.default.password');
+    $reglage = static function (string $cle): string {
+        $valeur = config("database.redis.default.{$cle}");
+
+        return is_scalar($valeur) ? (string) $valeur : '';
+    };
 
     return Process::start([
         PHP_BINARY, '-r', $code, '--',
-        (string) config('database.redis.default.host'),
-        (string) config('database.redis.default.port'),
-        is_string($motDePasse) ? $motDePasse : '',
-        (string) config('database.redis.default.database'),
+        $reglage('host'),
+        $reglage('port'),
+        $reglage('password'),
+        $reglage('database'),
         RedisReel::cleComplete('queues:'.$attente),
         RedisReel::cleComplete('queues:'.$file),
         ...array_map(static fn (float $instant): string => sprintf('%.6F', $instant), $instants),
@@ -154,7 +161,7 @@ it('range un instantané des métriques de Horizon par horizon:snapshot, que la 
     dispatch(static function (): void {
     })->onConnection('redis')->onQueue('redis-reel');
 
-    (new Worker(app('queue'), app('events'), app(ExceptionHandler::class), static fn (): bool => false))
+    new Worker(app('queue'), app('events'), app(ExceptionHandler::class), static fn (): bool => false)
         ->runNextJob('redis', 'redis-reel', new WorkerOptions(sleep: 0, maxTries: 1));
 
     expect(Artisan::call('horizon:snapshot'))->toBe(0);
