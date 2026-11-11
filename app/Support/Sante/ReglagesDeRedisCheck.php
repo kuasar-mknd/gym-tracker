@@ -24,7 +24,7 @@ use Throwable;
  * synchronisations ou quand `INFO` ne rend pas de quoi juger. Les compteurs
  * courent depuis le démarrage de Redis : le contrôle garde ceux du passage
  * précédent dans le cache et ne juge que ce qui a changé depuis, un
- * redémarrage remettant le compte à zéro. Les seuils se calculent sur le
+ * redémarrage (un autre `run_id`) remettant le compte à zéro. Les seuils se calculent sur le
  * `maxmemory` que rend `INFO`, et rien ne montre une quantité de mémoire :
  * un plafond relevé dirait ce que l'hôte donne à Redis. Production
  * seulement ; la lecture se fait dans run(), jamais au démarrage, et rien
@@ -120,8 +120,8 @@ final class ReglagesDeRedisCheck extends Check
      * qui la nomme : laissée filer, le paquet afficherait « Crashed », sans
      * message ni courriel.
      *
-     * @param  array{uptime: int|null, compteurs: array<string, int|null>}|null  $avant
-     * @return array{meta: array<string, mixed>|null, rouges: list<string>, oranges: list<string>, plafond: string, compteurs: array{uptime: int|null, compteurs: array<string, int|null>}|null}
+     * @param  array{run_id: string|null, uptime: int|null, compteurs: array<string, int|null>}|null  $avant
+     * @return array{meta: array<string, mixed>|null, rouges: list<string>, oranges: list<string>, plafond: string, compteurs: array{run_id: string|null, uptime: int|null, compteurs: array<string, int|null>}|null}
      */
     private function jugerLInstance(string $role, string $connexion, ?array $avant, bool $cacheAPart): array
     {
@@ -392,10 +392,10 @@ final class ReglagesDeRedisCheck extends Check
     /**
      * Ce qu'un compteur a pris depuis le passage précédent, et depuis quand
      * il se compte : depuis le démarrage de Redis au premier passage, depuis
-     * son redémarrage quand il a redémarré entre-temps (son âge a baissé).
+     * son redémarrage quand il a redémarré entre-temps.
      *
      * @param  array<string, string>  $champs
-     * @param  array{uptime: int|null, compteurs: array<string, int|null>}|null  $avant
+     * @param  array{run_id: string|null, uptime: int|null, compteurs: array<string, int|null>}|null  $avant
      * @return array{nombre: int, depuis: string}|null
      */
     private function ecart(string $compteur, array $champs, ?array $avant): ?array
@@ -422,10 +422,17 @@ final class ReglagesDeRedisCheck extends Check
 
     /**
      * @param  array<string, string>  $champs
-     * @param  array{uptime: int|null, compteurs: array<string, int|null>}|null  $avant
+     * @param  array{run_id: string|null, uptime: int|null, compteurs: array<string, int|null>}|null  $avant
      */
     private function aRedemarre(array $champs, ?array $avant): bool
     {
+        $processus = $champs['run_id'] ?? null;
+        $processusPrecedent = $avant['run_id'] ?? null;
+
+        if ($processus !== null && $processusPrecedent !== null) {
+            return $processus !== $processusPrecedent;
+        }
+
         $age = LecteurDeRedis::entier($champs['uptime_in_seconds'] ?? null);
         $agePrecedent = $avant['uptime'] ?? null;
 
@@ -434,7 +441,7 @@ final class ReglagesDeRedisCheck extends Check
 
     /**
      * @param  array<string, string>  $champs
-     * @return array{uptime: int|null, compteurs: array<string, int|null>}
+     * @return array{run_id: string|null, uptime: int|null, compteurs: array<string, int|null>}
      */
     private function compteurs(array $champs): array
     {
@@ -444,7 +451,7 @@ final class ReglagesDeRedisCheck extends Check
             $compteurs[$compteur] = $this->valeurDuCompteur($compteur, $champs);
         }
 
-        return ['uptime' => LecteurDeRedis::entier($champs['uptime_in_seconds'] ?? null), 'compteurs' => $compteurs];
+        return ['run_id' => $champs['run_id'] ?? null, 'uptime' => LecteurDeRedis::entier($champs['uptime_in_seconds'] ?? null), 'compteurs' => $compteurs];
     }
 
     /**
@@ -507,6 +514,10 @@ final class ReglagesDeRedisCheck extends Check
     }
 
     /**
+     * La ligne de la page « Santé », qui n'affiche jamais les `meta` : la
+     * version, la mémoire en pourcentage du plafond, la politique
+     * d'éviction et les évictions de chaque instance.
+     *
      * @param  array<string, array{meta: array<string, mixed>|null, rouges: list<string>, oranges: list<string>, plafond: string, compteurs: mixed}>  $jugements
      */
     private function resume(array $jugements, bool $cacheAPart): string
@@ -521,6 +532,7 @@ final class ReglagesDeRedisCheck extends Check
         $morceaux = [
             'Redis '.(is_string($donnees['version']) ? $donnees['version'] : '?'),
             'données '.$jugements['donnees']['plafond'],
+            $this->politiqueLue($donnees),
             is_int($evictions) ? $this->compte($evictions, 'éviction', 'évictions') : '? éviction',
         ];
 
@@ -541,14 +553,22 @@ final class ReglagesDeRedisCheck extends Check
 
         $taux = $meta['taux_de_reussite_en_pourcentage'] ?? null;
 
-        return ['cache '.str_replace(' du plafond', '', $jugement['plafond']), 'réussite '.(is_int($taux) ? "{$taux} %" : '?')];
+        return ['cache '.str_replace(' du plafond', '', $jugement['plafond']), $this->politiqueLue($meta), 'réussite '.(is_int($taux) ? "{$taux} %" : '?')];
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    private function politiqueLue(array $meta): string
+    {
+        return is_string($meta['politique'] ?? null) ? $meta['politique'] : 'politique ?';
     }
 
     /**
      * Les compteurs du passage précédent, relus du cache sans rien croire
      * de leur forme.
      *
-     * @return array<string, array{uptime: int|null, compteurs: array<string, int|null>}>
+     * @return array<string, array{run_id: string|null, uptime: int|null, compteurs: array<string, int|null>}>
      */
     private function passagePrecedent(): array
     {
@@ -567,7 +587,7 @@ final class ReglagesDeRedisCheck extends Check
     }
 
     /**
-     * @return array{uptime: int|null, compteurs: array<string, int|null>}|null
+     * @return array{run_id: string|null, uptime: int|null, compteurs: array<string, int|null>}|null
      */
     private function instanceRelue(mixed $instance): ?array
     {
@@ -582,7 +602,9 @@ final class ReglagesDeRedisCheck extends Check
             $compteurs[$compteur] = self::entierOuNul($brut[$compteur] ?? null);
         }
 
-        return ['uptime' => self::entierOuNul($instance['uptime'] ?? null), 'compteurs' => $compteurs];
+        $processus = $instance['run_id'] ?? null;
+
+        return ['run_id' => is_string($processus) ? $processus : null, 'uptime' => self::entierOuNul($instance['uptime'] ?? null), 'compteurs' => $compteurs];
     }
 
     private static function entierOuNul(mixed $valeur): ?int

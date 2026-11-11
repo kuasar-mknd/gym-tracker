@@ -21,15 +21,20 @@ use Illuminate\Support\Facades\Redis;
 class LecteurDeRedis
 {
     /**
-     * Les seuls champs gardés : version, âge, mémoire et plafond (en octets,
-     * que rien n'affiche : le contrôle et le relevé n'en montrent que le
-     * rapport), politique, évictions et refus, persistance, et, par base,
-     * le nombre de clés et la taille des valeurs du cache, sans aucun nom.
+     * Les seuls champs gardés : version, identité du processus et âge,
+     * mémoire et plafond (en octets, que rien n'affiche : le contrôle et le
+     * relevé n'en montrent que le rapport), politique, évictions et refus,
+     * persistance, et, par base, le nombre de clés et la taille des valeurs
+     * du cache, sans aucun nom. `run_id` est un identifiant aléatoire tiré à
+     * chaque démarrage, qui ne dit rien de l'hôte ni d'une clé : le contrôle
+     * le garde d'un passage à l'autre pour voir un redémarrage, et rien ne
+     * l'affiche.
      *
      * @var list<string>
      */
     public const array CHAMPS = [
         'redis_version',
+        'run_id',
         'uptime_in_seconds',
         'used_memory',
         'used_memory_peak',

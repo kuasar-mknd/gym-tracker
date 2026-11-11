@@ -73,7 +73,7 @@ it('met Redis au vert : sous la moitié du plafond, sans éviction ni refus, per
     $resultat = reglagesDeRedisEnProduction()->run();
 
     expect($resultat->status->value)->toBe('ok', $resultat->notificationMessage)
-        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · 0 éviction')
+        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · allkeys-lru · 0 éviction')
         ->and($resultat->meta)->toBe([
             'donnees' => [
                 'version' => '8.10.3',
@@ -91,6 +91,7 @@ it('ne garde de la réponse d’INFO que les champs de sa liste blanche', functi
 
     expect(array_keys($gardes))->toEqualCanonicalizing([
         'redis_version',
+        'run_id',
         'uptime_in_seconds',
         'used_memory',
         'used_memory_peak',
@@ -110,7 +111,7 @@ it('ne garde de la réponse d’INFO que les champs de sa liste blanche', functi
         'db1',
         'db1_distrib_strings_sizes',
     ])
-        ->and($gardes)->not->toHaveKeys(['total_system_memory', 'total_system_memory_human', 'os', 'executable', 'run_id', 'hotkey_0'])
+        ->and($gardes)->not->toHaveKeys(['total_system_memory', 'total_system_memory_human', 'os', 'executable', 'tcp_port', 'hotkey_0'])
         ->and($gardes['mem_fragmentation_ratio'])->toBe('1.21')
         ->and($gardes['maxmemory'])->toBe('134217728');
 
@@ -139,7 +140,7 @@ it('ne montre jamais la mémoire ni le système de l’hôte, ni un nom de clé'
 
     expect($resultat->status->value)->toBe('failed');
 
-    foreach (['16867414016', '15.71G', 'Linux', 'ada@example.org', '203.0.113.5', '134217728', '128.00M', '120000000', 'redis-server'] as $interdit) {
+    foreach (['16867414016', '15.71G', 'Linux', 'ada@example.org', '203.0.113.5', '134217728', '128.00M', '120000000', 'redis-server', '3af84ee04d2b25a15c9ae9a3b9448d0b40c9ce61'] as $interdit) {
         expect($texte)->not->toContain($interdit);
     }
 });
@@ -150,7 +151,7 @@ it('met Redis au rouge quand l’instance des données a évincé une clé, et d
     $resultat = reglagesDeRedisEnProduction()->run();
 
     expect($resultat->status->value)->toBe('failed')
-        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · 17 évictions')
+        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · allkeys-lru · 17 évictions')
         ->and($resultat->notificationMessage)
         ->toContain('17 clés évincées depuis le démarrage de Redis')
         ->toContain('file, sessions et verrous')
@@ -174,7 +175,7 @@ it('met Redis au rouge au-delà de 75 % du plafond des données, et à l’orang
     $resultat = reglagesDeRedisEnProduction()->run();
 
     expect($resultat->status->value)->toBe($statut)
-        ->and($resultat->shortSummary)->toBe("Redis 8.10.3 · données {$occupee} % du plafond · 0 éviction")
+        ->and($resultat->shortSummary)->toBe("Redis 8.10.3 · données {$occupee} % du plafond · allkeys-lru · 0 éviction")
         ->and($resultat->notificationMessage)->toContain($message);
 })->with([
     'sous la moitié' => [50, 'ok', ''],
@@ -219,7 +220,7 @@ it('met Redis à l’orange quand INFO ne rend pas ce qu’il faut pour juger, p
     $resultat = reglagesDeRedisEnProduction()->run();
 
     expect($resultat->status->value)->toBe('warning')
-        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données ? du plafond · ? éviction')
+        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données ? du plafond · allkeys-lru · ? éviction')
         ->and($resultat->notificationMessage)->toBe('Non vérifié : INFO n\'a pas rendu maxmemory ni evicted_keys pour l\'instance des données.');
 });
 
@@ -229,7 +230,7 @@ it('met Redis à l’orange quand l’instance des données n’a pas de plafond
     $resultat = reglagesDeRedisEnProduction()->run();
 
     expect($resultat->status->value)->toBe('warning')
-        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données sans plafond · 0 éviction')
+        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données sans plafond · allkeys-lru · 0 éviction')
         ->and($resultat->notificationMessage)->toContain('sans plafond (maxmemory 0)')->toContain('--maxmemory');
 });
 
@@ -237,7 +238,10 @@ it('met Redis à l’orange quand l’instance des données n’a pas de plafond
  * Les compteurs d'INFO courent depuis le démarrage de Redis. Le contrôle
  * garde ceux du passage précédent dans le cache, et ne juge que ce qui a
  * changé depuis ; un redémarrage remet les compteurs à zéro, et ce qui suit
- * se compte depuis lui.
+ * se compte depuis lui. Un redémarrage se lit au `run_id`, tiré à chaque
+ * démarrage : deux redémarrages entre deux passages, quand Redis tombe en
+ * boucle sur la limite de mémoire de son conteneur, peuvent rendre un âge
+ * plus grand qu'au passage d'avant.
  */
 it('ne juge que ce qui a changé depuis le passage précédent, redémarrage compris', function (): void {
     Carbon::setTestNow('2026-11-11 10:00:00');
@@ -248,7 +252,7 @@ it('ne juge que ce qui a changé depuis le passage précédent, redémarrage com
     RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 17, 'errorstat_OOM' => 'count=2', 'uptime_in_seconds' => 3900])]);
     $calme = reglagesDeRedisEnProduction()->run();
     expect($calme->status->value)->toBe('ok', $calme->notificationMessage)
-        ->and($calme->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · 17 évictions');
+        ->and($calme->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · allkeys-lru · 17 évictions');
 
     Carbon::setTestNow('2026-11-11 10:10:00');
     RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 20, 'errorstat_OOM' => 'count=2', 'uptime_in_seconds' => 4200])]);
@@ -258,16 +262,58 @@ it('ne juge que ce qui a changé depuis le passage précédent, redémarrage com
         ->and($nouvelles->notificationMessage)->not->toContain('écritures refusées');
 
     Carbon::setTestNow('2026-11-11 10:15:00');
-    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 0, 'uptime_in_seconds' => 120])]);
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 0, 'uptime_in_seconds' => 120, 'run_id' => str_repeat('b', 40)])]);
     expect(reglagesDeRedisEnProduction()->run()->status->value)->toBe('ok');
 
     Carbon::setTestNow('2026-11-11 10:20:00');
-    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 5, 'uptime_in_seconds' => 420])]);
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 5, 'uptime_in_seconds' => 420, 'run_id' => str_repeat('b', 40)])]);
     expect(reglagesDeRedisEnProduction()->run()->notificationMessage)->toContain('5 clés évincées depuis le passage précédent');
 
     Carbon::setTestNow('2026-11-11 10:25:00');
-    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 2, 'uptime_in_seconds' => 60])]);
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 2, 'uptime_in_seconds' => 60, 'run_id' => str_repeat('c', 40)])]);
     expect(reglagesDeRedisEnProduction()->run()->notificationMessage)->toContain('2 clés évincées depuis le redémarrage de Redis');
+
+    Carbon::setTestNow('2026-11-11 10:30:00');
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 2, 'uptime_in_seconds' => 250, 'run_id' => str_repeat('d', 40)])]);
+    $enBoucle = reglagesDeRedisEnProduction()->run();
+    expect($enBoucle->status->value)->toBe('failed')
+        ->and($enBoucle->notificationMessage)->toContain('2 clés évincées depuis le redémarrage de Redis');
+
+    Carbon::setTestNow('2026-11-11 10:35:00');
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 2, 'uptime_in_seconds' => 550, 'run_id' => str_repeat('d', 40)])]);
+    expect(reglagesDeRedisEnProduction()->run()->status->value)->toBe('ok');
+});
+
+/*
+ * `CONFIG RESETSTAT` remet les compteurs à zéro sans redémarrer Redis : ce
+ * qui suit se compte depuis la remise à zéro, jamais en nombre négatif. Une
+ * lecture qui échoue ne perd pas le passage précédent : sans lui, le passage
+ * suivant compterait depuis le démarrage, et une éviction ancienne
+ * repasserait au rouge, courriel compris.
+ */
+it('compte depuis la remise à zéro des compteurs, et garde le passage précédent quand une lecture échoue', function (): void {
+    Carbon::setTestNow('2026-11-11 10:00:00');
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 20, 'uptime_in_seconds' => 3600])]);
+    expect(reglagesDeRedisEnProduction()->run()->status->value)->toBe('failed');
+
+    Carbon::setTestNow('2026-11-11 10:05:00');
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 20, 'uptime_in_seconds' => 3900])]);
+    expect(reglagesDeRedisEnProduction()->run()->status->value)->toBe('ok');
+
+    Carbon::setTestNow('2026-11-11 10:10:00');
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 4, 'uptime_in_seconds' => 4200])]);
+    $remiseAZero = reglagesDeRedisEnProduction()->run();
+    expect($remiseAZero->status->value)->toBe('failed')
+        ->and($remiseAZero->notificationMessage)->toContain('(4 clés évincées depuis la remise à zéro de ses compteurs)');
+
+    Carbon::setTestNow('2026-11-11 10:15:00');
+    RedisQuiRepond::repond(['default' => new RuntimeException('read error on connection')]);
+    expect(reglagesDeRedisEnProduction()->run()->notificationMessage)->toContain('ne répond pas à INFO');
+
+    Carbon::setTestNow('2026-11-11 10:20:00');
+    RedisQuiRepond::repond(['default' => RedisQuiRepond::info(['evicted_keys' => 4, 'uptime_in_seconds' => 4800])]);
+    $retour = reglagesDeRedisEnProduction()->run();
+    expect($retour->status->value)->toBe('ok', $retour->notificationMessage);
 });
 
 it('met Redis à l’orange quand des synchronisations de l’AOF ont été différées depuis le passage précédent', function (): void {
@@ -289,6 +335,20 @@ it('ne lit qu’une instance tant que le cache partage celle des données', func
 });
 
 /*
+ * L'étape 2 de #2151 pose, dans le job `demarrage`, une instance du cache
+ * sur le même hôte, à un autre port ; une URL peut aussi mener ailleurs à
+ * elle seule. Chacune de ces différences suffit à lire le cache à part.
+ */
+it('lit le cache à part dès que son port ou son URL mène ailleurs', function (string $cle, string $valeur): void {
+    Config::set("database.redis.cache.{$cle}", $valeur);
+
+    expect(app(LecteurDeRedis::class)->instances())->toBe(['donnees' => 'default', 'cache' => 'cache']);
+})->with([
+    'même hôte, autre port' => ['port', '6380'],
+    'autre URL, même hôte et même port' => ['url', 'redis://redis-cache:6379'],
+]);
+
+/*
  * Une fois le cache à part (#2151, étape 2), l'instance des données ne doit
  * plus rien évincer : sa politique devient `noeviction`, et le contrôle
  * l'exige. Les évictions du cache sont son métier : un orange seulement, et
@@ -305,7 +365,7 @@ it('lit les deux instances une fois le cache à part, et exige noeviction sur le
 
     expect(app(LecteurDeRedis::class)->instances())->toBe(['donnees' => 'default', 'cache' => 'cache'])
         ->and($resultat->status->value)->toBe('ok', $resultat->notificationMessage)
-        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · 0 éviction · cache 40 % · réussite 97 %')
+        ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · noeviction · 0 éviction · cache 40 % · allkeys-lru · réussite 97 %')
         ->and($resultat->meta)->toHaveKeys(['donnees', 'cache'])
         ->and($resultat->meta['cache'])->toMatchArray(['memoire_en_pourcentage' => 40, 'taux_de_reussite_en_pourcentage' => 97]);
 
