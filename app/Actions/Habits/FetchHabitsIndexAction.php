@@ -13,9 +13,16 @@ final class FetchHabitsIndexAction
      * De quoi rendre la page des habitudes tout de suite : des requêtes rapides,
      * rien d'autre.
      *
+     * Chacune est une fermeture, qu'Inertia ne résout que si sa prop part dans
+     * la réponse : la requête de la prop différée `stats`, qui rejoue le
+     * contrôleur, relisait sinon les habitudes et leurs suivis pour les jeter
+     * aussitôt (#2148, étape 3a). L'horloge se lit une fois, ici : la grille et
+     * le chargement des suivis gardent la semaine de cet instant, même résolus
+     * après minuit, et aucune fermeture ne la relit.
+     *
      * @return array{
-     *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
-     *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
+     *     habits: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
+     *     weekDates: \Closure(): array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      * }
      */
     public function getImmediateData(User $user): array
@@ -24,24 +31,22 @@ final class FetchHabitsIndexAction
         $startOfWeek = $maintenant->copy()->startOfWeek();
         $endOfWeek = $startOfWeek->copy()->endOfWeek();
 
-        $habits = $user->habits()
-            ->where('archived', false)
-            ->with([
-                /*
-                 * `$query` type, sinon il est `mixed` et l'appel qui suit ne
-                 * verifie plus rien : c'est un `Relation`, pas un `Builder`,
-                 * parce qu'Eloquent passe la relation elle-meme aux fermetures
-                 * de chargement anticipe.
-                 */
-                'logs' => function (\Illuminate\Database\Eloquent\Relations\Relation $query) use ($startOfWeek, $endOfWeek): void {
-                    $query->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')]);
-                },
-            ])
-            ->get();
-
         return [
-            'habits' => $habits,
-            'weekDates' => $this->getWeekDates($startOfWeek, $endOfWeek, $maintenant),
+            'habits' => fn (): \Illuminate\Database\Eloquent\Collection => $user->habits()
+                ->where('archived', false)
+                ->with([
+                    /*
+                     * `$query` type, sinon il est `mixed` et l'appel qui suit ne
+                     * verifie plus rien : c'est un `Relation`, pas un `Builder`,
+                     * parce qu'Eloquent passe la relation elle-meme aux fermetures
+                     * de chargement anticipe.
+                     */
+                    'logs' => function (\Illuminate\Database\Eloquent\Relations\Relation $query) use ($startOfWeek, $endOfWeek): void {
+                        $query->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')]);
+                    },
+                ])
+                ->get(),
+            'weekDates' => fn (): array => $this->getWeekDates($startOfWeek, $endOfWeek, $maintenant),
         ];
     }
 

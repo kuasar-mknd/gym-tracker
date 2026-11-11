@@ -16,6 +16,11 @@ use Inertia\Inertia;
 
 class HabitController extends Controller
 {
+    /**
+     * La page des habitudes : les habitudes et la grille de la semaine
+     * arrivent en fermetures, que la requête de la prop différée, qui rejoue
+     * ce contrôleur, ne calcule plus (#2148, étape 3a).
+     */
     public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
     {
         $this->authorize('viewAny', Habit::class);

@@ -45,7 +45,9 @@ class WorkoutController extends Controller
 
     /**
      * La séance, et les plafonds d'une série : la page ramène dessous ce
-     * qu'elle recopie dans une série qu'elle ajoute (`Set::bornes()`).
+     * qu'elle recopie dans une série qu'elle ajoute (`Set::bornes()`). Toutes
+     * en fermetures : le rechargement de la seule séance ne calcule qu'elle
+     * (#2148, étape 3a).
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException Si la séance n'est pas celle de l'utilisateur (403).
      */
@@ -55,7 +57,7 @@ class WorkoutController extends Controller
 
         return Inertia::render('Workouts/Show', [
             ...$fetchWorkoutShow->execute($this->user(), $workout),
-            'bornesDUneSerie' => Set::bornes(),
+            'bornesDUneSerie' => fn (): array => Set::bornes(),
         ]);
     }
 
