@@ -336,15 +336,17 @@ function projectionsLInventaire(): array
             domaine: 'La conduite de l’effort',
             marqueur: '/\bcleDeCache\s*\(/',
             ecrivains: [
-                'le calcul pour une ligne' => [
-                    'app/Services/RecommendedValuesService.php' => ['getRecommendedValues'],
-                ],
-                'le calcul en lot pour une séance' => [
+                /*
+                 * Un seul écrivain depuis #1513 : la ligne seule
+                 * (`getRecommendedValues()`, que demande l'accesseur de la
+                 * ligne) avait son calcul et son écriture de la même clef, et
+                 * les deux chemins avaient déjà répondu différemment sur les
+                 * mêmes séances. Elle passe désormais par le calcul du lot.
+                 */
+                'le calcul, pour une ligne comme pour une séance' => [
                     'app/Services/RecommendedValuesService.php' => ['fetchUncachedRecommendedValues'],
                 ],
             ],
-            dette: 'Deux chemins remplissent la même clef, ligne par ligne et en lot ; ils ont déjà répondu '
-                .'différemment sur les mêmes séances (voir `fetchUncachedRecommendedValues()`).',
         ),
     ];
 }
