@@ -17,18 +17,10 @@ class CreateWorkoutLineAction
     public function execute(Workout $workout, array $data): WorkoutLine
     {
         $key = CreateSetAction::idempotencyKey($data);
+        $existing = $this->ligneDejaCreeeSous($workout, $key);
 
-        /**
-         * La recherche est bornée à la séance, jamais globale. La clef arrive
-         * dans un en-tête que le client maîtrise, et une recherche globale
-         * rendrait la ligne d'un autre utilisateur à qui rejouerait sa clef.
-         */
-        if ($key !== null) {
-            $existing = $workout->workoutLines()->where('idempotency_key', $key)->first();
-
-            if ($existing instanceof WorkoutLine) {
-                return $existing;
-            }
+        if ($existing instanceof WorkoutLine) {
+            return $existing;
         }
 
         $maxOrder = $workout->workoutLines()->max('order');
@@ -55,5 +47,21 @@ class CreateWorkoutLineAction
         }
 
         return $line;
+    }
+
+    /**
+     * La ligne que la séance porte déjà sous cette clef, rien sans clef.
+     *
+     * La recherche est bornée à la séance, jamais globale. La clef arrive
+     * dans un en-tête que le client maîtrise, et une recherche globale
+     * rendrait la ligne d'un autre utilisateur à qui rejouerait sa clef.
+     */
+    private function ligneDejaCreeeSous(Workout $workout, ?string $key): ?WorkoutLine
+    {
+        if ($key === null) {
+            return null;
+        }
+
+        return $workout->workoutLines()->where('idempotency_key', $key)->first();
     }
 }

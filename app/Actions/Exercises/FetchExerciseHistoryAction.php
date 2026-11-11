@@ -114,9 +114,23 @@ class FetchExerciseHistoryAction
      */
     private static function peutEtablirLeRecord(Set $set): bool
     {
-        return $set->is_completed
-            && ! $set->is_warmup
-            && $set->weight !== null && $set->weight > 0.0
+        return self::estUneSerieDeTravailValidee($set) && self::aUnPoidsEtDesRepetitions($set);
+    }
+
+    /**
+     * La serie a ete validee, et n'est pas un echauffement.
+     */
+    private static function estUneSerieDeTravailValidee(Set $set): bool
+    {
+        return $set->is_completed && ! $set->is_warmup;
+    }
+
+    /**
+     * La serie porte un poids et des repetitions, tous deux positifs.
+     */
+    private static function aUnPoidsEtDesRepetitions(Set $set): bool
+    {
+        return $set->weight !== null && $set->weight > 0.0
             && $set->reps !== null && $set->reps > 0;
     }
 }

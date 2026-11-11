@@ -162,6 +162,18 @@ return [
     'json_results_failure_status' => 200,
 
     /*
+     * Les versions de db et de redis que lance la composition de production,
+     * que « Versions des services » compare à celles que rendent les serveurs
+     * (#2152). `docker-compose.prod.yml` les écrit en dur, d'après l'étiquette
+     * `image:` de chaque service (LesVersionsAttenduesSuiventLesImagesTest) :
+     * vides, la pile n'a pas reçu la composition de la release.
+     */
+    'versions_attendues' => [
+        'mysql' => env('VERSION_ATTENDUE_DE_MYSQL'),
+        'redis' => env('VERSION_ATTENDUE_DE_REDIS'),
+    ],
+
+    /*
      * You can specify a secret token that needs to be sent in the X-Secret-Token for secured access.
      */
     'secret_token' => env('HEALTH_SECRET_TOKEN'),

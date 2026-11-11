@@ -37,6 +37,23 @@ trait VerifieLesExercicesDuGabarit
             return;
         }
 
+        $identifiants = self::identifiantsLus($exercices);
+
+        if ($identifiants === []) {
+            return;
+        }
+
+        self::signalerLesExercicesRefuses($validator, $exercices, $this->exercicesAutorises($identifiants));
+    }
+
+    /**
+     * Les identifiants lisibles des exercices du gabarit, dans leur ordre.
+     *
+     * @param  array<mixed>  $exercices
+     * @return list<int>
+     */
+    private static function identifiantsLus(array $exercices): array
+    {
         $identifiants = [];
 
         foreach ($exercices as $exercice) {
@@ -47,10 +64,18 @@ trait VerifieLesExercicesDuGabarit
             }
         }
 
-        if ($identifiants === []) {
-            return;
-        }
+        return $identifiants;
+    }
 
+    /**
+     * Parmi ces identifiants, ceux des exercices communs et de ceux de
+     * l'utilisateur, en une requete.
+     *
+     * @param  list<int>  $identifiants
+     * @return list<int>
+     */
+    private function exercicesAutorises(array $identifiants): array
+    {
         $idUtilisateur = $this->user()?->id;
 
         /** @var list<int> $autorises */
@@ -61,6 +86,17 @@ trait VerifieLesExercicesDuGabarit
             ->map(fn (mixed $id): int => ValeurLue::entier($id) ?? 0)
             ->all();
 
+        return $autorises;
+    }
+
+    /**
+     * Refuse, a son rang, chaque exercice illisible ou hors des autorises.
+     *
+     * @param  array<mixed>  $exercices
+     * @param  list<int>  $autorises
+     */
+    private static function signalerLesExercicesRefuses(Validator $validator, array $exercices, array $autorises): void
+    {
         foreach ($exercices as $rang => $exercice) {
             $identifiant = self::identifiantLu($exercice);
 

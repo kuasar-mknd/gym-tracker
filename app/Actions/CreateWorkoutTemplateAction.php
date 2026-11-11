@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Models\User;
 use App\Models\WorkoutTemplate;
 use App\Traits\HandlesWorkoutTemplateSets;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 final class CreateWorkoutTemplateAction
@@ -73,6 +74,18 @@ final class CreateWorkoutTemplateAction
             ->orderBy('id')
             ->get();
 
+        $this->insertSetsData($this->donneesDesSeries($exercises, $lines, $now));
+    }
+
+    /**
+     * Les séries de chaque exercice, accrochées à la ligne de même rang.
+     *
+     * @param  array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>  $exercises
+     * @param  Collection<int, \App\Models\WorkoutTemplateLine>  $lines
+     * @return array<int, array<string, mixed>>
+     */
+    private function donneesDesSeries(array $exercises, Collection $lines, string $now): array
+    {
         $donneesDesSeries = [];
         foreach (collect($exercises)->values() as $index => $ex) {
             if (isset($ex['sets'])) {
@@ -85,6 +98,6 @@ final class CreateWorkoutTemplateAction
             }
         }
 
-        $this->insertSetsData($donneesDesSeries);
+        return $donneesDesSeries;
     }
 }
