@@ -185,9 +185,10 @@ it('enregistre la session et pose ses cookies sur le même HEAD sans la marque (
 });
 
 /*
- * Deux préchargements, et non un : Laravel vieillit le flash à chaque
- * enregistrement, et ne l'efface qu'au second. Un seul préchargement qui
- * enregistrerait la session le laisserait encore à la page suivante.
+ * Deux préchargements de suite : le flash survit à plusieurs. Un seul
+ * suffirait pourtant à le perdre s'il enregistrait la session : chaque
+ * enregistrement oublie les clés flashées pour la requête (`_flash.old`),
+ * et la page qui le lit est la dernière à le voir (contre-épreuve suivante).
  */
 it('ne montre pas le message flash en attente dans la page préchargée, et le laisse à la page suivante', function (): void {
     prechargementRoutesQuiLaissentUnFlash();
@@ -217,7 +218,6 @@ it('montre le message flash dans la page demandée sans la marque, une fois (con
     $appareil->envoyer('POST', '/_prechargement-flash', [], prechargementEntetes([]))->assertRedirect('/dashboard');
 
     $appareil->envoyer('GET', '/dashboard', [], prechargementEntetes([]))->assertJsonPath('props.flash.success', 'Séance enregistrée.');
-    $appareil->envoyer('GET', '/dashboard', [], prechargementEntetes([]));
     $appareil->envoyer('GET', '/dashboard', [], prechargementEntetes([]))->assertJsonPath('props.flash.success', null);
 });
 
