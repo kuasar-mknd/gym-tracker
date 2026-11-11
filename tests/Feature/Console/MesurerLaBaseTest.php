@@ -174,6 +174,8 @@ it('donne le convoi de verrous sur les relevés du 03/09 avant réglage, à 1 34
             'ms_par_attente' => 1_349,
             'maximum_ms' => 10_100,
             'maximum_atteint_pendant_la_fenetre' => true,
+            'en_cours_au_premier_releve' => 0,
+            'en_cours_au_second_releve' => 0,
         ])
         ->and($mesure['fsync_par_seconde'])->toBe(['journal' => 1.07, 'donnees' => 2.04])
         ->and($mesure['ecarts'])->toMatchArray([
@@ -270,6 +272,102 @@ it('juge le convoi aux deux seuils : dix attentes, deux cents millisecondes par 
     'une attente de moins' => [9, 1_800, 'rien à signaler'],
     'une milliseconde de moins en tout' => [10, 1_999, 'rien à signaler'],
 ]);
+
+/*
+ * InnoDB compte une attente de verrou quand elle commence
+ * (Innodb_row_lock_waits), et n'ajoute sa durée à Innodb_row_lock_time
+ * qu'à sa fin. Les attentes que la durée de la fenêtre couvre sont donc celles
+ * qui y ont fini : les commencées, plus celles en cours au premier relevé,
+ * moins celles en cours au second (Innodb_row_lock_current_waits, une jauge).
+ */
+it('rapporte la durée des attentes de verrou aux attentes finies dans la fenêtre, pas aux commencées', function (array $avant, array $apres, array $attendu, string $verdict, ?string $raison): void {
+    /**
+     * @var array<string, int> $avant
+     * @var array<string, int> $apres
+     * @var array<string, int> $attendu
+     */
+    mesureDeLaBaseReleves([
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs([...$avant, 'Uptime' => 1_000, 'Innodb_os_log_fsyncs' => 100])],
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs([...$apres, 'Uptime' => 1_200, 'Innodb_os_log_fsyncs' => 300])],
+    ]);
+
+    $mesure = mesureDeLaBaseEnJson();
+
+    expect($mesure['attentes_de_verrou'])->toMatchArray($attendu)
+        ->and($mesure['verdict'])->toBe($verdict);
+
+    if ($raison === null) {
+        expect($mesure['raisons'])->toBe([]);
+    } else {
+        expect(array_filter((array) $mesure['raisons'], fn (mixed $texte): bool => is_string($texte) && str_contains($texte, $raison)))->toHaveCount(1);
+    }
+})->with([
+    // La sonde du 11/11 sur MySQL 8.4 : une attente de 8 s, commencée avant
+    // le premier relevé, finie pendant la fenêtre.
+    'une attente commencée avant la fenêtre, finie pendant' => [
+        ['Innodb_row_lock_waits' => 14, 'Innodb_row_lock_time' => 19_749, 'Innodb_row_lock_current_waits' => 1],
+        ['Innodb_row_lock_waits' => 14, 'Innodb_row_lock_time' => 27_669, 'Innodb_row_lock_current_waits' => 0],
+        ['nombre' => 1, 'ms' => 7_920, 'ms_par_attente' => 7_920, 'en_cours_au_premier_releve' => 1, 'en_cours_au_second_releve' => 0],
+        'rien à signaler',
+        'Innodb_row_lock_current_waits valait 1 au premier relevé',
+    ],
+    'une attente encore en cours au second relevé, sans durée' => [
+        ['Innodb_row_lock_waits' => 3, 'Innodb_row_lock_time' => 600],
+        ['Innodb_row_lock_waits' => 4, 'Innodb_row_lock_time' => 600, 'Innodb_row_lock_current_waits' => 1],
+        ['nombre' => 0, 'ms' => 0, 'ms_par_attente' => 0, 'en_cours_au_premier_releve' => 0, 'en_cours_au_second_releve' => 1],
+        'rien à signaler',
+        'Innodb_row_lock_current_waits valait 1 au second relevé',
+    ],
+    // Les deux compteurs d'un relevé ne se lisent pas au même instant : des
+    // millisecondes comptées prouvent au moins une attente finie.
+    'des millisecondes sans attente finie, lues entre deux compteurs' => [
+        ['Innodb_row_lock_waits' => 3, 'Innodb_row_lock_time' => 600],
+        ['Innodb_row_lock_waits' => 3, 'Innodb_row_lock_time' => 650],
+        ['nombre' => 1, 'ms' => 50, 'ms_par_attente' => 50],
+        'rien à signaler',
+        null,
+    ],
+    'une attente en cours au second relevé, pas encore comptée commencée' => [
+        ['Innodb_row_lock_waits' => 3, 'Innodb_row_lock_time' => 600],
+        ['Innodb_row_lock_waits' => 3, 'Innodb_row_lock_time' => 600, 'Innodb_row_lock_current_waits' => 1],
+        ['nombre' => 0, 'ms' => 0, 'ms_par_attente' => 0],
+        'rien à signaler',
+        'Innodb_row_lock_current_waits valait 1 au second relevé',
+    ],
+    // Au seuil, l'attente en cours fait basculer le verdict, dans un sens ou
+    // dans l'autre.
+    'dix commencées dont une encore en cours : neuf finies, pas de convoi' => [
+        [],
+        ['Innodb_row_lock_waits' => 10, 'Innodb_row_lock_time' => 2_000, 'Innodb_row_lock_current_waits' => 1],
+        ['nombre' => 9, 'ms' => 2_000, 'ms_par_attente' => 222],
+        'rien à signaler',
+        'Innodb_row_lock_current_waits valait 1 au second relevé',
+    ],
+    'neuf commencées et une d’avant la fenêtre : dix finies, un convoi qui le dit' => [
+        ['Innodb_row_lock_current_waits' => 1],
+        ['Innodb_row_lock_waits' => 9, 'Innodb_row_lock_time' => 2_000],
+        ['nombre' => 10, 'ms' => 2_000, 'ms_par_attente' => 200],
+        'convoi de verrous',
+        'une attente commencée avant la fenêtre et finie pendant compte toute sa durée',
+    ],
+]);
+
+it('écrit les attentes en cours à l’un des relevés dans les lignes lisibles, et rien quand il n’y en a pas', function (): void {
+    mesureDeLaBaseReleves([
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs(['Uptime' => 1_000, 'Innodb_row_lock_current_waits' => 1])],
+        ['variables' => mesureDeLaBaseReglagesDApres(), 'compteurs' => mesureDeLaBaseCompteurs([
+            'Uptime' => 1_200, 'Innodb_row_lock_waits' => 2, 'Innodb_row_lock_time' => 7_920, 'Innodb_row_lock_current_waits' => 2,
+        ])],
+    ]);
+
+    expect(Artisan::call('base:mesurer'))->toBe(0)
+        ->and(Artisan::output())->toContain('Attentes de verrou : 1, 7 920 ms en tout, 7 920 ms par attente ; maximum 0 ms ; en cours : 1 au premier relevé, 2 au second.');
+
+    mesureDeLaBaseDuTroisSeptembreAvantReglage();
+
+    expect(Artisan::call('base:mesurer'))->toBe(0)
+        ->and(Artisan::output())->not->toContain('en cours :');
+});
 
 it('ne compte pas le maximum d’avant la fenêtre comme une attente de la fenêtre', function (): void {
     mesureDeLaBaseReleves([

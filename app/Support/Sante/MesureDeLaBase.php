@@ -27,6 +27,13 @@ use UnexpectedValueException;
  * courtes, c'est la contention ordinaire de deux appareils sur la même
  * séance. Le seuil se compare au total, pas à la moyenne arrondie : dix
  * attentes et 1 999 ms restent dessous.
+ *
+ * InnoDB compte une attente de verrou quand elle commence, et n'ajoute sa
+ * durée qu'à sa fin : la durée de la fenêtre est celle des attentes qui y ont
+ * fini. Elle se rapporte donc à ces attentes-là, les commencées plus celles
+ * en cours au premier relevé, moins celles en cours au second. Une attente
+ * commencée avant la fenêtre y verse aussi sa durée d'avant, que les
+ * compteurs ne séparent pas : la mesure le dit dans ses raisons.
  */
 final readonly class MesureDeLaBase
 {
@@ -48,7 +55,8 @@ final readonly class MesureDeLaBase
 
     /**
      * Les compteurs relevés. `Innodb_row_lock_time_max` n'est pas un cumul,
-     * mais le maximum depuis le démarrage : il n'a pas d'écart.
+     * mais le maximum depuis le démarrage, ni `Innodb_row_lock_current_waits`,
+     * le nombre d'attentes en cours au relevé : ils n'ont pas d'écart.
      *
      * @var list<string>
      */
@@ -56,6 +64,7 @@ final readonly class MesureDeLaBase
         'Innodb_row_lock_waits',
         'Innodb_row_lock_time',
         'Innodb_row_lock_time_max',
+        'Innodb_row_lock_current_waits',
         'Innodb_log_waits',
         'Innodb_buffer_pool_wait_free',
         'Innodb_os_log_fsyncs',
@@ -80,10 +89,13 @@ final readonly class MesureDeLaBase
 
     private const string MAXIMUM = 'Innodb_row_lock_time_max';
 
+    private const string EN_COURS = 'Innodb_row_lock_current_waits';
+
     /**
      * @param  array<string, string>  $reglages  ceux du second relevé, `NON_RENDU` pour un nom absent
      * @param  array<string, int|null>  $ecarts  par compteur cumulé, null pour un nom absent
      * @param  array{int|null, int|null}  $maximums  le maximum d'une attente, au premier et au second relevé
+     * @param  array{int|null, int|null}  $enCours  les attentes en cours, au premier et au second relevé
      * @param  list<string>  $nonRendus
      */
     private function __construct(
@@ -91,6 +103,7 @@ final readonly class MesureDeLaBase
         public array $reglages,
         public array $ecarts,
         private array $maximums,
+        private array $enCours,
         public array $nonRendus,
     ) {
     }
@@ -140,7 +153,7 @@ final readonly class MesureDeLaBase
         $fenetre = self::fenetre($compteursAvant['Uptime'] ?? null, $compteursApres['Uptime'] ?? null, $pendant);
         $ecarts = [];
 
-        foreach (array_diff(self::COMPTEURS, [self::MAXIMUM]) as $nom) {
+        foreach (array_diff(self::COMPTEURS, [self::MAXIMUM, self::EN_COURS]) as $nom) {
             $ecarts[$nom] = self::ecart($nom, $compteursAvant[$nom] ?? null, $compteursApres[$nom] ?? null);
         }
 
@@ -149,6 +162,7 @@ final readonly class MesureDeLaBase
             reglages: array_merge(array_fill_keys(self::VARIABLES, self::NON_RENDU), array_intersect_key($apres['variables'], array_flip(self::VARIABLES))),
             ecarts: $ecarts,
             maximums: [$compteursAvant[self::MAXIMUM] ?? null, $compteursApres[self::MAXIMUM] ?? null],
+            enCours: [$compteursAvant[self::EN_COURS] ?? null, $compteursApres[self::EN_COURS] ?? null],
             nonRendus: [
                 ...self::absents(self::VARIABLES, $avant['variables'], $apres['variables']),
                 ...self::absents(self::COMPTEURS, $compteursAvant, $compteursApres),
@@ -156,9 +170,23 @@ final readonly class MesureDeLaBase
         );
     }
 
+    /**
+     * Les attentes de verrou finies dans la fenêtre, celles dont
+     * `Innodb_row_lock_time` a reçu la durée : les commencées, plus celles en
+     * cours au premier relevé, moins celles en cours au second. Les compteurs
+     * d'un relevé ne se lisent pas au même instant : jamais moins de zéro, et
+     * des millisecondes comptées prouvent au moins une attente finie.
+     */
     public function attentes(): ?int
     {
-        return $this->ecarts['Innodb_row_lock_waits'] ?? null;
+        $commencees = $this->ecarts['Innodb_row_lock_waits'] ?? null;
+        [$auPremier, $auSecond] = $this->enCours;
+
+        if ($commencees === null || $auPremier === null || $auSecond === null) {
+            return null;
+        }
+
+        return max($commencees + $auPremier - $auSecond, min(1, (int) $this->millisecondesDAttente()));
     }
 
     public function millisecondesDAttente(): ?int
@@ -219,7 +247,8 @@ final readonly class MesureDeLaBase
 
     /**
      * Tout ce qui mène au verdict, le convoi d'abord : le 03/09, c'était les
-     * deux à la fois.
+     * deux à la fois. Puis ce qui en nuance la lecture : les attentes en cours
+     * à l'un des relevés.
      *
      * @return list<string>
      */
@@ -234,13 +263,13 @@ final readonly class MesureDeLaBase
                 .'rien n\'a été écrit, donc rien n\'a été mesuré ; relancer en saisissant des séries pendant l\'attente.';
         }
 
-        return $raisons;
+        return [...$raisons, ...$this->nuancesDesAttentesEnCours()];
     }
 
     /**
      * La mesure telle que `--json` la rend.
      *
-     * @return array{fenetre_s: int, reglages: array<string, string>, ecarts: array<string, int|null>, attentes_de_verrou: array{nombre: int|null, ms: int|null, ms_par_attente: int|null, maximum_ms: int|null, maximum_atteint_pendant_la_fenetre: bool}, fsync_par_seconde: array{journal: float|null, donnees: float|null}, verdict: string, raisons: list<string>, non_rendus: list<string>}
+     * @return array{fenetre_s: int, reglages: array<string, string>, ecarts: array<string, int|null>, attentes_de_verrou: array{nombre: int|null, ms: int|null, ms_par_attente: int|null, maximum_ms: int|null, maximum_atteint_pendant_la_fenetre: bool, en_cours_au_premier_releve: int|null, en_cours_au_second_releve: int|null}, fsync_par_seconde: array{journal: float|null, donnees: float|null}, verdict: string, raisons: list<string>, non_rendus: list<string>}
      */
     public function enTableau(): array
     {
@@ -254,6 +283,8 @@ final readonly class MesureDeLaBase
                 'ms_par_attente' => $this->millisecondesParAttente(),
                 'maximum_ms' => $this->maximum(),
                 'maximum_atteint_pendant_la_fenetre' => $this->maximumDansLaFenetre(),
+                'en_cours_au_premier_releve' => $this->enCours[0],
+                'en_cours_au_second_releve' => $this->enCours[1],
             ],
             'fsync_par_seconde' => [
                 'journal' => $this->fsyncParSeconde('Innodb_os_log_fsyncs'),
@@ -294,12 +325,13 @@ final readonly class MesureDeLaBase
             sprintf('Fenêtre : %s s.', self::entier($this->fenetre)),
             'Réglages : '.implode(' · ', array_map(fn (string $nom, string $valeur): string => $nom.' '.$valeur, array_keys($this->reglages), $this->reglages)).'.',
             sprintf(
-                'Attentes de verrou : %s, %s en tout, %s par attente ; maximum %s%s.',
+                'Attentes de verrou : %s, %s en tout, %s par attente ; maximum %s%s%s.',
                 self::nombre($this->attentes()),
                 self::millisecondes($this->millisecondesDAttente()),
                 self::millisecondes($this->millisecondesParAttente()),
                 self::millisecondes($this->maximum()),
                 $this->quandLeMaximum(),
+                $this->attentesEnCours(),
             ),
             sprintf(
                 'Attentes du journal (Innodb_log_waits) : %s ; pages libres attendues (Innodb_buffer_pool_wait_free) : %s.',
@@ -404,6 +436,48 @@ final readonly class MesureDeLaBase
         );
 
         return [$raison];
+    }
+
+    /**
+     * Ce que les attentes en cours à l'un des relevés changent à la lecture
+     * de la moyenne par attente.
+     *
+     * @return list<string>
+     */
+    private function nuancesDesAttentesEnCours(): array
+    {
+        [$auPremier, $auSecond] = $this->enCours;
+        $nuances = [];
+
+        if ((int) $auPremier > 0) {
+            $nuances[] = sprintf(
+                '%s valait %s au premier relevé : une attente commencée avant la fenêtre et finie pendant compte toute sa durée, '
+                .'y compris celle d\'avant la fenêtre, et peut gonfler la moyenne par attente ; relancer la mesure pour la confirmer.',
+                self::EN_COURS,
+                self::entier((int) $auPremier),
+            );
+        }
+
+        if ((int) $auSecond > 0) {
+            $nuances[] = sprintf(
+                '%s valait %s au second relevé : une attente encore en cours n\'est pas comptée, sa durée ne s\'ajoute qu\'à sa fin.',
+                self::EN_COURS,
+                self::entier((int) $auSecond),
+            );
+        }
+
+        return $nuances;
+    }
+
+    private function attentesEnCours(): string
+    {
+        [$auPremier, $auSecond] = $this->enCours;
+
+        if ((int) $auPremier === 0 && (int) $auSecond === 0) {
+            return '';
+        }
+
+        return sprintf(' ; en cours : %s au premier relevé, %s au second', self::nombre($auPremier), self::nombre($auSecond));
     }
 
     private function quandLeMaximum(): string
