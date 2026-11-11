@@ -21,17 +21,39 @@ namespace App\Services\Diagnostic\Expurgation;
  * ainsi en entier un secret où une telle suite figure. Chaque motif ne
  * s'essaie qu'au début d'un mot : une longue suite n'est parcourue qu'une
  * fois.
+ *
+ * Les deux premiers motifs sont publics : la table des exceptions et le
+ * journal masquent aussi, par valeur, le jeton de diagnostic et la valeur
+ * d'un en-tête `Bearer …` (`TexteSansJeton`), et la garde des fichiers
+ * suivis reconnaît un jeton au même motif
+ * (`AucunJetonDeDiagnosticNEstSuiviTest`). Ils ne s'écrivent qu'ici.
  */
 final class MasqueLesSecrets
 {
+    /**
+     * La valeur d'un en-tête `Authorization: Bearer …` : le mot, quelle que
+     * soit sa casse, un à huit blancs, puis ce qui suit jusqu'au premier
+     * blanc, guillemet, apostrophe ou chevron, 4 096 octets au plus. Le motif
+     * lit des octets. La table des exceptions et le journal retirent
+     * eux-mêmes la suite d'une valeur plus longue (`TexteSansJeton`).
+     */
+    public const string MOTIF_BEARER = '/\bBearer\s{1,8}[^\s"\'<>]{1,4096}/i';
+
+    /**
+     * Le jeton de diagnostic (#2032) : `gtdiag_`, un identifiant de douze
+     * caractères `[a-z0-9]`, `_`, un secret de quarante-huit caractères
+     * `[A-Za-z0-9]`.
+     */
+    public const string MOTIF_DU_JETON = '/gtdiag_[a-z0-9]{12}_[A-Za-z0-9]{48}/';
+
     /**
      * Chaque motif et sa marque, dans l'ordre où ils s'appliquent.
      *
      * @var array<string, string>
      */
     private const array MOTIFS = [
-        '/\bBearer\s{1,8}[^\s"\'<>]{1,4096}/i' => 'Bearer [secret]',
-        '/gtdiag_[a-z0-9]{12}_[A-Za-z0-9]{48}/' => '[secret]',
+        self::MOTIF_BEARER => 'Bearer [secret]',
+        self::MOTIF_DU_JETON => '[secret]',
         '/(?<![\w-])eyJ[\w-]{2,4096}\.[\w-]{2,4096}\.[\w-]{0,4096}/' => '[secret]',
         '/(?<![\w+\/=-])(?=[\w+-]{0,4096}[a-z])(?=[\w+-]{0,4096}[A-Z])(?=[\w+-]{0,4096}\d)[\w+-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
         '/(?<![\w+\/=-])(?=[\w+\/-]{0,4096}(?:\+|=))[\w+\/-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
