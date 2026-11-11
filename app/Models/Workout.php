@@ -262,6 +262,23 @@ class Workout extends Model
         });
     }
 
+    /**
+     * Recopie le début de cette séance sur chacune de ses lignes, et rend le
+     * nombre de lignes écrites.
+     *
+     * `workout_lines.workout_started_at` recopie `started_at` pour qu'un index
+     * serve à la fois le filtre et l'ordre des lectures par compte (#1601,
+     * `.ai/rules/stats.md`). C'est l'écrivain de la propagation : la séance
+     * l'appelle quand elle change de date, et la réparation nocturne
+     * (`app:verify-data-coherence --repair`) sur les séances dont une ligne
+     * s'écarte de son début (#1513). L'autre écrivain de la copie est
+     * l'enregistrement de la ligne (`WorkoutLine::booted()`).
+     */
+    public function recopierLeDebutSurSesLignes(): int
+    {
+        return $this->workoutLines()->update(['workout_started_at' => $this->started_at]);
+    }
+
     #[\Override]
     protected static function booted(): void
     {
@@ -306,7 +323,7 @@ class Workout extends Model
                 return;
             }
 
-            $workout->workoutLines()->update(['workout_started_at' => $workout->started_at]);
+            $workout->recopierLeDebutSurSesLignes();
         });
 
         /*

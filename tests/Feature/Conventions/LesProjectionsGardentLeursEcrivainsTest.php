@@ -261,12 +261,20 @@ function projectionsLInventaire(): array
                 'la copie posée à l’enregistrement de la ligne' => [
                     'app/Models/WorkoutLine.php' => ['booted'],
                 ],
+                /*
+                 * Une méthode nommée depuis #1513 : la séance l'appelle quand
+                 * elle change de date, et `app:verify-data-coherence --repair`
+                 * aussi, sur les seules séances dont le contrôle nocturne
+                 * trouve une ligne en écart. La réparation n'est pas un
+                 * écrivain de plus.
+                 */
                 'la propagation quand la séance change de date' => [
-                    'app/Models/Workout.php' => ['booted'],
+                    'app/Models/Workout.php' => ['recopierLeDebutSurSesLignes'],
                 ],
             ],
             dette: 'La copie se pose quand la ligne s’écrit et se propage quand la séance change de date : '
-                .'deux écrivains, le prix de toute copie dénormalisée tant qu’elle est stockée.',
+                .'deux écrivains, le prix de toute copie dénormalisée tant qu’elle est stockée. Le contrôle '
+                .'nocturne la compare au début de sa séance, et `--repair` la refait par la propagation.',
         ),
         'le propriétaire recopié sur les séries' => projectionsDecrire(
             genre: 'copie',
