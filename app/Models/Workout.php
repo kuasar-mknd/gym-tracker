@@ -273,10 +273,46 @@ class Workout extends Model
      * (`app:verify-data-coherence --repair`) sur les séances dont une ligne
      * s'écarte de son début (#1513). L'autre écrivain de la copie est
      * l'enregistrement de la ligne (`WorkoutLine::booted()`).
+     *
+     * La copie reçoit l'heure murale que la base tient (`debutALHeureMurale()`),
+     * celle que le contrôle compare en SQL, et non l'instant que le cast relit.
      */
     public function recopierLeDebutSurSesLignes(): int
     {
-        return $this->workoutLines()->update(['workout_started_at' => $this->started_at]);
+        return $this->workoutLines()->update(['workout_started_at' => $this->debutALHeureMurale()]);
+    }
+
+    /**
+     * Le début de cette séance à l'heure murale que la base tient
+     * (`Y-m-d H:i:s`), la valeur que `workout_lines.workout_started_at` recopie.
+     *
+     * C'est la chaîne que le cast `InstantAvecSonDecalage` a écrite, ou que la
+     * base a rendue, et non l'instant qu'il relit. Les deux ne diffèrent que
+     * pour une heure que le fuseau de l'application saute au passage à l'heure
+     * d'été, qu'aucun chemin Eloquent n'écrit mais qu'une écriture hors du cast
+     * peut poser (constructeur de requêtes, migration, import, fuseau changé
+     * depuis) : « 2026-03-29 02:30:00 » se relit 03:30 CEST, et une copie de
+     * l'instant relu valait 03:30, que le contrôle nocturne, qui compare les
+     * heures murales, signalait encore après chaque réparation (relu le
+     * 2026-11-11, #1513). L'heure que le passage à l'heure d'hiver répète
+     * s'écrit, elle, à la même heure murale dans ses deux occurrences (#2159).
+     *
+     * Lue dans les attributs, pas par `getRawOriginal()`, qui rend encore
+     * l'ancienne valeur dans le crochet `updated`. Un attribut qui ne serait
+     * pas une chaîne (posé à la main en objet) se rend à l'heure murale de
+     * l'application.
+     */
+    public function debutALHeureMurale(): string
+    {
+        $debut = $this->getAttributes()['started_at'] ?? null;
+
+        if (is_string($debut)) {
+            return $debut;
+        }
+
+        return $this->started_at->copy()
+            ->setTimezone(config()->string('app.timezone'))
+            ->format(InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE);
     }
 
     #[\Override]

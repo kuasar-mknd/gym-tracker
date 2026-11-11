@@ -386,6 +386,78 @@ it('recopie par --repair le début de la séance sur ses lignes, par l’écriva
         ->and($apresDuVoisin)->toBe($avantDuVoisin);
 });
 
+/*
+ * L'heure que le fuseau de l'application saute au passage à l'heure d'été
+ * (2026-03-29 02:30:00 n'existe pas à Europe/Paris). Seule une écriture hors du
+ * cast la pose en base (constructeur de requêtes, migration, import, fuseau
+ * changé depuis l'écriture) ; relue par le cast, elle devient 03:30 CEST. La
+ * copie recopie l'heure murale que la base tient, celle que le contrôle compare
+ * en SQL : recopiée depuis l'instant relu, elle valait 03:30, et le contrôle
+ * restait en erreur après chaque `--repair`, qui la comptait pourtant comme
+ * recopiée. Seul ce contrôle est jugé ici : la date de dernière séance du
+ * compte, relue par le cast, a son propre écart à cette heure.
+ */
+it('recopie par --repair l’heure murale d’un début que l’heure d’été saute, et le contrôle repasse au vert', function (): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['started_at' => '2026-03-29 02:30:00', 'started_at_offset' => null]);
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-01-01 08:00:00']);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->expectsOutputToContain('1 séance(s) dont le début a été recopié sur les lignes');
+
+    expect(DB::table('workout_lines')->where('id', $set->workout_line_id)->value('workout_started_at'))->toBe('2026-03-29 02:30:00');
+
+    $this->artisan('app:verify-data-coherence')
+        ->expectsOutputToContain('OK date de séance recopiée sur ses lignes');
+});
+
+it('recopie l’heure murale d’un début que l’heure d’été saute sur une ligne qui s’enregistre', function (): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['started_at' => '2026-03-29 02:30:00', 'started_at_offset' => null]);
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-03-29 02:30:00']);
+
+    $ligne = WorkoutLine::factory()->create([
+        'workout_id' => $idSeance,
+        'exercise_id' => $set->workoutLine->exercise_id,
+    ]);
+
+    expect(DB::table('workout_lines')->where('id', $ligne->id)->value('workout_started_at'))->toBe('2026-03-29 02:30:00');
+
+    $this->artisan('app:verify-data-coherence')
+        ->expectsOutputToContain('OK date de séance recopiée sur ses lignes');
+});
+
+/*
+ * L'heure que le passage à l'heure d'hiver répète (#2159) : les deux
+ * occurrences s'écrivent 02:30:00 avec leur décalage, et la copie, à l'heure
+ * murale, vaut 02:30:00 dans l'une comme dans l'autre.
+ */
+it('recopie l’heure murale d’un début pris dans l’une ou l’autre occurrence de l’heure que l’heure d’hiver répète', function (int $decalage): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['started_at' => '2026-10-25 02:30:00', 'started_at_offset' => $decalage]);
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-01-01 08:00:00']);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->expectsOutputToContain('1 séance(s) dont le début a été recopié sur les lignes');
+
+    $ligne = WorkoutLine::factory()->create([
+        'workout_id' => $idSeance,
+        'exercise_id' => $set->workoutLine->exercise_id,
+    ]);
+
+    expect(DB::table('workout_lines')->whereIn('id', [$set->workout_line_id, $ligne->id])->pluck('workout_started_at')->all())
+        ->toBe(['2026-10-25 02:30:00', '2026-10-25 02:30:00']);
+
+    $this->artisan('app:verify-data-coherence')
+        ->expectsOutputToContain('OK date de séance recopiée sur ses lignes');
+})->with(['première occurrence (CEST)' => [120], 'seconde occurrence (CET)' => [60]]);
+
 it('ne réécrit par --repair aucune ligne quand chaque date recopiée est juste', function (): void {
     compteCoherent();
 
