@@ -63,7 +63,7 @@ final class RecommendedValuesService
             return $this->getDefaultValues();
         }
 
-        $cacheKey = self::cleDeCache((int) $workout->user_id, (int) $line->exercise_id, (int) $line->workout_id);
+        $cacheKey = self::cleDeCache($workout->user_id, $line->exercise_id, $line->workout_id);
 
         /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null $cached */
         $cached = Cache::get($cacheKey);
@@ -132,8 +132,8 @@ final class RecommendedValuesService
         /** @var array<int, int> $idsExercices */
         $idsExercices = $lines->pluck('exercise_id')->unique()->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)->values()->all();
 
-        // Sans séance ou sans exercice à servir, il n'y a rien à chercher : aucune requête.
-        if (! is_numeric($idDeLaSeance) || count($idsExercices) === 0) {
+        // Sans séance, il n'y a rien à chercher : aucune requête.
+        if (! is_numeric($idDeLaSeance)) {
             return [];
         }
 
@@ -221,10 +221,10 @@ final class RecommendedValuesService
     {
         $defauts = $this->getDefaultValues();
 
-        return (float) ($set->weight ?? 0.0) === $defauts['weight']
-            && (int) ($set->reps ?? $defauts['reps']) === $defauts['reps']
-            && (float) ($set->distance_km ?? 0.0) === $defauts['distance_km']
-            && in_array((int) ($set->duration_seconds ?? $defauts['duration_seconds']), [0, $defauts['duration_seconds']], true);
+        return ($set->weight ?? 0.0) === $defauts['weight']
+            && ($set->reps ?? $defauts['reps']) === $defauts['reps']
+            && ($set->distance_km ?? 0.0) === $defauts['distance_km']
+            && in_array($set->duration_seconds ?? $defauts['duration_seconds'], [0, $defauts['duration_seconds']], true);
     }
 
     /**
@@ -289,8 +289,7 @@ final class RecommendedValuesService
         $cacheKeys = [];
 
         foreach ($idsExercices as $idExercice) {
-            $exerciseIdInt = (int) $idExercice;
-            $cacheKeys[$exerciseIdInt] = self::cleDeCache($idUtilisateur, $exerciseIdInt, $idSeance);
+            $cacheKeys[$idExercice] = self::cleDeCache($idUtilisateur, $idExercice, $idSeance);
         }
 
         /** @var array<string, array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null> $cachedMany */
@@ -342,7 +341,7 @@ final class RecommendedValuesService
          * chaque exercice remonte ses dernieres lignes, pas seulement une.
          */
         $classement = WorkoutLine::query()
-            ->select(['id', 'exercise_id'])
+            ->select('id')
             ->selectRaw('ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY workout_started_at DESC, id DESC) AS rang')
             ->where('user_id', $idUtilisateur)
             ->whereIn('exercise_id', $uncachedExerciseIds)
@@ -372,9 +371,7 @@ final class RecommendedValuesService
             $results[$idExercice] = $values;
         }
 
-        if (count($cacheData) > 0) {
-            Cache::putMany($cacheData, 300);
-        }
+        Cache::putMany($cacheData, 300);
 
         return $results;
     }
