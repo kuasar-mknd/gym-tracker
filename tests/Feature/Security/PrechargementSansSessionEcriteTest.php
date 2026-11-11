@@ -26,7 +26,9 @@ use Tests\Support\SessionsEspionnees;
  * recopiait le message flash en attente dans la page préchargée, montrée avec
  * lui au toucher. Comme le préchauffage des copies
  * (`PrechauffageSansSessionEcriteTest`), un GET ou un HEAD préchargé ouvre et
- * lit la session sans l'enregistrer, et sa réponse ne pose aucun cookie ; sa
+ * lit la session sans l'enregistrer, et sa réponse ne pose aucun cookie, sauf
+ * pour une session neuve, que le magasin ne tenait pas (un invité sans
+ * cookie, une session expirée) : elle s'enregistre comme chez Laravel ; sa
  * page ne porte ni le flash de l'application (`flash.success`, `flash.error`),
  * ni celui d'Inertia (`Inertia::flash()`), ni les erreurs de validation qu'une
  * écriture a laissées : tout cela reste à la page qui l'attend.
@@ -124,6 +126,34 @@ function prechargementRoutesQuiLaissentUnFlash(): void
     Route::middleware('web')->post('/_prechargement-erreurs', static fn (): Illuminate\Http\RedirectResponse => redirect('/dashboard')->withErrors(['name' => 'Le nom est obligatoire.']));
 }
 
+/**
+ * Le jeton que la session enregistrée sous `identifiant` tient, ou rien.
+ */
+function prechargementJetonEnregistre(SessionsEspionnees $espion, ?string $identifiant): ?string
+{
+    $brut = $identifiant === null ? false : $espion->read($identifiant);
+
+    if (! is_string($brut) || $brut === '') {
+        return null;
+    }
+
+    $donnees = unserialize($brut, ['allowed_classes' => false]);
+
+    return is_array($donnees) && is_string($donnees['_token'] ?? null) ? $donnees['_token'] : null;
+}
+
+/**
+ * Le jeton que porte la page HTML rendue (`<meta name="csrf-token">`).
+ *
+ * @param  TestResponse<Response>  $reponse
+ */
+function prechargementJetonDeLaPage(TestResponse $reponse): ?string
+{
+    return preg_match('/<meta name="csrf-token" content="([^"]+)"/', (string) $reponse->getContent(), $trouve) === 1
+        ? $trouve[1]
+        : null;
+}
+
 dataset('marques d’un préchargement', [
     'Purpose, comme Inertia' => ['Purpose'],
     'Sec-Purpose, comme un navigateur' => ['Sec-Purpose'],
@@ -182,6 +212,54 @@ it('enregistre la session et pose ses cookies sur le même HEAD sans la marque (
     $reponse->assertOk();
     expect($espion->ecritures)->not->toBe([])
         ->and(prechargementCookiesPoses($reponse))->toContain(config()->string('session.cookie'));
+});
+
+/*
+ * Une session neuve, elle, s'enregistre et pose ses cookies : la page
+ * préchargée porte son jeton, qu'aucune session ne tiendrait sinon, et le
+ * premier envoi de la page (la connexion) échouerait en 419. Le cas d'un
+ * document que le navigateur précharge pour un invité sans cookie.
+ */
+it('enregistre la session neuve d’un invité sans cookie, dont la page préchargée porte le jeton, et pose ses cookies', function (string $entete): void {
+    $espion = prechargementEspionner();
+    $appareil = new Appareil();
+
+    $reponse = $appareil->envoyer('GET', '/login', [], ['Accept' => 'text/html', $entete => 'prefetch']);
+
+    $reponse->assertOk();
+    $jeton = prechargementJetonDeLaPage($reponse);
+    $identifiant = $appareil->cookie(config()->string('session.cookie'));
+
+    expect($jeton)->not->toBeNull()
+        ->and(prechargementCookiesPoses($reponse))->toEqualCanonicalizing(['XSRF-TOKEN', config()->string('session.cookie')])
+        ->and($espion->ecritures)->toBe([$identifiant])
+        ->and(prechargementJetonEnregistre($espion, $identifiant))->toBe($jeton)
+        ->and($appareil->cookie('XSRF-TOKEN'))->toBe($jeton);
+})->with('marques d’un préchargement');
+
+/*
+ * Une session expirée : le cookie revient, le magasin ne la tient plus. Le
+ * préchargement d'une page du compte renvoie vers la connexion, sous une
+ * session neuve qu'il enregistre, avec ses cookies : la page de connexion
+ * qu'Inertia en garde se montre au toucher, et son envoi part avec le jeton
+ * de cette session. Laravel garde l'identifiant reçu, même que le magasin
+ * ne tient plus.
+ */
+it('enregistre la session neuve qui remplace une session expirée, et pose ses cookies', function (): void {
+    $espion = prechargementEspionner();
+    $appareil = prechargementAppareilConnecte(User::factory()->create(), $espion);
+    $expiree = $appareil->cookie(config()->string('session.cookie'));
+    $espion->destroy((string) $expiree);
+
+    $reponse = $appareil->envoyer('GET', '/dashboard', [], prechargementEntetes());
+
+    $reponse->assertRedirect(route('login'));
+    $identifiant = $appareil->cookie(config()->string('session.cookie'));
+
+    expect($identifiant)->not->toBeNull()
+        ->and($espion->ecritures)->toBe([$identifiant])
+        ->and(prechargementCookiesPoses($reponse))->toContain('XSRF-TOKEN', config()->string('session.cookie'))
+        ->and(prechargementJetonEnregistre($espion, $identifiant))->toBe($appareil->cookie('XSRF-TOKEN'));
 });
 
 /*

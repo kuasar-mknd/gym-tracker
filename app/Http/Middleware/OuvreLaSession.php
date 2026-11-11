@@ -63,7 +63,13 @@ use Symfony\Component\HttpFoundation\Response;
  * suivante. Un GET ou un HEAD préchargé suit désormais le sort du
  * préchauffage : session lue, jamais enregistrée, aucun cookie posé. Sa page
  * ne porte pas non plus le flash en attente
- * (`HandleInertiaRequests::masquerLeFlashDUnPrechargement()`).
+ * (`HandleInertiaRequests::masquerLeFlashDUnPrechargement()`). Sauf quand le
+ * préchargement ouvre une session neuve (un invité sans cookie, une session
+ * expirée, que le magasin ne tient plus) : elle s'enregistre et pose ses
+ * cookies comme chez Laravel. Sa page porte son jeton, qu'aucune session ne
+ * tiendrait sinon : la page de connexion préchargée, puis montrée au
+ * toucher, échouerait en 419 à son premier envoi. Elle ne prolonge rien,
+ * puisqu'elle est neuve.
  *
  * Branché à la place de `StartSession` dans le groupe `web`
  * (bootstrap/app.php, `web(replace:)`) : l'ordre de priorité de Laravel le
@@ -100,9 +106,9 @@ final class OuvreLaSession extends StartSession
 
     /**
      * Ouvre la session, et l'enregistre à la fin comme Laravel, sauf sur un
-     * GET marqué du préchauffage, sur un GET préchargé, ou quand elle a été
-     * détruite ailleurs pendant la requête : la réponse ne pose alors aucun
-     * cookie.
+     * GET marqué du préchauffage, sur un GET préchargé qui l'a trouvée au
+     * magasin, ou quand elle a été détruite ailleurs pendant la requête : la
+     * réponse ne pose alors aucun cookie.
      *
      * @param  Session  $session
      */
@@ -111,7 +117,7 @@ final class OuvreLaSession extends StartSession
     {
         $request->setLaravelSession($this->startSession($request, $session));
 
-        if (self::estUnPrechauffage($request) || self::estUnPrechargement($request)) {
+        if (self::laisseLaSessionTelleQuelle($request, $session)) {
             return $this->sansRienPoser($next($request));
         }
 
@@ -172,6 +178,20 @@ final class OuvreLaSession extends StartSession
     {
         return in_array($request->getMethod(), [Request::METHOD_GET, Request::METHOD_HEAD], true)
             && $request->prefetch();
+    }
+
+    /**
+     * Un GET du préchauffage, ou un GET préchargé qui a lu une session que le
+     * magasin tenait : la session ne s'enregistre pas. Un préchargement qui
+     * en ouvre une neuve l'enregistre. Un magasin qui ne sait pas le dire
+     * (aucun dans l'application : `GestionnaireDesSessions` bâtit chacun) la
+     * tient pour lue.
+     */
+    private static function laisseLaSessionTelleQuelle(Request $request, Session $session): bool
+    {
+        return self::estUnPrechauffage($request)
+            || (self::estUnPrechargement($request)
+                && (! $session instanceof SessionQuiNeRenaitPas || $session->aEteLueAuMagasin()));
     }
 
     /**

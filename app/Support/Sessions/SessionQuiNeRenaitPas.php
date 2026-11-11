@@ -10,7 +10,8 @@ namespace App\Support\Sessions;
  * (`SessionChiffreeGardee`).
  *
  * `OuvreLaSession` l'enregistre par `enregistrerSiElleTient()`, qui lui dit
- * si la réponse peut en poser le cookie.
+ * si la réponse peut en poser le cookie, et demande à `aEteLueAuMagasin()`
+ * si un préchargement l'a trouvée, ou l'ouvre neuve (#2148).
  */
 interface SessionQuiNeRenaitPas
 {
@@ -21,4 +22,11 @@ interface SessionQuiNeRenaitPas
      * navigateur.
      */
     public function enregistrerSiElleTient(): bool;
+
+    /**
+     * La requête a lu en entrant une session que le magasin tenait. Faux pour
+     * une session neuve : un invité sans cookie, un cookie illisible, une
+     * session expirée ou détruite, que le magasin ne tient plus.
+     */
+    public function aEteLueAuMagasin(): bool;
 }
