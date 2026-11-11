@@ -67,7 +67,7 @@ function redisReelPousserAuxInstants(string $attente, string $file, array $insta
             $redis->rPush($file.':notify', 1);
             $poussees[] = microtime(true);
         }
-        echo json_encode($poussees);
+        fwrite(STDOUT, (string) json_encode($poussees));
         PHP;
 
     $reglage = static function (string $cle): string {
