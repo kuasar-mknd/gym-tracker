@@ -76,45 +76,41 @@ final class VersionsDesServicesCheck extends Check
                 ->ok('Ce contrôle ne juge que la production : seule sa composition transmet les versions attendues de db et de redis.');
         }
 
-        $meta = [];
-        $ecarts = [];
-        $absentes = [];
-        $illisibles = [];
+        $constats = [];
 
-        foreach (self::SERVICES as $service => ['nom' => $nom, 'variable' => $variable]) {
-            $attendue = config("health.versions_attendues.{$service}");
-            $attendue = is_string($attendue) && $attendue !== '' ? $attendue : null;
-            [$servie, $erreur] = $this->lire($service);
-            $meta[$service] = ['attendue' => $attendue, 'servie' => $servie];
-
-            if ($attendue === null) {
-                $absentes[] = $variable;
-            }
-
-            if ($servie === null) {
-                $illisibles[] = sprintf('Non vérifié : %s n\'a pas rendu sa version%s.', $nom, $erreur === null ? '' : " ({$erreur})");
-            } elseif ($attendue !== null && ! self::correspond($attendue, $servie)) {
-                $ecarts[] = sprintf('%s rend %s, la composition attend %s', $nom, $servie, $attendue);
-            }
+        foreach (array_keys(self::SERVICES) as $service) {
+            $constats[$service] = $this->constat($service);
         }
 
         $result = Result::make()
-            ->meta($meta)
+            ->meta(array_map(fn (array $constat): array => ['attendue' => $constat['attendue'], 'servie' => $constat['servie']], $constats))
             ->shortSummary(implode(' · ', array_map(
-                fn (string $service): string => self::SERVICES[$service]['nom'].' '.($meta[$service]['servie'] ?? '?'),
-                array_keys(self::SERVICES),
+                fn (string $service): string => self::SERVICES[$service]['nom'].' '.($constats[$service]['servie'] ?? '?'),
+                array_keys($constats),
             )));
 
-        $oranges = $illisibles;
+        return $this->juger($result, $constats);
+    }
 
-        if ($absentes !== []) {
-            $oranges[] = sprintf(
-                '%s %s pas %s : la pile n\'a pas reçu la composition de la release, et rien ne dit quelle version elle devrait servir. Lui donner le docker-compose.prod.yml du tag, puis la mettre à jour.',
-                implode(' et ', $absentes),
-                count($absentes) > 1 ? 'ne sont' : 'n\'est',
-                count($absentes) > 1 ? 'posées' : 'posée',
-            );
-        }
+    /**
+     * La version servie correspond à l'attendue quand elle est cette version
+     * ou l'un de ses correctifs ou rangs (`8.4` admet `8.4.13`, pas `8.40.1`).
+     * Un suffixe du serveur (`-log`) ne compte pas.
+     */
+    public static function correspond(string $attendue, string $servie): bool
+    {
+        $version = explode('-', $servie, 2)[0];
+
+        return $version === $attendue || str_starts_with($version, $attendue.'.');
+    }
+
+    /**
+     * @param  array<string, array{attendue: string|null, servie: string|null, erreur: string|null}>  $constats
+     */
+    private function juger(Result $result, array $constats): Result
+    {
+        $oranges = [...$this->illisibles($constats), ...$this->absentes($constats)];
+        $ecarts = $this->ecarts($constats);
 
         if ($ecarts === []) {
             Cache::forget(self::CLE_DE_L_ECART);
@@ -133,15 +129,85 @@ final class VersionsDesServicesCheck extends Check
     }
 
     /**
-     * La version servie correspond à l'attendue quand elle est cette version
-     * ou l'un de ses correctifs ou rangs (`8.4` admet `8.4.13`, pas `8.40.1`).
-     * Un suffixe du serveur (`-log`) ne compte pas.
+     * La version attendue d'un service, celle qu'il rend, et ce qui a
+     * empêché de la lire.
+     *
+     * @return array{attendue: string|null, servie: string|null, erreur: string|null}
      */
-    public static function correspond(string $attendue, string $servie): bool
+    private function constat(string $service): array
     {
-        $version = explode('-', $servie, 2)[0];
+        $attendue = config("health.versions_attendues.{$service}");
+        [$servie, $erreur] = $this->lire($service);
 
-        return $version === $attendue || str_starts_with($version, $attendue.'.');
+        return ['attendue' => is_string($attendue) && $attendue !== '' ? $attendue : null, 'servie' => $servie, 'erreur' => $erreur];
+    }
+
+    /**
+     * @param  array<string, array{attendue: string|null, servie: string|null, erreur: string|null}>  $constats
+     * @return list<string>
+     */
+    private function ecarts(array $constats): array
+    {
+        $ecarts = [];
+
+        foreach ($constats as $service => $constat) {
+            if ($constat['attendue'] !== null && $constat['servie'] !== null && ! self::correspond($constat['attendue'], $constat['servie'])) {
+                $ecarts[] = sprintf('%s rend %s, la composition attend %s', self::SERVICES[$service]['nom'], $constat['servie'], $constat['attendue']);
+            }
+        }
+
+        return $ecarts;
+    }
+
+    /**
+     * @param  array<string, array{attendue: string|null, servie: string|null, erreur: string|null}>  $constats
+     * @return list<string>
+     */
+    private function illisibles(array $constats): array
+    {
+        $illisibles = [];
+
+        foreach ($constats as $service => $constat) {
+            if ($constat['servie'] === null) {
+                $illisibles[] = sprintf(
+                    'Non vérifié : %s n\'a pas rendu sa version%s.',
+                    self::SERVICES[$service]['nom'],
+                    $constat['erreur'] === null ? '' : " ({$constat['erreur']})",
+                );
+            }
+        }
+
+        return $illisibles;
+    }
+
+    /**
+     * Les versions attendues manquent quand la pile a reçu l'image de la
+     * release sans sa composition : rien ne dit alors ce qu'elle devrait
+     * servir.
+     *
+     * @param  array<string, array{attendue: string|null, servie: string|null, erreur: string|null}>  $constats
+     * @return list<string>
+     */
+    private function absentes(array $constats): array
+    {
+        $variables = array_values(array_map(
+            fn (string $service): string => self::SERVICES[$service]['variable'],
+            array_keys(array_filter($constats, fn (array $constat): bool => $constat['attendue'] === null)),
+        ));
+
+        if ($variables === []) {
+            return [];
+        }
+
+        $plusieurs = count($variables) > 1;
+
+        $message = sprintf(
+            '%s %s : la pile n\'a pas reçu la composition de la release, et rien ne dit quelle version elle devrait servir. Lui donner le docker-compose.prod.yml du tag, puis la mettre à jour.',
+            implode(' et ', $variables),
+            $plusieurs ? 'ne sont pas posées' : 'n\'est pas posée',
+        );
+
+        return [$message];
     }
 
     /**
