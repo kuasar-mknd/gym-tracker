@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Symfony\Component\Finder\Finder;
+use Tests\Support\FichiersSuivis;
 
 /*
  * Le dépôt est public : il ne nomme pas l'infrastructure qui le fait tourner.
@@ -91,37 +91,6 @@ function infrastructureLignesQuiLaNomment(string $contenu): array
     return $lignes;
 }
 
-/**
- * Les fichiers texte du dépôt, ceux que Git suivrait : .gitignore respecté,
- * dépendances et fichiers produits écartés.
- *
- * @return array<string, string> contenu par chemin relatif
- */
-function infrastructureFichiersDuDepot(): array
-{
-    $fichiers = Finder::create()
-        ->files()
-        ->in(base_path())
-        ->ignoreDotFiles(false)
-        ->ignoreVCS(true)
-        ->ignoreVCSIgnored(true)
-        ->exclude(['vendor', 'node_modules', 'storage', 'bootstrap/cache', 'public/build', '.claude/worktrees']);
-
-    $contenus = [];
-
-    foreach ($fichiers as $fichier) {
-        $contenu = (string) file_get_contents($fichier->getPathname());
-
-        if (str_contains(substr($contenu, 0, 8000), "\0")) {
-            continue;
-        }
-
-        $contenus[$fichier->getRelativePathname()] = $contenu;
-    }
-
-    return $contenus;
-}
-
 it('reconnaît un nom interdit sans l\'écrire', function (): void {
     // strrev() : le mot n'apparaît pas en clair, même ici.
     expect(infrastructureLignesQuiLaNomment("première ligne\nle ".strrev('san').' de production'))->toBe([2])
@@ -130,10 +99,18 @@ it('reconnaît un nom interdit sans l\'écrire', function (): void {
 });
 
 it('ne nomme l\'infrastructure de production nulle part dans le dépôt', function (): void {
-    $fichiers = infrastructureFichiersDuDepot();
+    $fichiers = FichiersSuivis::contenus();
 
     expect(count($fichiers))->toBeGreaterThan(500)
-        ->and($fichiers)->toHaveKeys(['README.md', 'docker-compose.prod.yml', 'CHANGELOG.md']);
+        ->and($fichiers)->toHaveKeys([
+            'README.md',
+            'docker-compose.prod.yml',
+            'CHANGELOG.md',
+            'resources/views/vendor/mail/html/message.blade.php',
+            'lang/vendor/health/fr/notifications.php',
+            'public/robots.txt',
+            'storage/framework/.gitignore',
+        ]);
 
     $mentions = [];
 

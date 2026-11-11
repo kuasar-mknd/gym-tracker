@@ -27,6 +27,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **La séance en cours ne relit plus sa propre séance pour proposer les valeurs de ses séries** (#2148, #PR) : étape 3c de #2148. Le calcul groupé des valeurs proposées relisait la séance par son identifiant alors que la page la tenait déjà de la route : une requête SQL de moins à chaque ouverture de la séance et à chaque rechargement de la séance après un vidage de la file, six au lieu de sept. L'historique lu reste celui du compte connecté.
 - **Le compte connecté et le message flash ne se calculent plus pour une réponse qui ne les montre pas** (#2148, #PR) : étape 3b de #2148. Le compte des notifications non lues, le dernier badge et la séance en cours se lisaient à chaque requête, redirections après une écriture, réponses JSON et rechargements partiels compris, pour être jetés aussitôt. Ils ne se lisent plus que pour une page qui les porte : la requête des chiffres différés de l'accueil passe de douze instructions SQL à neuf. Chaque page porte toujours le compte, nul pour un invité.
 
+### Sécurité
+- **Le jeton de diagnostic et la valeur d'un en-tête `Bearer` ne s'écrivent plus dans la table des exceptions ni dans le journal** (#2032, #2237) : chaque chaîne de chaque colonne d'une exception enregistrée les masque par valeur, la valeur en entier, avant que la colonne soit coupée à son budget, en plus du masque par clef ; chaque canal du journal fait de même pour chaque ligne. Deux gardes de convention refusent, dans les fichiers que Git suit, un jeton complet et la note que porte toute réponse du diagnostic. `JetonsHorsDesExceptionsTest` et `JetonsHorsDuJournalTest` le vérifient.
+
 ## [1.7.0] - 2026-11-06
 
 ### Ajouté

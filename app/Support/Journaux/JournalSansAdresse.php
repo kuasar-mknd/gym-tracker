@@ -11,8 +11,9 @@ use Monolog\Logger as Monolog;
 /**
  * Ce que `config/logging.php` pose (`tap`) sur chaque canal qui écrit : le
  * formateur de chacun de ses gestionnaires passe désormais par
- * `FormateurSansAdresse` (#2076). La pile (`stack`) reprend les gestionnaires
- * de ses canaux, déjà masqués, et ne le porte pas.
+ * `FormateurSansAdresse`, qui masque les adresses (#2076), le jeton de
+ * diagnostic et la valeur d'un en-tête `Bearer …` (#2032). La pile (`stack`)
+ * reprend les gestionnaires de ses canaux, déjà masqués, et ne le porte pas.
  */
 final class JournalSansAdresse
 {
