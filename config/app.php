@@ -106,11 +106,12 @@ return [
     | Accès de diagnostic (#2032)
     |--------------------------------------------------------------------------
     |
-    | L'interrupteur de l'accès en lecture seule (aucune route ne le sert
-    | encore ; elle viendra sous /diagnostic/v1). Lu
+    | L'interrupteur de l'accès en lecture seule, que sert /diagnostic/v1
+    | (routes/diagnostic.php, gardée par ExigeUnJetonDeDiagnostic). Lu
     | strictement : seule la valeur booléenne vraie l'ouvre, jamais « 1 »
-    | ni un texte. Coupé, aucun jeton ne se crée et ceux qui restent sont
-    | révoqués au démarrage (entrypoint.sh).
+    | ni un texte. Coupé, chaque route répond comme un chemin inconnu, aucun
+    | jeton ne se crée et ceux qui restent sont révoqués au démarrage
+    | (entrypoint.sh).
     |
     */
 

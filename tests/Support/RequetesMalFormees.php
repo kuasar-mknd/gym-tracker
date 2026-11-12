@@ -105,7 +105,8 @@ final class RequetesMalFormees
         $serveur = [];
 
         foreach ($entetes as $nom => $valeur) {
-            $serveur['HTTP_'.strtoupper(str_replace('-', '_', $nom))] = $valeur;
+            // Symfony lit `Authorization` en chaîne (`ServerBag::getHeaders()`) : un serveur lui donne les lignes jointes.
+            $serveur['HTTP_'.strtoupper(str_replace('-', '_', $nom))] = is_array($valeur) && strtolower($nom) === 'authorization' ? implode(', ', $valeur) : $valeur;
         }
 
         if ($corps !== null) {
