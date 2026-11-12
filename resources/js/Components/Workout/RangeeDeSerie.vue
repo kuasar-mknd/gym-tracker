@@ -4,6 +4,7 @@
  * mesures selon le type d'exercice, et son retrait. Les ecritures restent a
  * la page ; la rangee dit ce que l'utilisateur a fait.
  */
+import { useId } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
@@ -19,6 +20,9 @@ defineProps({
     disabled: { type: Boolean, default: false },
 })
 
+/** Le texte « record personnel » se lit en description de la coche : son nom, lui, ne change pas avec la réponse du serveur. */
+const idDuRecord = useId()
+
 defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update', 'deplacer', 'pointerdown'])
 </script>
 
@@ -33,7 +37,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 type="button"
                 @click="$emit('remove')"
                 :dusk="`swipe-remove-set-${lineIndex}-${index}`"
-                :aria-label="`Supprimer la série ${index + 1}`"
+                :aria-label="`Supprimer la série ${index + 1}, ${line.exercise.name}`"
                 class="bg-accent-danger text-text-on-accent focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
             >
                 <span class="flex flex-col items-center" aria-hidden="true">
@@ -64,7 +68,8 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 class="group focus-visible:ring-accent-primary relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition focus-visible:ring-2 focus-visible:outline-none"
                 :class="set.is_completed ? 'bg-accent-state text-text-main' : 'bg-surface-sunken text-text-muted'"
                 :aria-pressed="set.is_completed ? 'true' : 'false'"
-                :aria-label="`Valider la série ${index + 1}, exercice ${line.exercise.name}${set.personal_record ? ', record personnel' : ''}`"
+                :aria-label="`Valider la série ${index + 1}, ${line.exercise.name}`"
+                :aria-describedby="set.personal_record ? idDuRecord : undefined"
             >
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -78,6 +83,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     <GlassIcon name="stars" class="text-xs font-bold" />
                 </div>
             </button>
+            <span v-if="set.personal_record" :id="idDuRecord" class="sr-only">Record personnel</span>
             <!-- Le numero porte le deplacement au CLAVIER. Le
                  doigt, lui, saisit la rangee entiere. -->
             <component
@@ -85,7 +91,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 :type="reordonnable ? 'button' : undefined"
                 :data-poignee-clavier="reordonnable ? '' : undefined"
                 :dusk="`reorder-set-${lineIndex}-${index}`"
-                :aria-label="reordonnable ? `Déplacer la série ${index + 1}` : undefined"
+                :aria-label="reordonnable ? `Déplacer la série ${index + 1}, ${line.exercise.name}` : undefined"
                 class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black select-none focus-visible:ring-2 focus-visible:outline-none"
                 @keydown.up.prevent="$emit('deplacer', index - 1)"
                 @keydown.down.prevent="$emit('deplacer', index + 1)"
@@ -204,7 +210,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     // only, so a mouse has no other way to delete.
                     'hidden sm:block',
                 ]"
-                :aria-label="`Supprimer la série ${index + 1}`"
+                :aria-label="`Supprimer la série ${index + 1}, ${line.exercise.name}`"
             >
                 <GlassIcon name="delete" />
             </button>

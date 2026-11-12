@@ -46,10 +46,12 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
     const editErrorSessionExpiree = ref(false)
     let editErrorTimer = null
 
-    /** Les refus ordinaires survenus pendant qu'un message persistant occupait la place. */
+    /** Les refus ordinaires survenus pendant qu'un message persistant occupait la place, chacun gardé. */
     let refusEnAttente = []
     let sessionExpiree = null
     let stockagePlein = null
+    /** Les écritures que la porte fermée a fait refuser depuis que le message est posé. */
+    let ecrituresEcartees = 0
 
     /**
      * Un message de la file (session expirée, stockage plein) reste jusqu'à sa
@@ -57,17 +59,14 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
      * pas à le lire. Un refus ordinaire ne le remplace pas : il attend la
      * fermeture, puis s'affiche à son tour.
      */
-    const reportEditFailure = (message, { persistante = false, avecReconnexion = false } = {}) => {
-        triggerHaptic('error')
-
+    const reportEditFailure = (message, { persistante = false, avecReconnexion = false, duree = 6000 } = {}) => {
         if (editErrorPersistante.value && !persistante) {
-            if (!refusEnAttente.includes(message)) {
-                refusEnAttente.push(message)
-            }
+            refusEnAttente.push(message)
 
             return
         }
 
+        triggerHaptic('error')
         clearTimeout(editErrorTimer)
 
         editError.value = message
@@ -77,8 +76,22 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         if (!persistante) {
             editErrorTimer = setTimeout(() => {
                 editError.value = null
-            }, 6000)
+            }, duree)
         }
+    }
+
+    /** Les refus mis de côté, dits d'un coup : deux refus au même texte restent deux, comptés. */
+    const resumerLesRefus = (messages) => {
+        if (messages.length === 1) {
+            return messages[0]
+        }
+
+        const comptes = new Map()
+        messages.forEach((message) => comptes.set(message, (comptes.get(message) ?? 0) + 1))
+
+        const detail = [...comptes].map(([message, fois]) => (fois > 1 ? `${message} (×${fois})` : message))
+
+        return `${messages.length} refus : ${detail.join(' ')}`
     }
 
     const fermerEditError = () => {
@@ -88,12 +101,13 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         editErrorSessionExpiree.value = false
         sessionExpiree = null
         stockagePlein = null
+        ecrituresEcartees = 0
 
-        const suite = refusEnAttente.join(' ')
+        const suite = refusEnAttente
         refusEnAttente = []
 
-        if (suite) {
-            reportEditFailure(suite)
+        if (suite.length > 0) {
+            reportEditFailure(resumerLesRefus(suite), { duree: Math.min(15000, 6000 + 3000 * (suite.length - 1)) })
         }
     }
 
@@ -150,42 +164,92 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
     }
 
-    /**
-     * Session expirée et stockage plein se disent ensemble : le second
-     * n'efface pas le premier, et quand le téléphone ne garde plus rien, le
-     * message n'offre pas le lien de connexion, que la navigation complète
-     * rendrait fatal à ce qui n'est qu'en mémoire.
-     */
+    /** Un nombre de modifications, dit de la même façon partout : « une modification » ou « N modifications ». */
+    const modifications = (nombre) => (nombre === 1 ? 'une modification' : `${nombre} modifications`)
+
+    /** Session expirée et stockage plein se disent ensemble ; la file n'est qu'en mémoire : une connexion par fournisseur recharge la page et la perd. */
     const direLaFile = () => {
-        const pending = Math.max(sessionExpiree ?? 0, stockagePlein ?? 0)
-        const pluriel = pending > 1
+        const attente = Math.max(sessionExpiree ?? 0, stockagePlein ?? 0)
+        const pluriel = attente > 1
+        const ecartees = ecrituresEcartees
+        const sort = `${modifications(attente)} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement`
+        const refus =
+            ecartees > 0
+                ? `${modifications(ecartees).replace(/^u/, 'U')} ${ecartees > 1 ? "n'ont pas pu être envoyées et ont été écartées" : "n'a pas pu être envoyée et a été écartée"}`
+                : null
+        const ecartee = refus === null ? '' : ` ${refus}.`
 
         if (sessionExpiree !== null && stockagePlein !== null) {
             reportEditFailure(
-                `Ta session a expiré et le stockage du téléphone est plein : ${pending} modification${pluriel ? 's' : ''} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement. Reconnecte-toi sans recharger la page.`,
-                { persistante: true },
+                attente === 0
+                    ? `Ta session a expiré et le stockage du téléphone est plein : reconnecte-toi.${ecartee}`
+                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient ${pluriel ? 'ces modifications' : 'cette modification'}. Libère de la place sur le téléphone.${ecartee}`,
+                { persistante: true, avecReconnexion: true },
             )
         } else if (sessionExpiree !== null) {
+            const reste =
+                ecartees > 1
+                    ? pluriel
+                        ? `les ${attente} modifications restantes repartiront`
+                        : 'la modification restante repartira'
+                    : pluriel
+                      ? `les ${attente} autres modifications en attente repartiront`
+                      : "l'autre modification en attente repartira"
+            const suite = attente === 0 ? '.' : ` ; ${reste} ensuite.`
+
             reportEditFailure(
-                `Ta session a expiré : reconnecte-toi, ${pluriel ? `tes ${pending} modifications en attente` : 'ta modification en attente'} repartir${pluriel ? 'ont' : 'a'} ensuite.`,
+                refus === null
+                    ? attente === 0
+                        ? 'Ta session a expiré : reconnecte-toi.'
+                        : `Ta session a expiré : reconnecte-toi, ${pluriel ? `tes ${attente} modifications en attente` : 'ta modification en attente'} repartir${pluriel ? 'ont' : 'a'} ensuite.`
+                    : `Ta session a expiré : reconnecte-toi. ${refus}${suite}`,
                 { persistante: true, avecReconnexion: true },
             )
         } else {
             reportEditFailure(
-                `Le stockage du téléphone est plein : ${pending} modification${pluriel ? 's' : ''} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement.`,
+                attente === 0
+                    ? 'Le stockage du téléphone est plein : libère de la place sur le téléphone.'
+                    : `Le stockage du téléphone est plein : ${sort}.`,
                 { persistante: true },
             )
         }
     }
 
     const handleSyncAuthRequired = (event) => {
-        sessionExpiree = event.detail?.pending ?? 0
+        const refusee = event.detail?.refusee === true
+        const enAttente = event.detail?.pending ?? 0
+
+        if (refusee) {
+            ecrituresEcartees += 1
+        }
+
+        sessionExpiree = refusee ? Math.max(0, enAttente - 1) : enAttente
+
+        if (refusee && stockagePlein !== null) {
+            stockagePlein = Math.min(stockagePlein, sessionExpiree)
+        }
+
         direLaFile()
     }
 
     const handleSyncStorageFull = (event) => {
         stockagePlein = event.detail?.pending ?? 0
         direLaFile()
+    }
+
+    /** La file vide, les messages de porte fermée et de stockage plein n'ont plus d'objet : ils se ferment. */
+    const handleSyncReplayed = () => {
+        if ((sessionExpiree === null && stockagePlein === null) || SyncService.enAttente() > 0) {
+            return
+        }
+
+        const surLeMessage = document.activeElement?.closest('[dusk="set-edit-error"]') != null
+
+        fermerEditError()
+
+        if (surLeMessage) {
+            document.getElementById('main-content')?.focus({ preventScroll: true })
+        }
     }
 
     /**
@@ -253,6 +317,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
             window.addEventListener('sync:failed', handleSyncFailure)
             window.addEventListener('sync:auth-required', handleSyncAuthRequired)
             window.addEventListener('sync:storage-full', handleSyncStorageFull)
+            window.addEventListener('sync:replayed', handleSyncReplayed)
             markQueuedFailuresOnMount()
         })
 
@@ -260,6 +325,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
             window.removeEventListener('sync:failed', handleSyncFailure)
             window.removeEventListener('sync:auth-required', handleSyncAuthRequired)
             window.removeEventListener('sync:storage-full', handleSyncStorageFull)
+            window.removeEventListener('sync:replayed', handleSyncReplayed)
         })
     }
 
@@ -277,6 +343,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         describeFailedCreate,
         handleSyncAuthRequired,
         handleSyncStorageFull,
+        handleSyncReplayed,
         handleSyncFailure,
         markQueuedFailuresOnMount,
     }

@@ -40,7 +40,11 @@ const champPoids = ref(null)
  * Le formulaire s'ouvre au-dessus de l'historique, sous le pli depuis le bouton de l'état vide : sans ceci, rien ne
  * bouge à l'écran. Il se montre, et son premier champ prend le focus, quelle que soit la commande qui l'a ouvert.
  */
-watch(showAddForm, async () => {
+watch(showAddForm, async (ouvert) => {
+    if (!ouvert) {
+        return
+    }
+
     await nextTick()
     champPoids.value?.focus?.()
     formulaire.value?.scrollIntoView?.({ block: 'center' })
@@ -53,11 +57,26 @@ const form = useForm({
     notes: '',
 })
 
+/** Le bouton qui ouvre et ferme le formulaire : celui des deux jeux d'en-tête que l'écran montre. */
+const boutonDuFormulaire = () => {
+    const boutons = [...document.querySelectorAll('[data-bascule-mesure]')]
+
+    return boutons.find((bouton) => bouton.getClientRects().length > 0) ?? boutons[0]
+}
+
+/** « Enregistrer » disparaît avec le formulaire : le focus revient à qui l'a ouvert. */
 const submit = () => {
     form.post(route('body-measurements.store'), {
-        onSuccess: () => {
+        onSuccess: async () => {
             form.reset('weight', 'body_fat', 'notes')
             showAddForm.value = false
+            await nextTick()
+
+            const actif = document.activeElement
+
+            if (actif === null || actif === document.body) {
+                boutonDuFormulaire()?.focus()
+            }
         },
     })
 }
@@ -110,7 +129,10 @@ const previousWeight = computed(() => {
 const weightDiff = computed(() => {
     if (!latestWeight.value || !previousWeight.value) return null
 
-    return Number(latestWeight.value) - Number(previousWeight.value)
+    // À la décimale que l'écran affiche : le signe et la flèche suivent ce qui se lit, pas l'écart brut. `|| 0` tue le -0.
+    const ecart = Number(latestWeight.value) - Number(previousWeight.value)
+
+    return Math.sign(ecart) * (Math.round(Math.abs(ecart) * 10) / 10) || 0
 })
 
 const sensDeLEcart = computed(() => {
@@ -144,6 +166,7 @@ const latestBodyFat = computed(() => {
                 :variant="showAddForm ? 'secondary' : 'primary'"
                 size="sm"
                 :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
+                data-bascule-mesure
                 @click="showAddForm = !showAddForm"
             >
                 <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" />
@@ -153,7 +176,11 @@ const latestBodyFat = computed(() => {
         <template #header>
             <div class="flex items-center justify-between">
                 <h1 class="titre-carte">Poids</h1>
-                <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
+                <GlassButton
+                    :variant="showAddForm ? 'secondary' : 'primary'"
+                    data-bascule-mesure
+                    @click="showAddForm = !showAddForm"
+                >
                     <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}
                 </GlassButton>

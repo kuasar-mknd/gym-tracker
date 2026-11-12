@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import { routeDeTest } from '../composables/seanceHorsLigne'
 
@@ -35,6 +35,35 @@ describe('ErreurDeSaisie', () => {
         await fermer.trigger('click')
 
         expect(wrapper.emitted('fermer')).toHaveLength(1)
+    })
+
+    it('rend le focus au contenu principal quand « Fermer » retire le bouton qui l’avait', async () => {
+        const principal = document.createElement('main')
+        principal.id = 'main-content'
+        principal.tabIndex = -1
+        document.body.appendChild(principal)
+
+        const wrapper = mount(ErreurDeSaisie, {
+            props: {
+                message: 'Stockage plein',
+                persistant: true,
+                onFermer: () => wrapper.setProps({ message: null }),
+            },
+            attachTo: document.body,
+            global: { mocks: { route: routeDeTest }, stubs: { Transition: false } },
+        })
+        const fermer = wrapper.get('[dusk="set-edit-error-fermer"]')
+        fermer.element.focus()
+        expect(document.activeElement).toBe(fermer.element)
+
+        await fermer.trigger('click')
+        await flushPromises()
+
+        expect(wrapper.find('[dusk="set-edit-error-fermer"]').exists()).toBe(false)
+        expect(document.activeElement).toBe(principal)
+
+        wrapper.unmount()
+        principal.remove()
     })
 
     it('session expirée, offre un lien « Se reconnecter » vers la connexion', () => {

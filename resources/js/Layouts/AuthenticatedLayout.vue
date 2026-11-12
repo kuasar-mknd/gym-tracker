@@ -352,7 +352,8 @@ onUnmounted(() => {
         <!-- Page Content -->
         <main
             id="main-content"
-            class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6"
+            tabindex="-1"
+            class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6 focus:outline-none"
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
         >
             <!--

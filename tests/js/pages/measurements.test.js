@@ -4,6 +4,7 @@ import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
 import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 const formPost = vi.fn()
+const succes = { differe: false, rappel: null }
 const routerDelete = vi.fn()
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -30,6 +31,12 @@ vi.mock('@inertiajs/vue3', async () => {
                 processing: false,
                 post: (url, options = {}) => {
                     formPost(url, Object.fromEntries(Object.keys(initial).map((name) => [name, form[name]])))
+                    if (succes.differe) {
+                        succes.rappel = options.onSuccess
+
+                        return
+                    }
+
                     options.onSuccess?.()
                 },
                 // Inertia's reset() puts back the fields it is named, or every
@@ -151,6 +158,8 @@ const occurrences = (wrapper, needle) => wrapper.text().split(needle).length - 1
 
 beforeEach(() => {
     formPost.mockReset()
+    succes.differe = false
+    succes.rappel = null
     routerDelete.mockReset()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 })
@@ -226,6 +235,58 @@ describe('Measurements/Index headline figures', () => {
         const carte = wrapper.findAllComponents(GlassStat).find((c) => c.props('libelle') === 'Évolution')
         expect(carte.props('unite')).toBe('kg')
         expect(carte.props('tendance')).toEqual({ texte: 'depuis la dernière pesée', sens: 'stable' })
+    })
+
+    it.each([
+        ['74.54', '74.50'],
+        ['74.46', '74.50'],
+    ])(
+        'lit comme stable un écart sous 0,05 kg (%s contre %s), sans signe ni flèche que l’écran ne montre pas',
+        async (dernier, precedent) => {
+            const presqueStable = [
+                { ...MEASUREMENTS[0], weight: dernier },
+                { ...MEASUREMENTS[1], weight: precedent },
+            ]
+
+            const wrapper = await mountPage(MeasurementsIndex, { measurements: presqueStable })
+
+            expect(wrapper.vm.weightDiff).toBe(0)
+            expect(statistique(wrapper, 'Évolution')).toBe('0')
+            const carte = wrapper.findAllComponents(GlassStat).find((c) => c.props('libelle') === 'Évolution')
+            expect(carte.props('tendance').sens).toBe('stable')
+        },
+    )
+
+    it('arrondit l’écart à la décimale lue, et garde le sens d’un écart qui s’y lit encore', async () => {
+        const wrapper = await mountPage(MeasurementsIndex, {
+            measurements: [
+                { ...MEASUREMENTS[0], weight: '74.56' },
+                { ...MEASUREMENTS[1], weight: '74.50' },
+            ],
+        })
+
+        expect(wrapper.vm.weightDiff).toBe(0.1)
+        expect(statistique(wrapper, 'Évolution')).toBe('+0,1')
+        const carte = wrapper.findAllComponents(GlassStat).find((c) => c.props('libelle') === 'Évolution')
+        expect(carte.props('tendance').sens).toBe('hausse')
+    })
+
+    it('arrondit une perte et un gain de même taille à la même valeur, une moitié exacte comprise', async () => {
+        const perte = await mountPage(MeasurementsIndex, {
+            measurements: [
+                { ...MEASUREMENTS[0], weight: '80.00' },
+                { ...MEASUREMENTS[1], weight: '80.25' },
+            ],
+        })
+        const gain = await mountPage(MeasurementsIndex, {
+            measurements: [
+                { ...MEASUREMENTS[0], weight: '80.25' },
+                { ...MEASUREMENTS[1], weight: '80.00' },
+            ],
+        })
+
+        expect(perte.vm.weightDiff).toBe(-0.3)
+        expect(gain.vm.weightDiff).toBe(0.3)
     })
 
     it('falls back to the last day body fat was measured, because most weigh-ins skip it', async () => {
@@ -409,12 +470,55 @@ describe('Measurements/Index add form', () => {
         it('défile jusqu’au formulaire et donne le focus au poids, depuis le « + » de l’en-tête', async () => {
             const { wrapper, defiler } = await monterAvecLesVraisChamps(MEASUREMENTS)
 
-            await click(wrapper, 'Ajouter')
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
             await flushPromises()
 
             expect(defiler).toHaveBeenCalledTimes(1)
             expect(defiler.mock.contexts[0]).toBe(wrapper.find('form').element)
             expect(document.activeElement).toBe(wrapper.find('input[type="number"]').element)
+        })
+
+        it('rend le focus au bouton qui l’a ouverte une fois enregistrée', async () => {
+            const { wrapper } = await monterAvecLesVraisChamps(MEASUREMENTS)
+
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+            await flushPromises()
+            await wrapper.find('form').trigger('submit')
+            await flushPromises()
+
+            expect(wrapper.find('form').exists()).toBe(false)
+            expect(document.activeElement).toBe(wrapper.get('button[aria-label="Ajouter une mesure"]').element)
+        })
+
+        it('laisse le focus où l’utilisateur l’a mis pendant que la requête était en vol', async () => {
+            succes.differe = true
+            const { wrapper } = await monterAvecLesVraisChamps(MEASUREMENTS)
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+            await flushPromises()
+
+            const ailleurs = document.createElement('button')
+            document.body.appendChild(ailleurs)
+            onTestFinished(() => ailleurs.remove())
+
+            await wrapper.find('form').trigger('submit')
+            ailleurs.focus()
+            await succes.rappel()
+            await flushPromises()
+
+            expect(document.activeElement).toBe(ailleurs)
+        })
+
+        it('rend le focus au bouton quand la requête aboutit après un délai et que le focus est perdu', async () => {
+            succes.differe = true
+            const { wrapper } = await monterAvecLesVraisChamps(MEASUREMENTS)
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+            await flushPromises()
+            await wrapper.find('form').trigger('submit')
+
+            await succes.rappel()
+            await flushPromises()
+
+            expect(document.activeElement).toBe(wrapper.get('button[aria-label="Ajouter une mesure"]').element)
         })
 
         it('fait de même depuis le bouton de l’état vide', async () => {

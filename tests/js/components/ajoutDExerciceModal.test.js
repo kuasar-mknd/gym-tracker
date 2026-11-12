@@ -80,6 +80,27 @@ describe('choisir un exercice', () => {
         expect(wrapper.findAll('[dusk="quick-create-exercise"]')).toHaveLength(1)
     })
 
+    it('ne propose pas de créer « » quand la recherche n’est faite que d’espaces', async () => {
+        const wrapper = monter({ exercises: [] })
+
+        await wrapper.get('#search-workout-exercise').setValue('   ')
+
+        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(false)
+        expect(wrapper.text()).toContain('Aucun exercice, crée le premier')
+    })
+
+    it('crée l’exercice sous le nom tapé, sans les espaces autour', async () => {
+        const wrapper = monter({ exercises: [] })
+
+        await wrapper.get('#search-workout-exercise').setValue('  Squat bulgare ')
+
+        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer "Squat bulgare"')
+
+        await wrapper.get('[dusk="quick-create-exercise"]').trigger('click')
+
+        expect(wrapper.vm.createExerciseForm.name).toBe('Squat bulgare')
+    })
+
     it('ne montre pas l’état vide quand la bibliothèque contient des exercices', () => {
         expect(monter().text()).not.toContain('Aucun exercice, crée le premier')
     })
