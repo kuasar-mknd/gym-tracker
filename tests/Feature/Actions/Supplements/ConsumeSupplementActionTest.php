@@ -80,3 +80,20 @@ it('journalise la prise sans faire passer le stock sous zero', function (): void
     expect($supplement->refresh()->servings_remaining)->toBe(0);
     expect(SupplementLog::where('supplement_id', $supplement->id)->count())->toBe(1);
 });
+
+it('ne descend pas sous zéro quand une autre prise a vidé le stock entre la lecture et la prise', function (): void {
+    $user = User::factory()->create();
+    $supplement = Supplement::factory()->create([
+        'user_id' => $user->id,
+        'servings_remaining' => 1,
+    ]);
+
+    // Une seconde prise, déjà passée, a vidé le stock : le modèle en main
+    // porte encore 1.
+    Supplement::query()->whereKey($supplement->id)->update(['servings_remaining' => 0]);
+    expect($supplement->servings_remaining)->toBe(1);
+
+    app(ConsumeSupplementAction::class)->execute($user, $supplement);
+
+    expect($supplement->refresh()->servings_remaining)->toBe(0);
+});

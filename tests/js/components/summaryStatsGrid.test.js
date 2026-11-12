@@ -101,7 +101,8 @@ describe('SummaryStatsGrid monthly comparison', () => {
     it("affiche un tiret plutot qu'un +0 % quand il n'y a pas de mois precedent", () => {
         const value = comparison(mountGrid())
 
-        expect(value.text()).toBe('—')
+        expect(value.get('[aria-hidden="true"]').text()).toBe('—')
+        expect(value.get('.sr-only').text()).toBe('Pas de mois précédent')
         expect(value.classes()).not.toContain('text-trend-up')
         expect(value.classes()).not.toContain('text-trend-down')
     })
@@ -109,7 +110,8 @@ describe('SummaryStatsGrid monthly comparison', () => {
     it("en fait autant quand le serveur dit explicitement qu'il n'y a rien a comparer", () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: null } }))
 
-        expect(value.text()).toBe('—')
+        expect(value.get('[aria-hidden="true"]').text()).toBe('—')
+        expect(value.get('.sr-only').text()).toBe('Pas de mois précédent')
     })
 })
 

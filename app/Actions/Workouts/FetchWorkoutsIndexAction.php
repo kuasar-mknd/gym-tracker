@@ -334,6 +334,7 @@ final class FetchWorkoutsIndexAction
         ])
             ->where('user_id', $user->id)
             ->latest('started_at')
+            ->orderByDesc('id')
             ->paginate(20);
     }
 }

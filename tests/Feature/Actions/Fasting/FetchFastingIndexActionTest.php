@@ -17,6 +17,7 @@ use App\Models\Fast;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Onze jeunes termines, plus un en cours.
@@ -95,4 +96,16 @@ it('sort le jeune en cours de l historique et le rend a part', function (): void
     // il occuperait la premiere ligne de l'historique.
     expect(collect($historique->items())->pluck('target_duration_minutes')->all())
         ->not->toContain(999);
+});
+
+it('départage par identifiant décroissant les jeûnes qui commencent à la même seconde', function (): void {
+    $user = User::factory()->create();
+    Fast::factory()->count(12)->create(['user_id' => $user->id, 'status' => 'completed', 'start_time' => '2026-08-10 08:00:00']);
+
+    DB::enableQueryLog();
+    app(FetchFastingIndexAction::class)->execute($user);
+    $tris = collect(DB::getQueryLog())->map(fn (array $entree): string => $entree['query'])->filter(fn (string $sql): bool => str_contains($sql, 'order by'));
+
+    expect($tris)->toHaveCount(2)
+        ->and($tris->every(fn (string $sql): bool => str_contains($sql, 'order by `start_time` desc, `id` desc')))->toBeTrue();
 });
