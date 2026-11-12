@@ -138,6 +138,15 @@ La page « Système › Aperçu du diagnostic » du panneau montre ce que l'agen
 
 En ligne de commande, dans le conteneur `app` : `php artisan diagnostic:resume` rend le résumé de toutes les sources, mis en forme, suivi du nombre de caractères invisibles retirés ; `--json` le rend seul, sur une ligne ; `--depuis=2026-10-11T08:00:00+02:00` choisit le début de la fenêtre des exceptions et des erreurs navigateur (vingt-quatre heures par défaut, trente jours au plus).
 
+### Accès de diagnostic
+
+La page « Système › Accès de diagnostic » du panneau liste les jetons de l'agent de maintenance (identifiant, nom, portées, expiration, état, dernière utilisation : jamais l'empreinte), en crée et les révoque (#2032). Elle n'ouvre aucune route : un jeton créé ici ne lit encore rien.
+
+- **Accès** : le rôle de super administrateur, la double authentification activée et la capacité `view-diagnostic` ; la page est invisible et sa route refusée pour tout autre. `AppServiceProvider::ouvrirLesOutilsAuSuperAdministrateur()` ouvre la capacité au super administrateur, mais `Gate::allows()` peut être vrai pour un administrateur ordinaire qui en aurait la permission : `canAccess()` exige en plus le rôle.
+- **Création** : un nom, des portées, une durée de 1, 7 (par défaut) ou 30 jours (un jour au plus avec `texte-brut`), et le code du moment de l'application d'authentification, que `CreeUnJetonDeDiagnosticAction` vérifie côté serveur. Un refus s'affiche par une phrase écrite dans la page, jamais par un texte venu de l'extérieur.
+- **Le jeton en clair** est rangé chiffré (`encrypt()`) en cache cinq minutes au plus, sous une clef tirée au hasard que seule la fenêtre porte, et déchiffré au rendu pour l'administrateur qui l'a créé. Fermer la fenêtre dans l'interface l'oublie aussitôt (et seul son créateur peut l'effacer) ; après un rechargement, une navigation ou un onglet fermé, il reste relisible par son créateur, avec la clef, jusqu'à la fin des cinq minutes. Il n'entre ni dans un champ de formulaire, ni dans la session, ni dans une notification, ni dans un journal, ni dans l'état du composant que la table des exceptions copie.
+- **Révocation** : par ligne, ou « Tout révoquer », par `RevoqueLesJetonsDeDiagnosticAction`.
+
 ### Relevé des temps
 
 `SERVER_TIMING_ENABLED` sert au relevé chiffré de ce que coûte chaque écran, avant puis après un changement de performance (#1315, #2148). Le reste du temps, la variable reste à `false`.

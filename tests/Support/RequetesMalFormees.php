@@ -37,6 +37,7 @@ use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Livewire\Attributes\Url;
 use LogicException;
+use PragmaRX\Google2FA\Google2FA;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionFunction;
@@ -436,6 +437,7 @@ final class RequetesMalFormees
 
         $admin = Admin::factory()->create();
         $admin->assignRole(Role::findOrCreate('super_admin', 'admin'));
+        $admin->forceFill(['app_authentication_secret' => new Google2FA()->generateSecretKey()])->save();
 
         foreach ($routes as $route) {
             $modele = self::modeleDeLaPage(self::classeDeLAction($route));
