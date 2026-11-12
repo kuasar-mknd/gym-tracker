@@ -21,7 +21,9 @@ use Illuminate\Support\Facades\Notification;
  * révocation ; `premierUsage()`, `jetonInvalidePresente()` et
  * `debitDepasse()` sont ce que la garde HTTP appellera, avec la ligne du
  * jeton connu : jamais le texte présenté, qui ne borne aucune clef. Aucune ne
- * lit ni n'écrit en base : un refus n'écrit rien.
+ * lit ni n'écrit en base : un refus n'écrit rien. Elles écrivent dans le cache
+ * par défaut ; `jetonInvalidePresente()` y borne son travail à une fois par
+ * minute et par jeton quand ce cache est `database`.
  *
  * Aucune ne lève : une panne du cache, de la file ou du courrier est
  * rapportée, et ce que l'alerte annonce (une création, une révocation, une
@@ -123,7 +125,7 @@ final class AlertesDeDiagnostic
 
     public function premierUsage(JetonDeDiagnostic $jeton): void
     {
-        $this->sansLever(fn () => $this->envoyerSiLesCreneauxSontLibres(
+        $this->sansLever(fn (): bool => $this->envoyerSiLesCreneauxSontLibres(
             [['diagnostic:alerte:premier-usage:'.$jeton->identifiant, $jeton->expire_le->copy()->addDay()]],
             new AlerteDeDiagnostic(
                 EvenementDAlerteDeDiagnostic::PremierUsage,
@@ -136,22 +138,45 @@ final class AlertesDeDiagnostic
 
     /**
      * La trace que lit le contrôle de santé se pose à chaque présentation,
-     * même quand le courriel ne part pas. L'instant est celui de la garde,
-     * qui a jugé l'expiration d'après lui : une seconde lecture de l'horloge
-     * pouvait tomber, près de minuit, sur le jour suivant.
+     * même quand le courriel ne part pas ; sur un cache `database`, une fois
+     * par minute et par jeton au plus, le reste étant une lecture du cache.
+     * L'instant est celui de la garde, qui a jugé l'expiration d'après lui :
+     * une seconde lecture de l'horloge pouvait tomber, près de minuit, sur le
+     * jour suivant.
      */
     public function jetonInvalidePresente(JetonDeDiagnostic $jeton, CarbonInterface $maintenant): void
     {
         $marque = 'diagnostic:alerte:presentation-vue:'.$jeton->identifiant.':'.$maintenant->format('Y-m-d\TH:i');
-        $surSql = JournalDuDiagnostic::lEcritureSeraitEnSql();
 
-        if ($surSql && rescue(static fn (): bool => Cache::has($marque), false, true)) {
+        if ($this->presentationDejaVueCetteMinute($marque)) {
             return;
         }
 
         rescue(static fn (): bool => Cache::put(self::CLE_DE_LA_DERNIERE_PRESENTATION, $maintenant->toIso8601String(), $maintenant->copy()->addDays(2)), false, true);
 
-        $this->sansLever(function () use ($jeton, $maintenant): void {
+        $this->marquerLaPresentation($marque, $this->alerterDUnJetonMort($jeton, $maintenant));
+    }
+
+    private function presentationDejaVueCetteMinute(string $marque): bool
+    {
+        return JournalDuDiagnostic::lEcritureSeraitEnSql() && rescue(static fn (): bool => Cache::has($marque), false, true);
+    }
+
+    /**
+     * La marque d'une minute ne se pose que si le travail a abouti : un envoi
+     * qui n'a pas pu se mettre en file rend son créneau, et la présentation
+     * suivante réessaie sans attendre la minute.
+     */
+    private function marquerLaPresentation(string $marque, bool $abouti): void
+    {
+        if ($abouti && JournalDuDiagnostic::lEcritureSeraitEnSql()) {
+            rescue(static fn (): bool => Cache::put($marque, true, 120), false, true);
+        }
+    }
+
+    private function alerterDUnJetonMort(JetonDeDiagnostic $jeton, CarbonInterface $maintenant): bool
+    {
+        return $this->sansLever(function () use ($jeton, $maintenant): bool {
             $compteur = 'diagnostic:alerte:presentations:'.$jeton->identifiant;
             Cache::add($compteur, 0, self::SECONDES_DU_COMPTEUR);
             $presentations = Cache::increment($compteur);
@@ -159,22 +184,18 @@ final class AlertesDeDiagnostic
             $quinzeMinutes = ['diagnostic:alerte:jeton-mort:quinze-minutes:'.$jeton->identifiant, self::SECONDES_ENTRE_DEUX_PRESENTATIONS];
             $parJour = is_int($presentations) && $presentations > self::PRESENTATIONS_AVANT_LA_CADENCE_JOURNALIERE;
 
-            $this->envoyerSiLesCreneauxSontLibres(
+            return $this->envoyerSiLesCreneauxSontLibres(
                 $parJour
                     ? [['diagnostic:alerte:jeton-mort:jour:'.$jeton->identifiant.':'.$maintenant->format('Y-m-d'), self::SECONDES_DU_CRENEAU_JOURNALIER], $quinzeMinutes]
                     : [$quinzeMinutes],
                 new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::JetonInvalidePresente, [self::fin($jeton)]),
             );
-        });
-
-        if ($surSql) {
-            rescue(static fn (): bool => Cache::put($marque, true, 120), false, true);
-        }
+        }) === true;
     }
 
     public function debitDepasse(JetonDeDiagnostic $jeton): void
     {
-        $this->sansLever(fn () => $this->envoyerSiLesCreneauxSontLibres(
+        $this->sansLever(fn (): bool => $this->envoyerSiLesCreneauxSontLibres(
             [['diagnostic:alerte:debit:'.$jeton->identifiant, self::SECONDES_ENTRE_DEUX_DEBITS_DEPASSES]],
             new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::DebitDepasse, [self::fin($jeton)]),
         ));
@@ -182,11 +203,11 @@ final class AlertesDeDiagnostic
 
     /**
      * Prend tous les créneaux, ou aucun, puis envoie ; un envoi qui ne part
-     * pas rend ceux qu'il avait pris.
+     * pas rend ceux qu'il avait pris. Faux quand l'envoi n'a pas pu partir.
      *
      * @param  list<array{0: string, 1: DateTimeInterface|int}>  $creneaux
      */
-    private function envoyerSiLesCreneauxSontLibres(array $creneaux, AlerteDeDiagnostic $alerte): void
+    private function envoyerSiLesCreneauxSontLibres(array $creneaux, AlerteDeDiagnostic $alerte): bool
     {
         $pris = [];
 
@@ -194,7 +215,7 @@ final class AlertesDeDiagnostic
             if (! Cache::add($cle, true, $duree)) {
                 $this->rendre($pris);
 
-                return;
+                return true;
             }
 
             $pris[] = $cle;
@@ -202,7 +223,11 @@ final class AlertesDeDiagnostic
 
         if (! $this->envoyer($alerte)) {
             $this->rendre($pris);
+
+            return false;
         }
+
+        return true;
     }
 
     /**
@@ -233,8 +258,8 @@ final class AlertesDeDiagnostic
         }, false, true);
     }
 
-    private function sansLever(Closure $travail): void
+    private function sansLever(Closure $travail): mixed
     {
-        rescue($travail, null, true);
+        return rescue($travail, null, true);
     }
 }

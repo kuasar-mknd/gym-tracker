@@ -519,10 +519,9 @@ it('rend le Retry-After le plus long quand la minute et l’heure sont épuisée
     expect((int) $refus->headers->get('Retry-After'))->toBeGreaterThan(60);
 });
 
-it('n’écrit pas en base à chaque présentation d’un jeton révoqué ou expiré quand le cache par défaut est `database`', function (string $cause): void {
+it('n’écrit en base qu’une fois par minute la présentation d’un jeton révoqué ou expiré quand le cache par défaut est `database`', function (string $cause): void {
     config()->set('cache.default', 'database');
     [$uri, $entete] = accesDeDiagnosticSituation($cause);
-    accesDeDiagnosticAppeler($uri, $entete);
     $ecritures = new ArrayObject();
     DB::listen(function ($requete) use ($ecritures): void {
         if (! str_starts_with(strtolower(ltrim($requete->sql)), 'select')) {
@@ -530,11 +529,22 @@ it('n’écrit pas en base à chaque présentation d’un jeton révoqué ou exp
         }
     });
 
+    accesDeDiagnosticAppeler($uri, $entete)->assertNotFound();
+    $amorce = $ecritures->count();
+    $ecritures->exchangeArray([]);
+
     foreach (range(1, 5) as $rang) {
         accesDeDiagnosticAppeler($uri, $entete)->assertNotFound();
     }
 
-    expect($ecritures->getArrayCopy())->toBe([]);
+    $dansLaMinute = $ecritures->count();
+    Carbon::setTestNow(now()->addMinutes(16));
+    accesDeDiagnosticAppeler($uri, $entete)->assertNotFound();
+
+    expect($amorce)->toBeGreaterThan(0)
+        ->and($dansLaMinute)->toBe(0)
+        ->and($ecritures->count())->toBeGreaterThan(0);
+    Notification::assertSentOnDemandTimes(AlerteDeDiagnostic::class, 2);
 })->with(['révoqué', 'expiré']);
 
 it('lit la ligne du jeton avant de décider de l’interrupteur : la même lecture, coupé ou non', function (bool $actif): void {

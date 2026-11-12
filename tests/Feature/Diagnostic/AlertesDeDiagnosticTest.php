@@ -346,6 +346,19 @@ it('pose le créneau du jour et la trace d’un jeton mort d’après l’instan
         ->and(Cache::get(AlertesDeDiagnostic::CLE_DE_LA_DERNIERE_PRESENTATION))->toBe($instantDeLaGarde->toIso8601String());
 });
 
+it('ne pose la marque de la minute, sur un cache `database`, que si l’envoi a abouti', function (): void {
+    config()->set('cache.default', 'database');
+    config()->set('health.notifications.mail.to', '');
+    $jeton = JetonDeDiagnostic::factory()->expire()->create();
+    $alertes = resolve(AlertesDeDiagnostic::class);
+
+    $alertes->jetonInvalidePresente($jeton, now());
+    config()->set('health.notifications.mail.to', 'alertes@example.org');
+    $alertes->jetonInvalidePresente($jeton, now());
+
+    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente))->toBe(1);
+});
+
 it('alerte d’un jeton mort présenté une fois par quinze minutes', function (): void {
     $jeton = JetonDeDiagnostic::factory()->expire()->create();
     $autre = JetonDeDiagnostic::factory()->revoque()->create();

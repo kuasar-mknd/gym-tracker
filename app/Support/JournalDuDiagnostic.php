@@ -102,10 +102,27 @@ final class JournalDuDiagnostic
      */
     public static function lEcritureSeraitEnSql(): bool
     {
-        $defaut = config('cache.default');
-        $pilote = is_string($defaut) ? config('cache.stores.'.$defaut.'.driver') : null;
-        $noms = $pilote === 'failover' ? config('cache.stores.'.$defaut.'.stores') : [$defaut];
+        return array_any(self::nomsDesMagasinsDuDefaut(), self::estEnSql(...));
+    }
 
-        return array_any(is_array($noms) ? $noms : [], fn ($nom): bool => is_string($nom) && config('cache.stores.'.$nom.'.driver') === 'database');
+    /**
+     * @return list<string>
+     */
+    private static function nomsDesMagasinsDuDefaut(): array
+    {
+        $defaut = config('cache.default');
+
+        if (! is_string($defaut)) {
+            return [];
+        }
+
+        $noms = config('cache.stores.'.$defaut.'.driver') === 'failover' ? config('cache.stores.'.$defaut.'.stores') : [$defaut];
+
+        return array_values(array_filter(is_array($noms) ? $noms : [], is_string(...)));
+    }
+
+    private static function estEnSql(string $nom): bool
+    {
+        return config('cache.stores.'.$nom.'.driver') === 'database';
     }
 }

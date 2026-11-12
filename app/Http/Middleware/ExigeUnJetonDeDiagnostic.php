@@ -183,8 +183,8 @@ class ExigeUnJetonDeDiagnostic
     }
 
     /**
-     * Ce que la route rend, une fois le jeton reconnu : la portée, les
-     * limiteurs, la trace d'usage, le contrôleur, l'audit.
+     * Ce que la route rend, une fois le jeton reconnu : les limiteurs, la
+     * portée, la trace d'usage, le contrôleur, l'audit.
      *
      * @param  Closure(Request): Response  $next
      */
@@ -223,7 +223,7 @@ class ExigeUnJetonDeDiagnostic
         $parHeure = 'diagnostic:debit:heure:'.$jeton->identifiant;
 
         if (RateLimiter::hit($parMinute, 60) > self::REQUETES_PAR_MINUTE) {
-            return max(1, RateLimiter::availableIn($parMinute), RateLimiter::tooManyAttempts($parHeure, self::REQUETES_PAR_HEURE) ? RateLimiter::availableIn($parHeure) : 0);
+            return max(1, RateLimiter::availableIn($parMinute), $this->attenteDeLHeureEpuisee($parHeure));
         }
 
         if (RateLimiter::hit($parHeure, 3600) > self::REQUETES_PAR_HEURE) {
@@ -231,6 +231,15 @@ class ExigeUnJetonDeDiagnostic
         }
 
         return null;
+    }
+
+    /**
+     * Les secondes de l'heure quand elle est épuisée, sinon zéro ; sans
+     * ajouter de tentative.
+     */
+    private function attenteDeLHeureEpuisee(string $parHeure): int
+    {
+        return RateLimiter::tooManyAttempts($parHeure, self::REQUETES_PAR_HEURE) ? RateLimiter::availableIn($parHeure) : 0;
     }
 
     /**

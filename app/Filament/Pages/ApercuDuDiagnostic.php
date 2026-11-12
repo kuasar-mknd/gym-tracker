@@ -128,7 +128,12 @@ final class ApercuDuDiagnostic extends Page
         try {
             return $enveloppe->json(lisible: true);
         } catch (JsonException) {
-            return 'Enveloppe illisible : elle ne s\'encode pas en JSON.';
+            return self::texteIllisible();
         }
+    }
+
+    private static function texteIllisible(): string
+    {
+        return 'Enveloppe illisible : elle ne s\'encode pas en JSON.';
     }
 }
