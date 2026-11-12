@@ -220,7 +220,7 @@ it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans 
     $indice = '/*+ MAX_EXECUTION_TIME('.LecturesBornees::MILLISECONDES_AU_PLUS.') */';
     $sansIndice = array_map(static fn (string $requete): string => str_replace($indice, '', $requete), $lectures);
 
-    expect($lectures)->toHaveCount(16)
+    expect($lectures)->toHaveCount(18)
         ->and(array_filter($sansIndice, static fn (string $requete): bool => str_contains($requete, '*')))->toBe([])
         ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'filament_exceptions_table') && ! str_starts_with($requete, 'select '.$indice.' ')))->toBe([])
         ->and($sansBorne)->toBe([])

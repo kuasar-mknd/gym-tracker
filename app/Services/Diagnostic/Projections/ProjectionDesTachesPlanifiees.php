@@ -58,6 +58,7 @@ final class ProjectionDesTachesPlanifiees
         $montrees = $taches->take(LecturesBornees::GROUPES_AU_PLUS);
         $echecs = $this->echecs($fenetre, $montrees->modelKeys());
         $parTache = LecturesBornees::bornees($echecs)->groupBy('monitored_scheduled_task_id');
+        $this->mesurer($parTache->flatMap(static fn (Collection $de): Collection => $de->take(self::ECHECS_DU_RESUME)));
 
         return [
             'taches' => $montrees
@@ -109,6 +110,8 @@ final class ProjectionDesTachesPlanifiees
      */
     private function detailDe(TachePlanifiee $tache, FenetreDeDiagnostic $fenetre, Collection $echecs, bool $texteBrut): array
     {
+        $this->mesurer(LecturesBornees::bornees($echecs)->take(LecturesBornees::GROUPES_AU_PLUS));
+
         return [
             ...$this->tache($tache, $fenetre, LecturesBornees::bornees($echecs), LecturesBornees::GROUPES_AU_PLUS, $texteBrut),
             'echantillon' => LecturesBornees::deborde($echecs),
@@ -148,14 +151,40 @@ final class ProjectionDesTachesPlanifiees
     private function echecs(FenetreDeDiagnostic $fenetre, array $taches): Collection
     {
         return LecturesBornees::requete(MonitoredScheduledTaskLogItem::query()->toBase(), ['id', 'monitored_scheduled_task_id', 'created_at'])
-            ->selectRaw("json_unquote(json_extract(meta, '$.runtime')) as duree")
-            ->selectRaw("json_unquote(json_extract(meta, '$.exit_code')) as code_de_sortie")
             ->whereIn('monitored_scheduled_task_id', $taches)
             ->where('type', MonitoredScheduledTaskLogItem::TYPE_FAILED)
             ->where('created_at', '>=', $fenetre->jusqua->subDays(self::JOURS_D_ECHECS))
             ->orderByDesc('id')
             ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
             ->get();
+    }
+
+    /**
+     * La durée et le code de sortie des échecs montrés, extraits en base de
+     * ces seules lignes et posés sur elles : le tri des 5 000 lignes lues ne
+     * porte ainsi aucune extraction de la colonne `meta`, que le moniteur
+     * laisse grossir avec le message.
+     *
+     * @param  Collection<int, stdClass>  $montres
+     */
+    private function mesurer(Collection $montres): void
+    {
+        if ($montres->isEmpty()) {
+            return;
+        }
+
+        $mesures = LecturesBornees::requete(MonitoredScheduledTaskLogItem::query()->toBase(), ['id'])
+            ->selectRaw("json_unquote(json_extract(meta, '$.runtime')) as duree")
+            ->selectRaw("json_unquote(json_extract(meta, '$.exit_code')) as code_de_sortie")
+            ->whereIn('id', $montres->pluck('id')->all())
+            ->get()
+            ->keyBy('id');
+
+        foreach ($montres as $echec) {
+            $mesure = $mesures->get(ValeurLue::entier($echec->id) ?? 0);
+            $echec->duree = $mesure->duree ?? null;
+            $echec->code_de_sortie = $mesure->code_de_sortie ?? null;
+        }
     }
 
     /**
