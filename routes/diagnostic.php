@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Diagnostic\DetailDUneExceptionController;
 use App\Http\Controllers\Diagnostic\DetailDUneTacheController;
+use App\Http\Controllers\Diagnostic\DetailDUnGroupeDErreursNavigateurController;
 use App\Http\Controllers\Diagnostic\EtatController;
+use App\Http\Controllers\Diagnostic\ListeDesErreursNavigateurController;
 use App\Http\Controllers\Diagnostic\ListeDesExceptionsController;
 use App\Http\Controllers\Diagnostic\ListeDesFilesController;
 use App\Http\Controllers\Diagnostic\ListeDesTachesController;
@@ -51,6 +53,16 @@ Route::middleware([ExigeUnJetonDeDiagnostic::class, ConditionalCspHeaders::class
 
         /* Les files et les jobs échoués, sous la portée `Files` : aucun paramètre. */
         Route::get('files', ListeDesFilesController::class)->name('files.index');
+
+        /*
+         * Les erreurs du navigateur, sous la portée `ErreursNavigateur` : un
+         * groupe se désigne par son empreinte, trente-deux chiffres
+         * hexadécimaux en minuscules, sans liaison de modèle.
+         */
+        Route::get('erreurs-navigateur', ListeDesErreursNavigateurController::class)->name('erreurs-navigateur.index');
+        Route::get('erreurs-navigateur/{empreinte}', DetailDUnGroupeDErreursNavigateurController::class)
+            ->where('empreinte', '[0-9a-f]{32}')
+            ->name('erreurs-navigateur.show');
     });
 
 /*

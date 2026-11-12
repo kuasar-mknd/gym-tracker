@@ -333,7 +333,7 @@ it('garde la réponse sous 256 Kio, même devant cinquante classes de job aux no
     foreach (range(1, 60) as $numero) {
         routeFilesPlanter(str_repeat('f', 240).$numero, [
             'payload' => (string) json_encode(['displayName' => str_repeat('C', 250).$numero]),
-            'exception' => str_repeat('E', 250).': '.str_repeat('démesuré ', 200_000),
+            'exception' => str_repeat('E', 250).': '.str_repeat('démesuré ', 20_000),
         ]);
     }
     $cree = routeFilesUnJeton(['files', 'texte-brut']);

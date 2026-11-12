@@ -50,7 +50,8 @@ abstract class DiagnosticController extends Controller
 
     /**
      * Les paramètres validés de la lecture, pour la ligne d'audit : des
-     * nombres et des instants, jamais un texte venu de la requête.
+     * nombres, des instants et une empreinte (32 chiffres hexadécimaux, que la
+     * route contraint), jamais un texte venu de la requête.
      *
      * @param  array<string, int|string|null>  $parametres
      */
