@@ -9,6 +9,7 @@ use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\TexteNonFiable;
 use App\Services\Diagnostic\ValeurLue;
 use App\Services\Diagnostic\Vocabulaire;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use stdClass;
 
@@ -109,36 +110,71 @@ final class ProjectionDesExceptions
             return null;
         }
 
-        $dernieres = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id'])
-            ->where('created_at', '>=', $depuis)
-            ->orderByDesc('id')
-            ->offset(LecturesBornees::LIGNES_AU_PLUS - 1)
-            ->limit(2)
-            ->pluck('id');
-
-        $lignes = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'method', 'route_context', 'created_at'])
-            ->where('type', $groupe->type)
-            ->where('file', $groupe->file)
-            ->where('line', $groupe->line)
-            ->where('created_at', '>=', $depuis)
-            ->when($dernieres->isNotEmpty(), static fn ($requete) => $requete->where('id', '>=', $dernieres->first()))
-            ->when($avant !== null, static fn ($requete) => $requete->where('id', '<', $avant))
-            ->orderByDesc('id')
-            ->limit(self::OCCURRENCES_PAR_PAGE + 1)
-            ->get();
-
-        $page = $lignes->take(self::OCCURRENCES_PAR_PAGE);
+        $plancher = $this->plancher($depuis);
+        $page = $this->page($groupe, $depuis, $plancher, $avant);
+        $rendues = $page->take(self::OCCURRENCES_PAR_PAGE);
 
         return [
-            'occurrences' => array_values($page->map(static fn (stdClass $ligne): array => [
+            'occurrences' => array_values($rendues->map(static fn (stdClass $ligne): array => [
                 'id' => ValeurLue::entier($ligne->id),
                 'le' => ValeurLue::instant($ligne->created_at),
                 'methode' => Vocabulaire::parmi($ligne->method, self::METHODES),
                 'route' => NomDeRoute::du($ligne->route_context),
             ])->all()),
-            'suivant' => $lignes->count() > self::OCCURRENCES_PAR_PAGE ? ValeurLue::entier($page->last()?->id) : null,
-            'echantillon' => $dernieres->count() > 1,
+            'suivant' => $page->count() > self::OCCURRENCES_PAR_PAGE ? ValeurLue::entier($rendues->last()?->id) : null,
+            'echantillon' => $plancher !== null && $this->plusAncienneQueLePlancher($groupe, $depuis, $plancher),
         ];
+    }
+
+    /**
+     * L'identifiant de la 5 000e ligne la plus récente de la fenêtre, `null`
+     * si elle en compte moins : en deçà, rien n'est lu.
+     */
+    private function plancher(CarbonImmutable $depuis): ?int
+    {
+        $dernieres = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id'])
+            ->where('created_at', '>=', $depuis)
+            ->orderByDesc('id')
+            ->offset(LecturesBornees::LIGNES_AU_PLUS - 1)
+            ->limit(1)
+            ->first();
+
+        return $dernieres instanceof stdClass ? ValeurLue::entier($dernieres->id) : null;
+    }
+
+    /**
+     * Une page du groupe, une ligne de plus que sa taille pour savoir s'il
+     * en reste.
+     *
+     * @return Collection<int, stdClass>
+     */
+    private function page(stdClass $groupe, CarbonImmutable $depuis, ?int $plancher, ?int $avant): Collection
+    {
+        return LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'method', 'route_context', 'created_at'])
+            ->where('type', $groupe->type)
+            ->where('file', $groupe->file)
+            ->where('line', $groupe->line)
+            ->where('created_at', '>=', $depuis)
+            ->when($plancher !== null, static fn ($requete) => $requete->where('id', '>=', $plancher))
+            ->when($avant !== null, static fn ($requete) => $requete->where('id', '<', $avant))
+            ->orderByDesc('id')
+            ->limit(self::OCCURRENCES_PAR_PAGE + 1)
+            ->get();
+    }
+
+    /**
+     * Le plancher a-t-il écarté des lignes du groupe ?
+     */
+    private function plusAncienneQueLePlancher(stdClass $groupe, CarbonImmutable $depuis, int $plancher): bool
+    {
+        return LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id'])
+            ->where('type', $groupe->type)
+            ->where('file', $groupe->file)
+            ->where('line', $groupe->line)
+            ->where('created_at', '>=', $depuis)
+            ->where('id', '<', $plancher)
+            ->limit(1)
+            ->first() instanceof stdClass;
     }
 
     /**

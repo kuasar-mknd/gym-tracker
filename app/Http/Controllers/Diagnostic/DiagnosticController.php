@@ -79,8 +79,10 @@ abstract class DiagnosticController extends Controller
     /**
      * Ce que la garde lira pour l'audit, sur sa requête : une requête de
      * validation que le contrôleur reçoit en est une copie, faite avant lui.
+     *
+     * @param  int|array<string, int|string|null>  $valeur
      */
-    private function poser(Request $request, string $cle, mixed $valeur): void
+    private function poser(Request $request, string $cle, int|array $valeur): void
     {
         $request->attributes->set($cle, $valeur);
         request()->attributes->set($cle, $valeur);

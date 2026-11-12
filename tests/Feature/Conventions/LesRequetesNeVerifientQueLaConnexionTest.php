@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Requests\Diagnostic\ListeDesExceptionsRequest;
+use App\Http\Requests\Diagnostic\OccurrencesDUneExceptionRequest;
 use Illuminate\Foundation\Http\FormRequest;
 use Symfony\Component\Finder\Finder;
 
@@ -40,7 +42,7 @@ it('ne laisse aucune requête rendre vrai sans regarder l’utilisateur', functi
     $fautes = [];
 
     foreach ($requetes() as $classe => $chemin) {
-        if (str_starts_with($classe, 'App\\Http\\Requests\\Auth\\') || str_starts_with($classe, 'App\\Http\\Requests\\Diagnostic\\')) {
+        if (str_starts_with($classe, 'App\\Http\\Requests\\Auth\\') || in_array($classe, [ListeDesExceptionsRequest::class, OccurrencesDUneExceptionRequest::class], true)) {
             continue;
         }
 

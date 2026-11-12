@@ -8,6 +8,7 @@ use App\Models\JetonDeDiagnostic;
 use App\Services\Diagnostic\EnveloppeDeDiagnostic;
 use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\ProjectionDesExceptions;
+use App\Services\Diagnostic\ValeurLue;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Response;
 use Illuminate\Log\Events\MessageLogged;
@@ -183,7 +184,11 @@ function routeExceptionsLesCles(array $valeurs, string $prefixe = ''): array
 function routeExceptionsAdresse(string $route): string
 {
     return match ($route) {
-        'la liste' => '/diagnostic/v1/exceptions',
+        'la liste' => (static function (): string {
+            routeExceptionsPlanterLesCanaris();
+
+            return '/diagnostic/v1/exceptions';
+        })(),
         'le détail' => '/diagnostic/v1/exceptions/'.routeExceptionsPlanterLesCanaris(),
         default => '/diagnostic/v1/exceptions/'.routeExceptionsPlanterLesCanaris().'/occurrences',
     };
@@ -283,8 +288,9 @@ it('refuse en 403 portee-non-accordee chaque route à un jeton sans la portée E
     routeExceptionsAppeler($uri, $avec['entete'])->assertOk();
 })->with('routes des exceptions');
 
-it('répond sans jeton, ou au jeton faux, comme à un chemin inconnu', function (string $route): void {
+it('répond sans jeton, ou au jeton faux, comme à un chemin inconnu, la route existant pour un jeton sans portée', function (string $route): void {
     $uri = routeExceptionsAdresse($route);
+    $sansPortee = routeExceptionsUnJeton(['sante']);
     $cree = routeExceptionsUnJeton();
     $faux = 'Bearer '.JetonDeDiagnostic::composer(Str::lower(Str::random(JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT)), Str::random(JetonDeDiagnostic::LONGUEUR_DU_SECRET));
     $tout = static function (TestResponse $reponse): array {
@@ -299,19 +305,22 @@ it('répond sans jeton, ou au jeton faux, comme à un chemin inconnu', function 
 
     expect($inconnu[0])->toBe(404)
         ->and($tout(routeExceptionsAppeler($uri, null)))->toBe($inconnu)
-        ->and($tout(routeExceptionsAppeler($uri, $faux)))->toBe($inconnu);
+        ->and($tout(routeExceptionsAppeler($uri, $faux)))->toBe($inconnu)
+        ->and(routeExceptionsAppeler($uri, $sansPortee['entete'])->getStatusCode())->toBe(403);
     expect($cree['jeton']->fresh()?->derniere_utilisation_le)->toBeNull();
 })->with('routes des exceptions');
 
 it('ne route pas un identifiant qui n’est pas un nombre : même 404 qu’un chemin inconnu', function (string $identifiant): void {
     $cree = routeExceptionsUnJeton();
 
+    $inconnu = (string) routeExceptionsAppeler('/diagnostic/v1/ce-chemin-n-existe-pas', $cree['entete'])->getContent();
     $reponse = routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$identifiant, $cree['entete']);
     $occurrences = routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$identifiant.'/occurrences', $cree['entete']);
 
     expect($reponse->getStatusCode())->toBe(404)
         ->and($occurrences->getStatusCode())->toBe(404)
-        ->and((string) $reponse->getContent())->toBe((string) routeExceptionsAppeler('/diagnostic/v1/ce-chemin-n-existe-pas', $cree['entete'])->getContent());
+        ->and((string) $reponse->getContent())->toBe($inconnu)
+        ->and((string) $occurrences->getContent())->toBe($inconnu);
 })->with(['lettres' => 'abc', 'zéro de tête' => '01', 'signe' => '-1', 'décimal' => '1.5', 'trop long' => '1234567890123456789', 'zéro' => '0']);
 
 it('répond 422 à une valeur de depuis qui n’est pas un instant ISO 8601, sans la répéter', function (string $depuis): void {
@@ -331,14 +340,14 @@ it('répond 422 à un depuis en tableau', function (): void {
     routeExceptionsAppeler('/diagnostic/v1/exceptions?depuis[]=2026-11-12', $cree['entete'])->assertStatus(422)->assertJsonPath('champs', ['depuis']);
 });
 
-it('répond 422 à un avant hors des bornes ou qui n’est pas un entier', function (string $avant): void {
+it('répond 422 à un avant hors des bornes ou qui n’est pas un entier', function (string $requete): void {
     $identifiant = routeExceptionsPlanter();
     $cree = routeExceptionsUnJeton();
 
-    $reponse = routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$identifiant.'/occurrences?avant='.$avant, $cree['entete']);
+    $reponse = routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$identifiant.'/occurrences?'.$requete, $cree['entete']);
 
     $reponse->assertStatus(422)->assertJsonPath('champs', ['avant']);
-})->with(['mot' => 'abc', 'zéro' => '0', 'négatif' => '-3', 'décimal' => '1.5', 'au-delà de la base' => '9223372036854775808', 'au-delà de la borne' => '1000000000000000000', 'tableau' => '[]=1']);
+})->with(['mot' => 'avant=abc', 'zéro' => 'avant=0', 'négatif' => 'avant=-3', 'décimal' => 'avant=1.5', 'au-delà de la base' => 'avant=9223372036854775808', 'au-delà de la borne' => 'avant=1000000000000000000', 'tableau' => 'avant[]=1']);
 
 it('répond 422 en JSON même sans l’en-tête Accept, jamais une redirection', function (): void {
     $cree = routeExceptionsUnJeton();
@@ -442,6 +451,24 @@ it('ne remonte pas, pour les occurrences, au-delà des 5 000 dernières lignes d
 
     expect($reponse->json('donnees.occurrences'))->toBe([])
         ->and($reponse->json('echantillon'))->toBeTrue();
+});
+
+it('ne signale l’échantillon que si le plancher a écarté des lignes du groupe', function (): void {
+    routeExceptionsPlanter(['line' => 1, 'created_at' => now()->subMinutes(30)]);
+    $lignes = array_fill(0, 5_000, [
+        'type' => RuntimeException::class, 'code' => '0', 'message' => 'boum', 'file' => base_path('app/Models/User.php'), 'line' => 2,
+        'trace' => '[]', 'method' => 'GET', 'path' => '/', 'created_at' => now()->subMinutes(5), 'updated_at' => now(),
+    ]);
+    foreach (array_chunk($lignes, 1_000) as $lot) {
+        DB::table('filament_exceptions_table')->insert($lot);
+    }
+    $dernier = ValeurLue::entier(DB::table('filament_exceptions_table')->max('id')) ?? 0;
+    $cree = routeExceptionsUnJeton();
+
+    $reponse = routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$dernier.'/occurrences', $cree['entete'])->assertOk();
+
+    expect($reponse->json('echantillon'))->toBeFalse()
+        ->and(routeExceptionsTableau($reponse->json('donnees.occurrences')))->toHaveCount(25);
 });
 
 it('n’écrit rien en base pour une lecture, hors la trace d’usage du jeton, et borne chaque lecture de la table', function (string $route): void {
@@ -566,7 +593,7 @@ it('ne sert que la lecture : chaque méthode d’écriture est refusée', functi
 
     $reponse = $this->call($methode, '/diagnostic/v1/exceptions/'.$identifiant, server: ['HTTP_AUTHORIZATION' => $cree['entete'], 'HTTP_ACCEPT' => 'application/json']);
 
-    expect($reponse->getStatusCode())->toBeIn([404, 405]);
+    expect($reponse->getStatusCode())->toBe(405);
     expect(DB::table('filament_exceptions_table')->count())->toBe(1);
 })->with(['POST', 'PUT', 'PATCH', 'DELETE']);
 

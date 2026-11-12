@@ -8,6 +8,7 @@ use App\Http\Requests\Concerns\RefuseUneValeurEnJson;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use Carbon\CarbonInterface;
 use Closure;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use InvalidArgumentException;
 
@@ -30,24 +31,34 @@ final class ListeDesExceptionsRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, Closure|string>>
+     * @return array<string, array<int, string>>
      */
     public function rules(): array
     {
         return [
-            'depuis' => [
-                'bail',
-                'nullable',
-                'string',
-                'max:'.self::LONGUEUR_AU_PLUS,
-                static function (string $attribut, mixed $valeur, Closure $echec): void {
-                    try {
-                        FenetreDeDiagnostic::depuis(is_string($valeur) ? $valeur : null, now());
-                    } catch (InvalidArgumentException) {
-                        $echec(FenetreDeDiagnostic::INSTANT_ATTENDU);
-                    }
-                },
-            ],
+            'depuis' => ['bail', 'nullable', 'string', 'max:'.self::LONGUEUR_AU_PLUS],
+        ];
+    }
+
+    /**
+     * @return array<int, Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validateur): void {
+                $depuis = $this->input('depuis');
+
+                if ($validateur->errors()->has('depuis') || ! is_string($depuis) || $depuis === '') {
+                    return;
+                }
+
+                try {
+                    FenetreDeDiagnostic::depuis($depuis, now());
+                } catch (InvalidArgumentException) {
+                    $validateur->errors()->add('depuis', FenetreDeDiagnostic::INSTANT_ATTENDU);
+                }
+            },
         ];
     }
 
