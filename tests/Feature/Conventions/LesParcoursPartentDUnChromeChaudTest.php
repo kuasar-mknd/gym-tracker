@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Facebook\WebDriver\Chrome\ChromeOptions;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
+use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 use Tests\DuskTestCase;
@@ -657,8 +658,7 @@ it('ne mesure jamais une durée négative quand l\'heure murale du runner recule
                 ->and(trim($rejeu['sortie']))->toMatch(chromeChaudLigneAttendue('Chrome chaud en X s : pilote prêt en X s, session ouverte en X s, page rendue en X s, capture en X s, session fermée en X s.'));
         }
     } finally {
-        array_map(unlink(...), glob("{$dossier}/*") ?: []); // @phpstan-ignore ternary.shortNotAllowed
-        rmdir($dossier);
+        File::deleteDirectory($dossier);
     }
 });
 

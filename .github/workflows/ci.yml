@@ -419,7 +419,7 @@ jobs:
                   essais=1
                   ecoule() { echo $(( $(horloge) - debut )); }
                   a_bout() { [ "$(ecoule)" -ge $(( SECONDES_DE_CHAUFFE * 1000 )) ]; }
-                  en_secondes() { ms=$(( $1 > 0 ? $1 : 0 )); printf '%d,%d s' $(( ms / 1000 )) $(( ms % 1000 / 100 )); }
+                  en_secondes() { printf '%d,%d s' $(( $1 / 1000 )) $(( $1 % 1000 / 100 )); }
                   reste() { r=$(( SECONDES_DE_CHAUFFE - $(ecoule) / 1000 )); if [ "$r" -gt 0 ]; then echo "$r"; else echo 1; fi; }
                   noter() {
                       maintenant=$(horloge)
