@@ -633,6 +633,35 @@ it('ouvre une session avec les options sans tête et la borne d\'une page des pa
     }
 });
 
+it('ne mesure jamais une durée négative quand l\'heure murale du runner recule', function (): void {
+    // NTP a remis l'heure en arrière en CI : « page rendue en 0,-5 s » (trois fois sur #2270).
+    $dossier = sys_get_temp_dir().'/horloge-qui-recule-'.bin2hex(random_bytes(4));
+    mkdir($dossier);
+    file_put_contents(
+        "{$dossier}/date",
+        "#!/bin/sh\nn=\$(cat \"\$0.n\" 2>/dev/null || echo 0)\nn=\$((n + 1))\necho \$n > \"\$0.n\"\necho \$((1900000000000 - n * 5000))\n",
+    );
+    chmod("{$dossier}/date", 0755);
+
+    try {
+        foreach (chromeChaudJobsDesParcours() as ['ou' => $ou, 'etapes' => $etapes]) {
+            $rejeu = chromeChaudRejouerLaChauffe(
+                $etapes[chromeChaudRangDeLaChauffe($etapes, $ou)],
+                20,
+                chromeChaudFauxPilote(),
+                ['PATH' => $dossier.':'.(is_string(getenv('PATH')) ? getenv('PATH') : '/usr/bin:/bin')],
+            );
+
+            expect($rejeu['code'])->toBe(0, "{$ou} : {$rejeu['sortie']}")
+                ->and($rejeu['sortie'])->not->toContain('-')
+                ->and(trim($rejeu['sortie']))->toMatch(chromeChaudLigneAttendue('Chrome chaud en X s : pilote prêt en X s, session ouverte en X s, page rendue en X s, capture en X s, session fermée en X s.'));
+        }
+    } finally {
+        array_map(unlink(...), glob("{$dossier}/*") ?: []); // @phpstan-ignore ternary.shortNotAllowed
+        rmdir($dossier);
+    }
+});
+
 it('rejoue un ordre que le pilote refuse ou laisse sans réponse, rend la main sur ses bornes et le signale', function (?array $pannes, int $secondes, array $variables, int $code, array $ordres, string $sortie, float $dureeMin, float $dureeMax): void {
     foreach (chromeChaudJobsDesParcours() as ['ou' => $ou, 'etapes' => $etapes]) {
         $rejeu = chromeChaudRejouerLaChauffe($etapes[chromeChaudRangDeLaChauffe($etapes, $ou)], $secondes, $pannes === null ? null : chromeChaudFauxPilote($pannes), $variables);
