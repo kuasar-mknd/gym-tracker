@@ -23,7 +23,9 @@ use Illuminate\Support\Facades\Notification;
  * jeton connu : jamais le texte présenté, qui ne borne aucune clef. Aucune ne
  * lit ni n'écrit en base : un refus n'écrit rien. Elles écrivent dans le cache
  * par défaut ; `jetonInvalidePresente()` y borne son travail à une fois par
- * minute et par jeton quand ce cache est `database`.
+ * minute et par jeton quand ce cache est `database`, tant que l'envoi
+ * aboutit : sans adresse valide, ou si la mise en file échoue, la marque de
+ * la minute n'est pas posée et la présentation suivante réessaie.
  *
  * Aucune ne lève : une panne du cache, de la file ou du courrier est
  * rapportée, et ce que l'alerte annonce (une création, une révocation, une
