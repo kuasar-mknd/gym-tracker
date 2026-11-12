@@ -163,6 +163,9 @@ it('réduit à son hôte toute URL de la raison, requête, fragment et identifia
     'http gardé' => ['http://host.example/chemin-secret', 'http://host.example'],
     'parenthèse dans le chemin' => ['https://host.example/se(cr)et-suite', 'https://host.example'],
     'arobase dans le mot de passe' => ['https://user:p@ss-secret@host.example/x', 'https://host.example'],
+    'secret après une apostrophe' => ["https://host.example/p'secret", 'https://host.example'],
+    'secret avant l\'arobase, après une requête' => ['https://jeton-secret?x@host.example/', '[adresse masquée]'],
+    'barre oblique inverse avant l\'arobase' => ['https://host.example\\@secret/x', '[adresse masquée]'],
     'hôte vide' => ['https://user:mot-de-passe@/chemin-secret', '[adresse masquée]'],
 ]);
 

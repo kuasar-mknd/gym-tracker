@@ -250,11 +250,17 @@ final class AppServiceProvider extends ServiceProvider
                 'expire' => $rapport->isSubscriptionExpired(),
                 'statut' => $rapport->getResponse()?->getStatusCode(),
                 'raison' => preg_replace_callback(
-                    '~https?://[^\s"\'<>]+~i',
+                    '~https?://\S+~i',
                     static function (array $trouve): string {
+                        $debut = (int) strpos($trouve[0], '://') + 3;
+                        $autorite = (string) preg_replace('~[/?#].*$~s', '', substr($trouve[0], $debut));
                         $hote = parse_url($trouve[0], PHP_URL_HOST);
+                        $vraisemblable = is_string($hote)
+                            && preg_match('~^(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])$~', $hote) === 1
+                            && ! str_contains($autorite, '\\')
+                            && ! str_contains(substr($trouve[0], $debut + strlen($autorite)), '@');
 
-                        return is_string($hote) && $hote !== '' ? strstr($trouve[0], '://', true).'://'.$hote : '[adresse masquée]';
+                        return $vraisemblable ? substr($trouve[0], 0, $debut - 3).'://'.$hote : '[adresse masquée]';
                     },
                     $rapport->getReason(),
                 ),
