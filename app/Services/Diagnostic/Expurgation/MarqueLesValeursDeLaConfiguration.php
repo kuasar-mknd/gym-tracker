@@ -16,10 +16,11 @@ namespace App\Services\Diagnostic\Expurgation;
  * Octane, une configuration changée vaut dès la requête suivante. Une valeur
  * de moins de quatre caractères n'est pas cherchée, pour ne pas effacer les
  * mots qui la contiennent ; elle n'est remplacée qu'entière, jamais au milieu
- * d'un mot ou d'un nom plus long. La casse ne compte que pour une valeur qui
- * n'est pas un seul mot en minuscules : `mysql` ne masque que lui-même, pas le
- * « MySQL » de « MySQL server has gone away », mais `Db-Prod`, `db.example.org`
- * ou un chemin se masquent quelle que soit la casse du texte.
+ * d'un mot ou d'un nom plus long. La casse ne compte que pour un hôte qui
+ * est un seul mot en minuscules et chiffres : `mysql` ne masque que lui-même,
+ * pas le « MySQL » de « MySQL server has gone away ». Tout le reste (hôte
+ * avec un tiret ou un point, base, utilisateur, chemin) se masque quelle que
+ * soit la casse du texte.
  */
 final class MarqueLesValeursDeLaConfiguration
 {
@@ -30,7 +31,7 @@ final class MarqueLesValeursDeLaConfiguration
         return array_reduce(
             $this->valeurs(),
             static fn (string $partiel, array $valeur): string => Motifs::remplacer(
-                '/(?<![\w.-])'.preg_quote($valeur[0], '/').'(?![\w-])/u'.(preg_match('/^[a-z0-9_-]+$/D', $valeur[0]) === 1 ? '' : 'i'),
+                '/(?<![\w.-])'.preg_quote($valeur[0], '/').'(?![\w-])/u'.(str_starts_with($valeur[1], '[hôte') && preg_match('/^[a-z0-9]+$/D', $valeur[0]) === 1 ? '' : 'i'),
                 $valeur[1],
                 $partiel,
             ),

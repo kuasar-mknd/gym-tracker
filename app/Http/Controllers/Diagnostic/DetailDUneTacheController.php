@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
- * `GET /diagnostic/v1/taches/{id}`, sous la portée `Sante` (#2032) : une
+ * `GET /diagnostic/v1/taches/{identifiant}`, sous la portée `Sante` (#2032) : une
  * tâche planifiée et ses cinquante derniers échecs des sept derniers jours.
  * Le message de chacun, sous `non_fiable`, avec `TexteBrut` seulement : sans
  * elle la clé n'existe pas. Une tâche que le moniteur ne connaît pas : 404.

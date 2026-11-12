@@ -461,3 +461,15 @@ it('rend l’état d’une tâche jugé à l’instant de la lecture', function 
         ->and(routeTachesAppeler('/diagnostic/v1/taches/'.$aLHeure, $cree['entete'])->json('donnees.tache_planifiee.etat'))->toBe('a_l_heure')
         ->and(TachePlanifiee::query()->count())->toBe(2);
 });
+
+it('masque, dans le message d’un échec, une valeur de la configuration, sous TexteBrut', function (): void {
+    config()->set('mail.mailers.smtp.host', 'courrier-canari.example.org');
+    $tache = routeTachesPlanter();
+    routeTachesPlanterUnEchec($tache, ['failure_message' => 'envoi refusé par courrier-canari.example.org']);
+    $cree = routeTachesUnJeton(['sante', 'texte-brut']);
+
+    $reponse = routeTachesAppeler('/diagnostic/v1/taches/'.$tache, $cree['entete'])->assertOk();
+
+    expect($reponse->json('donnees.tache_planifiee.derniers_echecs.0.non_fiable.message'))->toBe('envoi refusé par [hôte du courrier]')
+        ->and((string) $reponse->getContent())->not->toContain('canari');
+});

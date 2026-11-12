@@ -186,6 +186,15 @@ it('ne masque un hôte d’un seul mot que tel qu’il est écrit, et un hôte p
     expect(expurgeLeTexte('MySQL server has gone away')->texte)->toBe('MySQL server has gone away')
         ->and(expurgeLeTexte('connexion à mysql refusée')->texte)->toBe('connexion à [hôte de la base] refusée');
 
+    Config::set('database.connections.mysql.host', 'base-canari');
+
+    expect(expurgeLeTexte('hôte BASE-CANARI et base-canari')->texte)->toBe('hôte [hôte de la base] et [hôte de la base]');
+
+    Config::set('database.connections.mysql.username', 'lecteur_canari');
+    Config::set('database.connections.mysql.database', 'gym_canari');
+
+    expect(expurgeLeTexte('par LECTEUR_CANARI sur Gym_Canari')->texte)->toBe('par [utilisateur de la base] sur [base]');
+
     Config::set('database.connections.mysql.host', 'Base-Canari');
 
     expect(expurgeLeTexte('hôte base-canari et BASE-CANARI')->texte)->toBe('hôte [hôte de la base] et [hôte de la base]');
