@@ -118,7 +118,7 @@ describe('ce que dit la file hors ligne', () => {
         expect(editError.value).toBeNull()
     })
 
-    it('dit ensemble la session expirée et le stockage plein, avec le lien de connexion', () => {
+    it('dit ensemble la session expirée et le stockage plein, sans lien de connexion', () => {
         const { erreurDeSaisie, handleSyncAuthRequired, handleSyncStorageFull } = monter()
 
         handleSyncStorageFull({ detail: { pending: 2 } })
@@ -126,8 +126,10 @@ describe('ce que dit la file hors ligne', () => {
 
         expect(erreurDeSaisie.value.message).toContain('session a expiré')
         expect(erreurDeSaisie.value.message).toContain('ne survivront pas à un rechargement')
-        expect(erreurDeSaisie.value.message).toContain('Reconnecte-toi sans recharger la page')
-        expect(erreurDeSaisie.value.reconnexion).toBe(true)
+        expect(erreurDeSaisie.value.message).toBe(
+            'Ta session a expiré et le stockage du téléphone est plein : 2 modifications en attente ne survivront pas à un rechargement. Reste sur la page : un rechargement, ou une connexion par Google, GitHub ou Apple, les perdrait. Libère de la place sur le téléphone.',
+        )
+        expect(erreurDeSaisie.value.reconnexion).toBe(false)
         expect(erreurDeSaisie.value.persistant).toBe(true)
     })
 
@@ -139,7 +141,7 @@ describe('ce que dit la file hors ligne', () => {
 
         expect(erreurDeSaisie.value.message).toContain('session a expiré')
         expect(erreurDeSaisie.value.message).toContain('stockage du téléphone est plein')
-        expect(erreurDeSaisie.value.reconnexion).toBe(true)
+        expect(erreurDeSaisie.value.reconnexion).toBe(false)
     })
 
     it('un message persistant remplace un refus ordinaire et son minuteur ne l’efface pas', () => {
@@ -189,7 +191,20 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncStorageFull({ detail: { pending: 2 } })
         handleSyncAuthRequired({ detail: { pending: 2, refusee: true } })
 
-        expect(editError.value).toContain('Reconnecte-toi sans recharger la page. 1 modification a été écartée.')
+        expect(editError.value).toBe(
+            'Ta session a expiré et le stockage du téléphone est plein : 1 modification en attente ne survivra pas à un rechargement. Reste sur la page : un rechargement, ou une connexion par Google, GitHub ou Apple, les perdrait. Libère de la place sur le téléphone. 1 modification a été écartée.',
+        )
+    })
+
+    it('ne compte plus en attente, dans le message combiné, l’écriture que la troisième porte vient d’écarter', () => {
+        const { editError, handleSyncAuthRequired, handleSyncStorageFull } = monter()
+
+        handleSyncStorageFull({ detail: { pending: 1 } })
+        handleSyncAuthRequired({ detail: { pending: 1, refusee: true } })
+
+        expect(editError.value).toBe(
+            'Ta session a expiré et le stockage du téléphone est plein. 1 modification a été écartée.',
+        )
     })
 
     it('accorde de même le message de stockage plein', () => {
@@ -281,6 +296,21 @@ describe('les refus mis de côté', () => {
         expect(rapport.editError.value).toBe(
             "3 refus : La série 2 de « Squat » n'a pas pu être enregistrée. (×2) « Développé couché » n'a pas pu être ajouté à la séance.",
         )
+    })
+
+    it('plafonnent le temps d’affichage de la liste à quinze secondes', () => {
+        const rapport = monter()
+
+        rapport.handleSyncStorageFull({ detail: { pending: 1 } })
+        for (let i = 0; i < 20; i++) {
+            refusDeLigne(rapport)
+        }
+        rapport.fermerEditError()
+
+        vi.advanceTimersByTime(14999)
+        expect(rapport.editError.value).not.toBeNull()
+        vi.advanceTimersByTime(1)
+        expect(rapport.editError.value).toBeNull()
     })
 
     it('laissent à la liste le temps d’être lue', () => {

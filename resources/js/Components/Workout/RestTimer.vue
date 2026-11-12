@@ -113,6 +113,19 @@ const fermeture = ref(null)
 const boutonPause = ref(null)
 const boutonPasser = ref(null)
 const boutonFermer = ref(null)
+const carte = ref(null)
+
+/** La page démonte la carte sur `close` : le focus qu'elle portait, ou perdu, passe au contenu principal. */
+const fermerLaCarte = () => {
+    const actif = document.activeElement
+    const perdu = actif === null || actif === document.body || carte.value?.contains(actif) === true
+
+    emit('close')
+
+    if (perdu) {
+        document.getElementById('main-content')?.focus({ preventScroll: true })
+    }
+}
 
 /** Où sonne la fin : la sortie de la page, ou la sienne quand il est monté seul. */
 const sortieAudio = props.sortieAudio ?? useSortieAudio()
@@ -204,9 +217,9 @@ const toggleTimer = () => {
 const skipTimer = () => {
     triggerHaptic('tap')
     sortieAudio.preparer()
-    finishTimer()
+    finishTimer(false)
     clearTimeout(fermeture.value)
-    emit('close')
+    fermerLaCarte()
 }
 
 /**
@@ -239,7 +252,7 @@ const jouerLeBipDeFin = (contexte) => {
  * passe par `navigator.vibrate`, que Safari iOS n'a pas : sur iPhone, c'est le
  * son seul qui prévient.
  */
-const finishTimer = () => {
+const finishTimer = (rendreLeFocus = true) => {
     const focusSurUnBoutonRetire = [boutonPause.value, boutonPasser.value].includes(document.activeElement)
 
     pauseTimer()
@@ -251,9 +264,9 @@ const finishTimer = () => {
     sortieAudio.jouer(jouerLeBipDeFin)
 
     termine.value = true
-    fermeture.value = setTimeout(() => emit('close'), DELAI_DE_FERMETURE_MS)
+    fermeture.value = setTimeout(fermerLaCarte, DELAI_DE_FERMETURE_MS)
 
-    if (focusSurUnBoutonRetire) {
+    if (rendreLeFocus && focusSurUnBoutonRetire) {
         nextTick(() => boutonFermer.value?.focus())
     }
 }
@@ -263,7 +276,7 @@ const close = () => {
     triggerHaptic('tap')
     pauseTimer()
     clearTimeout(fermeture.value)
-    emit('close')
+    fermerLaCarte()
 }
 
 /** Handles document visibility changes to sync the timer when app returns from background. */
@@ -308,6 +321,7 @@ watch(
 
 <template>
     <div
+        ref="carte"
         class="animate-bounce-in z-flottant right-sure-4 bottom-sure-36 left-sure-4 sm:right-sure-4 fixed sm:left-auto sm:w-80"
     >
         <!-- Liquid Glass Card -->

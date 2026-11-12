@@ -107,7 +107,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         refusEnAttente = []
 
         if (suite.length > 0) {
-            reportEditFailure(resumerLesRefus(suite), { duree: 6000 + 3000 * (suite.length - 1) })
+            reportEditFailure(resumerLesRefus(suite), { duree: Math.min(15000, 6000 + 3000 * (suite.length - 1)) })
         }
     }
 
@@ -164,17 +164,23 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
     }
 
-    /** Session expirée et stockage plein se disent ensemble ; le lien de connexion est un `Link` d'Inertia : la file en mémoire survit. */
+    /** Session expirée et stockage plein se disent ensemble, sans lien de connexion : la page de connexion offre des fournisseurs qui rechargent la page. */
     const direLaFile = () => {
         const attente = Math.max(sessionExpiree ?? 0, stockagePlein ?? 0)
         const pluriel = attente > 1
         const ecartees = ecrituresEcartees
         const sort = `${attente} modification${pluriel ? 's' : ''} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement`
+        const ecartee =
+            ecartees > 0
+                ? ` ${ecartees} modification${ecartees > 1 ? 's ont' : ' a'} été écartée${ecartees > 1 ? 's' : ''}.`
+                : ''
 
         if (sessionExpiree !== null && stockagePlein !== null) {
             reportEditFailure(
-                `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Reconnecte-toi sans recharger la page.${ecartees > 0 ? ` ${ecartees} modification${ecartees > 1 ? 's ont' : ' a'} été écartée${ecartees > 1 ? 's' : ''}.` : ''}`,
-                { persistante: true, avecReconnexion: true },
+                attente === 0
+                    ? `Ta session a expiré et le stockage du téléphone est plein.${ecartee}`
+                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Reste sur la page : un rechargement, ou une connexion par Google, GitHub ou Apple, les perdrait. Libère de la place sur le téléphone.${ecartee}`,
+                { persistante: true },
             )
         } else if (sessionExpiree !== null) {
             const suite =
@@ -208,6 +214,11 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         }
 
         sessionExpiree = refusee ? Math.max(0, enAttente - 1) : enAttente
+
+        if (refusee && stockagePlein !== null) {
+            stockagePlein = Math.min(stockagePlein, sessionExpiree)
+        }
+
         direLaFile()
     }
 

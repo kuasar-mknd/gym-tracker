@@ -481,6 +481,22 @@ describe('Measurements/Index add form', () => {
             expect(document.activeElement).toBe(wrapper.get('button[aria-label="Ajouter une mesure"]').element)
         })
 
+        it('laisse le focus où il est quand il n’était pas sur le formulaire à l’enregistrement', async () => {
+            const { wrapper } = await monterAvecLesVraisChamps(MEASUREMENTS)
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+            await flushPromises()
+
+            const ailleurs = document.createElement('button')
+            document.body.appendChild(ailleurs)
+            onTestFinished(() => ailleurs.remove())
+            ailleurs.focus()
+
+            await wrapper.find('form').trigger('submit')
+            await flushPromises()
+
+            expect(document.activeElement).toBe(ailleurs)
+        })
+
         it('fait de même depuis le bouton de l’état vide', async () => {
             const { wrapper, defiler } = await monterAvecLesVraisChamps([])
 

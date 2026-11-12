@@ -284,6 +284,65 @@ describe('RestTimer countdown', () => {
             expect(document.activeElement).toBe(button(wrapper, 'close-timer-x').element)
         })
 
+        describe('à la fermeture de la carte, que la page démonte', () => {
+            let principal
+
+            beforeEach(() => {
+                principal = document.createElement('main')
+                principal.id = 'main-content'
+                principal.tabIndex = -1
+                document.body.appendChild(principal)
+            })
+
+            afterEach(() => principal.remove())
+
+            it.each([
+                [
+                    '« Fermer »',
+                    (cible) => button(cible, 'close-timer-x'),
+                    (cible) => button(cible, 'close-timer-x').trigger('click'),
+                ],
+                [
+                    '« Passer »',
+                    (cible) => button(cible, 'skip-rest-timer'),
+                    (cible) => button(cible, 'skip-rest-timer').trigger('click'),
+                ],
+            ])('rend le focus au contenu principal depuis %s', async (_nom, boutonFocalise, agir) => {
+                monterAttache()
+                boutonFocalise(wrapper).element.focus()
+
+                await agir(wrapper)
+                await wrapper.vm.$nextTick()
+
+                expect(wrapper.emitted('close')).toHaveLength(1)
+                expect(document.activeElement).toBe(principal)
+            })
+
+            it('le rend aussi à la fermeture automatique, une fois le focus perdu', async () => {
+                monterAttache()
+                vi.advanceTimersByTime(3000)
+                await wrapper.vm.$nextTick()
+                document.activeElement.blur()
+
+                vi.advanceTimersByTime(4000)
+
+                expect(wrapper.emitted('close')).toHaveLength(1)
+                expect(document.activeElement).toBe(principal)
+            })
+
+            it('ne le prend pas à qui écrit ailleurs', async () => {
+                const champ = document.createElement('input')
+                document.body.appendChild(champ)
+                monterAttache()
+                champ.focus()
+
+                await button(wrapper, 'close-timer-x').trigger('click')
+
+                expect(document.activeElement).toBe(champ)
+                champ.remove()
+            })
+        })
+
         it('ne prend pas le focus à qui écrit ailleurs pendant le repos', async () => {
             const champ = document.createElement('input')
             document.body.appendChild(champ)
