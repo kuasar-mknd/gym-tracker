@@ -155,6 +155,7 @@ final class ExceptionEnregistree extends Exception
         'email',
         'adresse',
         'identifiant',
+        'user',
         'referer',
         'keys',
         'auth',
