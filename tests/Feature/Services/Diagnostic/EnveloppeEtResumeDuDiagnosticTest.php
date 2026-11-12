@@ -12,8 +12,10 @@ use App\Services\Diagnostic\EnveloppeDeDiagnostic;
 use App\Services\Diagnostic\EnveloppeRendue;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\LecturesBornees;
+use App\Services\Diagnostic\Projections\ProjectionDesExceptions;
 use App\Services\Diagnostic\ResumeDuDiagnostic;
 use App\Services\Diagnostic\TexteNonFiable;
+use App\Services\Diagnostic\ValeurLue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
@@ -208,14 +210,19 @@ it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans 
     DB::enableQueryLog();
     $resume = new ResumeDuDiagnostic()(PorteeDeDiagnostic::cases(), $fenetre);
     new ApercuDesDetails()(PorteeDeDiagnostic::cases(), $fenetre, $resume->enveloppe['donnees']);
+    new ProjectionDesExceptions()->occurrences(ValeurLue::entier(data_get($resume->enveloppe['donnees'], 'exceptions.groupes.0.dernier_id')) ?? 0, null, $fenetre);
     $lectures = array_map(static fn (array $requete): string => (string) $requete['query'], DB::getQueryLog());
     DB::disableQueryLog();
 
-    $sansBorne = array_filter($lectures, static fn (string $requete): bool => preg_match('/ limit \d+$|`id` in \(\?(?:, \?){0,49}\)$/', $requete) !== 1);
+    $sansBorne = array_filter($lectures, static fn (string $requete): bool => preg_match('/ limit \d+(?: offset \d+)?$|`id` in \(\?(?:, \?){0,49}\)$/', $requete) !== 1);
     $texteEntier = array_values(array_filter($lectures, static fn (string $requete): bool => preg_match('/`(?:message|url|pile|path|trace)`/', $requete) === 1));
 
-    expect($lectures)->toHaveCount(13)
-        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, '*')))->toBe([])
+    $indice = '/*+ MAX_EXECUTION_TIME('.LecturesBornees::MILLISECONDES_AU_PLUS.') */';
+    $sansIndice = array_map(static fn (string $requete): string => str_replace($indice, '', $requete), $lectures);
+
+    expect($lectures)->toHaveCount(16)
+        ->and(array_filter($sansIndice, static fn (string $requete): bool => str_contains($requete, '*')))->toBe([])
+        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'filament_exceptions_table') && ! str_starts_with($requete, 'select '.$indice.' ')))->toBe([])
         ->and($sansBorne)->toBe([])
         ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'limit '.(LecturesBornees::LIGNES_AU_PLUS + 1))))->toHaveCount(6)
         ->and($texteEntier)->toHaveCount(2)

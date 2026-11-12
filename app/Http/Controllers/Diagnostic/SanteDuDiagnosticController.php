@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Diagnostic;
 
 use App\Enums\PorteeDeDiagnostic;
 use App\Services\Diagnostic\EnveloppeDeDiagnostic;
+use App\Services\Diagnostic\EnveloppeRendue;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\ProjectionDeLaSante;
 use App\Services\Diagnostic\Projections\ProjectionDesVersions;
@@ -26,11 +27,9 @@ final class SanteDuDiagnosticController extends DiagnosticController
         $maintenant = now();
         $texteBrut = in_array(PorteeDeDiagnostic::TexteBrut->value, $jeton->portees, true);
 
-        $donnees = [
+        return $this->servir($request, static fn (): EnveloppeRendue => new EnveloppeDeDiagnostic()([
             'sante' => new ProjectionDeLaSante()->detail(FenetreDeDiagnostic::depuis(null, $maintenant), $texteBrut),
             'versions' => new ProjectionDesVersions()->liste(),
-        ];
-
-        return $this->repondre($request, new EnveloppeDeDiagnostic()($donnees, $maintenant));
+        ], $maintenant));
     }
 }

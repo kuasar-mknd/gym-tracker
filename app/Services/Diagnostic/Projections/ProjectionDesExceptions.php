@@ -32,6 +32,11 @@ final class ProjectionDesExceptions
 
     public const int BUDGET_DU_CHEMIN = 512;
 
+    public const int OCCURRENCES_PAR_PAGE = 25;
+
+    /** Le plus grand identifiant qu'un curseur admet, sous la capacité d'un entier de la base. */
+    public const int IDENTIFIANT_AU_PLUS = 999_999_999_999_999_999;
+
     /** @var list<string> */
     public const array METHODES = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
 
@@ -40,8 +45,7 @@ final class ProjectionDesExceptions
      */
     public function liste(FenetreDeDiagnostic $fenetre): array
     {
-        $lignes = ExceptionEnregistree::query()->toBase()
-            ->select(['id', 'type', 'file', 'line', 'created_at'])
+        $lignes = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'type', 'file', 'line', 'created_at'])
             ->where('created_at', '>=', $fenetre->depuis)
             ->orderByDesc('id')
             ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
@@ -71,8 +75,7 @@ final class ProjectionDesExceptions
      */
     public function detail(int $identifiant, FenetreDeDiagnostic $fenetre, bool $texteBrut): ?array
     {
-        $ligne = ExceptionEnregistree::query()->toBase()
-            ->select(['id', 'type', 'code', 'file', 'line', 'method', 'trace', 'route_context', 'created_at'])
+        $ligne = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'type', 'code', 'file', 'line', 'method', 'trace', 'route_context', 'created_at'])
             ->when($texteBrut, static fn ($requete) => $requete->addSelect(['message', 'path']))
             ->where('id', $identifiant)
             ->where('created_at', '>=', $fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS))
@@ -82,6 +85,60 @@ final class ProjectionDesExceptions
             null => null,
             default => [...$this->structure($ligne), ...$this->texte($ligne, $texteBrut)],
         };
+    }
+
+    /**
+     * Une page des occurrences du groupe (type, fichier, ligne) de
+     * l'exception donnée, de la plus récente à la plus ancienne, sur trente
+     * jours et sur les 5 000 dernières lignes de la fenêtre seulement :
+     * `echantillon` dit que des plus anciennes n'ont pas été lues. `suivant`
+     * est le curseur `avant` de la page d'après, `null` à la dernière.
+     * `null` si l'exception n'est pas dans la fenêtre de conservation.
+     *
+     * @return array{occurrences: list<array<string, mixed>>, suivant: int|null, echantillon: bool}|null
+     */
+    public function occurrences(int $identifiant, ?int $avant, FenetreDeDiagnostic $fenetre): ?array
+    {
+        $depuis = $fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS);
+        $groupe = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'type', 'file', 'line'])
+            ->where('id', $identifiant)
+            ->where('created_at', '>=', $depuis)
+            ->first();
+
+        if (! $groupe instanceof stdClass) {
+            return null;
+        }
+
+        $dernieres = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id'])
+            ->where('created_at', '>=', $depuis)
+            ->orderByDesc('id')
+            ->offset(LecturesBornees::LIGNES_AU_PLUS - 1)
+            ->limit(2)
+            ->pluck('id');
+
+        $lignes = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'method', 'route_context', 'created_at'])
+            ->where('type', $groupe->type)
+            ->where('file', $groupe->file)
+            ->where('line', $groupe->line)
+            ->where('created_at', '>=', $depuis)
+            ->when($dernieres->isNotEmpty(), static fn ($requete) => $requete->where('id', '>=', $dernieres->first()))
+            ->when($avant !== null, static fn ($requete) => $requete->where('id', '<', $avant))
+            ->orderByDesc('id')
+            ->limit(self::OCCURRENCES_PAR_PAGE + 1)
+            ->get();
+
+        $page = $lignes->take(self::OCCURRENCES_PAR_PAGE);
+
+        return [
+            'occurrences' => array_values($page->map(static fn (stdClass $ligne): array => [
+                'id' => ValeurLue::entier($ligne->id),
+                'le' => ValeurLue::instant($ligne->created_at),
+                'methode' => Vocabulaire::parmi($ligne->method, self::METHODES),
+                'route' => NomDeRoute::du($ligne->route_context),
+            ])->all()),
+            'suivant' => $lignes->count() > self::OCCURRENCES_PAR_PAGE ? ValeurLue::entier($page->last()?->id) : null,
+            'echantillon' => $dernieres->count() > 1,
+        ];
     }
 
     /**
@@ -130,8 +187,7 @@ final class ProjectionDesExceptions
      */
     private function avecLeurRoute(Collection $groupes): array
     {
-        $routes = ExceptionEnregistree::query()->toBase()
-            ->select(['id', 'route_context'])
+        $routes = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'route_context'])
             ->whereIn('id', $groupes->pluck('dernier_id')->all())
             ->pluck('route_context', 'id');
 

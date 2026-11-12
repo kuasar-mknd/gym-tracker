@@ -11,7 +11,7 @@ namespace App\Services\Diagnostic;
 final readonly class EnveloppeRendue
 {
     /**
-     * @param  array{donnees: array<array-key, mixed>, suivant: null, tronque: bool, echantillon: bool, genere_le: string|null, note: string}  $enveloppe
+     * @param  array{donnees: array<array-key, mixed>, suivant: int|null, tronque: bool, echantillon: bool, genere_le: string|null, note: string}  $enveloppe
      */
     public function __construct(
         public array $enveloppe,
