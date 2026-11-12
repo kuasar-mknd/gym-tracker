@@ -46,15 +46,25 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
     const editErrorSessionExpiree = ref(false)
     let editErrorTimer = null
 
+    /** Les refus ordinaires survenus pendant qu'un message persistant occupait la place. */
+    let refusEnAttente = []
+    let sessionExpiree = null
+    let stockagePlein = null
+
     /**
      * Un message de la file (session expirée, stockage plein) reste jusqu'à sa
      * fermeture : des saisies attendent encore, et six secondes ne suffisent
-     * pas à le lire. Un refus ordinaire ne le remplace pas.
+     * pas à le lire. Un refus ordinaire ne le remplace pas : il attend la
+     * fermeture, puis s'affiche à son tour.
      */
-    const reportEditFailure = (message, { persistante = false, sessionExpiree = false } = {}) => {
+    const reportEditFailure = (message, { persistante = false, avecReconnexion = false } = {}) => {
         triggerHaptic('error')
 
         if (editErrorPersistante.value && !persistante) {
+            if (!refusEnAttente.includes(message)) {
+                refusEnAttente.push(message)
+            }
+
             return
         }
 
@@ -62,7 +72,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
 
         editError.value = message
         editErrorPersistante.value = persistante
-        editErrorSessionExpiree.value = sessionExpiree
+        editErrorSessionExpiree.value = avecReconnexion
 
         if (!persistante) {
             editErrorTimer = setTimeout(() => {
@@ -76,6 +86,15 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         editError.value = null
         editErrorPersistante.value = false
         editErrorSessionExpiree.value = false
+        sessionExpiree = null
+        stockagePlein = null
+
+        const suite = refusEnAttente.join(' ')
+        refusEnAttente = []
+
+        if (suite) {
+            reportEditFailure(suite)
+        }
     }
 
     if (getCurrentInstance()) {
@@ -131,20 +150,42 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
     }
 
+    /**
+     * Session expirée et stockage plein se disent ensemble : le second
+     * n'efface pas le premier, et quand le téléphone ne garde plus rien, le
+     * message n'offre pas le lien de connexion, que la navigation complète
+     * rendrait fatal à ce qui n'est qu'en mémoire.
+     */
+    const direLaFile = () => {
+        const pending = Math.max(sessionExpiree ?? 0, stockagePlein ?? 0)
+        const pluriel = pending > 1
+
+        if (sessionExpiree !== null && stockagePlein !== null) {
+            reportEditFailure(
+                `Ta session a expiré et le stockage du téléphone est plein : ${pending} modification${pluriel ? 's' : ''} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement. Reconnecte-toi sans recharger la page.`,
+                { persistante: true },
+            )
+        } else if (sessionExpiree !== null) {
+            reportEditFailure(
+                `Ta session a expiré : reconnecte-toi, ${pluriel ? `tes ${pending} modifications en attente` : 'ta modification en attente'} repartir${pluriel ? 'ont' : 'a'} ensuite.`,
+                { persistante: true, avecReconnexion: true },
+            )
+        } else {
+            reportEditFailure(
+                `Le stockage du téléphone est plein : ${pending} modification${pluriel ? 's' : ''} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement.`,
+                { persistante: true },
+            )
+        }
+    }
+
     const handleSyncAuthRequired = (event) => {
-        const pending = event.detail?.pending ?? 0
-        reportEditFailure(
-            `Ta session a expiré : reconnecte-toi, ${pending > 1 ? `tes ${pending} modifications en attente` : 'ta modification en attente'} repartir${pending > 1 ? 'ont' : 'a'} ensuite.`,
-            { persistante: true, sessionExpiree: true },
-        )
+        sessionExpiree = event.detail?.pending ?? 0
+        direLaFile()
     }
 
     const handleSyncStorageFull = (event) => {
-        const pending = event.detail?.pending ?? 0
-        reportEditFailure(
-            `Le stockage du téléphone est plein : ${pending} modification${pending > 1 ? 's' : ''} en attente ne survivr${pending > 1 ? 'ont' : 'a'} pas à un rechargement.`,
-            { persistante: true },
-        )
+        stockagePlein = event.detail?.pending ?? 0
+        direLaFile()
     }
 
     /**

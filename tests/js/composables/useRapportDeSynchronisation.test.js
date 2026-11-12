@@ -99,14 +99,45 @@ describe('ce que dit la file hors ligne', () => {
         expect(erreurDeSaisie.value).toMatchObject({ persistant: true, reconnexion: false })
     })
 
-    it('ne laisse pas un refus ordinaire remplacer, ni effacer, un message persistant', () => {
-        const { editError, handleSyncAuthRequired, reportEditFailure } = monter()
+    it('ne laisse pas un refus ordinaire remplacer un message persistant, et le montre à la fermeture', () => {
+        const { editError, erreurDeSaisie, handleSyncStorageFull, handleSyncFailure } = monter()
 
-        handleSyncAuthRequired({ detail: { pending: 1 } })
-        reportEditFailure('Refus ordinaire')
+        handleSyncStorageFull({ detail: { pending: 1 } })
+        handleSyncFailure({ detail: { url: '/api/v1/workout-lines', data: { exercise_id: 3 } } })
         vi.advanceTimersByTime(60000)
 
-        expect(editError.value).toContain('Ta session a expiré')
+        expect(editError.value).toContain('stockage du téléphone est plein')
+
+        erreurDeSaisie.value.onFermer()
+
+        expect(editError.value).toBe("« Développé couché » n'a pas pu être ajouté à la séance.")
+
+        vi.advanceTimersByTime(6000)
+
+        expect(editError.value).toBeNull()
+    })
+
+    it('dit ensemble la session expirée et le stockage plein, sans lien de connexion', () => {
+        const { erreurDeSaisie, handleSyncAuthRequired, handleSyncStorageFull } = monter()
+
+        handleSyncStorageFull({ detail: { pending: 2 } })
+        handleSyncAuthRequired({ detail: { pending: 2 } })
+
+        expect(erreurDeSaisie.value.message).toContain('session a expiré')
+        expect(erreurDeSaisie.value.message).toContain('ne survivront pas à un rechargement')
+        expect(erreurDeSaisie.value.reconnexion).toBe(false)
+        expect(erreurDeSaisie.value.persistant).toBe(true)
+    })
+
+    it('dit de même la session expirée suivie du stockage plein', () => {
+        const { erreurDeSaisie, handleSyncAuthRequired, handleSyncStorageFull } = monter()
+
+        handleSyncAuthRequired({ detail: { pending: 1 } })
+        handleSyncStorageFull({ detail: { pending: 1 } })
+
+        expect(erreurDeSaisie.value.message).toContain('session a expiré')
+        expect(erreurDeSaisie.value.message).toContain('stockage du téléphone est plein')
+        expect(erreurDeSaisie.value.reconnexion).toBe(false)
     })
 
     it('un message persistant remplace un refus ordinaire et son minuteur ne l’efface pas', () => {

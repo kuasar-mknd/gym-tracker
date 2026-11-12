@@ -71,6 +71,15 @@ describe('choisir un exercice', () => {
         expect(wrapper.vm.showCreateForm).toBe(true)
     })
 
+    it('avec une bibliothèque vide et une recherche, ne propose que « Créer » et non l’état vide', async () => {
+        const wrapper = monter({ exercises: [] })
+
+        await wrapper.get('#search-workout-exercise').setValue('Squat')
+
+        expect(wrapper.text()).not.toContain('Aucun exercice, crée le premier')
+        expect(wrapper.findAll('[dusk="quick-create-exercise"]')).toHaveLength(1)
+    })
+
     it('ne montre pas l’état vide quand la bibliothèque contient des exercices', () => {
         expect(monter().text()).not.toContain('Aucun exercice, crée le premier')
     })

@@ -1,13 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
+import { routeDeTest } from '../composables/seanceHorsLigne'
+
+let routeAvant
 
 beforeEach(() => {
-    globalThis.route = (nom) => `/${nom}`
+    routeAvant = globalThis.route
+    globalThis.route = routeDeTest
+})
+
+afterEach(() => {
+    globalThis.route = routeAvant
 })
 
 const monter = (props) =>
-    mount(ErreurDeSaisie, { props, global: { mocks: { route: globalThis.route }, stubs: { Transition: false } } })
+    mount(ErreurDeSaisie, { props, global: { mocks: { route: routeDeTest }, stubs: { Transition: false } } })
 
 describe('ErreurDeSaisie', () => {
     it('sans persistance, n’offre ni fermeture ni reconnexion', () => {
@@ -18,10 +26,13 @@ describe('ErreurDeSaisie', () => {
         expect(wrapper.find('[dusk="set-edit-error-reconnexion"]').exists()).toBe(false)
     })
 
-    it('persistant, offre la fermeture et la signale au parent', async () => {
+    it('persistant, offre la fermeture, au gabarit du bouton, et la signale au parent', async () => {
         const wrapper = monter({ message: 'Stockage plein', persistant: true })
+        const fermer = wrapper.get('[dusk="set-edit-error-fermer"]')
 
-        await wrapper.get('[dusk="set-edit-error-fermer"]').trigger('click')
+        expect(fermer.classes()).toContain('min-h-touch')
+
+        await fermer.trigger('click')
 
         expect(wrapper.emitted('fermer')).toHaveLength(1)
     })
@@ -32,5 +43,6 @@ describe('ErreurDeSaisie', () => {
 
         expect(lien.text()).toBe('Se reconnecter')
         expect(lien.attributes('href')).toBe('/login')
+        expect(lien.classes()).toContain('min-h-touch')
     })
 })
