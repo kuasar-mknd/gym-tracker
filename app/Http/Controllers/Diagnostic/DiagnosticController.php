@@ -73,9 +73,7 @@ abstract class DiagnosticController extends Controller
     {
         $corps = $rendue->json();
 
-        if (strlen($corps) >= EnveloppeRendue::OCTETS_AU_PLUS) {
-            throw new LogicException('Une réponse du diagnostic dépasse 256 Kio.');
-        }
+        throw_if(strlen($corps) >= EnveloppeRendue::OCTETS_AU_PLUS, LogicException::class, 'Une réponse du diagnostic dépasse 256 Kio.');
 
         $this->poser($request, ExigeUnJetonDeDiagnostic::ELEMENTS, count($rendue->enveloppe['donnees']));
 

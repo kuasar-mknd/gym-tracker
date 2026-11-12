@@ -15,7 +15,6 @@ use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
-use JsonException;
 
 /**
  * « Système › Aperçu du diagnostic » (#2032) : pour les portées choisies,
@@ -125,15 +124,6 @@ final class ApercuDuDiagnostic extends Page
      */
     public static function lisible(EnveloppeRendue $enveloppe): string
     {
-        try {
-            return $enveloppe->json(lisible: true);
-        } catch (JsonException) {
-            return self::texteIllisible();
-        }
-    }
-
-    private static function texteIllisible(): string
-    {
-        return 'Enveloppe illisible : elle ne s\'encode pas en JSON.';
+        return rescue(static fn (): string => $enveloppe->json(lisible: true), 'Enveloppe illisible : elle ne s\'encode pas en JSON.', false);
     }
 }

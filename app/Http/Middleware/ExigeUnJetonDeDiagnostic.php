@@ -157,14 +157,19 @@ class ExigeUnJetonDeDiagnostic
             return [null, 'mal-forme'];
         }
 
-        $ligne = $this->lire($request, static fn (): ?JetonDeDiagnostic => JetonDeDiagnostic::query()->where('identifiant', $champs['identifiant'])->first());
+        return $this->confronter($request, $champs['identifiant'], $champs['secret']);
+    }
+
+    /**
+     * @return array{0: ?JetonDeDiagnostic, 1: ?string}
+     */
+    private function confronter(Request $request, string $identifiant, #[\SensitiveParameter] string $secret): array
+    {
+        $ligne = $this->lire($request, static fn (): ?JetonDeDiagnostic => JetonDeDiagnostic::query()->where('identifiant', $identifiant)->first());
         $attendue = $ligne instanceof JetonDeDiagnostic ? $ligne->empreinte : self::EMPREINTE_FACTICE;
+        $exact = hash_equals($attendue, JetonDeDiagnostic::empreinteDe($secret)) && $ligne instanceof JetonDeDiagnostic;
 
-        if (! hash_equals($attendue, JetonDeDiagnostic::empreinteDe($champs['secret'])) || ! $ligne instanceof JetonDeDiagnostic) {
-            return [$ligne, 'inconnu'];
-        }
-
-        return [$ligne, null];
+        return [$ligne, $exact ? null : 'inconnu'];
     }
 
     private function verifierLaVieDuJeton(Request $request, JetonDeDiagnostic $jeton, CarbonInterface $maintenant): void

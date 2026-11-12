@@ -68,30 +68,47 @@ final class JournalDuDiagnostic
             return;
         }
 
-        rescue(function () use ($cause, $connu, $adresse): void {
-            $maintenant = now();
-            $minute = $maintenant->format('Y-m-d\TH:i');
-            $precedente = $maintenant->copy()->subMinute()->format('Y-m-d\TH:i');
+        rescue(fn () => $this->journaliser($cause, $connu, $adresse), null, false);
+    }
 
-            $cleDuCompteur = 'diagnostic:refus:'.($connu instanceof JetonDeDiagnostic ? 'connus' : 'anonymes').':'.$minute;
-            Cache::add($cleDuCompteur, 0, self::SECONDES_DES_COMPTEURS);
-            Cache::increment($cleDuCompteur);
+    private function journaliser(string $cause, ?JetonDeDiagnostic $connu, ?string $adresse): void
+    {
+        $maintenant = now();
+        $minute = $maintenant->format('Y-m-d\TH:i');
+        $precedente = $maintenant->copy()->subMinute()->format('Y-m-d\TH:i');
 
-            $premierDeLaLigne = Cache::add('diagnostic:refus:jeton:'.($connu instanceof JetonDeDiagnostic ? $connu->identifiant : 'anonyme').':'.$minute, true, self::SECONDES_DES_COMPTEURS);
-            $premierDeLaSynthese = Cache::add('diagnostic:refus:synthese:'.$minute, true, self::SECONDES_DES_COMPTEURS);
-            $compte = Cache::get('diagnostic:refus:anonymes:'.$precedente);
+        $cleDuCompteur = 'diagnostic:refus:'.self::genreDuRefus($connu).':'.$minute;
+        Cache::add($cleDuCompteur, 0, self::SECONDES_DES_COMPTEURS);
+        Cache::increment($cleDuCompteur);
 
-            if ($connu instanceof JetonDeDiagnostic && $premierDeLaLigne) {
-                Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus', ['jeton' => $connu->identifiant, 'cause' => $cause, 'adresse' => $adresse]);
-            }
+        $premierDeLaLigne = Cache::add('diagnostic:refus:jeton:'.($connu->identifiant ?? 'anonyme').':'.$minute, true, self::SECONDES_DES_COMPTEURS);
+        $premierDeLaSynthese = Cache::add('diagnostic:refus:synthese:'.$minute, true, self::SECONDES_DES_COMPTEURS);
+        $compte = Cache::get('diagnostic:refus:anonymes:'.$precedente);
 
-            if ($premierDeLaSynthese) {
-                Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus.synthese', [
-                    'minute_precedente' => $precedente,
-                    'refus_anonymes' => is_int($compte) ? $compte : 0,
-                ]);
-            }
-        }, null, false);
+        $this->ecrireLaLigne($premierDeLaLigne ? $connu : null, $cause, $adresse);
+        $this->ecrireLaSynthese($premierDeLaSynthese, $precedente, $compte);
+    }
+
+    private static function genreDuRefus(?JetonDeDiagnostic $connu): string
+    {
+        return $connu instanceof JetonDeDiagnostic ? 'connus' : 'anonymes';
+    }
+
+    private function ecrireLaLigne(?JetonDeDiagnostic $connu, string $cause, ?string $adresse): void
+    {
+        if ($connu instanceof JetonDeDiagnostic) {
+            Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus', ['jeton' => $connu->identifiant, 'cause' => $cause, 'adresse' => $adresse]);
+        }
+    }
+
+    private function ecrireLaSynthese(bool $premiere, string $precedente, mixed $compte): void
+    {
+        if ($premiere) {
+            Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus.synthese', [
+                'minute_precedente' => $precedente,
+                'refus_anonymes' => is_int($compte) ? $compte : 0,
+            ]);
+        }
     }
 
     /**
