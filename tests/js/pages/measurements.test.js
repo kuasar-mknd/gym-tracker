@@ -426,7 +426,6 @@ describe('Measurements/Index add form', () => {
             expect(defiler).toHaveBeenCalledTimes(1)
             expect(document.activeElement).toBe(wrapper.find('input[type="number"]').element)
         })
-
     })
 
     it('folds itself back up once saved, uncovering the entry that was just added', async () => {
