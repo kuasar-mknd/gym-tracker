@@ -29,22 +29,27 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
-use Livewire\Attributes\Locked;
+use Illuminate\Support\Str;
 
 /**
  * « Système › Accès de diagnostic » (#2032) : les jetons de l'agent de
  * maintenance, leur création et leur révocation. La liste ne lit jamais
  * l'empreinte.
  *
- * Le jeton en clair ne vit que le temps d'une fenêtre : il passe de l'action
- * de création à la fenêtre qui l'affiche chiffré par `encrypt()`, n'est
- * déchiffré qu'au rendu de celle-ci, et s'efface de l'état du composant dès
- * qu'elle se ferme. Il n'entre ni dans un champ de formulaire, ni dans la
- * session, ni dans une notification, ni dans un journal.
+ * Le jeton en clair ne vit que le temps d'une fenêtre. Il est rangé chiffré
+ * (`encrypt()`) en cache, cinq minutes au plus, sous une clef tirée au hasard
+ * que la fenêtre porte dans ses arguments ; le composant ne garde que cette
+ * clef. Il est déchiffré au rendu seulement, et oublié à la fermeture : un
+ * état rejoué après elle ne rend plus rien. Il n'entre ni dans un champ de
+ * formulaire, ni dans la session, ni dans une notification, ni dans un
+ * journal, ni dans l'état du composant que la table des exceptions copie.
  *
  * L'accès est réservé au super administrateur dont la double authentification
- * est activée et qui porte la capacité `view-diagnostic`.
+ * est activée. La capacité `view-diagnostic` est ouverte à ce seul rôle
+ * (`AppServiceProvider::ouvrirLesOutilsAuSuperAdministrateur()`) : la
+ * demander n'ajoute pas un second verrou indépendant, elle suit le rôle.
  */
 final class AccesDeDiagnostic extends Page implements HasTable
 {
@@ -101,13 +106,13 @@ final class AccesDeDiagnostic extends Page implements HasTable
     #[\Override]
     protected string $view = 'filament.pages.acces-de-diagnostic';
 
-    /** Le jeton en clair, chiffré, le temps de la fenêtre qui l'affiche. */
-    #[Locked]
-    public ?string $jetonChiffre = null;
+    /** Combien de secondes le jeton en clair reste en cache, chiffré. */
+    private const int VIE_DU_JETON_AFFICHE = 300;
 
     /**
-     * Le super administrateur, avec la double authentification et la
-     * capacité `view-diagnostic`.
+     * Le super administrateur dont la double authentification est activée.
+     * La capacité `view-diagnostic` suit le rôle : elle n'est pas un second
+     * verrou.
      */
     #[\Override]
     public static function canAccess(): bool
@@ -228,10 +233,11 @@ final class AccesDeDiagnostic extends Page implements HasTable
                     return;
                 }
 
-                $this->jetonChiffre = encrypt($cree['en_clair']);
+                $affichage = Str::random(40);
+                Cache::put(self::cleDeLAffichage($affichage), encrypt(['admin' => $administrateur->id, 'jeton' => $cree['en_clair']]), self::VIE_DU_JETON_AFFICHE);
                 unset($cree);
 
-                $this->replaceMountedAction('afficherLeJeton');
+                $this->replaceMountedAction('afficherLeJeton', ['affichage' => $affichage]);
             });
     }
 
@@ -246,7 +252,7 @@ final class AccesDeDiagnostic extends Page implements HasTable
             ->modalCancelActionLabel('Fermer')
             ->closeModalByClickingAway(false)
             ->closeModalByEscaping(false)
-            ->modalContent(fn (): View => view('filament.pages.acces-de-diagnostic-jeton', ['jeton' => $this->jetonEnClair()]));
+            ->modalContent(fn (array $arguments): View => view('filament.pages.acces-de-diagnostic-jeton', ['jeton' => $this->jetonAffiche($arguments['affichage'] ?? null)]));
     }
 
     public function toutRevoquerAction(): Action
@@ -266,35 +272,49 @@ final class AccesDeDiagnostic extends Page implements HasTable
     }
 
     /**
-     * Le jeton ne survit pas à sa fenêtre : sans elle, l'état du composant
-     * ne le garde plus, même chiffré.
+     * Fermer la fenêtre du jeton l'oublie : le cache ne le rend plus.
      */
-    public function dehydrate(): void
+    #[\Override]
+    public function unmountAction(bool|string|null $cancelParentActions = null): void
     {
-        if ($this->jetonChiffre === null) {
-            return;
+        $monte = (array) array_last((array) $this->mountedActions);
+        $affichage = data_get($monte, 'arguments.affichage');
+
+        if (($monte['name'] ?? null) === 'afficherLeJeton' && is_string($affichage)) {
+            Cache::forget(self::cleDeLAffichage($affichage));
         }
 
-        $affiche = array_any((array) $this->mountedActions, static fn (array $monte): bool => ($monte['name'] ?? null) === 'afficherLeJeton');
-
-        if (! $affiche) {
-            $this->jetonChiffre = null;
-        }
+        parent::unmountAction($cancelParentActions);
     }
 
-    private function jetonEnClair(): ?string
+    private function jetonAffiche(mixed $affichage): ?string
     {
-        if ($this->jetonChiffre === null) {
+        if (! is_string($affichage)) {
+            return null;
+        }
+
+        $range = Cache::get(self::cleDeLAffichage($affichage));
+
+        if (! is_string($range)) {
             return null;
         }
 
         try {
-            $jeton = decrypt($this->jetonChiffre);
+            $contenu = decrypt($range);
         } catch (DecryptException) {
             return null;
         }
 
-        return is_string($jeton) ? $jeton : null;
+        if (! is_array($contenu) || ($contenu['admin'] ?? null) !== self::administrateur()->id || ! is_string($contenu['jeton'] ?? null)) {
+            return null;
+        }
+
+        return $contenu['jeton'];
+    }
+
+    private static function cleDeLAffichage(string $affichage): string
+    {
+        return 'diagnostic:jeton-affiche:'.$affichage;
     }
 
     private function refuser(string $phrase): void

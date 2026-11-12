@@ -118,14 +118,6 @@ it('se refuse à qui porte la capacité sans être super administrateur', functi
     expect(AccesDeDiagnostic::canAccess())->toBeFalse();
 });
 
-it('se refuse au super administrateur sans la capacité', function (): void {
-    [$administrateur] = accesDeDiagnosticSuperAdministrateur();
-    $administrateur->revokePermissionTo('view-diagnostic');
-    Gate::define('view-diagnostic', static fn (): bool => false);
-
-    get(AccesDeDiagnostic::getUrl(panel: 'admin'))->assertForbidden();
-});
-
 it('renvoie un visiteur et un compte de l’application vers la connexion du panneau', function (): void {
     get(AccesDeDiagnostic::getUrl(panel: 'admin'))->assertRedirect(route('filament.admin.auth.login'));
 
@@ -152,13 +144,13 @@ it('liste les jetons, leur état et leur dernière utilisation, sans jamais lire
 it('crée un jeton par un code de la double authentification, et ne le montre qu’une fois', function (): void {
     [$administrateur, $secret] = accesDeDiagnosticSuperAdministrateur();
 
-    $page = Livewire::test(AccesDeDiagnostic::class)
-        ->callAction('creer', [
-            'nom' => 'Agent de maintenance',
-            'portees' => ['sante', 'exceptions'],
-            'jours' => 7,
-            'code' => new Google2FA()->getCurrentOtp($secret),
-        ])
+    $page = Livewire::test(AccesDeDiagnostic::class);
+    $page->callAction('creer', [
+        'nom' => 'Agent de maintenance',
+        'portees' => ['sante', 'exceptions'],
+        'jours' => 7,
+        'code' => new Google2FA()->getCurrentOtp($secret),
+    ])
         ->assertActionMounted('afficherLeJeton')
         ->assertMountedActionModalSee('Le jeton, affiché une seule fois')
         ->assertMountedActionModalSee(JetonDeDiagnostic::PREFIXE);
@@ -171,10 +163,11 @@ it('crée un jeton par un code de la double authentification, et ne le montre qu
         ->and($jeton->expire_le->toDateString())->toBe(now()->addDays(7)->toDateString())
         ->and($page->getMountedActionModalHtml())->toContain($jeton->identifiant);
 
+    $affichage = accesDeDiagnosticAffichage($page);
     $page->unmountAction();
 
-    expect($page->get('jetonChiffre'))->toBeNull()
-        ->and($page->html())->not->toContain(JetonDeDiagnostic::PREFIXE.$jeton->identifiant.'_');
+    expect($page->html())->not->toContain(JetonDeDiagnostic::PREFIXE.$jeton->identifiant.'_')
+        ->and(Cache::get('diagnostic:jeton-affiche:'.$affichage))->toBeNull();
 });
 
 /**
@@ -185,6 +178,18 @@ it('crée un jeton par un code de la double authentification, et ne le montre qu
 function accesDeDiagnosticEtat(Testable $page): string
 {
     return (string) json_encode($page->__get('snapshot'));
+}
+
+/**
+ * La clef que la fenêtre ouverte porte dans ses arguments.
+ *
+ * @param  Testable<AccesDeDiagnostic>  $page
+ */
+function accesDeDiagnosticAffichage(Testable $page): string
+{
+    preg_match('/"affichage":"([A-Za-z0-9]{40})"/', accesDeDiagnosticEtat($page), $trouve);
+
+    return $trouve[1] ?? '';
 }
 
 /**
@@ -216,17 +221,12 @@ it('ne garde le jeton en clair ni dans la session, ni dans les journaux, ni dans
         $page->call('$refresh');
     });
     $secretDuJeton = substr($enClair, -48);
-    $jetonChiffre = $page->get('jetonChiffre');
-    $jetonChiffre = is_string($jetonChiffre) ? $jetonChiffre : '';
-
     expect($enClair)->not->toBe('')
         ->and(json_encode(session()->all()))->not->toContain($secretDuJeton)
         ->and(accesDeDiagnosticEtat($page))->not->toContain($secretDuJeton)
         ->and(json_encode(session()->get('filament.notifications')))->not->toContain($secretDuJeton)
         ->and(implode("\n", $journaux))->not->toContain($secretDuJeton)
-        ->and($jetonChiffre)->not->toBe('')
-        ->and(str_contains($jetonChiffre, $secretDuJeton))->toBeFalse()
-        ->and(decrypt($jetonChiffre))->toBe($enClair)
+        ->and(accesDeDiagnosticEtat($page))->not->toContain('jetonChiffre')
         ->and(JetonDeDiagnostic::query()->sole()->empreinte)->toBe(JetonDeDiagnostic::empreinteDe($secretDuJeton));
 });
 
@@ -235,6 +235,8 @@ it('ne laisse pas le jeton en clair dans l’état ni dans la table des exceptio
     $page = Livewire::test(AccesDeDiagnostic::class);
     $enClair = accesDeDiagnosticCreerEtLire($page, $secret);
     $secretDuJeton = substr($enClair, -48);
+    $range = Cache::get('diagnostic:jeton-affiche:'.accesDeDiagnosticAffichage($page));
+    $chiffre = is_string($range) ? substr($range, 0, 60) : '';
 
     $arme = new stdClass();
     $arme->actif = true;
@@ -257,11 +259,59 @@ it('ne laisse pas le jeton en clair dans l’état ni dans la table des exceptio
 
     $ecrites = json_encode(ExceptionEnregistree::query()->get()->toArray(), JSON_PARTIAL_OUTPUT_ON_ERROR);
 
-    expect($ecrites)->toContain('lecture impossible')
-        ->and($ecrites)->toContain('jetonChiffre')
+    expect($chiffre)->not->toBe('')
+        ->and($ecrites)->toContain('lecture impossible')
+        ->and($ecrites)->toContain('components')
         ->and(accesDeDiagnosticEtat($page))->not->toContain($secretDuJeton)
         ->and(implode("\n", $journaux))->not->toContain($secretDuJeton)
-        ->and($ecrites)->not->toContain($secretDuJeton);
+        ->and($ecrites)->not->toContain($secretDuJeton)
+        ->and($ecrites)->not->toContain($chiffre)
+        ->and(accesDeDiagnosticEtat($page))->not->toContain($chiffre);
+});
+
+it('ne rend plus le jeton à un état rejoué après la fermeture de la fenêtre', function (): void {
+    [, $secret] = accesDeDiagnosticSuperAdministrateur();
+    $page = Livewire::test(AccesDeDiagnostic::class);
+    $enClair = accesDeDiagnosticCreerEtLire($page, $secret);
+    $ouvert = accesDeDiagnosticEtat($page);
+
+    $rejoueFenetreOuverte = Livewire::update(json_decode($ouvert, true), [], []);
+
+    expect(json_encode($rejoueFenetreOuverte))->toContain(substr($enClair, -48));
+
+    $page->unmountAction();
+
+    $rejoue = Livewire::update(json_decode($ouvert, true), [], []);
+
+    expect(json_encode($rejoue))->not->toContain(substr($enClair, -48))
+        ->and(accesDeDiagnosticEtat($page))->not->toContain(substr($enClair, -48));
+});
+
+it('range le jeton chiffré, pour cinq minutes, pour le seul administrateur qui l’a créé', function (): void {
+    [$administrateur, $secret] = accesDeDiagnosticSuperAdministrateur();
+    $page = Livewire::test(AccesDeDiagnostic::class);
+    $enClair = accesDeDiagnosticCreerEtLire($page, $secret);
+    $etat = json_decode(accesDeDiagnosticEtat($page), true);
+    $affichage = accesDeDiagnosticAffichage($page);
+    $cle = 'diagnostic:jeton-affiche:'.$affichage;
+
+    expect($affichage)->toBeString()->toHaveLength(40)
+        ->and(is_string(Cache::get($cle)))->toBeTrue()
+        ->and(str_contains(is_string($valeur = Cache::get($cle)) ? $valeur : '', substr($enClair, -48)))->toBeFalse();
+
+    $autre = FilamentAdminPanel::admin(['view-diagnostic']);
+    $autre->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
+    $autre->forceFill(['app_authentication_secret' => new Google2FA()->generateSecretKey()])->save();
+    actingAs($autre->refresh(), 'admin');
+
+    expect(json_encode(Livewire::update($etat, [], [])))->not->toContain(substr($enClair, -48));
+
+    actingAs($administrateur, 'admin');
+    Carbon\Carbon::setTestNow(now()->addMinutes(6));
+
+    expect(Cache::get($cle))->toBeNull();
+
+    Carbon\Carbon::setTestNow();
 });
 
 it('refuse un code faux sans créer de jeton, par une phrase écrite ici', function (): void {
@@ -369,4 +419,32 @@ it('refuse chaque action à qui perd l’accès en cours de route', function ():
     $page->call('mountAction', 'toutRevoquer')->assertForbidden();
 
     expect($jeton->refresh()->revoque_le)->toBeNull();
+});
+
+it('autorise chaque action de la page à l’administrateur qui a l’accès, et à lui seul', function (): void {
+    [$administrateur] = accesDeDiagnosticSuperAdministrateur();
+    $jeton = JetonDeDiagnostic::factory()->create();
+    $page = Livewire::test(AccesDeDiagnostic::class)->instance();
+    assert($page instanceof AccesDeDiagnostic);
+    $actions = fn (): array => [
+        $page->creerAction(),
+        $page->afficherLeJetonAction(),
+        $page->toutRevoquerAction(),
+        ...array_values($page->getTable()->getFlatActions()),
+    ];
+
+    foreach ($actions() as $action) {
+        $action->record($jeton);
+
+        expect($action->isAuthorized())->toBeTrue();
+    }
+
+    $administrateur->forceFill(['app_authentication_secret' => null])->save();
+    actingAs($administrateur->refresh(), 'admin');
+
+    foreach ($actions() as $action) {
+        $action->record($jeton);
+
+        expect($action->isAuthorized())->toBeFalse();
+    }
 });

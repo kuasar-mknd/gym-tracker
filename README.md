@@ -142,9 +142,9 @@ En ligne de commande, dans le conteneur `app` : `php artisan diagnostic:resume` 
 
 La page « Système › Accès de diagnostic » du panneau liste les jetons de l'agent de maintenance (identifiant, nom, portées, expiration, état, dernière utilisation : jamais l'empreinte), en crée et les révoque (#2032). Elle n'ouvre aucune route : un jeton créé ici ne lit encore rien.
 
-- **Accès** : le super administrateur dont la double authentification est activée, et qui porte la capacité `view-diagnostic` ; la page est invisible et sa route refusée pour tout autre.
+- **Accès** : le super administrateur dont la double authentification est activée ; la page est invisible et sa route refusée pour tout autre. La capacité `view-diagnostic` n'est pas un second verrou indépendant : elle n'est ouverte qu'au rôle de super administrateur (`AppServiceProvider::ouvrirLesOutilsAuSuperAdministrateur()`) et suit donc ce rôle.
 - **Création** : un nom, des portées, une durée de 1, 7 (par défaut) ou 30 jours (un jour au plus avec `texte-brut`), et le code du moment de l'application d'authentification, que `CreeUnJetonDeDiagnosticAction` vérifie côté serveur. Un refus s'affiche par une phrase écrite dans la page, jamais par un texte venu de l'extérieur.
-- **Le jeton en clair** n'est montré qu'une fois, dans une fenêtre : il y passe chiffré (`encrypt()`), n'est déchiffré qu'au rendu, s'efface de l'état du composant à la fermeture, et n'entre ni dans un champ de formulaire, ni dans la session, ni dans une notification, ni dans un journal.
+- **Le jeton en clair** n'est montré qu'une fois, dans une fenêtre : il est rangé chiffré (`encrypt()`) en cache cinq minutes au plus, sous une clef tirée au hasard que seule la fenêtre porte, déchiffré au rendu pour l'administrateur qui l'a créé, et oublié à la fermeture. Il n'entre ni dans un champ de formulaire, ni dans la session, ni dans une notification, ni dans un journal, ni dans l'état du composant que la table des exceptions copie ; un état rejoué après la fermeture ne rend rien.
 - **Révocation** : par ligne, ou « Tout révoquer », par `RevoqueLesJetonsDeDiagnosticAction`.
 
 ### Relevé des temps
