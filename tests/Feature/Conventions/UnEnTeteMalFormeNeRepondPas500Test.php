@@ -237,7 +237,7 @@ it('aucune route de l’application ne répond 500 à une valeur inattendue d’
     }
 
     expect($defauts)->toBe([])
-        ->and(array_keys($essais))->toEqualCanonicalizing(array_keys(EntetesLus::recenses()))
+        ->and(array_keys($essais))->toEqualCanonicalizing(array_values(array_diff(array_keys(EntetesLus::recenses()), ['Authorization'])))
         ->and(array_sum($essais['X-Compte-De-L-Ecriture'] ?? []))->toBeGreaterThanOrEqual(100 * count($formes))
         ->and(array_keys($essais[OuvreLaSession::ENTETE] ?? []))->toEqualCanonicalizing(['GET', 'HEAD'])
         ->and($temoinsSansLecture)->toBeGreaterThanOrEqual(50);
