@@ -436,6 +436,23 @@ it('pagine les occurrences par 25, du plus récent au plus ancien, avec le curse
         ->and(array_keys(routeExceptionsTableau($premiere->json())))->toBe(['donnees', 'suivant', 'tronque', 'echantillon', 'genere_le', 'note']);
 });
 
+/**
+ * Les requêtes sur la table des exceptions qu'une lecture a émises, et
+ * l'exigence que chacune porte l'indication de durée.
+ *
+ * @param  list<string>  $requetes
+ */
+function routeExceptionsExigerLaBorneSurChaqueLecture(array $requetes): void
+{
+    $lectures = array_values(array_filter($requetes, static fn (string $sql): bool => str_contains($sql, 'filament_exceptions_table')));
+
+    expect($lectures)->toHaveCount(4);
+
+    foreach ($lectures as $sql) {
+        expect($sql)->toStartWith('select /*+ MAX_EXECUTION_TIME('.LecturesBornees::MILLISECONDES_AU_PLUS.') */');
+    }
+}
+
 it('ne remonte pas, pour les occurrences, au-delà des 5 000 dernières lignes de la fenêtre', function (): void {
     $ancienne = routeExceptionsPlanter(['line' => 1, 'created_at' => now()->subMinutes(30)]);
     $lignes = array_fill(0, 5_000, [
@@ -447,7 +464,13 @@ it('ne remonte pas, pour les occurrences, au-delà des 5 000 dernières lignes d
     }
     $cree = routeExceptionsUnJeton();
 
+    $requetes = [];
+    DB::listen(static function ($requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
     $reponse = routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$ancienne.'/occurrences', $cree['entete'])->assertOk();
+    routeExceptionsExigerLaBorneSurChaqueLecture($requetes);
 
     expect($reponse->json('donnees.occurrences'))->toBe([])
         ->and($reponse->json('echantillon'))->toBeTrue();
@@ -465,7 +488,13 @@ it('ne signale l’échantillon que si le plancher a écarté des lignes du grou
     $dernier = ValeurLue::entier(DB::table('filament_exceptions_table')->max('id')) ?? 0;
     $cree = routeExceptionsUnJeton();
 
+    $requetes = [];
+    DB::listen(static function ($requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
     $reponse = routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$dernier.'/occurrences', $cree['entete'])->assertOk();
+    routeExceptionsExigerLaBorneSurChaqueLecture($requetes);
 
     expect($reponse->json('echantillon'))->toBeFalse()
         ->and(routeExceptionsTableau($reponse->json('donnees.occurrences')))->toHaveCount(25);
