@@ -15,7 +15,7 @@ use Illuminate\Log\LogManager;
  * `createEmergencyLogger()` ne lit que le chemin de `logging.channels.emergency`
  * et ne passe jamais par `tap()` : la clef `tap` de ce canal ne sert à rien.
  */
-final class GestionnaireDesJournaux extends LogManager
+class GestionnaireDesJournaux extends LogManager
 {
     protected function createEmergencyLogger()
     {
