@@ -161,11 +161,12 @@ it("ne réaffecte pas un supplément à un autre utilisateur depuis l'édition",
     $supplement = Supplement::factory()->create(['user_id' => $first->getKey()]);
 
     Livewire::test(EditSupplement::class, ['record' => $supplement->getKey()])
-        ->fillForm(['user_id' => $second->getKey()])
+        ->fillForm(['user_id' => $second->getKey(), 'name' => 'Nom corrigé'])
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($supplement->refresh()->user_id)->toBe($first->getKey());
+    expect($supplement->refresh()->name)->toBe('Nom corrigé')
+        ->and($supplement->user_id)->toBe($first->getKey());
 });
 
 it('interdit la gestion des suppléments à un admin sans les permissions Supplement', function (): void {

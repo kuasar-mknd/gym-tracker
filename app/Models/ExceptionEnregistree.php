@@ -156,6 +156,8 @@ final class ExceptionEnregistree extends Exception
         'adresse',
         'identifiant',
         'user',
+        'idtoken',
+        'code',
         'referer',
         'keys',
         'auth',
