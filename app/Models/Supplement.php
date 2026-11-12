@@ -65,6 +65,21 @@ class Supplement extends Model
     }
 
     #[\Override]
+    protected static function booted(): void
+    {
+        static::updating(function (self $supplement): void {
+            if (! $supplement->isDirty('user_id')) {
+                return;
+            }
+
+            throw new \LogicException(sprintf(
+                'Le propriétaire du supplément %d ne change pas après sa création : sa dernière prise (`latestLog()`) resterait celle de l’ancien.',
+                $supplement->id,
+            ));
+        });
+    }
+
+    #[\Override]
     protected function casts(): array
     {
         return [

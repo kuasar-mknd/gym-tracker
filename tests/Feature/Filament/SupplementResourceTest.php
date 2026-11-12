@@ -15,6 +15,17 @@ beforeEach(function (): void {
     $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Supplement')), 'admin');
 });
 
+it('fige le propriétaire à la modification et le laisse choisir à la création', function (): void {
+    $supplement = Supplement::factory()->create();
+
+    Livewire::test(CreateSupplement::class)
+        ->assertFormFieldEnabled('user_id');
+
+    Livewire::test(EditSupplement::class, ['record' => $supplement->getKey()])
+        ->assertFormFieldDisabled('user_id')
+        ->assertFormSet(['user_id' => (string) $supplement->user_id]);
+});
+
 it('liste les suppléments avec leur propriétaire et leur stock', function (): void {
     $owner = User::factory()->create(['name' => 'Camille Consommatrice']);
     $supplement = Supplement::factory()->create([
@@ -144,7 +155,7 @@ it('charge le supplément existant dans le formulaire et enregistre la modificat
         ->and($supplement->brand)->toBe('AncienneMarque');
 });
 
-it("réaffecte un supplément à un autre utilisateur depuis l'édition", function (): void {
+it("ne réaffecte pas un supplément à un autre utilisateur depuis l'édition", function (): void {
     $first = User::factory()->create();
     $second = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $first->getKey()]);
@@ -154,7 +165,7 @@ it("réaffecte un supplément à un autre utilisateur depuis l'édition", functi
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($supplement->refresh()->user_id)->toBe($second->getKey());
+    expect($supplement->refresh()->user_id)->toBe($first->getKey());
 });
 
 it('interdit la gestion des suppléments à un admin sans les permissions Supplement', function (): void {
