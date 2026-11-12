@@ -6,6 +6,7 @@ use App\Enums\PorteeDeDiagnostic;
 use App\Models\ErreurNavigateur;
 use App\Models\User;
 use App\Services\Diagnostic\ApercuDesDetails;
+use App\Services\Diagnostic\ExpurgeLeTexte;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\FamilleDeNavigateur;
 use App\Services\Diagnostic\Projections\LecturesBornees;
@@ -120,10 +121,22 @@ it('rend au détail, sous TexteBrut seulement, le message, la page réduite à s
         ->and($sans['echantillon'] ?? null)->toBeFalse()
         ->and($avec['non_fiable'] ?? null)->toEqual([
             'message' => new TexteNonFiable('récent', ProjectionDesErreursNavigateur::BUDGET_DU_MESSAGE),
-            'page' => new TexteNonFiable('gym.example.org/seances/3', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
+            'page' => new TexteNonFiable('//gym.example.org/seances/3', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
             'pile' => new TexteNonFiable(implode("\n", array_map(static fn (int $ligne): string => "at ligne {$ligne}", range(1, ProjectionDesErreursNavigateur::LIGNES_DE_PILE))), ProjectionDesErreursNavigateur::BUDGET_DE_LA_PILE),
         ])
         ->and(new ProjectionDesErreursNavigateur()->detail('pas-une-empreinte', erreursNavigateurDiagnosticFenetre(), true))->toBeNull();
+});
+
+it('masque, une fois expurgée, la page dont l’hôte a un dernier label hors liste', function (): void {
+    $compte = User::factory()->create();
+    erreursNavigateurDiagnosticRapporter($compte, 'hote', ['url' => 'https://gymtracker.fitness/seances?x=1']);
+
+    $detail = new ProjectionDesErreursNavigateur()->detail(md5('hote'), erreursNavigateurDiagnosticFenetre(), true);
+    $page = is_array($detail) && is_array($detail['non_fiable'] ?? null) ? ($detail['non_fiable']['page'] ?? null) : null;
+
+    expect($page)->toBeInstanceOf(TexteNonFiable::class);
+    assert($page instanceof TexteNonFiable);
+    expect(new ExpurgeLeTexte()($page->brut)->texte)->not->toContain('gymtracker');
 });
 
 /*

@@ -194,7 +194,7 @@ it('rend sous TexteBrut le message, la page réduite et la pile, expurgés, sans
 
     expect(array_keys(routeErreursTableau($reponse->json('donnees.erreur_navigateur.non_fiable'))))->toBe(['message', 'page', 'pile'])
         ->and($reponse->json('donnees.erreur_navigateur.non_fiable.message'))->toContain('échec pour [courriel]')
-        ->and($reponse->json('donnees.erreur_navigateur.non_fiable.page'))->toStartWith('[hôte]/reinit/[courriel]/')
+        ->and($reponse->json('donnees.erreur_navigateur.non_fiable.page'))->toStartWith('//[hôte]/reinit/[courriel]/')
         ->and($reponse->json('donnees.erreur_navigateur.non_fiable.page'))->not->toContain('?')
         ->and($reponse->json('donnees.erreur_navigateur.non_fiable.pile'))->toContain('?[requête]');
 

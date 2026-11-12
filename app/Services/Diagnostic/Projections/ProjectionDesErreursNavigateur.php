@@ -151,13 +151,17 @@ final class ProjectionDesErreursNavigateur
     /**
      * L'hôte et le chemin d'une page : ni schéma, ni compte (`user:secret@`),
      * ni port, ni chaîne de requête, ni fragment. Un texte qui n'est pas une
-     * adresse ne garde que ce que `parse_url()` y lit comme chemin, avant son
-     * expurgation (`TexteNonFiable`), ou rien s'il la refuse.
+     * adresse ne garde que ce que `parse_url()` y lit comme chemin, ou rien si
+     * elle la refuse. L'hôte garde son `//` : c'est lui qui fait masquer un
+     * hôte dont le dernier label est inconnu (`MasqueLesCoordonnees`), à
+     * l'expurgation (`TexteNonFiable`).
      */
     private static function page(string $url): string
     {
         $adresse = parse_url($url);
 
-        return is_array($adresse) ? ($adresse['host'] ?? '').($adresse['path'] ?? '') : '';
+        $hote = is_array($adresse) ? ($adresse['host'] ?? '') : '';
+
+        return is_array($adresse) ? ($hote === '' ? '' : '//').$hote.($adresse['path'] ?? '') : '';
     }
 }
