@@ -24,11 +24,13 @@ class FetchFastingIndexAction
         $activeFast = $user->fasts()
             ->where('status', 'active')
             ->latest('start_time')
+            ->orderByDesc('id')
             ->first();
 
         $historique = $user->fasts()
             ->where('status', '!=', 'active')
             ->latest('start_time')
+            ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
 

@@ -109,7 +109,7 @@ class StoreFastRequest extends FormRequest
             $user = $this->user();
 
             if ($user !== null && $user->fasts()->where('status', 'active')->exists()) {
-                $validator->errors()->add('base', 'Un jeûne est déjà en cours.');
+                $validator->errors()->add('base', \App\Actions\Fasting\DemarrerUnJeuneAction::MESSAGE);
             }
         });
     }
