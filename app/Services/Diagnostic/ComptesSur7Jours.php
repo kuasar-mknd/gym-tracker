@@ -13,12 +13,12 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use LogicException;
-use Spatie\ScheduleMonitor\Models\MonitoredScheduledTaskLogItem;
 
 /**
  * Ce que `GET /diagnostic/v1/etat` compte sur sept jours, une source à la fois
- * (#2032) : les exceptions, les jobs échoués, les échecs des tâches planifiées
- * et les erreurs du navigateur. Chaque nombre est lu sous la borne de temps et
+ * (#2032) : les exceptions, les jobs échoués et les erreurs du navigateur (les échecs
+ * des tâches planifiées se tirent de la liste des tâches, dans
+ * `EtatDuDiagnostic`). Chaque nombre est lu sous la borne de temps et
  * de lignes des autres lectures (`LecturesBornees::compter()`), et gardé
  * soixante secondes sous une clef par source : jamais par jeton, ni par
  * réponse. Le cache ne reçoit que des nombres.
@@ -48,11 +48,8 @@ final class ComptesSur7Jours
         return match ($source) {
             PorteeDeDiagnostic::Exceptions => ExceptionEnregistree::query()->toBase()->where('created_at', '>=', $depuis),
             PorteeDeDiagnostic::ErreursNavigateur => ErreurNavigateur::query()->toBase()->where('created_at', '>=', $depuis),
-            PorteeDeDiagnostic::Sante => MonitoredScheduledTaskLogItem::query()->toBase()
-                ->where('type', MonitoredScheduledTaskLogItem::TYPE_FAILED)
-                ->where('created_at', '>=', $depuis),
             PorteeDeDiagnostic::Files => $this->echecsDeFiles($depuis),
-            PorteeDeDiagnostic::TexteBrut => throw new LogicException('Le texte brut n\'est pas une source.'),
+            PorteeDeDiagnostic::Sante, PorteeDeDiagnostic::TexteBrut => throw new LogicException('Cette portée n\'a pas de compte en cache.'),
         };
     }
 

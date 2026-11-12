@@ -17,7 +17,7 @@ use Illuminate\Http\Response;
  * et de chaque file (jobs en attente, attente estimée, âge du plus ancien), les jobs échoués des
  * trente derniers jours comptés par file et groupés par classe de job et
  * d'exception (au plus 50 groupes, lus sur les 5 000 derniers échecs), et les
- * cinq derniers. Jamais la charge utile d'un job ; le message d'une exception,
+ * cinq derniers. La charge utile d'un job n'est jamais envoyée ; le message d'une exception,
  * sous `non_fiable`, avec `TexteBrut` seulement : sans elle la clé n'existe pas. Aucun paramètre : l'audit n'en garde pas.
  */
 final class ListeDesFilesController extends DiagnosticController

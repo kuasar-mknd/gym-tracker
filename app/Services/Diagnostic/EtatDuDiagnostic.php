@@ -71,17 +71,31 @@ final class EtatDuDiagnostic
     private function section(PorteeDeDiagnostic $portee, FenetreDeDiagnostic $fenetre): array
     {
         return match ($portee) {
-            PorteeDeDiagnostic::Sante => [
-                'versions' => new ProjectionDesVersions()->liste(),
-                'sante' => $this->sante($fenetre),
-                'taches_planifiees' => $this->taches($fenetre),
-                'echecs_de_taches_sur_7_jours' => new ComptesSur7Jours()->de($portee, $fenetre->jusqua),
-            ],
+            PorteeDeDiagnostic::Sante => $this->sections($fenetre),
             PorteeDeDiagnostic::Exceptions => ['exceptions' => $this->groupes(new ProjectionDesExceptions()->liste($fenetre), 'groupes', self::GROUPES_DES_EXCEPTIONS, $portee, $fenetre)],
             PorteeDeDiagnostic::Files => ['files' => $this->groupes(new ProjectionDesFiles()->liste($fenetre), 'echecs', self::ECHECS_DES_FILES, $portee, $fenetre)],
             PorteeDeDiagnostic::ErreursNavigateur => ['erreurs_navigateur' => $this->groupes(new ProjectionDesErreursNavigateur()->liste($fenetre), 'groupes', self::GROUPES_DES_ERREURS_NAVIGATEUR, $portee, $fenetre)],
             PorteeDeDiagnostic::TexteBrut => [],
         };
+    }
+
+    /**
+     * La santé : les versions, les contrôles, les tâches, et le compte de leurs
+     * échecs sur sept jours, tiré de la liste lue pour elles (les 50 premières
+     * tâches) : ni lecture ni clef de cache de plus.
+     *
+     * @return array<string, mixed>
+     */
+    private function sections(FenetreDeDiagnostic $fenetre): array
+    {
+        $liste = new ProjectionDesTachesPlanifiees()->liste($fenetre);
+
+        return [
+            'versions' => new ProjectionDesVersions()->liste(),
+            'sante' => $this->sante($fenetre),
+            'taches_planifiees' => $this->taches($liste),
+            'echecs_de_taches_sur_7_jours' => ['total' => $liste['lignes_lues'], 'plafonne' => $liste['echantillon']],
+        ];
     }
 
     /**
@@ -108,11 +122,11 @@ final class EtatDuDiagnostic
     /**
      * Les tâches en retard ou échouées, sans le détail de leurs échecs.
      *
+     * @param  array{taches: array<int, array<string, mixed>>, lignes_lues: int, echantillon: bool, tronque: bool}  $liste
      * @return array<string, mixed>
      */
-    private function taches(FenetreDeDiagnostic $fenetre): array
+    private function taches(array $liste): array
     {
-        $liste = new ProjectionDesTachesPlanifiees()->liste($fenetre);
         $enDifficulte = array_values(array_filter(
             $liste['taches'],
             static fn (array $tache): bool => $tache['etat'] !== 'a_l_heure',

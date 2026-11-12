@@ -119,7 +119,7 @@ it('garde chaque compte soixante secondes sous une clef par source, jamais par j
     etatComptesAppeler($premier['entete'])->assertOk();
 
     expect(Cache::get(ComptesSur7Jours::CLEF.'files'))->toBe(['total' => 1, 'plafonne' => false])
-        ->and(Cache::get(ComptesSur7Jours::CLEF.'sante'))->toBe(['total' => 2, 'plafonne' => false])
+        ->and(Cache::has(ComptesSur7Jours::CLEF.'sante'))->toBeFalse()
         ->and(Cache::has(ComptesSur7Jours::CLEF.'exceptions'))->toBeFalse();
 
     etatComptesPlanter([2]);
@@ -137,7 +137,7 @@ it('ne range en cache que des nombres, jamais un texte de la source', function (
 
     etatComptesAppeler($cree['entete'])->assertOk();
 
-    foreach (['sante', 'exceptions', 'files', 'erreurs-navigateur'] as $source) {
+    foreach (['exceptions', 'files', 'erreurs-navigateur'] as $source) {
         $valeur = (array) Cache::get(ComptesSur7Jours::CLEF.$source);
         expect(array_keys($valeur))->toBe(['total', 'plafonne'])
             ->and(is_int($valeur['total'] ?? null))->toBeTrue()
@@ -175,7 +175,7 @@ it('lit chaque compte sous la borne de temps, sans écrire en base hors la trace
     $comptes = array_values(array_filter($requetes, static fn (string $sql): bool => str_contains($sql, 'select /*+ MAX_EXECUTION_TIME(') && str_contains($sql, '`id` from') && str_contains($sql, '>= ?') && str_contains($sql, 'limit 5001') && ! str_contains($sql, 'order by')));
 
     expect($ecritures)->toHaveCount(1)
-        ->and($comptes)->toHaveCount(4);
+        ->and($comptes)->toHaveCount(3);
 });
 
 it('rend 503 lecture-trop-longue quand la base coupe un compte à la borne de temps', function (): void {

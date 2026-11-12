@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Queue;
  * Horizon nomme la file sans sa connexion (`default`, ou `default,mails` pour
  * un superviseur de plusieurs files) : la connexion est celle de la file par
  * défaut de l'application, et c'est le plus ancien de ses files qui est rendu.
- * `null` pour des files vides, une connexion qui n'est pas Redis ou un magasin
+ * Approximatif : la tête est le prochain job pris, et un job relâché ou rejoué garde sa date de création d'origine mais passe en queue. `null` pour des files vides, une connexion qui n'est pas Redis ou un magasin
  * qui ne répond pas. Les jobs différés n'y sont pas.
  */
 final class AgeDuPlusAncienEnAttente

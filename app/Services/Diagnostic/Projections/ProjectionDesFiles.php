@@ -65,7 +65,7 @@ final class ProjectionDesFiles
      * Les cinq derniers échecs des trente derniers jours, du plus récent au
      * plus ancien : le job, la file, l'instant et la classe de l'exception
      * levée. Avec `TexteBrut`, son message, sous `non_fiable` ; sans elle la
-     * clé n'existe pas. Jamais la charge utile ni la pile.
+     * clé n'existe pas. La charge utile n'est jamais rendue, ni la pile.
      *
      * @return array<int, array<string, mixed>>
      */
