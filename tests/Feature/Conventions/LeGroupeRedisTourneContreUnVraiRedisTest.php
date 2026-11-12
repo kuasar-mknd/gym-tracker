@@ -372,7 +372,7 @@ it('fait échouer en le disant un test du groupe lancé sans vrai Redis', functi
     'serveur absent' => [static function (): void {
         Config::set('database.redis.client', 'phpredis');
         Config::set(['cache.default' => 'redis', 'session.driver' => 'redis', 'queue.default' => 'redis']);
-        Config::set(['database.redis.default.host' => '127.0.0.1', 'database.redis.default.port' => '1', 'database.redis.default.max_retries' => 0]);
+        Config::set(['database.redis.default.host' => '127.0.0.1', 'database.redis.cache.host' => '127.0.0.1', 'database.redis.default.port' => '1', 'database.redis.default.max_retries' => 0]);
         Redis::purge('default');
     }, extension_loaded('redis') ? 'la connexion default (127.0.0.1:1) ne répond pas' : 'l\'extension redis (phpredis) n\'est pas chargée'],
     'client inconnu' => [static function (): void {
@@ -422,4 +422,45 @@ it('fait échouer en le disant chaque test du groupe lancé contre un Redis muet
         ->and((int) ($resume[1] ?? 0))->toBeGreaterThan(0)
         ->and($resume[2] ?? null)->toBe($resume[1] ?? null, "Un test du groupe est tombé sur une erreur au lieu du message de RedisReel::exiger() :\n{$sortie}")
         ->and(substr_count($sortie, 'Ce test du groupe redis exige un vrai Redis : '.$attendu))->toBe((int) ($resume[1] ?? 0), $sortie);
+});
+
+it('refuse de vider un serveur hors de la boucle locale tant que rien ne le déclare jetable', function (): void {
+    $avant = getenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE);
+    putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE);
+
+    try {
+        Config::set('database.redis.default.host', 'redis');
+        Config::set('database.redis.cache.host', 'redis');
+
+        expect(RedisReel::raisonDuServeur())->toContain('la connexion default vise « redis », hors de la boucle locale');
+
+        Config::set('database.redis.default.host', '127.0.0.1');
+
+        expect(RedisReel::raisonDuServeur())->toContain('la connexion cache vise « redis »');
+
+        Config::set('database.redis.cache.host', 'localhost');
+
+        expect(RedisReel::raisonDuServeur())->toBeNull();
+
+        Config::set('database.redis.cache.host', 'redis');
+        putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE.'=1');
+
+        expect(RedisReel::raisonDuServeur())->toBeNull();
+    } finally {
+        putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE.($avant === false ? '' : "={$avant}"));
+    }
+});
+
+it('refuse de vider un serveur donné par une URL, qui l\'emporte sur l\'hôte', function (): void {
+    $avant = getenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE);
+    putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE);
+    Config::set('database.redis.default.host', '127.0.0.1');
+    Config::set('database.redis.cache.host', '127.0.0.1');
+    Config::set('database.redis.cache.url', 'redis://redis:6379');
+
+    try {
+        expect(RedisReel::raisonDuServeur())->toContain('la connexion cache est donnée par une URL');
+    } finally {
+        putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE.($avant === false ? '' : "={$avant}"));
+    }
 });

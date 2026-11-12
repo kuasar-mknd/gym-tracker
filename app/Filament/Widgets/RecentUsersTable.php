@@ -19,7 +19,7 @@ class RecentUsersTable extends TableWidget
     #[\Override]
     public static function canView(): bool
     {
-        return auth()->user()?->can('ViewAny:User') === true;
+        return Filament::auth()->user()?->can('ViewAny:User') === true;
     }
 
     #[\Override]
