@@ -83,7 +83,9 @@ describe('ce que dit la file hors ligne', () => {
         vi.advanceTimersByTime(60000)
 
         expect(erreurDeSaisie.value).toMatchObject({ persistant: true, reconnexion: true })
-        expect(erreurDeSaisie.value.message).toContain('Ta session a expiré')
+        expect(erreurDeSaisie.value.message).toBe(
+            'Ta session a expiré : reconnecte-toi, tes 2 modifications en attente repartiront ensuite.',
+        )
 
         erreurDeSaisie.value.onFermer()
 
@@ -96,7 +98,9 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncStorageFull({ detail: { pending: 1 } })
         vi.advanceTimersByTime(60000)
 
-        expect(editError.value).toContain('stockage du téléphone est plein')
+        expect(editError.value).toBe(
+            'Le stockage du téléphone est plein : une modification en attente ne survivra pas à un rechargement.',
+        )
         expect(erreurDeSaisie.value).toMatchObject({ persistant: true, reconnexion: false })
     })
 
@@ -107,7 +111,9 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncFailure({ detail: { url: '/api/v1/workout-lines', data: { exercise_id: 3 } } })
         vi.advanceTimersByTime(60000)
 
-        expect(editError.value).toContain('stockage du téléphone est plein')
+        expect(editError.value).toBe(
+            'Le stockage du téléphone est plein : une modification en attente ne survivra pas à un rechargement.',
+        )
 
         erreurDeSaisie.value.onFermer()
 
@@ -124,8 +130,6 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncStorageFull({ detail: { pending: 2 } })
         handleSyncAuthRequired({ detail: { pending: 2 } })
 
-        expect(erreurDeSaisie.value.message).toContain('session a expiré')
-        expect(erreurDeSaisie.value.message).toContain('ne survivront pas à un rechargement')
         expect(erreurDeSaisie.value.message).toBe(
             'Ta session a expiré et le stockage du téléphone est plein : 2 modifications en attente ne survivront pas à un rechargement. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient ces modifications. Libère de la place sur le téléphone.',
         )
@@ -140,7 +144,7 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncStorageFull({ detail: { pending: 1 } })
 
         expect(erreurDeSaisie.value.message).toBe(
-            'Ta session a expiré et le stockage du téléphone est plein : 1 modification en attente ne survivra pas à un rechargement. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient ces modifications. Libère de la place sur le téléphone.',
+            'Ta session a expiré et le stockage du téléphone est plein : une modification en attente ne survivra pas à un rechargement. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient cette modification. Libère de la place sur le téléphone.',
         )
         expect(erreurDeSaisie.value.reconnexion).toBe(true)
     })
@@ -152,17 +156,23 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncStorageFull({ detail: { pending: 1 } })
         vi.advanceTimersByTime(60000)
 
-        expect(editError.value).toContain('stockage du téléphone est plein')
+        expect(editError.value).toBe(
+            'Le stockage du téléphone est plein : une modification en attente ne survivra pas à un rechargement.',
+        )
     })
 
     it('accorde le message d’expiration de session au nombre de modifications', () => {
         const { editError, handleSyncAuthRequired } = monter()
 
         handleSyncAuthRequired({ detail: { pending: 1 } })
-        expect(editError.value).toContain('ta modification en attente repartira')
+        expect(editError.value).toBe(
+            'Ta session a expiré : reconnecte-toi, ta modification en attente repartira ensuite.',
+        )
 
         handleSyncAuthRequired({ detail: { pending: 3 } })
-        expect(editError.value).toContain('tes 3 modifications en attente repartiront')
+        expect(editError.value).toBe(
+            'Ta session a expiré : reconnecte-toi, tes 3 modifications en attente repartiront ensuite.',
+        )
     })
 
     it('ne promet pas le départ d’une écriture que la troisième porte fermée vient de refuser', () => {
@@ -173,17 +183,18 @@ describe('ce que dit la file hors ligne', () => {
         expect(editError.value).toBe(
             "Ta session a expiré : reconnecte-toi. Une modification n'a pas pu être envoyée et a été écartée.",
         )
-        expect(editError.value).not.toContain('repartira')
 
         handleSyncAuthRequired({ detail: { pending: 3, refusee: false } })
 
-        expect(editError.value).toContain("Une modification n'a pas pu être envoyée et a été écartée")
-        expect(editError.value).toContain('les 3 autres modifications en attente repartiront ensuite')
+        expect(editError.value).toBe(
+            "Ta session a expiré : reconnecte-toi. Une modification n'a pas pu être envoyée et a été écartée ; les 3 autres modifications en attente repartiront ensuite.",
+        )
 
         handleSyncAuthRequired({ detail: { pending: 2, refusee: true } })
 
-        expect(editError.value).toContain("2 modifications n'ont pas pu être envoyées et ont été écartées")
-        expect(editError.value).toContain("l'autre modification en attente repartira ensuite")
+        expect(editError.value).toBe(
+            "Ta session a expiré : reconnecte-toi. 2 modifications n'ont pas pu être envoyées et ont été écartées ; la modification restante repartira ensuite.",
+        )
     })
 
     it('garde dans le message combiné le compte des écritures écartées', () => {
@@ -193,7 +204,7 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncAuthRequired({ detail: { pending: 2, refusee: true } })
 
         expect(editError.value).toBe(
-            "Ta session a expiré et le stockage du téléphone est plein : 1 modification en attente ne survivra pas à un rechargement. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient ces modifications. Libère de la place sur le téléphone. Une modification n'a pas pu être envoyée et a été écartée.",
+            "Ta session a expiré et le stockage du téléphone est plein : une modification en attente ne survivra pas à un rechargement. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient cette modification. Libère de la place sur le téléphone. Une modification n'a pas pu être envoyée et a été écartée.",
         )
     })
 
@@ -249,7 +260,7 @@ describe('ce que dit la file hors ligne', () => {
         )
 
         handleSyncStorageFull({})
-        expect(editError.value).toContain('0 modification en attente ne survivra')
+        expect(editError.value).toBe('Le stockage du téléphone est plein : libère de la place sur le téléphone.')
     })
 })
 
@@ -261,7 +272,9 @@ describe('quand la file se vide', () => {
 
         sync.enAttente.mockReturnValue(1)
         handleSyncReplayed()
-        expect(editError.value).toContain('Ta session a expiré')
+        expect(editError.value).toBe(
+            'Ta session a expiré : reconnecte-toi, tes 2 modifications en attente repartiront ensuite.',
+        )
 
         sync.enAttente.mockReturnValue(0)
         handleSyncReplayed()

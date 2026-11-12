@@ -164,17 +164,18 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
     }
 
+    /** Un nombre de modifications, dit de la même façon partout : « une modification » ou « N modifications ». */
+    const modifications = (nombre) => (nombre === 1 ? 'une modification' : `${nombre} modifications`)
+
     /** Session expirée et stockage plein se disent ensemble ; la file n'est qu'en mémoire : une connexion par fournisseur recharge la page et la perd. */
     const direLaFile = () => {
         const attente = Math.max(sessionExpiree ?? 0, stockagePlein ?? 0)
         const pluriel = attente > 1
         const ecartees = ecrituresEcartees
-        const sort = `${attente} modification${pluriel ? 's' : ''} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement`
+        const sort = `${modifications(attente)} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement`
         const refus =
             ecartees > 0
-                ? ecartees > 1
-                    ? `${ecartees} modifications n'ont pas pu être envoyées et ont été écartées`
-                    : "Une modification n'a pas pu être envoyée et a été écartée"
+                ? `${modifications(ecartees).replace(/^u/, 'U')} ${ecartees > 1 ? "n'ont pas pu être envoyées et ont été écartées" : "n'a pas pu être envoyée et a été écartée"}`
                 : null
         const ecartee = refus === null ? '' : ` ${refus}.`
 
@@ -182,14 +183,20 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
             reportEditFailure(
                 attente === 0
                     ? `Ta session a expiré et le stockage du téléphone est plein : reconnecte-toi.${ecartee}`
-                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient ces modifications. Libère de la place sur le téléphone.${ecartee}`,
+                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient ${pluriel ? 'ces modifications' : 'cette modification'}. Libère de la place sur le téléphone.${ecartee}`,
                 { persistante: true, avecReconnexion: true },
             )
         } else if (sessionExpiree !== null) {
-            const suite =
-                attente === 0
-                    ? '.'
-                    : ` ; ${pluriel ? `les ${attente} autres modifications en attente repartiront` : "l'autre modification en attente repartira"} ensuite.`
+            const reste =
+                ecartees > 1
+                    ? pluriel
+                        ? `les ${attente} modifications restantes repartiront`
+                        : 'la modification restante repartira'
+                    : pluriel
+                      ? `les ${attente} autres modifications en attente repartiront`
+                      : "l'autre modification en attente repartira"
+            const suite = attente === 0 ? '.' : ` ; ${reste} ensuite.`
+
             reportEditFailure(
                 refus === null
                     ? attente === 0
@@ -199,7 +206,12 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
                 { persistante: true, avecReconnexion: true },
             )
         } else {
-            reportEditFailure(`Le stockage du téléphone est plein : ${sort}.`, { persistante: true })
+            reportEditFailure(
+                attente === 0
+                    ? 'Le stockage du téléphone est plein : libère de la place sur le téléphone.'
+                    : `Le stockage du téléphone est plein : ${sort}.`,
+                { persistante: true },
+            )
         }
     }
 
