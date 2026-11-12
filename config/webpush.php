@@ -35,7 +35,10 @@ return [
     /**
      * The Guzzle client options used by Minishlink\WebPush.
      */
-    'client_options' => [],
+    'client_options' => [
+        'timeout' => 10,
+        'connect_timeout' => 5,
+    ],
 
     /**
      * The automatic padding in bytes used by Minishlink\WebPush.
