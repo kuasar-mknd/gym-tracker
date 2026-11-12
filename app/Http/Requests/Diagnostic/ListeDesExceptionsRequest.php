@@ -35,13 +35,19 @@ final class ListeDesExceptionsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'depuis' => ['bail', 'nullable', 'string', 'max:'.self::LONGUEUR_AU_PLUS, static function (string $attribut, mixed $valeur, Closure $echec): void {
-                try {
-                    FenetreDeDiagnostic::depuis(is_string($valeur) ? $valeur : null, now());
-                } catch (InvalidArgumentException) {
-                    $echec(FenetreDeDiagnostic::INSTANT_ATTENDU);
-                }
-            }],
+            'depuis' => [
+                'bail',
+                'nullable',
+                'string',
+                'max:'.self::LONGUEUR_AU_PLUS,
+                static function (string $attribut, mixed $valeur, Closure $echec): void {
+                    try {
+                        FenetreDeDiagnostic::depuis(is_string($valeur) ? $valeur : null, now());
+                    } catch (InvalidArgumentException) {
+                        $echec(FenetreDeDiagnostic::INSTANT_ATTENDU);
+                    }
+                },
+            ],
         ];
     }
 
