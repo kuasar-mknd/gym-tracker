@@ -46,6 +46,35 @@ afterEach(() => {
 })
 
 describe('choisir un exercice', () => {
+    it('trouve un exercice sans tenir compte des accents ni de la casse', async () => {
+        const wrapper = monter()
+
+        await wrapper.get('#search-workout-exercise').setValue('DEVELOPPE')
+
+        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual([
+            'Développé couchéPectoraux',
+        ])
+        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(false)
+
+        await wrapper.get('#search-workout-exercise').setValue('développé')
+
+        expect(wrapper.findAll('[dusk^="select-exercise-"]')).toHaveLength(1)
+    })
+
+    it('dit qu’il n’y a aucun exercice quand la bibliothèque est vide, et propose d’en créer un', async () => {
+        const wrapper = monter({ exercises: [] })
+
+        expect(wrapper.text()).toContain('Aucun exercice, crée le premier')
+
+        await wrapper.get('[data-testid="empty-create-exercise"]').trigger('click')
+
+        expect(wrapper.vm.showCreateForm).toBe(true)
+    })
+
+    it('ne montre pas l’état vide quand la bibliothèque contient des exercices', () => {
+        expect(monter().text()).not.toContain('Aucun exercice, crée le premier')
+    })
+
     it('filtre la bibliothèque sur la recherche, et se souvient de la recherche', async () => {
         const wrapper = monter()
 

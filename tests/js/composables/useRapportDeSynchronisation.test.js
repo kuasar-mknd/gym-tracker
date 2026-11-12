@@ -75,6 +75,50 @@ describe('les deux canaux du rapport', () => {
 })
 
 describe('ce que dit la file hors ligne', () => {
+    it('garde le message de session expirée jusqu’à sa fermeture, avec le lien de reconnexion', () => {
+        const { erreurDeSaisie, handleSyncAuthRequired } = monter()
+
+        handleSyncAuthRequired({ detail: { pending: 2 } })
+        vi.advanceTimersByTime(60000)
+
+        expect(erreurDeSaisie.value).toMatchObject({ persistant: true, reconnexion: true })
+        expect(erreurDeSaisie.value.message).toContain('Ta session a expiré')
+
+        erreurDeSaisie.value.onFermer()
+
+        expect(erreurDeSaisie.value).toMatchObject({ message: null, persistant: false, reconnexion: false })
+    })
+
+    it('garde le message de stockage plein jusqu’à sa fermeture, sans lien de reconnexion', () => {
+        const { editError, erreurDeSaisie, handleSyncStorageFull } = monter()
+
+        handleSyncStorageFull({ detail: { pending: 1 } })
+        vi.advanceTimersByTime(60000)
+
+        expect(editError.value).toContain('stockage du téléphone est plein')
+        expect(erreurDeSaisie.value).toMatchObject({ persistant: true, reconnexion: false })
+    })
+
+    it('ne laisse pas un refus ordinaire remplacer, ni effacer, un message persistant', () => {
+        const { editError, handleSyncAuthRequired, reportEditFailure } = monter()
+
+        handleSyncAuthRequired({ detail: { pending: 1 } })
+        reportEditFailure('Refus ordinaire')
+        vi.advanceTimersByTime(60000)
+
+        expect(editError.value).toContain('Ta session a expiré')
+    })
+
+    it('un message persistant remplace un refus ordinaire et son minuteur ne l’efface pas', () => {
+        const { editError, handleSyncStorageFull, reportEditFailure } = monter()
+
+        reportEditFailure('Refus ordinaire')
+        handleSyncStorageFull({ detail: { pending: 1 } })
+        vi.advanceTimersByTime(60000)
+
+        expect(editError.value).toContain('stockage du téléphone est plein')
+    })
+
     it('accorde le message d’expiration de session au nombre de modifications', () => {
         const { editError, handleSyncAuthRequired } = monter()
 

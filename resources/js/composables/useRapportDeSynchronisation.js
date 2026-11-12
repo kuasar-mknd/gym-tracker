@@ -1,4 +1,4 @@
-import { getCurrentInstance, onMounted, onUnmounted, ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, onUnmounted, ref } from 'vue'
 import SyncService from '@/Utils/SyncService'
 import { estUneCreationDeSeance } from '@/Utils/seanceEtFile'
 import { triggerHaptic } from '@/composables/useHaptics'
@@ -42,24 +42,53 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
     }
 
     const editError = ref(null)
+    const editErrorPersistante = ref(false)
+    const editErrorSessionExpiree = ref(false)
     let editErrorTimer = null
 
-    const reportEditFailure = (message) => {
-        editError.value = message
+    /**
+     * Un message de la file (session expirée, stockage plein) reste jusqu'à sa
+     * fermeture : des saisies attendent encore, et six secondes ne suffisent
+     * pas à le lire. Un refus ordinaire ne le remplace pas.
+     */
+    const reportEditFailure = (message, { persistante = false, sessionExpiree = false } = {}) => {
         triggerHaptic('error')
 
-        if (editErrorTimer) {
-            clearTimeout(editErrorTimer)
+        if (editErrorPersistante.value && !persistante) {
+            return
         }
 
-        editErrorTimer = setTimeout(() => {
-            editError.value = null
-        }, 6000)
+        clearTimeout(editErrorTimer)
+
+        editError.value = message
+        editErrorPersistante.value = persistante
+        editErrorSessionExpiree.value = sessionExpiree
+
+        if (!persistante) {
+            editErrorTimer = setTimeout(() => {
+                editError.value = null
+            }, 6000)
+        }
+    }
+
+    const fermerEditError = () => {
+        clearTimeout(editErrorTimer)
+        editError.value = null
+        editErrorPersistante.value = false
+        editErrorSessionExpiree.value = false
     }
 
     if (getCurrentInstance()) {
         onUnmounted(() => clearTimeout(editErrorTimer))
     }
+
+    /** Ce que `ErreurDeSaisie` reçoit : le message, sa persistance, le lien et la fermeture. */
+    const erreurDeSaisie = computed(() => ({
+        message: editError.value,
+        persistant: editErrorPersistante.value,
+        reconnexion: editErrorSessionExpiree.value,
+        onFermer: fermerEditError,
+    }))
 
     /** La charge utile, qu'elle ait été mise en file en objet ou déjà sérialisée. */
     const payloadOf = (data) => {
@@ -106,6 +135,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         const pending = event.detail?.pending ?? 0
         reportEditFailure(
             `Ta session a expiré : reconnecte-toi, ${pending > 1 ? `tes ${pending} modifications en attente` : 'ta modification en attente'} repartir${pending > 1 ? 'ont' : 'a'} ensuite.`,
+            { persistante: true, sessionExpiree: true },
         )
     }
 
@@ -113,6 +143,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         const pending = event.detail?.pending ?? 0
         reportEditFailure(
             `Le stockage du téléphone est plein : ${pending} modification${pending > 1 ? 's' : ''} en attente ne survivr${pending > 1 ? 'ont' : 'a'} pas à un rechargement.`,
+            { persistante: true },
         )
     }
 
@@ -196,6 +227,10 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         clearUnsynced,
         markUnsynced,
         editError,
+        erreurDeSaisie,
+        editErrorPersistante,
+        editErrorSessionExpiree,
+        fermerEditError,
         reportEditFailure,
         reportSyncFailure,
         describeFailedCreate,

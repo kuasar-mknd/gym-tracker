@@ -243,6 +243,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
         shallow: true,
         global: {
             directives: { press: {} },
+            mocks: { route: (...args) => globalThis.route(...args) },
             stubs: {
                 AuthenticatedLayout: LayoutStub,
                 GlassCard: passesSlot,
@@ -2491,6 +2492,14 @@ describe('Workouts/Show — la file hors-ligne prévient', () => {
         const message = wrapper.find('[dusk="set-edit-error"]').text()
         expect(message).toContain('session a expiré')
         expect(message).toContain('3 modifications')
+        expect(wrapper.find('[dusk="set-edit-error-reconnexion"]').attributes('href')).toBe('/login')
+
+        vi.useFakeTimers()
+        await vi.advanceTimersByTimeAsync(60000)
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(true)
+
+        await wrapper.find('[dusk="set-edit-error-fermer"]').trigger('click')
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
 
         wrapper.unmount()
     })
