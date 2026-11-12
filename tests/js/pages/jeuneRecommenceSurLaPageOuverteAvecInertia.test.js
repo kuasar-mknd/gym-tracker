@@ -106,7 +106,7 @@ const boutonTerminer = () =>
 /**
  * Joue un geste qui écrit, et attend que la page servie en réponse soit posée.
  *
- * @param {() => void} geste
+ * @param {() => void | Promise<void>} geste
  * @param {object} reponse la page que le serveur rend après l'écriture
  * @returns {Promise<{ methode: string, adresse: string, corps: Record<string, unknown>, entetes: Record<string, string> }>}
  *     l'écriture partie
@@ -121,7 +121,7 @@ const ecrire = async (geste, reponse) => {
     reseau.reponse = reponseInertia(reponse)
 
     try {
-        geste()
+        await geste()
         await vi.waitUntil(() => finie, { timeout: 3000 })
     } finally {
         arreter()
@@ -204,7 +204,11 @@ it('recommence à l’instant du second geste, sur la page restée montée depui
     vi.setSystemTime(FIN)
     const termine = { ...jeuneEnCours(1, MONTAGE), end_time: '2026-03-10T11:00:00.000000Z', status: 'completed' }
     const fin = await ecrire(
-        () => boutonTerminer().click(),
+        async () => {
+            boutonTerminer().click()
+            await flushPromises()
+            document.querySelector('[dusk="confirm-dialog-confirm"]').click()
+        },
         pageDuJeune({ history: { ...historiqueVide, data: [termine] } }),
     )
 

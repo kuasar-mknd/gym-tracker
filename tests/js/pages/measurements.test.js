@@ -216,6 +216,18 @@ describe('Measurements/Index headline figures', () => {
         expect(occurrences(wrapper, '—')).toBe(2)
     })
 
+    it('reads a weight that did not move as a zero, not as a missing comparison', async () => {
+        const stable = [MEASUREMENTS[0], { ...MEASUREMENTS[1], weight: MEASUREMENTS[0].weight }]
+
+        const wrapper = await mountPage(MeasurementsIndex, { measurements: stable })
+
+        expect(wrapper.vm.weightDiff).toBe(0)
+        expect(statistique(wrapper, 'Évolution')).toBe('0')
+        const carte = wrapper.findAllComponents(GlassStat).find((c) => c.props('libelle') === 'Évolution')
+        expect(carte.props('unite')).toBe('kg')
+        expect(carte.props('tendance')).toEqual({ texte: 'depuis la dernière pesée', sens: 'stable' })
+    })
+
     it('falls back to the last day body fat was measured, because most weigh-ins skip it', async () => {
         // The newest entry has no body_fat: reading measurements[0] blindly
         // would blank a figure the user did record a week ago.
@@ -361,6 +373,70 @@ describe('Measurements/Index add form', () => {
         // Resetting this one too would silently send the user back to today,
         // which is why the date typed above is deliberately not today's.
         expect(wrapper.vm.form.measured_at).toBe('2026-08-01')
+    })
+
+    it('lays its three fields out in one column on a phone, and in three from the small breakpoint', async () => {
+        const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
+
+        await click(wrapper, 'Ajouter')
+
+        const grille = wrapper.find('form > div')
+        expect(grille.classes()).toEqual(expect.arrayContaining(['grid-cols-1', 'sm:grid-cols-3']))
+        expect(grille.classes()).not.toContain('grid-cols-3')
+    })
+
+    describe("quand elle s'ouvre", () => {
+        const monterAvecLesVraisChamps = async (measurements) => {
+            const defiler = vi.fn()
+            Element.prototype.scrollIntoView = defiler
+            onTestFinished(() => delete Element.prototype.scrollIntoView)
+
+            const wrapper = mount(MeasurementsIndex, {
+                props: structuredClone({ measurements }),
+                attachTo: document.body,
+                global: {
+                    mocks: { route: globalThis.route },
+                    directives: { press: {} },
+                    stubs: { ...stubs, GlassInput: false },
+                },
+            })
+            onTestFinished(() => wrapper.unmount())
+            await flushPromises()
+
+            return { wrapper, defiler }
+        }
+
+        it('défile jusqu’au formulaire et donne le focus au poids, depuis le « + » de l’en-tête', async () => {
+            const { wrapper, defiler } = await monterAvecLesVraisChamps(MEASUREMENTS)
+
+            await click(wrapper, 'Ajouter')
+            await flushPromises()
+
+            expect(defiler).toHaveBeenCalledTimes(1)
+            expect(defiler.mock.contexts[0]).toBe(wrapper.find('form').element)
+            expect(document.activeElement).toBe(wrapper.find('input[type="number"]').element)
+        })
+
+        it('fait de même depuis le bouton de l’état vide', async () => {
+            const { wrapper, defiler } = await monterAvecLesVraisChamps([])
+
+            await wrapper.find('[data-testid="empty-state-measurement"]').trigger('click')
+            await flushPromises()
+
+            expect(defiler).toHaveBeenCalledTimes(1)
+            expect(document.activeElement).toBe(wrapper.find('input[type="number"]').element)
+        })
+
+        it('ne défile pas en se refermant', async () => {
+            const { wrapper, defiler } = await monterAvecLesVraisChamps(MEASUREMENTS)
+
+            await click(wrapper, 'Ajouter')
+            await flushPromises()
+            await click(wrapper, 'Annuler')
+            await flushPromises()
+
+            expect(defiler).toHaveBeenCalledTimes(1)
+        })
     })
 
     it('folds itself back up once saved, uncovering the entry that was just added', async () => {
