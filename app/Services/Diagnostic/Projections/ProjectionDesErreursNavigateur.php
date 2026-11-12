@@ -26,7 +26,8 @@ use stdClass;
  * les plus récents : un compte seul ne pousse pas son erreur devant celle
  * de plusieurs. Les erreurs d'un compte supprimé ou non vérifié ne sont
  * pas lues. Le détail d'un groupe ajoute,
- * avec `TexteBrut`, le message, la page sans sa chaîne de requête et les
+ * avec `TexteBrut`, le message, la page (son chemin seul, sous un hôte
+ * masqué, les identifiants numériques masqués) et les
  * premières lignes de la pile de sa dernière occurrence, sous `non_fiable`,
  * lus de cette seule ligne : le groupe en compte jusqu'à 5 000, et leurs
  * piles ne tiendraient pas dans la mémoire d'une requête. Jamais le compte,
@@ -49,7 +50,7 @@ final class ProjectionDesErreursNavigateur
      */
     public function liste(FenetreDeDiagnostic $fenetre): array
     {
-        $lignes = $this->erreurs($fenetre->depuis)->select(self::COLONNES)->limit(LecturesBornees::LIGNES_AU_PLUS + 1)->get();
+        $lignes = $this->erreurs($fenetre->depuis)->limit(LecturesBornees::LIGNES_AU_PLUS + 1)->get();
         $groupes = $this->regrouper(LecturesBornees::bornees($lignes));
 
         return [
@@ -59,16 +60,17 @@ final class ProjectionDesErreursNavigateur
     }
 
     /**
-     * Le détail d'un groupe des trente derniers jours, `null` s'il n'y a
-     * rien. Comme la liste, il compte au plus 5 000 occurrences, en lit une
+     * Le détail d'un groupe de la fenêtre de la liste (vingt-quatre heures),
+     * `null` s'il n'y a rien : une fenêtre plus large laisserait un jeton
+     * sans `TexteBrut` confirmer une empreinte devinée sur des jours que la
+     * liste ne montre pas. Comme la liste, il compte au plus 5 000 occurrences, en lit une
      * de plus et dit s'il a débordé (`echantillon`).
      *
      * @return array<string, mixed>|null
      */
     public function detail(string $empreinte, FenetreDeDiagnostic $fenetre, bool $texteBrut): ?array
     {
-        $lignes = $this->erreurs($fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS))
-            ->select(self::COLONNES)
+        $lignes = $this->erreurs($fenetre->depuis)
             ->where('e.empreinte', Vocabulaire::forme(Vocabulaire::EMPREINTE, $empreinte))
             ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
             ->get();
@@ -85,12 +87,12 @@ final class ProjectionDesErreursNavigateur
 
     /**
      * Les erreurs des comptes vérifiés, de la plus récente à la plus
-     * ancienne.
+     * ancienne, par leurs seules colonnes nommées et sous la borne de temps
+     * de la base : l'indication vit dans le `select`, posé avant le reste.
      */
     private function erreurs(CarbonImmutable $depuis): Builder
     {
-        return ErreurNavigateur::query()->toBase()
-            ->from(new ErreurNavigateur()->getTable(), 'e')
+        return LecturesBornees::requete(ErreurNavigateur::query()->toBase()->from(new ErreurNavigateur()->getTable(), 'e'), self::COLONNES)
             ->join('users as u', 'u.id', '=', 'e.user_id')
             ->whereNotNull('u.email_verified_at')
             ->where('e.created_at', '>=', $depuis)
@@ -128,14 +130,14 @@ final class ProjectionDesErreursNavigateur
     private function texte(mixed $identifiant, bool $texteBrut): array
     {
         return match ($texteBrut) {
-            true => ['non_fiable' => $this->texteDe(ErreurNavigateur::query()->toBase()->select(['message', 'url', 'pile'])->where('id', $identifiant)->first())],
+            true => ['non_fiable' => $this->texteDe(LecturesBornees::requete(ErreurNavigateur::query()->toBase(), ['message', 'url', 'pile'])->where('id', $identifiant)->first())],
             false => [],
         };
     }
 
     /**
-     * Le message, la page sans sa chaîne de requête et les premières lignes
-     * de la pile d'une occurrence ; rien d'une occurrence effacée entre deux
+     * Le message, la page (son chemin, sous un hôte remplacé par un marqueur) et les premières lignes de la pile
+     * d'une occurrence ; rien d'une occurrence effacée entre deux
      * lectures.
      *
      * @return array<string, TexteNonFiable>
@@ -144,8 +146,56 @@ final class ProjectionDesErreursNavigateur
     {
         return [
             'message' => new TexteNonFiable(ValeurLue::texte($occurrence?->message), self::BUDGET_DU_MESSAGE),
-            'page' => new TexteNonFiable((string) preg_replace('/[?#].*$/s', '', ValeurLue::texte($occurrence?->url)), self::BUDGET_DE_LA_PAGE),
+            'page' => new TexteNonFiable(self::page(ValeurLue::texte($occurrence?->url)), self::BUDGET_DE_LA_PAGE),
             'pile' => new TexteNonFiable(implode("\n", array_slice(explode("\n", ValeurLue::texte($occurrence?->pile)), 0, self::LIGNES_DE_PILE)), self::BUDGET_DE_LA_PILE),
         ];
+    }
+
+    /**
+     * Le chemin d'une page sous un hôte masqué (`//[hôte]/chemin`) : ni
+     * schéma, ni compte (`user:secret@`), ni port, ni chaîne de requête, ni
+     * fragment. Le nom d'hôte ne sort jamais : le masquer par motif
+     * (`MasqueLesCoordonnees`) laisserait passer un nom à un seul label ou une
+     * adresse en notation exotique. Sans hôte, seul un chemin absolu reste,
+     * que l'expurgation (`TexteNonFiable`) réduit encore (`/seances/3` rend
+     * `[chemin][n]`) ; tout autre texte ne rend rien.
+     */
+    private static function page(string $url): string
+    {
+        $adresse = parse_url($url);
+        $chemin = is_array($adresse) ? self::chemin($adresse['path'] ?? '') : '';
+
+        return match (true) {
+            ! is_array($adresse) => '',
+            isset($adresse['host']) => '//[hôte]'.$chemin,
+            default => str_starts_with($chemin, '/') ? $chemin : '',
+        };
+    }
+
+    /**
+     * Un chemin segment par segment. Une adresse collée dans le chemin
+     * (`/x/http://hote/y`) est coupée à son premier `//`.
+     */
+    private static function chemin(string $chemin): string
+    {
+        return implode('/', array_map(self::segment(...), explode('/', (string) preg_replace('#//.*$#s', '', $chemin))));
+    }
+
+    /**
+     * Un segment, lu après le décodage des `%xx` et sans caractère invisible
+     * (sinon `%E2%80%8B12` ne passerait pas pour un nombre) : décodé, un
+     * segment qui contient `/`, une barre oblique inverse, `:` ou `@` devient
+     * `[segment]`, un identifiant numérique, avec ou sans extension (`12`,
+     * `12.json`), devient `[n]`.
+     */
+    private static function segment(string $segment): string
+    {
+        $lu = preg_replace('/[\p{C}\p{Z}\p{M}]/u', '', rawurldecode($segment));
+
+        return match (true) {
+            $lu === null, preg_match('~[/\\\\:@]~', $lu) === 1 => '[segment]',
+            preg_match('/^\d+(\.\w+)?$/', $lu) === 1 => '[n]',
+            default => $lu,
+        };
     }
 }

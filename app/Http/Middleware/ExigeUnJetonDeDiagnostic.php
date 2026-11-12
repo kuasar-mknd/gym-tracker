@@ -57,7 +57,7 @@ class ExigeUnJetonDeDiagnostic
     /** Le nombre d'éléments rendus, que le contrôleur pose pour l'audit. */
     public const string ELEMENTS = 'diagnostic.elements';
 
-    /** Les paramètres validés que le contrôleur pose pour l'audit : des nombres et des instants, jamais un texte reçu. */
+    /** Les paramètres validés que le contrôleur pose pour l'audit : des nombres, des instants et une empreinte contrainte par la route, jamais un texte reçu. */
     public const string PARAMETRES = 'diagnostic.parametres';
 
     public const int REQUETES_PAR_MINUTE = 30;
@@ -81,6 +81,8 @@ class ExigeUnJetonDeDiagnostic
         'diagnostic.taches.index' => PorteeDeDiagnostic::Sante,
         'diagnostic.taches.show' => PorteeDeDiagnostic::Sante,
         'diagnostic.files.index' => PorteeDeDiagnostic::Files,
+        'diagnostic.erreurs-navigateur.index' => PorteeDeDiagnostic::ErreursNavigateur,
+        'diagnostic.erreurs-navigateur.show' => PorteeDeDiagnostic::ErreursNavigateur,
     ];
 
     private const string MOTIF_DE_L_ENTETE = '/^Bearer '.JetonDeDiagnostic::PREFIXE.'(?<identifiant>[a-z0-9]{'.JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT.'})_(?<secret>[A-Za-z0-9]{'.JetonDeDiagnostic::LONGUEUR_DU_SECRET.'})$/D';

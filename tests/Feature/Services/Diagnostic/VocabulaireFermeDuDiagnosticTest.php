@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\PorteeDeDiagnostic;
+use App\Models\Admin;
 use App\Models\ErreurNavigateur;
 use App\Models\ExceptionEnregistree;
 use App\Models\JetonDeDiagnostic;
@@ -22,7 +23,11 @@ use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
 use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResult;
 use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResults;
+use Spatie\Permission\Models\Role;
 use Tests\Support\BuildDuDiagnostic;
+use Tests\Support\FilamentAdminPanel;
+
+use function Pest\Laravel\get;
 
 /*
  * Hors de `non_fiable`, chaque valeur de chaque réponse du diagnostic est un
@@ -349,4 +354,44 @@ it('ne rend des derniers échecs que du vocabulaire fermé, et leur message expu
     if ($texteBrut) {
         expect(data_get($rendu, 'donnees.files.derniers_echecs.0.non_fiable.message'))->toContain('échec pour [courriel]');
     }
+})->with(['sans TexteBrut' => false, 'sous TexteBrut' => true]);
+
+/**
+ * La réponse JSON d'une route des erreurs navigateur, pour un jeton neuf de
+ * la portée `ErreursNavigateur`, avec ou sans `TexteBrut`.
+ *
+ * @return array<array-key, mixed>
+ */
+function vocabulaireFermeRoute(string $uri, bool $texteBrut): array
+{
+    $admin = FilamentAdminPanel::admin(['view-diagnostic']);
+    $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
+    $identifiant = Str::lower(Str::random(JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT));
+    $secret = Str::random(JetonDeDiagnostic::LONGUEUR_DU_SECRET);
+    JetonDeDiagnostic::factory()->create([
+        'identifiant' => $identifiant, 'empreinte' => JetonDeDiagnostic::empreinteDe($secret),
+        'portees' => $texteBrut ? ['erreurs-navigateur', 'texte-brut'] : ['erreurs-navigateur'], 'cree_par_admin_id' => $admin->id,
+    ]);
+
+    $json = get($uri, ['Accept' => 'application/json', 'Authorization' => 'Bearer '.JetonDeDiagnostic::composer($identifiant, $secret)])->assertOk()->json();
+
+    return is_array($json) ? $json : [];
+}
+
+it('ne rend des routes des erreurs navigateur que du vocabulaire fermé, devant des valeurs hostiles', function (bool $texteBrut): void {
+    config()->set('app.diagnostic_enabled', true);
+    config()->set('logging.channels.diagnostic', ['driver' => 'monolog', 'handler' => Monolog\Handler\NullHandler::class]);
+    $racine = ['ecarts' => [], 'non_fiables' => []];
+
+    $liste = vocabulaireFermeRoute('/diagnostic/v1/erreurs-navigateur', $texteBrut);
+    $detailHostile = vocabulaireFermeRoute('/diagnostic/v1/erreurs-navigateur/'.md5('hostile'), $texteBrut);
+    $detailOrdinaire = vocabulaireFermeRoute('/diagnostic/v1/erreurs-navigateur/'.md5('ordinaire'), $texteBrut);
+
+    expect(vocabulaireFermeParcourir($liste, '', '', $racine)['ecarts'])->toBe([])
+        ->and(vocabulaireFermeParcourir($detailHostile, '', '', $racine)['ecarts'])->toBe([])
+        ->and(vocabulaireFermeParcourir($detailOrdinaire, '', '', $racine)['ecarts'])->toBe([])
+        ->and(vocabulaireFermeParcourir($liste, '', '', $racine)['non_fiables'])->toBe([])
+        ->and(vocabulaireFermeParcourir($detailOrdinaire, '', '', $racine)['non_fiables'])->toHaveCount($texteBrut ? 1 : 0)
+        ->and(data_get($liste, 'donnees.erreurs_navigateur.groupes.*.fichier'))->toEqualCanonicalizing([null, null, 'build/assets/app-abc.js'])
+        ->and(data_get($liste, 'donnees.erreurs_navigateur.groupes.*.navigateurs'))->toEqualCanonicalizing([['autre'], ['firefox'], ['firefox']]);
 })->with(['sans TexteBrut' => false, 'sous TexteBrut' => true]);

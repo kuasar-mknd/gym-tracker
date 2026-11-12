@@ -1,0 +1,54 @@
+---
+paths:
+  - 'app/Services/Diagnostic/**'
+  - 'app/Http/Controllers/Diagnostic/**'
+  - 'app/Http/Requests/Diagnostic/**'
+  - 'routes/diagnostic.php'
+  - 'app/Http/Middleware/ExigeUnJetonDeDiagnostic.php'
+  - 'app/Support/AlertesDeDiagnostic.php'
+  - 'app/Support/JournalDuDiagnostic.php'
+---
+
+# Accès de diagnostic
+
+Réglé au fil de #2032 (2026-10-11 au 2026-11-12). `/diagnostic/v1` est une API en lecture seule, protégée par un jeton, qui rend l'état de l'application à qui le propriétaire a donné un jeton : GET et HEAD seulement, aucune écriture hors la trace d'usage du jeton. `DIAGNOSTIC_ENABLED` reste coupé par défaut. Ce fichier tient les décisions et les pièges ; le détail de la garde est dans `.ai/rules/middleware.md`, celui des projections dans `.ai/rules/services.md`.
+
+## Chaque route déclare sa portée dans `PORTEES`, et la portée se juge par le nom de la route
+`ExigeUnJetonDeDiagnostic::PORTEES` associe chaque route nommée à une portée de `PorteeDeDiagnostic`, ou à `null` pour un jeton quelconque. Une route que la liste ne nomme pas est refusée comme un chemin inconnu, et `LesRoutesDeDiagnosticSontEnLectureSeuleTest` exige que chaque route ait sa portée et chaque portée sa route. La carte au 2026-11-12 :
+
+| Route | Portée |
+| --- | --- |
+| `etat` | aucune : tout jeton |
+| `sante`, `taches` (liste et détail) | `Sante` |
+| `exceptions` (liste, détail, occurrences) | `Exceptions` |
+| `files` | `Files` |
+| `erreurs-navigateur` (liste et détail) | `ErreursNavigateur` |
+
+`TexteBrut` n'ouvre aucune source : il ajoute au détail seulement le texte libre expurgé, sous `non_fiable`. Une source nouvelle reçoit sa portée, dans l'énumération et dans cette carte, plutôt que de se ranger sous une portée voisine qui ouvrirait plus que prévu ; une route qui prolonge une source existante reprend sa portée (les erreurs navigateur avaient la leur avant d'avoir une route). Un identifiant de route est contraint à la route elle-même (chiffres sans zéro de tête, ou empreinte de 32 chiffres hexadécimaux), jamais lié à un modèle : un paramètre qui ne respecte pas la forme est un chemin inconnu.
+
+## Avant un jeton valide, tout refus est un 404 nu, indiscernable d'un chemin inconnu
+Interrupteur coupé, HTTPS en production, en-tête absent ou mal formé, jeton inconnu, secret faux, jeton révoqué ou expiré, créateur supprimé ou sans capacité, route sans portée, base qui ne répond pas : un `NotFoundHttpException` nu, rendu par le gestionnaire comme un chemin inconnu (même statut, même corps, mêmes en-têtes hors `Date`). Jamais de réponse fabriquée à la main, jamais de `WWW-Authenticate` ni de `Retry-After` avant le jeton, et un refus n'écrit rien en base. Les réponses distinctes (403 `portee-non-accordee`, 404 `introuvable` pour une ressource inconnue, 429, 503, 500) n'existent qu'après un jeton valide. Chaque fichier de test de route rejoue la comparaison : sans jeton, au jeton faux, et pour un jeton sans portée (403, ce qui prouve que la route existe).
+
+## Toute lecture est bornée : lignes, groupes, temps, et 503 quand la base coupe
+Une projection lit au plus 5 000 lignes (une de plus pour savoir qu'elle a débordé : `echantillon`), rend au plus 50 groupes (`tronque`), et porte la borne de temps de MySQL (`MAX_EXECUTION_TIME`, 2 s) par `LecturesBornees::requete()`. L'indication vit dans le `select` : un `count()`, un `exists()` ou un `select()` placé après elle la perdent sans erreur, c'est pourquoi les comptes se lisent par clés (`LecturesBornees::compter()`). Quand MySQL coupe la lecture (erreur 3024), le contrôleur rend 503 `lecture-trop-longue` ; toute autre erreur de la base est une 500 sans détail. `ChaqueProjectionPorteSaBorneDeTempsTest` exige l'indication sur chaque requête de chaque projection qui lit la base, et aucun SQL pour celles qui lisent le cache ou Redis (santé, versions, Horizon) sous les magasins `array` et Redis. Sur le pilote de cache `database`, cette lecture est une requête SQL sans l'indication, que `LecturesBornees` n'atteint pas : la production lit Redis, et ce pilote reste celui du développement et d'`.env.example`. Le test lit le dossier des projections : une classe `Projection*` nouvelle, ou une classe qui touche la base sans passer par `LecturesBornees`, le fait tomber tant qu'elle n'y est pas connue ; une lecture ajoutée à une projection déjà connue sans l'indication le fait tomber aussi. La lecture de la liste des erreurs navigateur trie une fenêtre de vingt-quatre heures par clé primaire (`EXPLAIN` du 2026-11-12 sur 60 000 lignes : parcours de l'index de la date, puis tri) ; elle n'a pas besoin d'un index de plus, la clé primaire étant déjà dans chaque index secondaire d'InnoDB, et la borne de temps couvre le reste. Le détail d'un groupe lit la même fenêtre que la liste (vingt-quatre heures) : une fenêtre plus large laisserait un jeton sans `texte-brut` confirmer une empreinte devinée (le hachage d'un message) sur des jours que la liste ne montre pas.
+
+## Une réponse tient sous 256 Kio, sans troncature
+`DiagnosticController::repondre()` lève à 256 Kio (`EnveloppeRendue::OCTETS_AU_PLUS`), et la garde en fait une 500 sans détail : pas de troncature silencieuse, qui rendrait une réponse fausse mais plausible. Ce sont les budgets par champ (`TexteNonFiable`), les listes de 50 au plus et les vocabulaires fermés qui la tiennent ; en pratique elles la gardent très en dessous du plafond (une vingtaine de Kio pour cinquante groupes de `files` au maximum de leurs champs). Chaque fichier de test de route sème des entrées démesurées et mesure la réponse ; le refus à 256 Kio se prouve à part, dans `AccesDeDiagnosticTest`.
+
+## Hors de `non_fiable`, rien n'est du texte libre : vocabulaire fermé, nombres, dates
+Une valeur rendue est un élément d'un vocabulaire fermé (`Vocabulaire::forme()`, `Vocabulaire::parmi()`), un nombre ou une date ; ce qui ne correspond pas devient `null`. Un texte libre (message, pile, page, message d'échec) n'existe qu'au détail, sous `non_fiable`, avec `TexteBrut`, par `TexteNonFiable` : expurgé (`ExpurgeLeTexte`), coupé à son budget, et la clé n'existe pas sans la portée. Une page est réduite à son chemin sous un hôte toujours remplacé par `//[hôte]` (ni nom d'hôte, ni compte `user:secret@`, ni port, ni chaîne de requête, ni fragment), (un identifiant de compte, `/verify-email/12/…`, devient `[n]`) ; le motif de `MasqueLesCoordonnees` ne suffit pas pour un hôte, qui laisse passer un nom à un seul label ou une adresse en notation exotique ; un segment de chemin se lit après le décodage des `%xx` et des caractères invisibles : s'il contient `/`, `\`, `:` ou `@` il devient `[segment]`, s'il est numérique (avec ou sans extension, `12.json`) `[n]`, et une adresse collée dans le chemin est coupée à son premier `//`. L'expurgation ne masque pas un jeton de moins de quarante caractères qui n'est pas hexadécimal : aucune route ne met un secret dans un chemin, et si l'une le faisait il faudrait le masquer ici ; une chaîne d'agent ne sort jamais, seulement sa famille de navigateur (liste fermée) ; le compte qui a rapporté une erreur ne sort jamais. Les valeurs sensibles des tests se composent à l'exécution, jamais écrites en clair (`AucunJetonDeDiagnosticNEstSuiviTest` refuse un jeton complet dans un fichier suivi). `VocabulaireFermeDuDiagnosticTest` sème des valeurs hostiles dans chaque colonne lue, parcourt chaque clé du résumé, d'`etat` et des routes, et refuse une clé qui n'est pas connue avec sa forme : une clé nouvelle y entre avec sa forme, ou le test tombe.
+
+## Le cache des comptes de `etat` : une clé par source, des nombres seulement
+`ComptesSur7Jours` garde 60 s les comptes sur sept jours sous une clé par source, jamais par jeton ni par réponse, et n'y met que des nombres. Sur le pilote de cache `database` (le pilote, pas le nom du magasin), chaque écriture du cache est une écriture SQL : une clé par jeton ou par requête en ferait une par appel. Une lecture coupée à la borne de temps n'est pas mise en cache. Pour la même raison, un refus n'est ni compté ni journalisé sur ce pilote (voir `.ai/rules/middleware.md`).
+
+## Rien ne se garde d'une requête à l'autre : Octane sert des milliers de requêtes avec un seul démarrage
+Aucune classe du diagnostic n'a de propriété statique ni de variable statique de méthode, aucune n'est liée comme singleton ; la garde relit la configuration, la ligne du jeton, la capacité du créateur et les limiteurs à chaque requête, et les projections s'instancient à l'appel. `LesRoutesDeDiagnosticGardentLeurCoutEtLeurEtatTest` le tient par réflexion sur chaque classe des dossiers du diagnostic, et rejoue deux jetons de portées différentes à la suite pour vérifier qu'aucun n'hérite de l'autre. Le même fichier fixe le coût : chaque route, d'un jeton neuf et d'un cache vide, envoie le même nombre de requêtes SQL devant une ligne et devant cinquante par source (aucune lecture par élément), au plus 20 ; il lit les routes dans `PORTEES`, et une route nouvelle fait échouer le test tant qu'elle n'y a pas son adresse.
+
+## Insights : une classe ou une méthode au-dessus de 5 de complexité coûte le score de la CI
+La CI exige 90 en complexité (`phpinsights`) et le diagnostic en consomme beaucoup, parce que chaque lecture se défend d'une valeur hostile. Pour rester au-dessus : des méthodes de quelques lignes, `match`, `throw_if`, `rescue` et les collections plutôt qu'une cascade de `if`, un contrôleur qui ne fait que servir une lecture, et une classe par préoccupation (`RegroupeLesOccurrences`, `ApercuDesDetails`, `ComptesSur7Jours`…) plutôt qu'une méthode de plus dans une projection. Le score se mesure dans un arbre de travail jetable plutôt que dans le dépôt principal, qui rend un autre chiffre que la CI ; la CI juge, et le seuil est 90.
+
+## Une route nouvelle : la liste de contrôle
+Un nom de route et sa portée dans `PORTEES` ; un contrôleur qui hérite de `DiagnosticController` (`servir()` pour la 503, `parametres()` pour l'audit, qui ne reçoit que des nombres, des instants et une empreinte contrainte à la route) ; une entrée dans `routes/diagnostic.php` sous la garde ; l'adresse dans `coutAdresse()` du test de coût ; un fichier de test calqué sur ceux des tâches et des erreurs navigateur (portée, 404 indiscernable, bornes, canaris hostiles, une seule écriture SQL, 503, 500, 256 Kio, méthodes refusées) ; le parcours du vocabulaire fermé ; une ligne au README et au journal des modifications.
+
+## L'infrastructure de production ne se nomme jamais, ni dans le code, ni dans les tests, ni dans les réponses
+Voir `.ai/rules/general.md`. Les réponses du diagnostic ne portent ni hôte, ni chemin de la machine, ni nom d'outil de production : un chemin absolu est ramené à la racine de l'application ou masqué, un nom d'hôte est masqué, et la note de l'enveloppe se borne à dire que ce qui est sous `non_fiable` vient de l'extérieur.

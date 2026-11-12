@@ -13,6 +13,7 @@ use App\Services\Diagnostic\Projections\ProjectionDesErreursNavigateur;
 use App\Services\Diagnostic\ResumeDuDiagnostic;
 use App\Services\Diagnostic\TexteNonFiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Tests\Support\BuildDuDiagnostic;
 
 /*
@@ -103,12 +104,12 @@ it('ne lit ni les erreurs d’un compte supprimé, ni celles d’un compte non v
         ->and(new ProjectionDesErreursNavigateur()->detail(md5('non-verifie'), erreursNavigateurDiagnosticFenetre(), true))->toBeNull();
 });
 
-it('rend au détail, sous TexteBrut seulement, le message, la page sans requête ni fragment et vingt lignes de pile', function (): void {
+it('rend au détail, sous TexteBrut seulement, le message, la page réduite à son chemin sous un hôte masqué et vingt lignes de pile', function (): void {
     $compte = User::factory()->create();
     erreursNavigateurDiagnosticRapporter($compte, 'detail', ['message' => 'ancien']);
     erreursNavigateurDiagnosticRapporter($compte, 'detail', [
         'message' => 'récent',
-        'url' => 'https://gym.example.org/seances/3?note=privee#ancre',
+        'url' => sprintf('https://%s@gym.example.org:8443/seances/3?note=privee#ancre', 'camille:'.Str::random(8)),
         'pile' => implode("\n", array_map(static fn (int $ligne): string => "at ligne {$ligne}", range(1, 25))),
     ]);
 
@@ -120,11 +121,38 @@ it('rend au détail, sous TexteBrut seulement, le message, la page sans requête
         ->and($sans['echantillon'] ?? null)->toBeFalse()
         ->and($avec['non_fiable'] ?? null)->toEqual([
             'message' => new TexteNonFiable('récent', ProjectionDesErreursNavigateur::BUDGET_DU_MESSAGE),
-            'page' => new TexteNonFiable('https://gym.example.org/seances/3', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
+            'page' => new TexteNonFiable('//[hôte]/seances/[n]', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
             'pile' => new TexteNonFiable(implode("\n", array_map(static fn (int $ligne): string => "at ligne {$ligne}", range(1, ProjectionDesErreursNavigateur::LIGNES_DE_PILE))), ProjectionDesErreursNavigateur::BUDGET_DE_LA_PILE),
         ])
         ->and(new ProjectionDesErreursNavigateur()->detail('pas-une-empreinte', erreursNavigateurDiagnosticFenetre(), true))->toBeNull();
 });
+
+it('ne rend jamais le nom de l’hôte de la page, quelle qu’en soit la forme, ni un identifiant numérique du chemin', function (string $url, string $attendu): void {
+    $compte = User::factory()->create();
+    erreursNavigateurDiagnosticRapporter($compte, 'hote', ['url' => $url]);
+
+    $detail = new ProjectionDesErreursNavigateur()->detail(md5('hote'), erreursNavigateurDiagnosticFenetre(), true);
+
+    expect(is_array($detail) && is_array($detail['non_fiable'] ?? null) ? ($detail['non_fiable']['page'] ?? null) : null)->toEqual(new TexteNonFiable($attendu, ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE));
+})->with([
+    'un hôte à un label' => ['http://serveur/x', '//[hôte]/x'],
+    'un hôte à un label et un port' => ['//serveur:8443/x', '//[hôte]/x'],
+    'un hôte à tirets' => ['http://mon-serveur-seul/x', '//[hôte]/x'],
+    'un domaine à label inconnu' => ['https://gymtracker.fitness/seances?x=1', '//[hôte]/seances'],
+    'une adresse en hexadécimal' => ['http://0x7f000001/x', '//[hôte]/x'],
+    'une adresse en décimal' => ['http://2130706433/x', '//[hôte]/x'],
+    'un identifiant de compte dans le chemin' => ['https://gym.example.org/verify-email/12/abcdef', '//[hôte]/verify-email/[n]/abcdef'],
+    'un identifiant en fin de chemin' => ['https://gym.example.org/seances/3', '//[hôte]/seances/[n]'],
+    'un chemin absolu sans hôte' => ['/seances/3?x=1', '/seances/[n]'],
+    'un texte qui n’est ni une adresse ni un chemin absolu' => ['serveur/x?token=1', ''],
+    'un identifiant derrière un caractère invisible' => ['https://gym.example.org/u/%E2%80%8B12', '//[hôte]/u/[n]'],
+    'un identifiant avec extension' => ['https://gym.example.org/users/12.json', '//[hôte]/users/[n]'],
+    'un chemin encodé qui cache un hôte' => ['https://gym.example.org/a%2F%2Fserveur%2Fy', '//[hôte]/[segment]'],
+    'une barre oblique inverse' => ['/\\serveur/x', '/[segment]/x'],
+    'une adresse collée dans le chemin' => ['https://gym.example.org/x/http://serveur/y', '//[hôte]/x/[segment]'],
+    'un compte dans un segment encodé' => ['https://gym.example.org/p/u%3Ap%40serveur', '//[hôte]/p/[segment]'],
+    'un compte sans schéma' => ['u:hunter2@serveur.example/chemin', ''],
+]);
 
 /*
  * Le détail d'un groupe compte, comme la liste, au plus 5 000 occurrences,

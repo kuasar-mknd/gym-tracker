@@ -10,6 +10,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/**, app/**, config/**, routes/** | .ai/rules/database.md |
 | package.json, package-lock.json, composer.json, composer.lock, docker-compose.prod.yml, compose.yaml | .ai/rules/dependencies.md |
+| app/Services/Diagnostic/**, app/Http/Controllers/Diagnostic/**, app/Http/Requests/Diagnostic/**, routes/diagnostic.php, app/Http/Middleware/ExigeUnJetonDeDiagnostic.php, app/Support/AlertesDeDiagnostic.php, app/Support/JournalDuDiagnostic.php | .ai/rules/diagnostic.md |
 | app/Filament/**, app/Support/AvatarDesInitiales.php, app/Support/ComptesVusParPulse.php, app/Providers/TelescopeServiceProvider.php, app/Policies/**, config/filament-shield.php, app/Providers/Filament/AdminPanelProvider.php | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
 | app/** | .ai/rules/horloge.md |

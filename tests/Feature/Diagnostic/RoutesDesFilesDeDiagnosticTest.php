@@ -329,18 +329,21 @@ it('écrit dans l’audit des paramètres vides, jamais un texte reçu', functio
     expect($lignes)->toBe([[[], 1]]);
 });
 
-it('garde la réponse sous 256 Kio, même devant cinquante classes de job aux noms démesurés', function (): void {
+it('coupe cinquante classes de job aux noms et aux messages démesurés bien en dessous de 256 Kio', function (): void {
     foreach (range(1, 60) as $numero) {
         routeFilesPlanter(str_repeat('f', 240).$numero, [
             'payload' => (string) json_encode(['displayName' => str_repeat('C', 250).$numero]),
-            'exception' => str_repeat('E', 250).': '.str_repeat('démesuré ', 200_000),
+            'exception' => str_repeat('E', 250).': '.str_repeat('démesuré ', 20_000),
         ]);
     }
     $cree = routeFilesUnJeton(['files', 'texte-brut']);
 
     $reponse = routeFilesAppeler('/diagnostic/v1/files', $cree['entete'])->assertOk();
 
-    expect(strlen((string) $reponse->getContent()))->toBeLessThan(256 * 1024);
+    // Les budgets par champ coupent des entrées de plusieurs Mio : la réponse pleine (cinquante groupes) pèse une vingtaine de Kio, très en dessous du plafond, que `AccesDeDiagnosticTest` prouve à part. Le plancher empêche ce test de passer sans rien lire.
+    expect(strlen((string) $reponse->getContent()))->toBeGreaterThan(15_000)
+        ->and(strlen((string) $reponse->getContent()))->toBeLessThan(64 * 1024)
+        ->and(routeFilesTableau($reponse->json('donnees.files.echecs')))->toHaveCount(50);
 });
 
 it('ne sert que la lecture : chaque autre méthode est refusée comme un chemin inconnu', function (string $methode): void {
