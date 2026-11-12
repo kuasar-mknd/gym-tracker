@@ -179,6 +179,14 @@ jobs:
                 ports:
                     - 3306:3306
                 options: --health-cmd="mysqladmin ping -ppassword" --health-interval=10s --health-timeout=5s --health-retries=3
+            # Le Redis du groupe `redis` de la suite (tests/Feature/Redis), à
+            # l'image de la production (`RedisPorteUneEtiquetteExacteTest`) :
+            # verrous, file, sessions, éviction et `INFO` réels (#2151).
+            redis:
+                image: redis:8.10.3-alpine
+                ports:
+                    - 6379:6379
+                options: --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=5s --health-retries=10
         steps:
             - name: Checkout code
               uses: actions/checkout@v7
@@ -211,7 +219,7 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: '8.5'
-                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline, redis
                   coverage: pcov
                   tools: composer:v2
 
@@ -257,6 +265,26 @@ jobs:
               # suite actually had when it was introduced, so a PR cannot silently
               # delete tests. Raise it whenever coverage climbs; never lower it.
               run: php artisan test -p --coverage --min=94
+
+            # Le groupe `redis`, que phpunit.xml écarte de l'étape précédente :
+            # chaque test vide le serveur, si bien que les éclats parallèles ne
+            # le partagent pas. Une seule passe, sans condition, magasins sur
+            # Redis comme en production (`LeGroupeRedisTourneContreUnVraiRedisTest`).
+            - name: Tests contre un vrai Redis
+              env:
+                  DB_CONNECTION: mysql
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 3306
+                  DB_DATABASE: gym_tracker_testing
+                  DB_USERNAME: sail
+                  DB_PASSWORD: password
+                  TELESCOPE_ENABLED: false
+                  CACHE_STORE: redis
+                  SESSION_DRIVER: redis
+                  QUEUE_CONNECTION: redis
+                  REDIS_HOST: 127.0.0.1
+                  REDIS_PORT: 6379
+              run: php artisan test --group=redis
 
     laravel-tests:
         runs-on: ubuntu-latest

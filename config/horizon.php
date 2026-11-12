@@ -226,6 +226,11 @@ return [
             'memory' => 128,
             'tries' => 1,
             'timeout' => 60,
+            // Aucun sommeil entre deux lectures de la file : la lecture attend
+            // elle-même sur le serveur (`block_for` de la connexion `redis`).
+            // Sans cette clé, Horizon dort trois secondes après chaque lecture
+            // vide (#2151).
+            'sleep' => 0,
             'nice' => 0,
         ],
     ],

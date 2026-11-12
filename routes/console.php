@@ -169,6 +169,18 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\User::class]])
     ->dailyAt('03:50');
 
+/*
+ * La page « Metrics » de Horizon ne lit que les instantanés que range
+ * `horizon:snapshot` : sans lui, elle restait vide (#2151). Toutes les cinq
+ * minutes, le rythme de la documentation de Horizon, qui en garde vingt-quatre
+ * par file et par travail (`metrics.trim_snapshots`), soit deux heures. Hors du
+ * moniteur, comme les tâches de santé : 288 passages par jour, et une page
+ * vide dit d'elle-même qu'ils manquent.
+ */
+\Illuminate\Support\Facades\Schedule::command('horizon:snapshot')
+    ->everyFiveMinutes()
+    ->doNotMonitor();
+
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\DispatchQueueCheckJobsCommand::class)
     ->everyMinute()
     ->doNotMonitor();

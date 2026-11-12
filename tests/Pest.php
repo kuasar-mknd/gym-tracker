@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\RedisReel;
 use Tests\TestCase;
 
 /*
@@ -31,3 +32,13 @@ require_once __DIR__.'/Support/horloge-des-timebox.php';
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+/*
+| Les tests de tests/Feature/Redis parlent à un vrai Redis (#2151) : groupe
+| `redis`, que phpunit.xml écarte de toute autre passe et que la CI lance à
+| part, contre un service à l'image de la production. Sans vrai Redis, chacun
+| échoue en le disant, avant que `RefreshDatabase` ne migre la base ; avec, il
+| part de deux bases vides (`Tests\TestCase::setUpTraits()`, `RedisReel`).
+*/
+pest()->group(RedisReel::GROUPE)
+    ->in('Feature/Redis');

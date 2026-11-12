@@ -116,8 +116,9 @@ it('laisse chaque tâche planifiée sous le moniteur local', function (): void {
         // Les deux battements et le contrôle de santé se surveillent eux-mêmes :
         // `ScheduleCheck`, `QueueCheck` et la page de santé disent quand ils
         // manquent, et trois lignes par passage, 1 728 fois par jour, ne
-        // diraient rien de plus.
-        if (str_contains($instruction, 'ScheduleCheckHeartbeatCommand') || str_contains($instruction, 'DispatchQueueCheckJobsCommand') || str_contains($instruction, 'RunHealthChecksCommand')) {
+        // diraient rien de plus. Les instantanés de Horizon (288 par jour,
+        // #2151) se lisent sur sa page « Metrics », vide quand ils manquent.
+        if (str_contains($instruction, 'ScheduleCheckHeartbeatCommand') || str_contains($instruction, 'DispatchQueueCheckJobsCommand') || str_contains($instruction, 'RunHealthChecksCommand') || str_starts_with($instruction, "'horizon:snapshot')")) {
             continue;
         }
 

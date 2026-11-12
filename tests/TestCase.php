@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Services\ResolveurDns;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Tests\Support\RedisReel;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -52,5 +53,41 @@ abstract class TestCase extends BaseTestCase
                 return ['203.0.113.7'];
             }
         });
+    }
+
+    /**
+     * Un test du groupe `redis` (tests/Feature/Redis, #2151) exige un vrai
+     * Redis avant ses traits.
+     *
+     * `setUpTraits()` passe juste après la création de l'application, avant
+     * que `RefreshDatabase` ne migre la base ; un `beforeEach` de Pest ne
+     * passe qu'après. Or la migration touche déjà le magasin du cache
+     * (`forgetCachedPermissions()`) : contre un Redis muet, chaque test du
+     * groupe tombait sur l'erreur brute de la connexion, sans dire pourquoi.
+     * `RedisReel::exiger()` lit donc la configuration et le serveur ici, et
+     * fait échouer le test, en le disant, avant toute migration. Les deux
+     * bases se vident ensuite, migration faite, puis à la fin du test.
+     *
+     * @return array<class-string, class-string>
+     */
+    #[\Override]
+    protected function setUpTraits(): array
+    {
+        if (! in_array(RedisReel::GROUPE, $this->groups(), true)) {
+            /** @var array<class-string, class-string> */
+            return parent::setUpTraits();
+        }
+
+        RedisReel::exiger();
+
+        /** @var array<class-string, class-string> $traits */
+        $traits = parent::setUpTraits();
+
+        RedisReel::vider();
+        $this->beforeApplicationDestroyed(static function (): void {
+            RedisReel::vider();
+        });
+
+        return $traits;
     }
 }
