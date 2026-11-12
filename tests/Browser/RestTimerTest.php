@@ -17,27 +17,27 @@ class RestTimerTest extends DuskTestCase
     use DatabaseTruncation;
 
     /**
-     * L'etat du bouton, tel que l'utilisateur l'entend.
+     * L'etat enfonce de la coche (`aria-pressed`, « true » ou « false »).
      *
      * Sert a dire ce qu'on a trouve quand l'attente echoue, plutot que de
      * laisser un « Waited 10 seconds for [selector] » qui ne distingue pas un
      * clic perdu d'une bascule dans le mauvais sens.
      */
-    private function toggleLabel(Browser $browser): string
+    private function togglePressed(Browser $browser): string
     {
         return (string) $browser->attribute('[dusk="complete-set-0-0"]', 'aria-pressed');
     }
 
     /**
-     * Attend que le bouton porte le libelle voulu, et dit ce qu'il porte sinon.
+     * Attend que la coche porte l'etat voulu, et dit ce qu'elle porte sinon.
      */
     private function waitForToggle(Browser $browser, string $label): void
     {
         $browser->waitUsing(
             10,
             100,
-            fn (): bool => $this->toggleLabel($browser) === $label,
-            "Le bouton de la serie devait porter « {$label} », il porte « {$this->toggleLabel($browser)} »",
+            fn (): bool => $this->togglePressed($browser) === $label,
+            "La coche de la serie devait valoir « {$label} », elle vaut « {$this->togglePressed($browser)} »",
         );
     }
 

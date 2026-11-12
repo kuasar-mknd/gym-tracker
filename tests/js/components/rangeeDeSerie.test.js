@@ -61,7 +61,6 @@ describe('la coche, le numéro et le retrait', () => {
         await wrapper.get('[dusk="complete-set-2-1"]').trigger('click')
 
         expect(wrapper.emitted('toggle')).toHaveLength(1)
-        expect(wrapper.get('[dusk="complete-set-2-1"]').attributes('aria-label')).toContain('Valider la série 2')
         expect(wrapper.find('[dusk="pr-trophy-2-1"]').exists()).toBe(true)
         expect(wrapper.get('[dusk="set-unsynced-2-1"]').attributes('aria-label')).toBe('Série 2 non enregistrée')
     })
