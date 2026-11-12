@@ -109,7 +109,7 @@ it('montre, au retour par Avance, la série ajoutée et cochée sans réseau, et
     expect(document.querySelector('[dusk="set-unsynced-0-1"]').getAttribute('aria-label')).toBe(
         'Série 2 non enregistrée',
     )
-    expect(document.querySelector('[dusk="complete-set-0-1"]').getAttribute('aria-label')).toBe('Annuler la série')
+    expect(document.querySelector('[dusk="complete-set-0-1"]').getAttribute('aria-pressed')).toBe('true')
 
     // Saisie après le retour : elle se fond dans la même entrée, qui reste seule.
     await saisir('[dusk="weight-input-0-1"]', '82.5')

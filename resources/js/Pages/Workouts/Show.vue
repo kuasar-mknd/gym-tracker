@@ -391,7 +391,6 @@ onUnmounted(() => {
             :reglage-desactive="surUneCopie"
             :raison-du-reglage="raisonDUneEcriture"
             :sortie-audio="sortieAudio"
-            @finished="showTimer = false"
             @close="showTimer = false"
             @update:auto-rest-timer="setAutoRestTimer"
             dusk="rest-timer"

@@ -155,7 +155,7 @@ class SeanceRouverteHorsLigneTest extends DuskTestCase
             ->waitFor('[dusk="set-unsynced-0-1"]', 15)
             ->assertValue('[dusk="weight-input-0-1"]', '82.5')
             ->assertValue('[dusk="reps-input-0-1"]', '7')
-            ->assertAttribute('[dusk="complete-set-0-1"]', 'aria-label', 'Annuler la série')
+            ->assertAttribute('[dusk="complete-set-0-1"]', 'aria-pressed', 'true')
             // La première série, enregistrée avant la coupure, n'attend rien.
             ->assertMissing('[dusk="set-unsynced-0-0"]')
             ->assertScript("document.querySelector('[dusk=\"set-unsynced-0-1\"] .material-symbols-outlined')?.textContent.trim()", 'cloud_off');
