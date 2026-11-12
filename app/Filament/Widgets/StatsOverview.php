@@ -7,32 +7,46 @@ namespace App\Filament\Widgets;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
 
 class StatsOverview extends StatsOverviewWidget
 {
-    /**
-     * Ces encarts montrent des comptes (noms, adresses, effectifs) : ils
-     * suivent la capacité qui ouvre la liste des utilisateurs.
-     */
-    #[\Override]
-    public static function canView(): bool
-    {
-        return auth()->user()?->can('ViewAny:User') === true;
-    }
-
     #[\Override]
     protected ?string $pollingInterval = '30s';
 
     /**
      * Les tuiles du tableau de bord. « Comptes » et « Nouveaux comptes (7 j) »
      * ne comptent que les comptes ouverts ; ceux qui attendent encore le lien
-     * envoyé à leur adresse se comptent à part, sous « Comptes ».
+     * envoyé à leur adresse se comptent à part, sous « Comptes ». Ces deux
+     * tuiles montrent des effectifs de comptes : elles suivent la capacité qui
+     * ouvre la liste des utilisateurs, et les deux autres restent ouvertes à
+     * tout administrateur du panneau.
      */
     #[\Override]
     protected function getStats(): array
+    {
+        $peutListerLesComptes = Filament::auth()->user()?->can('ViewAny:User') === true;
+
+        return [
+            ...($peutListerLesComptes ? $this->tuilesDeComptes() : []),
+            Stat::make('Séances du jour', $this->getWorkoutsTodayCount())
+                ->description("Séances commencées aujourd'hui")
+                ->descriptionIcon('heroicon-m-clock')
+                ->color('warning'),
+            Stat::make('Exercices communs', Exercise::whereNull('user_id')->count())
+                ->description('Taille de la bibliothèque commune')
+                ->descriptionIcon('heroicon-m-book-open')
+                ->color('primary'),
+        ];
+    }
+
+    /**
+     * @return list<Stat>
+     */
+    private function tuilesDeComptes(): array
     {
         return [
             Stat::make('Comptes', User::ouverts()->count())
@@ -44,14 +58,6 @@ class StatsOverview extends StatsOverviewWidget
                 ->description('Ouverts, inscrits ces sept derniers jours')
                 ->descriptionIcon('heroicon-m-user-plus')
                 ->color('info'),
-            Stat::make('Séances du jour', $this->getWorkoutsTodayCount())
-                ->description("Séances commencées aujourd'hui")
-                ->descriptionIcon('heroicon-m-clock')
-                ->color('warning'),
-            Stat::make('Exercices communs', Exercise::whereNull('user_id')->count())
-                ->description('Taille de la bibliothèque commune')
-                ->descriptionIcon('heroicon-m-book-open')
-                ->color('primary'),
         ];
     }
 

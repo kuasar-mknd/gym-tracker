@@ -119,6 +119,56 @@ it('ne recopie pas le point de terminaison, qui est une capacité', function ():
             && ! str_contains(json_encode($contexte, JSON_THROW_ON_ERROR), 'le-secret-de-l-appareil'));
 });
 
+it('ne recopie pas le chemin du point de terminaison dans la raison d’un échec de transport', function (): void {
+    $endpoint = 'https://web.push.apple.com/abcdef-le-secret-de-l-appareil';
+    [$user, $record] = comptePushAbonneA($endpoint);
+
+    transportPushQuiRepond(new MessageSentReport(
+        new Request('POST', $endpoint),
+        null,
+        false,
+        "cURL error 28: Operation timed out after 30001 milliseconds (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for {$endpoint}",
+    ));
+
+    $journal = Log::spy();
+
+    $user->notify(new PersonalRecordAchieved($record));
+
+    $journal->shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(fn (string $message, array $contexte): bool => is_string($contexte['raison'])
+            && str_contains($contexte['raison'], 'Operation timed out')
+            && str_ends_with($contexte['raison'], 'for https://web.push.apple.com')
+            && ! str_contains(json_encode($contexte, JSON_THROW_ON_ERROR), 'le-secret-de-l-appareil'));
+});
+
+it('réduit à son hôte toute URL de la raison, requête, fragment et identifiants compris', function (string $url, string $attendu): void {
+    $endpoint = 'https://web.push.apple.com/abcdef-le-secret-de-l-appareil';
+    [$user, $record] = comptePushAbonneA($endpoint);
+
+    transportPushQuiRepond(new MessageSentReport(new Request('POST', $endpoint), null, false, "cURL error 28: délai dépassé for {$url}"));
+
+    $journal = Log::spy();
+
+    $user->notify(new PersonalRecordAchieved($record));
+
+    $journal->shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(fn (string $message, array $contexte): bool => $contexte['raison'] === "cURL error 28: délai dépassé for {$attendu}");
+})->with([
+    'requête' => ['https://host.example?token=jeton-secret', 'https://host.example'],
+    'fragment' => ['https://host.example#fragment-secret', 'https://host.example'],
+    'identifiants' => [sprintf('https://%s@host.example/chemin-secret', 'user:mot-de-passe'), 'https://host.example'],
+    'schéma en majuscules, gardé tel quel' => ['HTTPS://host.example/chemin%2Fsecret', 'HTTPS://host.example'],
+    'http gardé' => ['http://host.example/chemin-secret', 'http://host.example'],
+    'parenthèse dans le chemin' => ['https://host.example/se(cr)et-suite', 'https://host.example'],
+    'arobase dans le mot de passe' => ['https://user:p@ss-secret@host.example/x', 'https://host.example'],
+    'secret après une apostrophe' => ["https://host.example/p'secret", 'https://host.example'],
+    'secret avant l\'arobase, après une requête' => ['https://jeton-secret?x@host.example/', '[adresse masquée]'],
+    'barre oblique inverse avant l\'arobase' => ['https://host.example\\@secret/x', '[adresse masquée]'],
+    'hôte vide' => ['https://user:mot-de-passe@/chemin-secret', '[adresse masquée]'],
+]);
+
 it('ne dit rien quand la remise réussit', function (): void {
     $endpoint = 'https://web.push.apple.com/abcdef-le-secret-de-l-appareil';
     [$user, $record] = comptePushAbonneA($endpoint);

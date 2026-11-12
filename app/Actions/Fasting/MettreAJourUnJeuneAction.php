@@ -17,8 +17,7 @@ final class MettreAJourUnJeuneAction
      *
      * @param  array<string, mixed>  $donnees
      *
-     * @throws ValidationException Si le compte a déjà un autre jeûne en cours.
-     * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou reste pris plus de `DemarrerUnJeuneAction::ATTENTE_DU_VERROU` secondes.
+     * @throws ValidationException Si le compte a déjà un autre jeûne en cours, ou si le verrou reste pris plus de `DemarrerUnJeuneAction::ATTENTE_DU_VERROU` secondes.
      */
     public function execute(User $user, Fast $fast, array $donnees): Fast
     {
@@ -28,19 +27,18 @@ final class MettreAJourUnJeuneAction
             return $fast;
         }
 
-        DemarrerUnJeuneAction::verrouDuCompte($user)
-            ->block(DemarrerUnJeuneAction::ATTENTE_DU_VERROU, function () use ($user, $fast, $donnees): void {
-                $autreEnCours = $user->fasts()
-                    ->where('status', 'active')
-                    ->whereKeyNot($fast->getKey())
-                    ->exists();
+        DemarrerUnJeuneAction::sousLeVerrou($user, function () use ($user, $fast, $donnees): void {
+            $autreEnCours = $user->fasts()
+                ->where('status', 'active')
+                ->whereKeyNot($fast->getKey())
+                ->exists();
 
-                if ($autreEnCours) {
-                    throw ValidationException::withMessages(['base' => DemarrerUnJeuneAction::MESSAGE]);
-                }
+            if ($autreEnCours) {
+                throw ValidationException::withMessages(['base' => DemarrerUnJeuneAction::MESSAGE]);
+            }
 
-                $fast->update($donnees);
-            });
+            $fast->update($donnees);
+        });
 
         return $fast;
     }

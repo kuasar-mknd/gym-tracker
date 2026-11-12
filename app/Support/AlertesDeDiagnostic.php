@@ -29,9 +29,10 @@ use Illuminate\Support\Facades\Notification;
  * validation de transaction : le courrier ne dépend d'aucune ligne en base.
  *
  * Les limites vivent dans le cache, et une clef évincée coûte un courriel de
- * plus, jamais un de moins. Un créneau n'est pris que si le courriel part : un
- * envoi sans adresse valide ou en échec rend le créneau, et le prochain appel
- * réessaie.
+ * plus, jamais un de moins. Un créneau est pris dès que le courriel est mis en
+ * file : sans adresse valide ou si la mise en file échoue, il est rendu et le
+ * prochain appel réessaie ; une fois en file, les essais de la notification
+ * (`#[Tries]`, `#[Backoff]`) portent les pannes passagères du courrier.
  *
  * - Premier usage : un courriel par jeton, pour toute sa vie.
  * - Jeton révoqué ou expiré présenté : un courriel par jeton et par quinze

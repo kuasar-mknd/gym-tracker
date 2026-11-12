@@ -6,6 +6,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\User;
 use App\Support\Charte;
+use Filament\Facades\Filament;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
@@ -18,7 +19,7 @@ class UserActivityChart extends ChartWidget
     #[\Override]
     public static function canView(): bool
     {
-        return auth()->user()?->can('ViewAny:User') === true;
+        return Filament::auth()->user()?->can('ViewAny:User') === true;
     }
 
     #[\Override]
