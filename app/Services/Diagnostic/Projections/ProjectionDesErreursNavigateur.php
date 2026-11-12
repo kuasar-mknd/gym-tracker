@@ -151,7 +151,8 @@ final class ProjectionDesErreursNavigateur
     /**
      * L'hôte et le chemin d'une page : ni schéma, ni compte (`user:secret@`),
      * ni port, ni chaîne de requête, ni fragment. Un texte qui n'est pas une
-     * adresse ne donne rien.
+     * adresse ne garde que ce que `parse_url()` y lit comme chemin, avant son
+     * expurgation (`TexteNonFiable`), ou rien s'il la refuse.
      */
     private static function page(string $url): string
     {

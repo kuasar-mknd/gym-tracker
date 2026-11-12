@@ -57,7 +57,7 @@ class ExigeUnJetonDeDiagnostic
     /** Le nombre d'éléments rendus, que le contrôleur pose pour l'audit. */
     public const string ELEMENTS = 'diagnostic.elements';
 
-    /** Les paramètres validés que le contrôleur pose pour l'audit : des nombres et des instants, jamais un texte reçu. */
+    /** Les paramètres validés que le contrôleur pose pour l'audit : des nombres, des instants et une empreinte contrainte par la route, jamais un texte reçu. */
     public const string PARAMETRES = 'diagnostic.parametres';
 
     public const int REQUETES_PAR_MINUTE = 30;

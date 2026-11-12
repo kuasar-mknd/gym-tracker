@@ -129,6 +129,33 @@ function coutSemer(int $depart, int $combien): array
 }
 
 /**
+ * Ajoute `$combien` occurrences au premier groupe d'exceptions, à la première
+ * tâche (des échecs) et au premier groupe d'erreurs navigateur : les routes de
+ * détail lisent ces lignes-là, que `coutSemer()` ne multiplie pas.
+ *
+ * @param  array{exception: int, tache: int}  $ids
+ */
+function coutAjouterDesOccurrences(array $ids, int $combien): void
+{
+    $compte = User::factory()->create();
+
+    foreach (range(1, $combien) as $numero) {
+        DB::table('filament_exceptions_table')->insert([
+            'type' => RuntimeException::class, 'code' => '0', 'message' => 'boum', 'file' => base_path('app/Models/User.php'), 'line' => 1,
+            'trace' => '[]', 'method' => 'GET', 'path' => '/seances/'.$numero, 'created_at' => now()->subMinutes(5), 'updated_at' => now(),
+        ]);
+        DB::table('erreurs_navigateur')->insert([
+            'user_id' => $compte->id, 'type' => 'error', 'message' => 'boum', 'ligne' => 1, 'url' => 'https://gym.example.org/seances/1',
+            'agent' => 'Mozilla/5.0 Firefox/130.0', 'empreinte' => md5('erreur-1'), 'created_at' => now()->subHours(3), 'updated_at' => now()->subHours(3),
+        ]);
+        DB::table('monitored_scheduled_task_log_items')->insert([
+            'monitored_scheduled_task_id' => $ids['tache'], 'type' => 'failed', 'meta' => '{"runtime":1,"exit_code":1,"failure_message":"boum"}',
+            'created_at' => now()->subHours(3), 'updated_at' => now()->subHours(3),
+        ]);
+    }
+}
+
+/**
  * L'adresse de chaque route de `PORTEES`, par son nom. Une route que cette
  * liste ne connaît pas fait échouer le test.
  *
@@ -174,7 +201,7 @@ function coutDeLAppel(string $nom, array $ids): int
 
 it('coûte le même nombre de requêtes SQL devant une ligne et devant cinquante par source, sur chaque route', function (): void {
     $ids = coutSemer(1, 1);
-    // Un premier passage, non compté : les permissions du créateur se chargent une fois par processus.
+    // Un premier passage, non compté : le paquet des permissions charge son catalogue (deux requêtes) une fois par processus, que `Cache::flush()` ne vide pas ; le créateur et ses rôles se relisent à chaque appel.
     foreach (array_keys(ExigeUnJetonDeDiagnostic::PORTEES) as $nom) {
         coutDeLAppel($nom, $ids);
     }
@@ -184,6 +211,7 @@ it('coûte le même nombre de requêtes SQL devant une ligne et devant cinquante
     }
 
     coutSemer(2, 49);
+    coutAjouterDesOccurrences($ids, 49);
     $devantCinquante = [];
     foreach (array_keys(ExigeUnJetonDeDiagnostic::PORTEES) as $nom) {
         $devantCinquante[$nom] = coutDeLAppel($nom, $ids);
