@@ -103,12 +103,12 @@ it('ne lit ni les erreurs d’un compte supprimé, ni celles d’un compte non v
         ->and(new ProjectionDesErreursNavigateur()->detail(md5('non-verifie'), erreursNavigateurDiagnosticFenetre(), true))->toBeNull();
 });
 
-it('rend au détail, sous TexteBrut seulement, le message, la page sans requête ni fragment et vingt lignes de pile', function (): void {
+it('rend au détail, sous TexteBrut seulement, le message, la page réduite à son hôte et son chemin et vingt lignes de pile', function (): void {
     $compte = User::factory()->create();
     erreursNavigateurDiagnosticRapporter($compte, 'detail', ['message' => 'ancien']);
     erreursNavigateurDiagnosticRapporter($compte, 'detail', [
         'message' => 'récent',
-        'url' => 'https://gym.example.org/seances/3?note=privee#ancre',
+        'url' => 'https://camille:secret@gym.example.org:8443/seances/3?note=privee#ancre',
         'pile' => implode("\n", array_map(static fn (int $ligne): string => "at ligne {$ligne}", range(1, 25))),
     ]);
 
@@ -120,7 +120,7 @@ it('rend au détail, sous TexteBrut seulement, le message, la page sans requête
         ->and($sans['echantillon'] ?? null)->toBeFalse()
         ->and($avec['non_fiable'] ?? null)->toEqual([
             'message' => new TexteNonFiable('récent', ProjectionDesErreursNavigateur::BUDGET_DU_MESSAGE),
-            'page' => new TexteNonFiable('https://gym.example.org/seances/3', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
+            'page' => new TexteNonFiable('gym.example.org/seances/3', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
             'pile' => new TexteNonFiable(implode("\n", array_map(static fn (int $ligne): string => "at ligne {$ligne}", range(1, ProjectionDesErreursNavigateur::LIGNES_DE_PILE))), ProjectionDesErreursNavigateur::BUDGET_DE_LA_PILE),
         ])
         ->and(new ProjectionDesErreursNavigateur()->detail('pas-une-empreinte', erreursNavigateurDiagnosticFenetre(), true))->toBeNull();

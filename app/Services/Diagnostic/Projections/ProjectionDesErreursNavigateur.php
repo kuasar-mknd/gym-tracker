@@ -26,7 +26,7 @@ use stdClass;
  * les plus récents : un compte seul ne pousse pas son erreur devant celle
  * de plusieurs. Les erreurs d'un compte supprimé ou non vérifié ne sont
  * pas lues. Le détail d'un groupe ajoute,
- * avec `TexteBrut`, le message, la page sans sa chaîne de requête et les
+ * avec `TexteBrut`, le message, la page (hôte et chemin seuls) et les
  * premières lignes de la pile de sa dernière occurrence, sous `non_fiable`,
  * lus de cette seule ligne : le groupe en compte jusqu'à 5 000, et leurs
  * piles ne tiendraient pas dans la mémoire d'une requête. Jamais le compte,
@@ -49,7 +49,7 @@ final class ProjectionDesErreursNavigateur
      */
     public function liste(FenetreDeDiagnostic $fenetre): array
     {
-        $lignes = $this->erreurs($fenetre->depuis)->select(self::COLONNES)->limit(LecturesBornees::LIGNES_AU_PLUS + 1)->get();
+        $lignes = $this->erreurs($fenetre->depuis)->limit(LecturesBornees::LIGNES_AU_PLUS + 1)->get();
         $groupes = $this->regrouper(LecturesBornees::bornees($lignes));
 
         return [
@@ -68,7 +68,6 @@ final class ProjectionDesErreursNavigateur
     public function detail(string $empreinte, FenetreDeDiagnostic $fenetre, bool $texteBrut): ?array
     {
         $lignes = $this->erreurs($fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS))
-            ->select(self::COLONNES)
             ->where('e.empreinte', Vocabulaire::forme(Vocabulaire::EMPREINTE, $empreinte))
             ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
             ->get();
@@ -85,12 +84,12 @@ final class ProjectionDesErreursNavigateur
 
     /**
      * Les erreurs des comptes vérifiés, de la plus récente à la plus
-     * ancienne.
+     * ancienne, par leurs seules colonnes nommées et sous la borne de temps
+     * de la base : l'indication vit dans le `select`, posé avant le reste.
      */
     private function erreurs(CarbonImmutable $depuis): Builder
     {
-        return ErreurNavigateur::query()->toBase()
-            ->from(new ErreurNavigateur()->getTable(), 'e')
+        return LecturesBornees::requete(ErreurNavigateur::query()->toBase()->from(new ErreurNavigateur()->getTable(), 'e'), self::COLONNES)
             ->join('users as u', 'u.id', '=', 'e.user_id')
             ->whereNotNull('u.email_verified_at')
             ->where('e.created_at', '>=', $depuis)
@@ -128,14 +127,14 @@ final class ProjectionDesErreursNavigateur
     private function texte(mixed $identifiant, bool $texteBrut): array
     {
         return match ($texteBrut) {
-            true => ['non_fiable' => $this->texteDe(ErreurNavigateur::query()->toBase()->select(['message', 'url', 'pile'])->where('id', $identifiant)->first())],
+            true => ['non_fiable' => $this->texteDe(LecturesBornees::requete(ErreurNavigateur::query()->toBase(), ['message', 'url', 'pile'])->where('id', $identifiant)->first())],
             false => [],
         };
     }
 
     /**
-     * Le message, la page sans sa chaîne de requête et les premières lignes
-     * de la pile d'une occurrence ; rien d'une occurrence effacée entre deux
+     * Le message, la page (hôte et chemin) et les premières lignes de la pile
+     * d'une occurrence ; rien d'une occurrence effacée entre deux
      * lectures.
      *
      * @return array<string, TexteNonFiable>
@@ -144,8 +143,20 @@ final class ProjectionDesErreursNavigateur
     {
         return [
             'message' => new TexteNonFiable(ValeurLue::texte($occurrence?->message), self::BUDGET_DU_MESSAGE),
-            'page' => new TexteNonFiable((string) preg_replace('/[?#].*$/s', '', ValeurLue::texte($occurrence?->url)), self::BUDGET_DE_LA_PAGE),
+            'page' => new TexteNonFiable(self::page(ValeurLue::texte($occurrence?->url)), self::BUDGET_DE_LA_PAGE),
             'pile' => new TexteNonFiable(implode("\n", array_slice(explode("\n", ValeurLue::texte($occurrence?->pile)), 0, self::LIGNES_DE_PILE)), self::BUDGET_DE_LA_PILE),
         ];
+    }
+
+    /**
+     * L'hôte et le chemin d'une page : ni schéma, ni compte (`user:secret@`),
+     * ni port, ni chaîne de requête, ni fragment. Un texte qui n'est pas une
+     * adresse ne donne rien.
+     */
+    private static function page(string $url): string
+    {
+        $adresse = parse_url($url);
+
+        return is_array($adresse) ? ($adresse['host'] ?? '').($adresse['path'] ?? '') : '';
     }
 }

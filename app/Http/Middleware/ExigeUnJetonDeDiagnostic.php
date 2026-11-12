@@ -81,6 +81,8 @@ class ExigeUnJetonDeDiagnostic
         'diagnostic.taches.index' => PorteeDeDiagnostic::Sante,
         'diagnostic.taches.show' => PorteeDeDiagnostic::Sante,
         'diagnostic.files.index' => PorteeDeDiagnostic::Files,
+        'diagnostic.erreurs-navigateur.index' => PorteeDeDiagnostic::ErreursNavigateur,
+        'diagnostic.erreurs-navigateur.show' => PorteeDeDiagnostic::ErreursNavigateur,
     ];
 
     private const string MOTIF_DE_L_ENTETE = '/^Bearer '.JetonDeDiagnostic::PREFIXE.'(?<identifiant>[a-z0-9]{'.JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT.'})_(?<secret>[A-Za-z0-9]{'.JetonDeDiagnostic::LONGUEUR_DU_SECRET.'})$/D';
