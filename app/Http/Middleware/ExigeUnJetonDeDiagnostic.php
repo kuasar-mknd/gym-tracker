@@ -15,6 +15,7 @@ use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use LogicException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
@@ -25,13 +26,16 @@ use Throwable;
  * limiteurs se relisent à chaque requête, jamais d'une propriété ou d'un
  * singleton.
  *
- * Dans l'ordre : l'interrupteur `DIAGNOSTIC_ENABLED` ; HTTPS en production ;
- * `Authorization: Bearer` de la forme exacte du jeton, et nulle part
- * ailleurs ; la ligne cherchée par l'identifiant et l'empreinte du secret
- * comparée par `hash_equals`, contre une empreinte factice quand
- * l'identifiant est inconnu ; ni révoqué ni expiré ; un créateur qui existe
- * et garde la capacité ; la portée que la route déclare dans `PORTEES`, lue
- * par son nom ; enfin les deux limiteurs du jeton.
+ * Dans l'ordre : l'en-tête `Authorization: Bearer` de la forme exacte du
+ * jeton, et nulle part ailleurs ; la ligne cherchée par l'identifiant et
+ * l'empreinte du secret comparée par `hash_equals`, contre une empreinte
+ * factice quand l'identifiant est inconnu (ces trois lectures se font avant
+ * l'interrupteur, pour qu'une requête bien formée coûte la même lecture
+ * qu'il soit coupé ou non) ; l'interrupteur `DIAGNOSTIC_ENABLED` ; HTTPS en
+ * production ; ni révoqué ni expiré ; un créateur qui existe et garde la
+ * capacité ; la route déclarée dans `PORTEES` ; les deux limiteurs du jeton ;
+ * enfin la portée, que la route déclare dans `PORTEES` et qui se lit par son
+ * nom : un 403 compte donc comme un appel.
  *
  * Tout refus d'avant le jeton, et celui d'une route sans portée, lève un
  * `NotFoundHttpException` nu, que le
@@ -93,6 +97,8 @@ class ExigeUnJetonDeDiagnostic
         $maintenant = now();
         $entete = $request->headers->get('Authorization');
 
+        [$ligne, $cause] = $this->examiner($request, $entete);
+
         if (config('app.diagnostic_enabled') !== true) {
             $this->refuser($request, 'coupe');
         }
@@ -101,7 +107,11 @@ class ExigeUnJetonDeDiagnostic
             $this->refuser($request, 'http');
         }
 
-        $jeton = $this->jetonPresente($request, $entete);
+        if ($cause !== null) {
+            $this->refuser($request, $cause, $ligne);
+        }
+
+        $jeton = $ligne ?? throw new LogicException('Un jeton reconnu a une ligne.');
         $this->verifierLaVieDuJeton($request, $jeton, $maintenant);
 
         $createurAutorise = $this->lire($request, static function () use ($jeton): bool {
@@ -132,27 +142,34 @@ class ExigeUnJetonDeDiagnostic
     }
 
     /**
-     * Le jeton que l'en-tête présente, sa ligne trouvée par l'identifiant et
-     * son secret exact. Tout autre cas est un refus.
+     * La ligne trouvée par l'identifiant et la cause du refus, ou `null` quand
+     * le secret est exact. Se fait avant l'interrupteur, coupé ou non.
+     *
+     * @return array{0: ?JetonDeDiagnostic, 1: ?string}
      */
-    private function jetonPresente(Request $request, #[\SensitiveParameter] mixed $entete): JetonDeDiagnostic
+    private function examiner(Request $request, #[\SensitiveParameter] mixed $entete): array
     {
         if (! is_string($entete)) {
-            $this->refuser($request, 'absent');
+            return [null, 'absent'];
         }
 
         if (preg_match(self::MOTIF_DE_L_ENTETE, $entete, $champs) !== 1) {
-            $this->refuser($request, 'mal-forme');
+            return [null, 'mal-forme'];
         }
 
-        $ligne = $this->lire($request, static fn (): ?JetonDeDiagnostic => JetonDeDiagnostic::query()->where('identifiant', $champs['identifiant'])->first());
+        return $this->confronter($request, $champs['identifiant'], $champs['secret']);
+    }
+
+    /**
+     * @return array{0: ?JetonDeDiagnostic, 1: ?string}
+     */
+    private function confronter(Request $request, string $identifiant, #[\SensitiveParameter] string $secret): array
+    {
+        $ligne = $this->lire($request, static fn (): ?JetonDeDiagnostic => JetonDeDiagnostic::query()->where('identifiant', $identifiant)->first());
         $attendue = $ligne instanceof JetonDeDiagnostic ? $ligne->empreinte : self::EMPREINTE_FACTICE;
+        $exact = hash_equals($attendue, JetonDeDiagnostic::empreinteDe($secret)) && $ligne instanceof JetonDeDiagnostic;
 
-        if (! hash_equals($attendue, JetonDeDiagnostic::empreinteDe($champs['secret'])) || ! $ligne instanceof JetonDeDiagnostic) {
-            $this->refuser($request, 'inconnu', $ligne);
-        }
-
-        return $ligne;
+        return [$ligne, $exact ? null : 'inconnu'];
     }
 
     private function verifierLaVieDuJeton(Request $request, JetonDeDiagnostic $jeton, CarbonInterface $maintenant): void
@@ -164,32 +181,32 @@ class ExigeUnJetonDeDiagnostic
         };
 
         if ($cause !== null) {
-            resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton);
+            resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton, $maintenant);
 
             $this->refuser($request, $cause, $jeton);
         }
     }
 
     /**
-     * Ce que la route rend, une fois le jeton reconnu : la portée, les
-     * limiteurs, la trace d'usage, le contrôleur, l'audit.
+     * Ce que la route rend, une fois le jeton reconnu : les limiteurs, la
+     * portée, la trace d'usage, le contrôleur, l'audit.
      *
      * @param  Closure(Request): Response  $next
      */
     private function servir(Request $request, Closure $next, JetonDeDiagnostic $jeton, string $nomDeLaRoute, CarbonInterface $maintenant, int|float $debut): Response
     {
-        $portee = self::PORTEES[$nomDeLaRoute];
-
-        if ($portee instanceof PorteeDeDiagnostic && ! in_array($portee->value, $jeton->portees, true)) {
-            return $this->audite($request, $jeton, $nomDeLaRoute, $this->reponseJson(403, 'portee-non-accordee'), $debut);
-        }
-
         $attente = $this->tropDeRequetes($jeton);
 
         if ($attente !== null) {
             resolve(AlertesDeDiagnostic::class)->debitDepasse($jeton);
 
             return $this->audite($request, $jeton, $nomDeLaRoute, $this->reponseJson(429, 'debit-depasse', ['Retry-After' => (string) $attente]), $debut);
+        }
+
+        $portee = self::PORTEES[$nomDeLaRoute];
+
+        if ($portee instanceof PorteeDeDiagnostic && ! in_array($portee->value, $jeton->portees, true)) {
+            return $this->audite($request, $jeton, $nomDeLaRoute, $this->reponseJson(403, 'portee-non-accordee'), $debut);
         }
 
         $this->noterLUsage($jeton, $request->ip(), $maintenant);
@@ -200,27 +217,34 @@ class ExigeUnJetonDeDiagnostic
 
     /**
      * Les secondes à attendre quand le jeton a épuisé la minute ou l'heure,
-     * sinon `null` : alors les deux compteurs comptent la requête. Un refus
-     * ne compte contre aucun des deux.
+     * sinon `null`. La requête se compte d'abord, et le compte rendu par
+     * l'incrément, atomique, la juge : lire puis compter laissait deux
+     * travailleurs passer ensemble la dernière place. Un refus de la minute
+     * ne compte pas dans l'heure.
      */
     private function tropDeRequetes(JetonDeDiagnostic $jeton): ?int
     {
         $parMinute = 'diagnostic:debit:minute:'.$jeton->identifiant;
         $parHeure = 'diagnostic:debit:heure:'.$jeton->identifiant;
 
-        $attentes = array_filter([
-            RateLimiter::tooManyAttempts($parMinute, self::REQUETES_PAR_MINUTE) ? RateLimiter::availableIn($parMinute) : null,
-            RateLimiter::tooManyAttempts($parHeure, self::REQUETES_PAR_HEURE) ? RateLimiter::availableIn($parHeure) : null,
-        ], static fn (?int $secondes): bool => $secondes !== null);
-
-        if ($attentes !== []) {
-            return max([1, ...$attentes]);
+        if (RateLimiter::hit($parMinute, 60) > self::REQUETES_PAR_MINUTE) {
+            return max(1, RateLimiter::availableIn($parMinute), $this->attenteDeLHeureEpuisee($parHeure));
         }
 
-        RateLimiter::hit($parMinute, 60);
-        RateLimiter::hit($parHeure, 3600);
+        if (RateLimiter::hit($parHeure, 3600) > self::REQUETES_PAR_HEURE) {
+            return max(1, RateLimiter::availableIn($parHeure));
+        }
 
         return null;
+    }
+
+    /**
+     * Les secondes de l'heure quand elle est épuisée, sinon zéro ; sans
+     * ajouter de tentative.
+     */
+    private function attenteDeLHeureEpuisee(string $parHeure): int
+    {
+        return RateLimiter::tooManyAttempts($parHeure, self::REQUETES_PAR_HEURE) ? RateLimiter::availableIn($parHeure) : 0;
     }
 
     /**

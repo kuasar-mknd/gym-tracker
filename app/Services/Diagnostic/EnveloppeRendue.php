@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Services\Diagnostic;
 
+use JsonException;
+
 /**
  * Une enveloppe prête à lire, et le nombre de caractères invisibles retirés
  * pour l'écrire.
  */
 final readonly class EnveloppeRendue
 {
+    /** Toute réponse de l'accès de diagnostic fait moins de 256 Kio (#2032). */
+    public const int OCTETS_AU_PLUS = 262_144;
+
     /**
      * @param  array{donnees: array<array-key, mixed>, suivant: int|null, tronque: bool, echantillon: bool, genere_le: string|null, note: string}  $enveloppe
      */
@@ -20,13 +25,16 @@ final readonly class EnveloppeRendue
     }
 
     /**
-     * L'enveloppe en JSON, telle que l'agent la lirait.
+     * L'enveloppe en JSON, telle que l'agent la lirait. Un encodage qui
+     * échoue lève (`JsonException`) : il ne rend jamais un corps vide.
+     *
+     * @throws JsonException
      */
     public function json(bool $lisible = false): string
     {
-        return (string) json_encode(
+        return json_encode(
             $this->enveloppe,
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | ($lisible ? JSON_PRETTY_PRINT : 0),
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | ($lisible ? JSON_PRETTY_PRINT : 0),
         );
     }
 

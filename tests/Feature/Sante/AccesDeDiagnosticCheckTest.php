@@ -56,7 +56,7 @@ it('dit « Ouvert, aucun jeton actif » quand l’accès est ouvert sans jeton',
 
 it('passe à l’orange pendant vingt-quatre heures après la présentation d’un jeton mort', function (): void {
     config()->set('app.diagnostic_enabled', true);
-    resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente(JetonDeDiagnostic::factory()->revoque()->create());
+    resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente(JetonDeDiagnostic::factory()->revoque()->create(), now());
 
     expect(AccesDeDiagnosticCheck::new()->run()->status->value)->toBe('warning');
 
