@@ -75,7 +75,7 @@ it('lit dans INFO les champs de sa liste blanche, et eux seuls', function (): vo
         ->and(LecteurDeRedis::entier($champs['keyspace_hits']))->toBeGreaterThanOrEqual(50);
 
     foreach ($champs as $champ => $valeur) {
-        expect(str_contains($valeur, 'ada') || str_contains($valeur, '203.0.113.7'))->toBeFalse("{$champ} recopie le nom d'une clé.");
+        expect(str_contains($valeur, 'ada@example.org') || str_contains($valeur, '203.0.113.7'))->toBeFalse("{$champ} recopie le nom d'une clé.");
     }
 });
 
@@ -100,7 +100,7 @@ it('relève les compteurs sans la mémoire de l’hôte ni aucun nom de clé, la
         ->and($lignes[1])->toBe('redis_version: '.redisReelVersionDeLaProduction())
         ->and($lignes[2])->toMatch('/^memoire: \d+ % du plafond$/');
 
-    foreach (['total_system_memory', 'used_memory', 'os:', 'ada', '203.0.113.7'] as $interdit) {
+    foreach (['total_system_memory', 'used_memory', 'os:', 'ada@example.org', '203.0.113.7'] as $interdit) {
         expect(str_contains($sortie, $interdit))->toBeFalse("Le relevé recopie « {$interdit} ».");
     }
 

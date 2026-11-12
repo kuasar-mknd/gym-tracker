@@ -322,7 +322,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             $browser->waitFor('[dusk="skip-rest-timer"]', 20)
                 ->click('[dusk="skip-rest-timer"]')
-                ->waitUntilMissing('[dusk="skip-rest-timer"]', 15);
+                ->waitUntilMissing('[dusk="rest-timer"]', 15);
 
             // 8. Finish Workout
             $browser->clickWhenSettled('[dusk="finish-workout-mobile"]', 20);
