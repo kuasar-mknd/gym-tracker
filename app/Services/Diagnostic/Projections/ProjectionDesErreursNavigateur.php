@@ -136,7 +136,7 @@ final class ProjectionDesErreursNavigateur
     }
 
     /**
-     * Le message, la page (hôte et chemin) et les premières lignes de la pile
+     * Le message, la page (son chemin, sous un hôte remplacé par un marqueur) et les premières lignes de la pile
      * d'une occurrence ; rien d'une occurrence effacée entre deux
      * lectures.
      *
@@ -154,23 +154,48 @@ final class ProjectionDesErreursNavigateur
     /**
      * Le chemin d'une page sous un hôte masqué (`//[hôte]/chemin`) : ni
      * schéma, ni compte (`user:secret@`), ni port, ni chaîne de requête, ni
-     * fragment, et chaque segment fait de chiffres seuls (un identifiant de
-     * compte, `/verify-email/12/…`) devient `[n]`. Le nom d'hôte ne sort
-     * jamais : le masquer par motif (`MasqueLesCoordonnees`) laisserait passer
-     * un nom à un seul label ou une adresse en notation exotique. Sans hôte,
-     * seul un chemin absolu (`/seances/[n]`) reste : tout autre texte ne rend
-     * rien.
+     * fragment. Le nom d'hôte ne sort jamais : le masquer par motif
+     * (`MasqueLesCoordonnees`) laisserait passer un nom à un seul label ou une
+     * adresse en notation exotique. Sans hôte, seul un chemin absolu reste,
+     * que l'expurgation (`TexteNonFiable`) réduit encore (`/seances/3` rend
+     * `[chemin][n]`) ; tout autre texte ne rend rien.
      */
     private static function page(string $url): string
     {
         $adresse = parse_url($url);
-
-        $chemin = is_array($adresse) ? (string) preg_replace('#(?<=/)\d+(?=/|$)#', '[n]', $adresse['path'] ?? '') : '';
+        $chemin = is_array($adresse) ? self::chemin($adresse['path'] ?? '') : '';
 
         return match (true) {
             ! is_array($adresse) => '',
             isset($adresse['host']) => '//[hôte]'.$chemin,
             default => str_starts_with($chemin, '/') ? $chemin : '',
+        };
+    }
+
+    /**
+     * Un chemin segment par segment. Une adresse collée dans le chemin
+     * (`/x/http://hote/y`) est coupée à son premier `//`.
+     */
+    private static function chemin(string $chemin): string
+    {
+        return implode('/', array_map(self::segment(...), explode('/', (string) preg_replace('#//.*$#s', '', $chemin))));
+    }
+
+    /**
+     * Un segment, lu après le décodage des `%xx` et sans caractère invisible
+     * (sinon `%E2%80%8B12` ne passerait pas pour un nombre) : décodé, un
+     * segment qui contient `/`, une barre oblique inverse, `:` ou `@` devient
+     * `[segment]`, un identifiant numérique, avec ou sans extension (`12`,
+     * `12.json`), devient `[n]`.
+     */
+    private static function segment(string $segment): string
+    {
+        $lu = preg_replace('/[\p{C}\p{Z}\p{M}]/u', '', rawurldecode($segment));
+
+        return match (true) {
+            $lu === null, preg_match('~[/\\\\:@]~', $lu) === 1 => '[segment]',
+            preg_match('/^\d+(\.\w+)?$/', $lu) === 1 => '[n]',
+            default => $lu,
         };
     }
 }

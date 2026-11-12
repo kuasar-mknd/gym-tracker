@@ -194,7 +194,7 @@ it('rend sous TexteBrut le message, la page réduite et la pile, expurgés, sans
 
     expect(array_keys(routeErreursTableau($reponse->json('donnees.erreur_navigateur.non_fiable'))))->toBe(['message', 'page', 'pile'])
         ->and($reponse->json('donnees.erreur_navigateur.non_fiable.message'))->toContain('échec pour [courriel]')
-        ->and($reponse->json('donnees.erreur_navigateur.non_fiable.page'))->toStartWith('//[hôte]/reinit/[courriel]/[n]/')
+        ->and($reponse->json('donnees.erreur_navigateur.non_fiable.page'))->toStartWith('//[hôte]/reinit/[segment]/[n]/')
         ->and($reponse->json('donnees.erreur_navigateur.non_fiable.page'))->not->toContain('?')
         ->and($reponse->json('donnees.erreur_navigateur.non_fiable.pile'))->toContain('?[requête]');
 
@@ -348,6 +348,28 @@ it('lit vingt-quatre heures à la liste comme au détail, et jamais les comptes 
     routeErreursAppeler('/diagnostic/v1/erreurs-navigateur/'.md5('ancienne'), $cree['entete'])->assertNotFound();
     routeErreursAppeler('/diagnostic/v1/erreurs-navigateur/'.md5('recente'), $cree['entete'])->assertOk();
     routeErreursAppeler('/diagnostic/v1/erreurs-navigateur/'.md5('fantome'), $cree['entete'])->assertNotFound();
+});
+
+it('tient la frontière des vingt-quatre heures, à la liste comme au détail', function (): void {
+    $compte = User::factory()->create();
+    routeErreursPlanter('vingt-cinq', $compte, ['created_at' => now()->subHours(25), 'updated_at' => now()->subHours(25)]);
+    routeErreursPlanter('vingt-trois', $compte, ['created_at' => now()->subHours(23), 'updated_at' => now()->subHours(23)]);
+    $cree = routeErreursUnJeton();
+
+    $liste = routeErreursAppeler('/diagnostic/v1/erreurs-navigateur', $cree['entete'])->assertOk();
+
+    expect(array_column(routeErreursTableau($liste->json('donnees.erreurs_navigateur.groupes')), 'empreinte'))->toBe([md5('vingt-trois')]);
+    routeErreursAppeler('/diagnostic/v1/erreurs-navigateur/'.md5('vingt-cinq'), $cree['entete'])->assertNotFound();
+    routeErreursAppeler('/diagnostic/v1/erreurs-navigateur/'.md5('vingt-trois'), $cree['entete'])->assertOk();
+});
+
+it('rend « [chemin][n] », une fois expurgée, une page sans hôte', function (): void {
+    routeErreursPlanter('sans-hote', colonnes: ['url' => '/seances/3?x=1']);
+    $cree = routeErreursUnJeton(['erreurs-navigateur', 'texte-brut']);
+
+    $reponse = routeErreursAppeler('/diagnostic/v1/erreurs-navigateur/'.md5('sans-hote'), $cree['entete'])->assertOk();
+
+    expect($reponse->json('donnees.erreur_navigateur.non_fiable.page'))->toBe('[chemin][n]');
 });
 
 it('n’écrit rien en base pour une lecture, hors la trace d’usage du jeton, et borne chaque lecture de la table', function (string $route): void {

@@ -136,7 +136,7 @@ it('ne rend jamais le nom de l’hôte de la page, quelle qu’en soit la forme,
     expect(is_array($detail) && is_array($detail['non_fiable'] ?? null) ? ($detail['non_fiable']['page'] ?? null) : null)->toEqual(new TexteNonFiable($attendu, ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE));
 })->with([
     'un hôte à un label' => ['http://serveur/x', '//[hôte]/x'],
-    'un hôte à un label et un port' => ['//serveur:5001/x', '//[hôte]/x'],
+    'un hôte à un label et un port' => ['//serveur:8443/x', '//[hôte]/x'],
     'un hôte à tirets' => ['http://mon-serveur-seul/x', '//[hôte]/x'],
     'un domaine à label inconnu' => ['https://gymtracker.fitness/seances?x=1', '//[hôte]/seances'],
     'une adresse en hexadécimal' => ['http://0x7f000001/x', '//[hôte]/x'],
@@ -145,6 +145,12 @@ it('ne rend jamais le nom de l’hôte de la page, quelle qu’en soit la forme,
     'un identifiant en fin de chemin' => ['https://gym.example.org/seances/3', '//[hôte]/seances/[n]'],
     'un chemin absolu sans hôte' => ['/seances/3?x=1', '/seances/[n]'],
     'un texte qui n’est ni une adresse ni un chemin absolu' => ['serveur/x?token=1', ''],
+    'un identifiant derrière un caractère invisible' => ['https://gym.example.org/u/%E2%80%8B12', '//[hôte]/u/[n]'],
+    'un identifiant avec extension' => ['https://gym.example.org/users/12.json', '//[hôte]/users/[n]'],
+    'un chemin encodé qui cache un hôte' => ['https://gym.example.org/a%2F%2Fserveur%2Fy', '//[hôte]/[segment]'],
+    'une barre oblique inverse' => ['/\\serveur/x', '/[segment]/x'],
+    'une adresse collée dans le chemin' => ['https://gym.example.org/x/http://serveur/y', '//[hôte]/x/[segment]'],
+    'un compte dans un segment encodé' => ['https://gym.example.org/p/u%3Ap%40serveur', '//[hôte]/p/[segment]'],
     'un compte sans schéma' => ['u:hunter2@serveur.example/chemin', ''],
 ]);
 
