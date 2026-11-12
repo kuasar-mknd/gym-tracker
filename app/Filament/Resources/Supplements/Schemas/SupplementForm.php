@@ -8,6 +8,7 @@ use App\Models\Supplement;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Operation;
 
 class SupplementForm
 {
@@ -24,7 +25,8 @@ class SupplementForm
                 Select::make('user_id')->label('Compte')
                     ->relationship('user', 'name')
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->disabledOn(Operation::Edit),
                 TextInput::make('name')->label('Nom')
                     ->required()
                     ->maxLength(255),
