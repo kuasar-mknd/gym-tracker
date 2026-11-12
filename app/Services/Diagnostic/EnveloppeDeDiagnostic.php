@@ -28,13 +28,13 @@ final class EnveloppeDeDiagnostic
     /**
      * @param  array<string, mixed>  $donnees
      */
-    public function __invoke(array $donnees, CarbonInterface $maintenant, bool $tronque = false, bool $echantillon = false, ?int $suivant = null): EnveloppeRendue
+    public function __invoke(array $donnees, CarbonInterface $maintenant, bool $tronque = false, bool $echantillon = false): EnveloppeRendue
     {
         [$nettoyees, $invisibles] = $this->nettoyerLeTableau($donnees, false);
 
         return new EnveloppeRendue([
             'donnees' => $nettoyees,
-            'suivant' => $suivant,
+            'suivant' => null,
             'tronque' => $tronque,
             'echantillon' => $echantillon,
             'genere_le' => ValeurLue::instant($maintenant),

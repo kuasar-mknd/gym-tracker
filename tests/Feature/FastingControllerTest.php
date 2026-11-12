@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Actions\Fasting\DemarrerUnJeuneAction;
 use App\Models\Fast;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Sleep;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\delete;
@@ -70,6 +72,23 @@ describe('FastingController', function (): void {
                 ->assertSessionHasErrors(['base']);
 
             $this->assertDatabaseCount('fasts', 1);
+        });
+
+        it('answers a validation error, not a 500, when the account lock stays held', function (): void {
+            $user = User::factory()->create();
+            Cache::lock("jeunes-du-compte:{$user->id}", 60, 'un-autre-processus')->get();
+            Sleep::fake(syncWithCarbon: true);
+
+            actingAs($user)
+                ->post(route('tools.fasting.store'), [
+                    'start_time' => now()->toDateTimeString(),
+                    'target_duration_minutes' => 960,
+                    'type' => '16:8',
+                ])
+                ->assertRedirect()
+                ->assertSessionHasErrors(['base' => DemarrerUnJeuneAction::MESSAGE_VERROU_PRIS]);
+
+            $this->assertDatabaseCount('fasts', 0);
         });
 
         it('validates required fields', function (): void {

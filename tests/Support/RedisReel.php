@@ -25,7 +25,10 @@ use Throwable;
  * et à la fin du test : un test du groupe lancé sans vrai Redis échoue en le
  * disant, avant toute migration, jamais en passant sur un magasin `array`.
  * Chaque test part de deux bases vides et de compteurs remis à zéro : le
- * serveur doit être jetable.
+ * serveur doit être jetable : `exiger()` ne l'admet que sur la boucle locale
+ * (le service de la CI) ou quand `REDIS_REEL_JETABLE=1` le déclare : le Redis
+ * de développement du conteneur `redis` n'y passe que déclaré jetable, car
+ * `FLUSHDB` le viderait.
  */
 final class RedisReel
 {
@@ -44,6 +47,9 @@ final class RedisReel
         'queue.default' => 'redis',
     ];
 
+    /** La variable qui déclare jetable un serveur hors de la boucle locale. */
+    public const string VARIABLE_DU_SERVEUR_JETABLE = 'REDIS_REEL_JETABLE';
+
     /** @var list<string> */
     private const array CONNEXIONS = ['default', 'cache'];
 
@@ -56,7 +62,7 @@ final class RedisReel
      */
     public static function raisonDeNePasTourner(): ?string
     {
-        return self::raisonDuClient() ?? self::raisonDesPilotes() ?? self::raisonDesBases() ?? self::raisonDesConnexions();
+        return self::raisonDuClient() ?? self::raisonDesPilotes() ?? self::raisonDesBases() ?? self::raisonDuServeur() ?? self::raisonDesConnexions();
     }
 
     /**
@@ -161,6 +167,39 @@ final class RedisReel
 
             if ($valeur !== $attendu) {
                 return sprintf('%s vaut « %s » au lieu de « %s »', $cle, is_scalar($valeur) ? (string) $valeur : '?', $attendu);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Un `FLUSHDB` sur le Redis de développement emporterait ses sessions, son
+     * cache et sa file : le serveur doit être sur la boucle locale, ou déclaré
+     * jetable.
+     */
+    public static function raisonDuServeur(): ?string
+    {
+        if (filter_var(getenv(self::VARIABLE_DU_SERVEUR_JETABLE), FILTER_VALIDATE_BOOLEAN)) {
+            return null;
+        }
+
+        foreach (self::CONNEXIONS as $connexion) {
+            $url = config("database.redis.{$connexion}.url");
+
+            if (is_string($url) && $url !== '') {
+                return sprintf('la connexion %s est donnée par une URL (REDIS_URL), qui l\'emporte sur l\'hôte, et %s n\'est pas posé : le groupe vide les bases du serveur', $connexion, self::VARIABLE_DU_SERVEUR_JETABLE);
+            }
+
+            $hote = config("database.redis.{$connexion}.host");
+
+            if (! in_array($hote, ['127.0.0.1', 'localhost', '::1'], true)) {
+                return sprintf(
+                    'la connexion %s vise « %s », hors de la boucle locale, et %s n\'est pas posé : le groupe vide les bases du serveur',
+                    $connexion,
+                    is_scalar($hote) ? (string) $hote : '?',
+                    self::VARIABLE_DU_SERVEUR_JETABLE,
+                );
             }
         }
 

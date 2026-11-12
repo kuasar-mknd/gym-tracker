@@ -53,9 +53,6 @@ class ExigeUnJetonDeDiagnostic
     /** Le nombre d'éléments rendus, que le contrôleur pose pour l'audit. */
     public const string ELEMENTS = 'diagnostic.elements';
 
-    /** Les paramètres validés que le contrôleur pose pour l'audit : des nombres et des instants, jamais un texte reçu. */
-    public const string PARAMETRES = 'diagnostic.parametres';
-
     public const int REQUETES_PAR_MINUTE = 30;
 
     public const int REQUETES_PAR_HEURE = 300;
@@ -71,9 +68,6 @@ class ExigeUnJetonDeDiagnostic
     public const array PORTEES = [
         'diagnostic.etat' => null,
         'diagnostic.sante' => PorteeDeDiagnostic::Sante,
-        'diagnostic.exceptions.index' => PorteeDeDiagnostic::Exceptions,
-        'diagnostic.exceptions.show' => PorteeDeDiagnostic::Exceptions,
-        'diagnostic.exceptions.occurrences' => PorteeDeDiagnostic::Exceptions,
     ];
 
     private const string MOTIF_DE_L_ENTETE = '/^Bearer '.JetonDeDiagnostic::PREFIXE.'(?<identifiant>[a-z0-9]{'.JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT.'})_(?<secret>[A-Za-z0-9]{'.JetonDeDiagnostic::LONGUEUR_DU_SECRET.'})$/D';
@@ -253,12 +247,11 @@ class ExigeUnJetonDeDiagnostic
     private function audite(Request $request, JetonDeDiagnostic $jeton, string $nomDeLaRoute, Response $reponse, int|float $debut): Response
     {
         $elements = $request->attributes->get(self::ELEMENTS);
-        $parametres = $request->attributes->get(self::PARAMETRES);
 
         $this->journal->appel(
             $jeton,
             $nomDeLaRoute,
-            is_array($parametres) ? array_filter($parametres, is_string(...), ARRAY_FILTER_USE_KEY) : [],
+            [],
             $reponse->getStatusCode(),
             is_int($elements) ? $elements : 0,
             strlen((string) $reponse->getContent()),

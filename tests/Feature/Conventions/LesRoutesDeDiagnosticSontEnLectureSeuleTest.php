@@ -26,7 +26,7 @@ function lesRoutesDeDiagnostic(): array
 
 it('enregistre des routes de diagnostic', function (): void {
     expect(array_map(static fn (Route $route): ?string => $route->getName(), lesRoutesDeDiagnostic()))
-        ->toContain('diagnostic.etat', 'diagnostic.sante', 'diagnostic.exceptions.index', 'diagnostic.exceptions.show', 'diagnostic.exceptions.occurrences');
+        ->toContain('diagnostic.etat', 'diagnostic.sante');
 });
 
 it('ne sert chaque route de diagnostic qu’en GET et HEAD', function (): void {

@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Http\Requests\Diagnostic\ListeDesExceptionsRequest;
-use App\Http\Requests\Diagnostic\OccurrencesDUneExceptionRequest;
 use Illuminate\Foundation\Http\FormRequest;
 use Symfony\Component\Finder\Finder;
 
@@ -13,9 +11,7 @@ use Symfony\Component\Finder\Finder;
  * requêtes rendaient encore `true` sans regarder l'utilisateur et une n'avait
  * pas d'`authorize()` du tout : rien ne cassait, parce que `Authenticate`
  * passe avant, mais la règle n'était tenue que par l'usage. Les requêtes
- * d'authentification servent des invités et rendent `true` à bon droit, et
- * celles du diagnostic (#2032) ne servent aucun compte : la garde a reconnu
- * le jeton avant elles.
+ * d'authentification servent des invités et rendent `true` à bon droit.
  *
  * Quatre autres n'étaient plus appelées par personne depuis que l'API v1 ne
  * sert que la page de séance (#1673) : une requête que rien n'appelle est
@@ -42,7 +38,7 @@ it('ne laisse aucune requête rendre vrai sans regarder l’utilisateur', functi
     $fautes = [];
 
     foreach ($requetes() as $classe => $chemin) {
-        if (str_starts_with($classe, 'App\\Http\\Requests\\Auth\\') || in_array($classe, [ListeDesExceptionsRequest::class, OccurrencesDUneExceptionRequest::class], true)) {
+        if (str_starts_with($classe, 'App\\Http\\Requests\\Auth\\')) {
             continue;
         }
 

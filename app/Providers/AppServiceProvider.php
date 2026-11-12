@@ -235,7 +235,9 @@ final class AppServiceProvider extends ServiceProvider
      * Le journal seulement, jamais la base : chaque écriture SQL coûte de
      * 350 ms à 1,7 s en production, et un abonnement mort en produit une par envoi.
      * Le point de terminaison est réduit à son hôte, parce que l'URL entière est
-     * une capacité : qui la détient peut écrire à l'appareil.
+     * une capacité : qui la détient peut écrire à l'appareil. La raison aussi :
+     * pour un échec de transport, le message de Guzzle se termine par `for <uri>`,
+     * chemin secret compris.
      */
     private function registerWebPushFailureLog(): void
     {
@@ -247,7 +249,7 @@ final class AppServiceProvider extends ServiceProvider
                 'hote' => parse_url($rapport->getEndpoint(), PHP_URL_HOST),
                 'expire' => $rapport->isSubscriptionExpired(),
                 'statut' => $rapport->getResponse()?->getStatusCode(),
-                'raison' => $rapport->getReason(),
+                'raison' => preg_replace('~https?://(?:[^/?#\s"\'<>@]+@)?([^/?#\s"\'<>]+)[^\s"\'<>)`]*~i', 'https://$1', $rapport->getReason()),
             ]);
         });
     }
