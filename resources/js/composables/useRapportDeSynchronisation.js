@@ -170,16 +170,19 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         const pluriel = attente > 1
         const ecartees = ecrituresEcartees
         const sort = `${attente} modification${pluriel ? 's' : ''} en attente ne survivr${pluriel ? 'ont' : 'a'} pas à un rechargement`
-        const ecartee =
+        const refus =
             ecartees > 0
-                ? ` ${ecartees} modification${ecartees > 1 ? 's ont' : ' a'} été écartée${ecartees > 1 ? 's' : ''}.`
-                : ''
+                ? ecartees > 1
+                    ? `${ecartees} modifications n'ont pas pu être envoyées et ont été écartées`
+                    : "Une modification n'a pas pu être envoyée et a été écartée"
+                : null
+        const ecartee = refus === null ? '' : ` ${refus}.`
 
         if (sessionExpiree !== null && stockagePlein !== null) {
             reportEditFailure(
                 attente === 0
                     ? `Ta session a expiré et le stockage du téléphone est plein : reconnecte-toi.${ecartee}`
-                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Reconnecte-toi par mot de passe, pas par Google, GitHub ou Apple, qui rechargent la page. Libère de la place sur le téléphone.${ecartee}`,
+                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Si ton compte a un mot de passe, reconnecte-toi avec lui : Google, GitHub et Apple rechargent la page et perdraient ces modifications. Libère de la place sur le téléphone.${ecartee}`,
                 { persistante: true, avecReconnexion: true },
             )
         } else if (sessionExpiree !== null) {
@@ -187,16 +190,11 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
                 attente === 0
                     ? '.'
                     : ` ; ${pluriel ? `les ${attente} autres modifications en attente repartiront` : "l'autre modification en attente repartira"} ensuite.`
-            const refus =
-                ecartees > 0
-                    ? ecartees > 1
-                        ? `${ecartees} modifications n'ont pas pu être envoyées et ont été écartées`
-                        : "Une modification n'a pas pu être envoyée et a été écartée"
-                    : null
-
             reportEditFailure(
                 refus === null
-                    ? `Ta session a expiré : reconnecte-toi, ${pluriel ? `tes ${attente} modifications en attente` : 'ta modification en attente'} repartir${pluriel ? 'ont' : 'a'} ensuite.`
+                    ? attente === 0
+                        ? 'Ta session a expiré : reconnecte-toi.'
+                        : `Ta session a expiré : reconnecte-toi, ${pluriel ? `tes ${attente} modifications en attente` : 'ta modification en attente'} repartir${pluriel ? 'ont' : 'a'} ensuite.`
                     : `Ta session a expiré : reconnecte-toi. ${refus}${suite}`,
                 { persistante: true, avecReconnexion: true },
             )
