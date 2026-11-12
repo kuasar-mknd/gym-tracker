@@ -89,11 +89,11 @@ parameters:
         - identifier: shipmonk.deadMethod
           path: app/Policies/*
           message: '#::deleteAny\b#'
-        # Livewire appelle dehydrate() a chaque reponse, et Filament l'action
-        # afficherLeJeton par son nom (`{nom}Action`), jamais en toutes lettres.
+        # Filament appelle l'action afficherLeJeton par son nom (`{nom}Action`),
+        # jamais en toutes lettres.
         - identifier: shipmonk.deadMethod
           path: app/Filament/Pages/AccesDeDiagnostic.php
-          message: '#::(afficherLeJetonAction|dehydrate)\b#'
+          message: '#::afficherLeJetonAction\b#'
         # Les cas d'enum sont instancies a l'execution par from(), via les casts
         # Eloquent — jamais ecrits en toutes lettres hors des tests. Le detecteur
         # ne peut pas voir cette voie. Ce n'est pas une hypothese : #899 rapporte

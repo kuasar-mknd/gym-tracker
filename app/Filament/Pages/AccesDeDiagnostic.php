@@ -38,18 +38,23 @@ use Illuminate\Support\Str;
  * maintenance, leur création et leur révocation. La liste ne lit jamais
  * l'empreinte.
  *
- * Le jeton en clair ne vit que le temps d'une fenêtre. Il est rangé chiffré
- * (`encrypt()`) en cache, cinq minutes au plus, sous une clef tirée au hasard
- * que la fenêtre porte dans ses arguments ; le composant ne garde que cette
- * clef. Il est déchiffré au rendu seulement, et oublié à la fermeture : un
- * état rejoué après elle ne rend plus rien. Il n'entre ni dans un champ de
- * formulaire, ni dans la session, ni dans une notification, ni dans un
- * journal, ni dans l'état du composant que la table des exceptions copie.
+ * Le jeton en clair est rangé chiffré (`encrypt()`) en cache, cinq minutes au
+ * plus, sous une clef tirée au hasard que la fenêtre porte dans ses
+ * arguments ; le composant ne garde que cette clef. Il est déchiffré au rendu
+ * seulement, pour l'administrateur qui l'a créé. Fermer la fenêtre dans
+ * l'interface (« Fermer ») l'oublie aussitôt, et un état rejoué après elle ne
+ * rend plus rien. Après un rechargement, une navigation ou un onglet fermé,
+ * la fermeture ne passe pas par la page : le jeton reste relisible par son
+ * créateur, avec la clef, jusqu'à la fin des cinq minutes. Il n'entre ni dans
+ * un champ de formulaire, ni dans la session, ni dans une notification, ni
+ * dans un journal, ni dans l'état du composant que la table des exceptions
+ * copie.
  *
- * L'accès est réservé au super administrateur dont la double authentification
- * est activée. La capacité `view-diagnostic` est ouverte à ce seul rôle
- * (`AppServiceProvider::ouvrirLesOutilsAuSuperAdministrateur()`) : la
- * demander n'ajoute pas un second verrou indépendant, elle suit le rôle.
+ * L'accès exige le rôle de super administrateur et la double authentification
+ * activée, puis la capacité `view-diagnostic`. Cette capacité n'ajoute rien
+ * au rôle tant que personne ne la donne : `Gate::allows()` peut être vrai
+ * pour un administrateur ordinaire qui en aurait la permission, mais
+ * `canAccess()` demande aussi le rôle.
  */
 final class AccesDeDiagnostic extends Page implements HasTable
 {
@@ -110,9 +115,10 @@ final class AccesDeDiagnostic extends Page implements HasTable
     private const int VIE_DU_JETON_AFFICHE = 300;
 
     /**
-     * Le super administrateur dont la double authentification est activée.
-     * La capacité `view-diagnostic` suit le rôle : elle n'est pas un second
-     * verrou.
+     * Le super administrateur dont la double authentification est activée et
+     * pour qui la capacité `view-diagnostic` est vraie. Le rôle est exigé en
+     * plus de la capacité : une permission donnée à un autre administrateur
+     * ne lui ouvre pas la page.
      */
     #[\Override]
     public static function canAccess(): bool
@@ -246,7 +252,7 @@ final class AccesDeDiagnostic extends Page implements HasTable
         return Action::make('afficherLeJeton')
             ->label('Jeton de diagnostic')
             ->authorize(static fn (): bool => self::canAccess())
-            ->modalHeading('Le jeton, affiché une seule fois')
+            ->modalHeading('Copiez le jeton maintenant')
             ->modalWidth('2xl')
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('Fermer')
@@ -272,7 +278,8 @@ final class AccesDeDiagnostic extends Page implements HasTable
     }
 
     /**
-     * Fermer la fenêtre du jeton l'oublie : le cache ne le rend plus.
+     * Fermer la fenêtre du jeton dans l'interface l'oublie, si l'entrée est
+     * celle de l'administrateur courant : un autre ne l'efface pas.
      */
     #[\Override]
     public function unmountAction(bool|string|null $cancelParentActions = null): void
@@ -280,7 +287,7 @@ final class AccesDeDiagnostic extends Page implements HasTable
         $monte = (array) array_last((array) $this->mountedActions);
         $affichage = data_get($monte, 'arguments.affichage');
 
-        if (($monte['name'] ?? null) === 'afficherLeJeton' && is_string($affichage)) {
+        if (($monte['name'] ?? null) === 'afficherLeJeton' && is_string($affichage) && $this->contenuAffiche($affichage) !== null) {
             Cache::forget(self::cleDeLAffichage($affichage));
         }
 
@@ -289,10 +296,19 @@ final class AccesDeDiagnostic extends Page implements HasTable
 
     private function jetonAffiche(mixed $affichage): ?string
     {
-        if (! is_string($affichage)) {
-            return null;
-        }
+        $contenu = is_string($affichage) ? $this->contenuAffiche($affichage) : null;
 
+        return $contenu === null ? null : $contenu['jeton'];
+    }
+
+    /**
+     * Ce que le cache garde sous cette clef, s'il est lisible et à
+     * l'administrateur courant.
+     *
+     * @return array{admin: int, jeton: string}|null
+     */
+    private function contenuAffiche(string $affichage): ?array
+    {
         $range = Cache::get(self::cleDeLAffichage($affichage));
 
         if (! is_string($range)) {
@@ -309,7 +325,7 @@ final class AccesDeDiagnostic extends Page implements HasTable
             return null;
         }
 
-        return $contenu['jeton'];
+        return ['admin' => $contenu['admin'], 'jeton' => $contenu['jeton']];
     }
 
     private static function cleDeLAffichage(string $affichage): string

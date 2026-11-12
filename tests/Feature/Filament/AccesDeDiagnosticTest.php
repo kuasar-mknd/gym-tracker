@@ -141,7 +141,7 @@ it('liste les jetons, leur état et leur dernière utilisation, sans jamais lire
     expect($page->html())->not->toContain('empreinte');
 });
 
-it('crée un jeton par un code de la double authentification, et ne le montre qu’une fois', function (): void {
+it('crée un jeton par un code de la double authentification, et le montre dans une fenêtre', function (): void {
     [$administrateur, $secret] = accesDeDiagnosticSuperAdministrateur();
 
     $page = Livewire::test(AccesDeDiagnostic::class);
@@ -152,7 +152,7 @@ it('crée un jeton par un code de la double authentification, et ne le montre qu
         'code' => new Google2FA()->getCurrentOtp($secret),
     ])
         ->assertActionMounted('afficherLeJeton')
-        ->assertMountedActionModalSee('Le jeton, affiché une seule fois')
+        ->assertMountedActionModalSee('Copiez le jeton maintenant')
         ->assertMountedActionModalSee(JetonDeDiagnostic::PREFIXE);
 
     $jeton = JetonDeDiagnostic::query()->sole();
@@ -226,7 +226,7 @@ it('ne garde le jeton en clair ni dans la session, ni dans les journaux, ni dans
         ->and(accesDeDiagnosticEtat($page))->not->toContain($secretDuJeton)
         ->and(json_encode(session()->get('filament.notifications')))->not->toContain($secretDuJeton)
         ->and(implode("\n", $journaux))->not->toContain($secretDuJeton)
-        ->and(accesDeDiagnosticEtat($page))->not->toContain('jetonChiffre')
+        ->and(accesDeDiagnosticEtat($page))->not->toContain('eyJpdiI6')
         ->and(JetonDeDiagnostic::query()->sole()->empreinte)->toBe(JetonDeDiagnostic::empreinteDe($secretDuJeton));
 });
 
@@ -305,6 +305,10 @@ it('range le jeton chiffré, pour cinq minutes, pour le seul administrateur qui 
     actingAs($autre->refresh(), 'admin');
 
     expect(json_encode(Livewire::update($etat, [], [])))->not->toContain(substr($enClair, -48));
+
+    Livewire::update($etat, [], [['path' => '', 'method' => 'unmountAction', 'params' => []]]);
+
+    expect(Cache::get($cle))->toBeString();
 
     actingAs($administrateur, 'admin');
     Carbon\Carbon::setTestNow(now()->addMinutes(6));
