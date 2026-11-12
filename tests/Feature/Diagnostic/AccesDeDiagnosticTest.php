@@ -273,7 +273,21 @@ it('refuse comme un chemin inconnu quand la base ne répond pas', function (): v
     expect($refuse)->toBe($inconnu);
 });
 
-it('lit l’en-tête même quand l’accès est coupé, pour que la lecture ne dépende pas de l’interrupteur', function (): void {
+it('refuse comme un chemin inconnu quand seule la lecture des rôles du créateur échoue', function (): void {
+    $cree = accesDeDiagnosticUnJeton();
+    $inconnu = accesDeDiagnosticTout(accesDeDiagnosticAppeler('/diagnostic/v1/ce-chemin-n-existe-pas', null));
+    DB::connection()->beforeExecuting(static function (string $requete): void {
+        if (str_contains($requete, 'roles')) {
+            throw new PDOException('La base ne répond pas.');
+        }
+    });
+
+    $refuse = accesDeDiagnosticTout(accesDeDiagnosticAppeler('/diagnostic/v1/etat', accesDeDiagnosticBearer($cree['en_clair'])));
+
+    expect($refuse)->toBe($inconnu);
+});
+
+it('refuse un jeton valide, sans rien écrire, quand l’accès est coupé', function (): void {
     config()->set('app.diagnostic_enabled', false);
     $cree = accesDeDiagnosticUnJeton();
 

@@ -33,12 +33,12 @@ use Throwable;
  * et garde la capacité ; la portée que la route déclare dans `PORTEES`, lue
  * par son nom ; enfin les deux limiteurs du jeton.
  *
- * Les six premiers refus lèvent un `NotFoundHttpException` nu, que le
+ * Tout refus d'avant le jeton, et celui d'une route sans portée, lève un
+ * `NotFoundHttpException` nu, que le
  * gestionnaire de `bootstrap/app.php` rend comme il rend un chemin inconnu :
  * même statut, même corps, mêmes en-têtes hors `Date`. Un refus n'écrit rien
- * en base. L'en-tête est lu avant l'interrupteur, pour que la lecture ne
- * dépende pas de lui. Une base qui ne répond pas ne peut pas vérifier le
- * jeton : la requête est refusée de même.
+ * en base. Une base qui ne répond pas, au jeton comme au créateur, ne peut pas
+ * vérifier le jeton : la requête est refusée de même.
  *
  * Après un jeton valide seulement : 403 `portee-non-accordee`, 429 avec
  * `Retry-After`, et toute défaillance (cache, audit, contrôleur) devient une
@@ -98,9 +98,13 @@ class ExigeUnJetonDeDiagnostic
         $jeton = $this->jetonPresente($request, $entete);
         $this->verifierLaVieDuJeton($request, $jeton, $maintenant);
 
-        $createur = $this->lire($request, static fn (): ?Admin => $jeton->createur);
+        $createurAutorise = $this->lire($request, static function () use ($jeton): bool {
+            $createur = $jeton->createur;
 
-        if (! $createur instanceof Admin || ! $createur->estSuperAdministrateur() || ! $createur->can('view-diagnostic')) {
+            return $createur instanceof Admin && $createur->estSuperAdministrateur() && $createur->can('view-diagnostic');
+        });
+
+        if (! $createurAutorise) {
             $this->refuser($request, 'createur', $jeton);
         }
 
@@ -125,7 +129,7 @@ class ExigeUnJetonDeDiagnostic
      * Le jeton que l'en-tête présente, sa ligne trouvée par l'identifiant et
      * son secret exact. Tout autre cas est un refus.
      */
-    private function jetonPresente(Request $request, mixed $entete): JetonDeDiagnostic
+    private function jetonPresente(Request $request, #[\SensitiveParameter] mixed $entete): JetonDeDiagnostic
     {
         if (! is_string($entete)) {
             $this->refuser($request, 'absent');
@@ -163,8 +167,7 @@ class ExigeUnJetonDeDiagnostic
     /**
      * Ce que la route rend, une fois le jeton reconnu : la portée, les
      * limiteurs, la trace d'usage, le contrôleur, l'audit.
-     */
-    /**
+     *
      * @param  Closure(Request): Response  $next
      */
     private function servir(Request $request, Closure $next, JetonDeDiagnostic $jeton, string $nomDeLaRoute, CarbonInterface $maintenant, int|float $debut): Response
