@@ -78,7 +78,7 @@ final class RedisReel
 
         if ($raison !== null) {
             Assert::fail(sprintf(
-                'Ce test du groupe redis exige un vrai Redis : %s. Le lancer par `php artisan test --group=redis`, avec CACHE_STORE, SESSION_DRIVER et QUEUE_CONNECTION à redis et REDIS_HOST vers un Redis jetable, que chaque test vide (.ai/rules/tests.md).',
+                'Ce test du groupe redis exige un vrai Redis : %s. Le lancer par `php artisan test --group=redis`, avec CACHE_STORE, SESSION_DRIVER et QUEUE_CONNECTION à redis et REDIS_HOST vers un Redis jetable (hors de la boucle locale, ajouter REDIS_REEL_JETABLE=1), que chaque test vide (.ai/rules/tests.md).',
                 $raison,
             ));
         }

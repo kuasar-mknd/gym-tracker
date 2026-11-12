@@ -159,7 +159,11 @@ it('réduit à son hôte toute URL de la raison, requête, fragment et identifia
     'requête' => ['https://host.example?token=jeton-secret', 'https://host.example'],
     'fragment' => ['https://host.example#fragment-secret', 'https://host.example'],
     'identifiants' => [sprintf('https://%s@host.example/chemin-secret', 'user:mot-de-passe'), 'https://host.example'],
-    'schéma en majuscules' => ['HTTPS://host.example/chemin%2Fsecret', 'https://host.example'],
+    'schéma en majuscules, gardé tel quel' => ['HTTPS://host.example/chemin%2Fsecret', 'HTTPS://host.example'],
+    'http gardé' => ['http://host.example/chemin-secret', 'http://host.example'],
+    'parenthèse dans le chemin' => ['https://host.example/se(cr)et-suite', 'https://host.example'],
+    'arobase dans le mot de passe' => ['https://user:p@ss-secret@host.example/x', 'https://host.example'],
+    'hôte vide' => ['https://user:mot-de-passe@/chemin-secret', '[adresse masquée]'],
 ]);
 
 it('ne dit rien quand la remise réussit', function (): void {

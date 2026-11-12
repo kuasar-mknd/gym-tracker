@@ -249,7 +249,15 @@ final class AppServiceProvider extends ServiceProvider
                 'hote' => parse_url($rapport->getEndpoint(), PHP_URL_HOST),
                 'expire' => $rapport->isSubscriptionExpired(),
                 'statut' => $rapport->getResponse()?->getStatusCode(),
-                'raison' => preg_replace('~https?://(?:[^/?#\s"\'<>@]+@)?([^/?#\s"\'<>]+)[^\s"\'<>)`]*~i', 'https://$1', $rapport->getReason()),
+                'raison' => preg_replace_callback(
+                    '~https?://[^\s"\'<>]+~i',
+                    static function (array $trouve): string {
+                        $hote = parse_url($trouve[0], PHP_URL_HOST);
+
+                        return is_string($hote) && $hote !== '' ? strstr($trouve[0], '://', true).'://'.$hote : '[adresse masquée]';
+                    },
+                    $rapport->getReason(),
+                ),
             ]);
         });
     }

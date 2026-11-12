@@ -427,7 +427,7 @@ cp .env.example .env
 | `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit, Selenium) |
 | `./vendor/bin/sail composer dev` | Lance Vite avec rechargement à chaud, la file (`queue:listen`) et les journaux (`pail`) |
 | `./vendor/bin/sail artisan test -p` | Suite backend en parallèle |
-| `./vendor/bin/sail exec -e CACHE_STORE=redis -e SESSION_DRIVER=redis -e QUEUE_CONNECTION=redis laravel.test php artisan test --group=redis` | Tests contre un vrai Redis (tests/Feature/Redis), que la suite écarte : ils vident le Redis de Sail, sessions et cache compris |
+| `./vendor/bin/sail exec -e CACHE_STORE=redis -e SESSION_DRIVER=redis -e QUEUE_CONNECTION=redis -e REDIS_REEL_JETABLE=1 laravel.test php artisan test --group=redis` | Tests contre un vrai Redis (tests/Feature/Redis), que la suite écarte : ils vident le Redis de Sail, sessions et cache compris ; `REDIS_REEL_JETABLE=1` le déclare jetable, faute de quoi la garde refuse un serveur hors de la boucle locale |
 | `./vendor/bin/sail npx vitest run` | Suite frontend |
 | `./vendor/bin/sail artisan dusk` | Parcours navigateur, sur la base `gym_tracker_dusk` : demande `.env.dusk.local`, voir ci-dessous |
 | `./vendor/bin/sail bin pint` | Formate le code |

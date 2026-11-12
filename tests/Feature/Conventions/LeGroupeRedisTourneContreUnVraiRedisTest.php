@@ -425,25 +425,26 @@ it('fait échouer en le disant chaque test du groupe lancé contre un Redis muet
 });
 
 it('refuse de vider un serveur hors de la boucle locale tant que rien ne le déclare jetable', function (): void {
-    Config::set('database.redis.default.host', 'redis');
-    Config::set('database.redis.cache.host', 'redis');
     $avant = getenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE);
     putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE);
 
-    expect(RedisReel::raisonDuServeur())->toContain('la connexion default vise « redis », hors de la boucle locale');
-
-    Config::set('database.redis.default.host', '127.0.0.1');
-
-    expect(RedisReel::raisonDuServeur())->toContain('la connexion cache vise « redis »');
-
-    Config::set('database.redis.cache.host', 'localhost');
-
-    expect(RedisReel::raisonDuServeur())->toBeNull();
-
-    Config::set('database.redis.cache.host', 'redis');
-    putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE.'=1');
-
     try {
+        Config::set('database.redis.default.host', 'redis');
+        Config::set('database.redis.cache.host', 'redis');
+
+        expect(RedisReel::raisonDuServeur())->toContain('la connexion default vise « redis », hors de la boucle locale');
+
+        Config::set('database.redis.default.host', '127.0.0.1');
+
+        expect(RedisReel::raisonDuServeur())->toContain('la connexion cache vise « redis »');
+
+        Config::set('database.redis.cache.host', 'localhost');
+
+        expect(RedisReel::raisonDuServeur())->toBeNull();
+
+        Config::set('database.redis.cache.host', 'redis');
+        putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE.'=1');
+
         expect(RedisReel::raisonDuServeur())->toBeNull();
     } finally {
         putenv(RedisReel::VARIABLE_DU_SERVEUR_JETABLE.($avant === false ? '' : "={$avant}"));
