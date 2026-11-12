@@ -100,7 +100,7 @@ final class PersonalRecordService
      */
     protected function update(User $user, int $idExercice, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): ?PersonalRecord
     {
-        if ($pr !== null && $value <= $pr->value) {
+        if ($pr !== null && round($value, 2) <= round((float) $pr->value, 2)) {
             return null;
         }
 
@@ -406,7 +406,7 @@ final class PersonalRecordService
             // Donné à une série qui ne le tenait pas, au-dessus de ce qu'il
             // portait, ou créé : sa synchronisation n'a pas écrit, et ne
             // l'annoncera pas (#2185).
-            if ($avant === null || ($avant['serie'] !== $meilleure['id'] && $valeur > $avant['valeur'])) {
+            if ($avant === null || ($avant['serie'] !== $meilleure['id'] && round($valeur, 2) > round($avant['valeur'], 2))) {
                 $aAnnoncer[$record->id] = ['record' => $record, 'avant' => $avant['valeur'] ?? null];
             }
         }
