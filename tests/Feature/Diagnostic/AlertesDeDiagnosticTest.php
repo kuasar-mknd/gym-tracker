@@ -14,18 +14,26 @@ use App\Notifications\AlerteDeDiagnostic;
 use App\Support\AlertesDeDiagnostic;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\QueryException;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\ChannelManager;
+use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Queue\QueueManager;
+use Illuminate\Queue\Worker;
+use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Testing\Fakes\NotificationFake;
 use PragmaRX\Google2FA\Google2FA;
 use Spatie\Permission\Models\Role;
+use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mailer\Transport\AbstractTransport;
 use Tests\Support\FilamentAdminPanel;
 
 /*
@@ -425,3 +433,73 @@ it('ne porte dans la file que des scalaires et une énumération fermée', funct
         return true;
     });
 });
+
+it('porte cinq essais et un délai croissant, que Horizon ne lui donnerait pas', function (): void {
+    $alerte = new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::Creation, ['abcd']);
+
+    $travail = new SendQueuedNotifications(collect([new AnonymousNotifiable()]), $alerte);
+
+    expect($travail->tries)->toBe(5)
+        ->and($travail->backoff())->toBe([60, 300, 900]);
+});
+
+it('rejoue un envoi dont le courrier tombe en panne passagère, au lieu de le perdre avec les réglages de Horizon', function (): void {
+    Facade::clearResolvedInstance(ChannelManager::class);
+    app()->forgetInstance(ChannelManager::class);
+    config()->set('queue.default', 'database');
+    config()->set('mail.default', 'en-panne');
+    config()->set('mail.mailers.en-panne', ['transport' => 'en-panne']);
+    Mail::extend('en-panne', fn (): AbstractTransport => new class() extends AbstractTransport
+    {
+        #[Override]
+        protected function doSend(SentMessage $message): void
+        {
+            throw new RuntimeException('SMTP injoignable');
+        }
+
+        #[Override]
+        public function __toString(): string
+        {
+            return 'en-panne';
+        }
+    });
+    Notification::route('mail', 'alertes@example.org')->notify(new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::Creation, ['abcd']));
+
+    $file = app('queue');
+    assert($file instanceof QueueManager);
+    $worker = new Worker($file, app('events'), app(ExceptionHandler::class), static fn (): bool => false);
+    $worker->setCache(app('cache.store'));
+    $travail = $file->connection('database')->pop('default');
+    assert($travail !== null);
+
+    try {
+        $worker->process('database', $travail, new WorkerOptions(sleep: 0, maxTries: config()->integer('horizon.defaults.supervisor-1.tries')));
+    } catch (RuntimeException) {
+    }
+
+    expect($travail->hasFailed())->toBeFalse()
+        ->and($travail->isReleased())->toBeTrue()
+        ->and(DB::table('jobs')->count())->toBe(1)
+        ->and(DB::table('jobs')->pluck('available_at')->all())->toEqual([now()->addSeconds(60)->getTimestamp()]);
+});
+
+it('dit « jetons » et « viennent d’être révoqués » quand plusieurs jetons sont révoqués, avec la raison en clair', function (): void {
+    $alerte = new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::Revocation, ['abcd', 'efgh'], raison: RaisonDeRevocationDuJeton::MotDePasseChange->value);
+    $lignes = $alerte->toMail(new AnonymousNotifiable())->introLines;
+
+    expect($lignes[0])->toBe('Les jetons …abcd, …efgh viennent d’être révoqués (raison : mot de passe changé).')
+        ->and($alerte->toMail(new AnonymousNotifiable())->subject)->toEndWith('jetons révoqués');
+});
+
+it('garde le singulier pour un seul jeton révoqué, et chaque raison a son libellé', function (RaisonDeRevocationDuJeton $raison, string $libelle): void {
+    $lignes = new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::Revocation, ['abcd'], raison: $raison->value)
+        ->toMail(new AnonymousNotifiable())->introLines;
+
+    expect($lignes[0])->toBe("Le jeton …abcd vient d’être révoqué (raison : {$libelle}).");
+})->with([
+    [RaisonDeRevocationDuJeton::Manuelle, 'révocation manuelle'],
+    [RaisonDeRevocationDuJeton::Interrupteur, 'accès de diagnostic fermé'],
+    [RaisonDeRevocationDuJeton::MotDePasseChange, 'mot de passe changé'],
+    [RaisonDeRevocationDuJeton::DoubleAuthentificationRetiree, 'double authentification retirée'],
+    [RaisonDeRevocationDuJeton::AdministrateurSupprime, 'administrateur supprimé'],
+]);

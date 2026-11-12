@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Enums\EvenementDAlerteDeDiagnostic;
+use App\Enums\RaisonDeRevocationDuJeton;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Queue\Attributes\Backoff;
+use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Support\Carbon;
 
 /**
@@ -25,6 +28,8 @@ use Illuminate\Support\Carbon;
  * l'englobe (`afterCommit` ferait lever l'appelant à la validation, hors de
  * la garde d'`AlertesDeDiagnostic`).
  */
+#[Tries(5)]
+#[Backoff(60, 300, 900)]
 final class AlerteDeDiagnostic extends Notification implements ShouldQueue
 {
     use Queueable;
@@ -74,7 +79,7 @@ final class AlerteDeDiagnostic extends Notification implements ShouldQueue
     {
         return match ($this->evenement) {
             EvenementDAlerteDeDiagnostic::Creation => 'jeton créé',
-            EvenementDAlerteDeDiagnostic::Revocation => 'jeton révoqué',
+            EvenementDAlerteDeDiagnostic::Revocation => count($this->jetons) > 1 ? 'jetons révoqués' : 'jeton révoqué',
             EvenementDAlerteDeDiagnostic::PremierUsage => 'jeton utilisé pour la première fois',
             EvenementDAlerteDeDiagnostic::JetonInvalidePresente => 'jeton révoqué ou expiré présenté',
             EvenementDAlerteDeDiagnostic::DebitDepasse => 'débit dépassé',
@@ -83,12 +88,27 @@ final class AlerteDeDiagnostic extends Notification implements ShouldQueue
 
     private function phrase(string $jetons): string
     {
+        $pluriel = count($this->jetons) > 1;
+        $raison = $this->raison === null ? '' : ' (raison : '.$this->libelleDeLaRaison($this->raison).')';
+
         return match ($this->evenement) {
             EvenementDAlerteDeDiagnostic::Creation => "Le jeton {$jetons} vient d’être créé.",
-            EvenementDAlerteDeDiagnostic::Revocation => "Le jeton {$jetons} vient d’être révoqué".($this->raison === null ? '' : " (raison : {$this->raison})").'.',
+            EvenementDAlerteDeDiagnostic::Revocation => ($pluriel ? "Les jetons {$jetons} viennent d’être révoqués" : "Le jeton {$jetons} vient d’être révoqué").$raison.'.',
             EvenementDAlerteDeDiagnostic::PremierUsage => "Le jeton {$jetons} vient de servir pour la première fois.",
             EvenementDAlerteDeDiagnostic::JetonInvalidePresente => "Le jeton {$jetons}, révoqué ou expiré, vient d’être présenté. Il n’a rien ouvert.",
             EvenementDAlerteDeDiagnostic::DebitDepasse => "Le jeton {$jetons} a dépassé son débit autorisé.",
+        };
+    }
+
+    private function libelleDeLaRaison(string $raison): string
+    {
+        return match (RaisonDeRevocationDuJeton::tryFrom($raison)) {
+            RaisonDeRevocationDuJeton::Manuelle => 'révocation manuelle',
+            RaisonDeRevocationDuJeton::Interrupteur => 'accès de diagnostic fermé',
+            RaisonDeRevocationDuJeton::MotDePasseChange => 'mot de passe changé',
+            RaisonDeRevocationDuJeton::DoubleAuthentificationRetiree => 'double authentification retirée',
+            RaisonDeRevocationDuJeton::AdministrateurSupprime => 'administrateur supprimé',
+            null => $raison,
         };
     }
 }

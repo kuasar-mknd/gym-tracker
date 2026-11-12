@@ -235,7 +235,9 @@ final class AppServiceProvider extends ServiceProvider
      * Le journal seulement, jamais la base : chaque écriture SQL coûte de
      * 350 ms à 1,7 s en production, et un abonnement mort en produit une par envoi.
      * Le point de terminaison est réduit à son hôte, parce que l'URL entière est
-     * une capacité : qui la détient peut écrire à l'appareil.
+     * une capacité : qui la détient peut écrire à l'appareil. La raison aussi :
+     * pour un échec de transport, le message de Guzzle se termine par `for <uri>`,
+     * chemin secret compris.
      */
     private function registerWebPushFailureLog(): void
     {
@@ -247,7 +249,21 @@ final class AppServiceProvider extends ServiceProvider
                 'hote' => parse_url($rapport->getEndpoint(), PHP_URL_HOST),
                 'expire' => $rapport->isSubscriptionExpired(),
                 'statut' => $rapport->getResponse()?->getStatusCode(),
-                'raison' => $rapport->getReason(),
+                'raison' => preg_replace_callback(
+                    '~https?://\S+~i',
+                    static function (array $trouve): string {
+                        $debut = (int) strpos($trouve[0], '://') + 3;
+                        $autorite = (string) preg_replace('~[/?#].*$~s', '', substr($trouve[0], $debut));
+                        $hote = parse_url($trouve[0], PHP_URL_HOST);
+                        $vraisemblable = is_string($hote)
+                            && preg_match('~^(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])$~', $hote) === 1
+                            && ! str_contains($autorite, '\\')
+                            && ! str_contains(substr($trouve[0], $debut + strlen($autorite)), '@');
+
+                        return $vraisemblable ? substr($trouve[0], 0, $debut - 3).'://'.$hote : '[adresse masquée]';
+                    },
+                    $rapport->getReason(),
+                ),
             ]);
         });
     }

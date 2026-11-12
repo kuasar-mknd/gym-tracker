@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Actions\Fasting\DemarrerUnJeuneAction;
+use App\Actions\Fasting\MettreAJourUnJeuneAction;
 use App\Models\Fast;
 use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Sleep;
 use Illuminate\Validation\ValidationException;
@@ -88,4 +90,33 @@ it('ne laisse pas deux démarrages simultanés ouvrir deux jeûnes', function ()
         ->and($user->fasts()->where('status', 'active')->count())->toBe(1)
         ->and($refus)->toBeInstanceOf(ValidationException::class)
         ->and($attentes)->toBeGreaterThan(0);
+});
+
+it('refuse proprement, sans erreur 500, quand le verrou du compte reste pris au-delà de l’attente', function (): void {
+    $user = User::factory()->create();
+    $autre = Cache::lock("jeunes-du-compte:{$user->id}", 60, 'un-autre-processus');
+    expect($autre->get())->toBeTrue();
+    Sleep::fake(syncWithCarbon: true);
+
+    $refus = null;
+
+    try {
+        app(DemarrerUnJeuneAction::class)->execute($user, donneesDUnJeune());
+    } catch (ValidationException $leve) {
+        $refus = $leve;
+    }
+
+    expect($refus)->toBeInstanceOf(ValidationException::class)
+        ->and($refus?->errors())->toBe(['base' => [DemarrerUnJeuneAction::MESSAGE_VERROU_PRIS]])
+        ->and($user->fasts()->count())->toBe(0);
+});
+
+it('refuse aussi, en validation, la reprise d’un jeûne quand le verrou du compte reste pris', function (): void {
+    $user = User::factory()->create();
+    $termine = Fast::factory()->for($user)->create(['status' => 'completed']);
+    Cache::lock("jeunes-du-compte:{$user->id}", 60, 'un-autre-processus')->get();
+    Sleep::fake(syncWithCarbon: true);
+
+    expect(fn () => app(MettreAJourUnJeuneAction::class)->execute($user, $termine, ['status' => 'active']))
+        ->toThrow(ValidationException::class, DemarrerUnJeuneAction::MESSAGE_VERROU_PRIS);
 });
