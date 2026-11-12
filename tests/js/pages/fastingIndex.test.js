@@ -141,6 +141,17 @@ const elapsedReadout = (wrapper) => wrapper.find('.font-mono.text-4xl').text()
 const boutonTerminer = (wrapper) =>
     wrapper.findAll('button').find((button) => button.text().includes('Terminer le jeûne'))
 
+const dialogueDeFin = (wrapper) =>
+    wrapper
+        .findAllComponents({ name: 'ConfirmDialog' })
+        .find((candidat) => candidat.props('titre') === 'Terminer le jeûne ?')
+
+/** Le geste complet : l'appui sur le bouton, puis la réponse « Terminer » du dialogue. */
+const terminerLeJeune = async (wrapper) => {
+    await boutonTerminer(wrapper).trigger('click')
+    await dialogueDeFin(wrapper).vm.$emit('confirmer')
+}
+
 /** Une heure qui porte son fuseau : `Z`, ou un décalage (`-04:00`, `+0100`). */
 const AVEC_SON_DECALAGE = /(?:Z|[+-]\d{2}:?\d{2})$/
 
@@ -195,7 +206,7 @@ describe('Fasting — le compteur du jeûne en cours', () => {
     it('termine le jeûne en horodatant la fin à l’instant, avec son décalage', async () => {
         const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
 
-        await boutonTerminer(wrapper).trigger('click')
+        await terminerLeJeune(wrapper)
 
         expect(hoisted.patch).toHaveBeenCalledTimes(1)
         const [url, payload] = hoisted.patch.mock.calls[0]
@@ -212,11 +223,80 @@ describe('Fasting — le compteur du jeûne en cours', () => {
         // ni l'un ni l'autre, et la durée reste l'écart de deux instants lus sur la même horloge.
         const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
 
-        await boutonTerminer(wrapper).trigger('click')
+        await terminerLeJeune(wrapper)
 
         const [, payload, options] = hoisted.patch.mock.calls[0]
         expect(options.headers).toEqual({ 'X-Heure-De-L-Appareil': NOW.toISOString() })
         expect(options.headers['X-Heure-De-L-Appareil']).toBe(payload.end_time)
+    })
+
+    it('demande confirmation avant de terminer, et ne part pas sur un seul appui', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+
+        await boutonTerminer(wrapper).trigger('click')
+
+        expect(dialogueDeFin(wrapper).props('ouvert')).toBe(true)
+        expect(hoisted.patch).not.toHaveBeenCalled()
+
+        await dialogueDeFin(wrapper).vm.$emit('annuler')
+
+        expect(dialogueDeFin(wrapper).props('ouvert')).toBe(false)
+        expect(hoisted.patch).not.toHaveBeenCalled()
+    })
+
+    it('referme la question quand le jeûne disparaît de la page, sans rien envoyer', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+        await boutonTerminer(wrapper).trigger('click')
+
+        await wrapper.setProps({ activeFast: null })
+
+        expect(dialogueDeFin(wrapper).props('ouvert')).toBe(false)
+        expect(hoisted.patch).not.toHaveBeenCalled()
+    })
+
+    it('présente « Terminer » comme un geste ordinaire, pas comme une perte', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+
+        expect(dialogueDeFin(wrapper).props('varianteConfirmation')).toBe('primary')
+    })
+
+    it('referme la question quand l’envoi finit, qu’il réussisse ou qu’il soit refusé', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+
+        for (const refus of [{}, { end_time: 'La fin précède le début.' }]) {
+            await boutonTerminer(wrapper).trigger('click')
+            await dialogueDeFin(wrapper).vm.$emit('confirmer')
+            expect(dialogueDeFin(wrapper).props('ouvert')).toBe(true)
+
+            wrapper.vm.endForm.errors = refus
+            hoisted.patch.mock.calls.at(-1)[2].onFinish()
+            await flushPromises()
+
+            expect(dialogueDeFin(wrapper).props('ouvert')).toBe(false)
+        }
+    })
+
+    it('verrouille le bouton du dialogue tant que la fin est en route', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+        await boutonTerminer(wrapper).trigger('click')
+        expect(dialogueDeFin(wrapper).props('enCours')).toBe(false)
+
+        wrapper.vm.endForm.processing = true
+        await flushPromises()
+
+        expect(dialogueDeFin(wrapper).props('enCours')).toBe(true)
+    })
+
+    it('dit le refus de la fin sous le bouton, en alerte', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+        expect(wrapper.find('[dusk="fasting-end-error"]').exists()).toBe(false)
+
+        wrapper.vm.endForm.errors = { end_time: 'La fin précède le début.' }
+        await flushPromises()
+
+        const alerte = wrapper.find('[dusk="fasting-end-error"]')
+        expect(alerte.attributes('role')).toBe('alert')
+        expect(alerte.text()).toBe('La fin précède le début.')
     })
 
     it('arrête son horloge en quittant la page', async () => {
@@ -425,6 +505,13 @@ describe('Fasting — historique', () => {
         expect((await mountPage({ history: history([completed]) })).text()).not.toContain('Aucun historique de jeûne')
     })
 
+    it('ne donne aux lignes de l’historique aucun effet de bouton : elles n’ont pas d’action', async () => {
+        const wrapper = await mountPage({ history: history([completed]) })
+        const ligne = wrapper.find('[aria-label^="Supprimer le jeûne"]').element.closest('.rounded-2xl')
+
+        expect(ligne.className).not.toMatch(/hover:|active:/)
+    })
+
     it('demande confirmation avant de supprimer', async () => {
         const wrapper = await mountPage({ history: history([completed]) })
 
@@ -570,7 +657,7 @@ const envoyerLeDebut = async (wrapper) => {
 }
 
 const envoyerLaFin = async (wrapper) => {
-    await boutonTerminer(wrapper).trigger('click')
+    await terminerLeJeune(wrapper)
 
     expect(hoisted.patch).toHaveBeenCalledTimes(1)
 

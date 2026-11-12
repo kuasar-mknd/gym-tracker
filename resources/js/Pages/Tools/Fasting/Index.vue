@@ -1,17 +1,9 @@
 <script setup>
 /**
- * Fasting Tracker Component.
+ * Suivi de jeûne : le jeûne en cours avec son compteur, le démarrage d'un jeûne par type, et l'historique.
  *
- * This component provides an interface for users to track their intermittent fasting. It displays the currently
- * active fast with a live progress timer, allows starting new fasts by selecting different duration types (e.g.,
- * 16:8, 20:4), and shows a history of past completed fasts.
- *
- * Props:
- * @prop {Object} activeFast - The currently ongoing fast object, if any. Null otherwise.
- *                             Expected shape: { id, type, start_time, target_duration_minutes, ... }
- * @prop {Object} history - Paginated object containing historical fasting records.
- *
- * Emits: none directly; uses Inertia forms for POST/PATCH/DELETE requests.
+ * @prop {Object} activeFast - Le jeûne en cours, ou null : { id, type, start_time, target_duration_minutes }.
+ * @prop {Object} history - Les jeûnes passés, paginés.
  */
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
@@ -36,10 +28,8 @@ const props = defineProps({
     history: Object,
 })
 
-// `type` is validated server-side against a fixed list — StoreFastRequest: in:16:8,18:6,20:4,24:0,36:0,48:0,custom —
-// so it is data, not something to carve out of the label. It used to be derived with label.split(' ')[0], which yields
-// '16:8', '18:6' and '20:4' correctly and then '24h' and '36h', neither of which the server accepts: two of the five
-// options could never start a fast, and the page rendered no error to say why.
+// `type` est une donnée que le serveur valide (StoreFastRequest), pas un morceau du libellé : « 24h » et « 36h »,
+// tirés du libellé, étaient refusés sans qu'aucune erreur ne s'affiche.
 const fastingTypes = [
     { value: '16:8', label: '16:8 (Leangains)', hours: 16 },
     { value: '18:6', label: '18:6', hours: 18 },
@@ -48,9 +38,7 @@ const fastingTypes = [
     { value: '36:0', label: '36h (Monk)', hours: 36 },
 ]
 
-// A <select> can only ever hand back a string. Binding the objects directly made every option render
-// value="[object Object]", so picking anything other than the default left selectedType as that string — .hours
-// became NaN and .label.split() threw, silently killing the "Commencer" button.
+// Un <select> ne rend qu'une chaîne : lier les objets donnait value="[object Object]" et tuait « Commencer ».
 const selectedTypeValue = ref(fastingTypes[0].value)
 
 const selectedType = computed(
@@ -68,6 +56,7 @@ const endForm = useForm({
     end_time: '',
     status: 'completed',
 })
+const finDemandee = ref(false)
 
 // Timer Logic
 const elapsedSeconds = ref(0)
@@ -96,10 +85,8 @@ const remainingTime = computed(() => {
 })
 
 /**
- * Les secondes pleines entre deux instants : l'écart réel, que l'heure murale ne donne pas la nuit où elle se répète.
- * Tronqué vers zéro, comme `diff(…, 'second')` de dayjs, et jamais négatif (#2198) : avant un début à venir (appareil
- * en avance), le compteur reste à 00:00:00, l'anneau vide, l'objectif entier, et un jeûne fini avant son début dure 0.
- * Un instant servi porte son fuseau (`2026-03-10T12:00:00.000000Z`), et se lit donc par `new Date()` (#2189).
+ * Les secondes pleines entre deux instants, tronquées vers zéro et jamais négatives (#2198) : avant un début à venir,
+ * le compteur reste à 00:00:00. Un instant servi porte son fuseau, et se lit par `new Date()` (#2189).
  */
 const secondesEntre = (debut, fin) => Math.max(0, Math.trunc((new Date(fin) - new Date(debut)) / 1000))
 
@@ -113,12 +100,8 @@ const updateTimer = () => {
 }
 
 /**
- * Arms and disarms the clock as the fast itself comes and goes.
- *
- * `onMounted` alone was not enough. Starting a fast posts through Inertia, and `router.post` preserves state by
- * default, so this component is never remounted — the hook does not run a second time. Anyone opening the page without
- * a fast in progress, which is the ordinary case, then pressed "Commencer" and watched the card appear stuck at
- * 00:00:00 with an empty ring, for as long as they left it open.
+ * Arme et désarme l'horloge avec le jeûne : `router.post` garde l'état, la page n'est pas remontée, et `onMounted`
+ * seul laissait le compteur figé à 00:00:00 après « Commencer ».
  */
 watch(
     () => props.activeFast,
@@ -127,6 +110,7 @@ watch(
         timerInterval.value = null
 
         if (!fast) {
+            finDemandee.value = false
             elapsedSeconds.value = 0
             progressPercentage.value = 0
             debutPrerempli = formatToLocalISO(new Date())
@@ -149,10 +133,9 @@ onUnmounted(() => {
 const auDepart = (geste) => ({ 'X-Heure-De-L-Appareil': geste })
 
 /**
- * Le champ montre l'heure de l'appareil, remplie à chaque retour du formulaire, la page n'étant pas remontée. Laissé
- * tel quel, il dit « maintenant » : le début part à l'instant du geste, avec l'heure de l'appareil au départ (#2198) ;
- * changé, à l'instant qu'il désigne, que le serveur juge tel quel. La fin part à l'instant présent, avec elle aussi.
- * Sans décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
+ * Le champ laissé tel quel dit « maintenant » : le début part à l'instant du geste, avec l'heure de l'appareil au
+ * départ (#2198) ; changé, à l'instant qu'il désigne. La fin part à l'instant présent, avec elle aussi. Sans
+ * décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
  */
 const startFast = () => {
     const geste = startForm.start_time === debutPrerempli ? new Date().toISOString() : null
@@ -166,9 +149,14 @@ const startFast = () => {
         .post(route('tools.fasting.store'), { headers: geste ? auDepart(geste) : {} })
 }
 
+const refusDeLaFin = computed(() => Object.values(endForm.errors).find(Boolean))
+
 const endFast = () => {
     endForm.end_time = new Date().toISOString()
-    endForm.patch(route('tools.fasting.update', props.activeFast.id), { headers: auDepart(endForm.end_time) })
+    endForm.patch(route('tools.fasting.update', props.activeFast.id), {
+        headers: auDepart(endForm.end_time),
+        onFinish: () => (finDemandee.value = false),
+    })
 }
 
 /** Le refus qu'aucun champ ne porte (`base`, un jeûne en cours) ; celui du début ou du type se dit sous lui (#2198). */
@@ -214,10 +202,8 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
         <div class="space-y-6">
             <div v-if="activeFast" class="flex justify-center">
                 <GlassCard class="relative flex w-full max-w-md flex-col items-center overflow-hidden p-8 text-center">
-                    <!-- Circular Progress -->
                     <div class="relative mb-6 h-64 w-64">
                         <svg class="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
-                            <!-- Background Circle -->
                             <circle
                                 cx="50"
                                 cy="50"
@@ -226,7 +212,6 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                                 stroke="rgb(from var(--color-surface-card) r g b / 0.1)"
                                 stroke-width="8"
                             />
-                            <!-- Progress Circle -->
                             <circle
                                 cx="50"
                                 cy="50"
@@ -257,13 +242,25 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                         <p class="text-text-muted text-sm">Objectif : {{ activeFast.type }}</p>
                     </div>
 
-                    <GlassButton @click="endFast" variant="primary" :loading="endForm.processing" class="w-full">
+                    <GlassButton
+                        @click="finDemandee = true"
+                        variant="primary"
+                        :loading="endForm.processing"
+                        class="w-full"
+                    >
                         Terminer le jeûne
                     </GlassButton>
+                    <p
+                        v-if="refusDeLaFin"
+                        class="text-accent-danger-deep mt-3 text-sm font-bold"
+                        role="alert"
+                        dusk="fasting-end-error"
+                    >
+                        {{ refusDeLaFin }}
+                    </p>
                 </GlassCard>
             </div>
 
-            <!-- Start Fast Section -->
             <GlassCard v-else class="mx-auto max-w-md">
                 <h3 class="titre-carte mb-6">Démarrer un jeûne</h3>
 
@@ -327,7 +324,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                     <div
                         v-for="fast in history.data"
                         :key="fast.id"
-                        class="border-border bg-surface-card/50 flex items-center justify-between rounded-2xl border p-3 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
+                        class="border-border bg-surface-card/50 flex items-center justify-between rounded-2xl border p-3"
                     >
                         <div>
                             <p class="text-text-main font-medium">{{ fast.type }}</p>
@@ -340,12 +337,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                             <span class="text-text-main font-mono text-sm" v-if="fast.end_time">
                                 {{ formatHistoryDuration(fast.start_time, fast.end_time) }}
                             </span>
-                            <!--
-                                Rouge au SURVOL seulement. Peinte en plein dès le
-                                repos, la corbeille mettait une alerte sur chaque
-                                ligne de l'historique — et une alerte partout
-                                n'alerte plus nulle part.
-                            -->
+                            <!-- Rouge au survol seulement : une alerte sur chaque ligne n'alerte plus nulle part. -->
                             <GlassIconButton
                                 icon="delete"
                                 :label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
@@ -356,8 +348,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                     </div>
                 </div>
 
-                <!-- Paginated 10 to a page server-side, with nothing here to reach
-                     page 2: every fast older than the tenth was unreachable. -->
+                <!-- Dix par page côté serveur : sans ceci, tout jeûne au-delà du dixième était inaccessible. -->
                 <nav
                     v-if="history.last_page > 1"
                     class="mt-6 flex items-center justify-center gap-4"
@@ -393,6 +384,17 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
             description="Il disparaîtra de ton historique."
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
+        />
+        <ConfirmDialog
+            :ouvert="finDemandee"
+            titre="Terminer le jeûne ?"
+            description="Il sera enregistré avec l'heure de maintenant."
+            libelle-confirmation="Terminer"
+            variante-confirmation="primary"
+            libelle-annulation="Continuer le jeûne"
+            :en-cours="endForm.processing"
+            @confirmer="endFast"
+            @annuler="finDemandee = false"
         />
     </AuthenticatedLayout>
 </template>

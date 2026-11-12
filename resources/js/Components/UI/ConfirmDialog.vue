@@ -64,6 +64,12 @@ const props = defineProps({
         default: 'Supprimer',
     },
 
+    /** La variante du bouton qui agit : `danger` pour une perte, `primary` pour un geste qui n'en est pas une. */
+    varianteConfirmation: {
+        type: String,
+        default: 'danger',
+    },
+
     /**
      * Le libellé du bouton qui renonce. « Annuler » ne dit pas toujours ce
      * qu'on garde : avant une déconnexion qui perdrait des écritures, c'est
@@ -118,7 +124,7 @@ const decrit = computed(() => props.description !== '')
                     {{ libelleAnnulation }}
                 </GlassButton>
                 <GlassButton
-                    variant="danger"
+                    :variant="varianteConfirmation"
                     dusk="confirm-dialog-confirm"
                     :loading="enCours"
                     @click="emit('confirmer')"

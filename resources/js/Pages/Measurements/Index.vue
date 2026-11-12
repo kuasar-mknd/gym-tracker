@@ -8,7 +8,7 @@ import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
@@ -33,6 +33,18 @@ const props = defineProps({
 })
 
 const showAddForm = ref(false)
+const formulaire = ref(null)
+const champPoids = ref(null)
+
+/**
+ * Le formulaire s'ouvre au-dessus de l'historique, sous le pli depuis le bouton de l'état vide : sans ceci, rien ne
+ * bouge à l'écran. Il se montre, et son premier champ prend le focus, quelle que soit la commande qui l'a ouvert.
+ */
+watch(showAddForm, async () => {
+    await nextTick()
+    champPoids.value?.focus?.()
+    formulaire.value?.scrollIntoView?.({ block: 'center' })
+})
 
 const form = useForm({
     weight: '',
@@ -101,6 +113,12 @@ const weightDiff = computed(() => {
     return Number(latestWeight.value) - Number(previousWeight.value)
 })
 
+const sensDeLEcart = computed(() => {
+    if (weightDiff.value > 0) return 'hausse'
+
+    return weightDiff.value < 0 ? 'baisse' : 'stable'
+})
+
 const latestBodyFat = computed(() => {
     // No empty-list guard: `find` already answers undefined on one, and the
     // ternary below turns that into null. The guard that used to sit here
@@ -152,14 +170,10 @@ const latestBodyFat = computed(() => {
                     ton="text-gradient"
                 />
                 <GlassStat
-                    :valeur="weightDiff ? variation(weightDiff, null) : '—'"
-                    :unite="weightDiff ? 'kg' : null"
+                    :valeur="weightDiff !== null ? variation(weightDiff, null) : '—'"
+                    :unite="weightDiff !== null ? 'kg' : null"
                     libelle="Évolution"
-                    :tendance="
-                        weightDiff
-                            ? { texte: 'depuis la dernière pesée', sens: weightDiff > 0 ? 'hausse' : 'baisse' }
-                            : null
-                    "
+                    :tendance="weightDiff !== null ? { texte: 'depuis la dernière pesée', sens: sensDeLEcart } : null"
                 />
                 <GlassStat
                     :valeur="latestBodyFat ? nombre(latestBodyFat) : '—'"
@@ -172,9 +186,10 @@ const latestBodyFat = computed(() => {
             <!-- Add Form (collapsible) -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
                 <h3 class="titre-carte mb-4">Nouvelle entrée</h3>
-                <form @submit.prevent="submit" class="space-y-4">
-                    <div class="grid grid-cols-3 gap-4">
+                <form ref="formulaire" @submit.prevent="submit" class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <GlassInput
+                            ref="champPoids"
                             v-model="form.weight"
                             type="number"
                             step="0.1"
