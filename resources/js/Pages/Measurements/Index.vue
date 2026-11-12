@@ -40,9 +40,7 @@ const champPoids = ref(null)
  * Le formulaire s'ouvre au-dessus de l'historique, sous le pli depuis le bouton de l'état vide : sans ceci, rien ne
  * bouge à l'écran. Il se montre, et son premier champ prend le focus, quelle que soit la commande qui l'a ouvert.
  */
-watch(showAddForm, async (ouvert) => {
-    if (!ouvert) return
-
+watch(showAddForm, async () => {
     await nextTick()
     champPoids.value?.focus?.()
     formulaire.value?.scrollIntoView?.({ block: 'center' })

@@ -244,6 +244,49 @@ describe('Fasting — le compteur du jeûne en cours', () => {
         expect(hoisted.patch).not.toHaveBeenCalled()
     })
 
+    it('referme la question quand le jeûne disparaît de la page, sans rien envoyer', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+        await boutonTerminer(wrapper).trigger('click')
+
+        await wrapper.setProps({ activeFast: null })
+
+        expect(dialogueDeFin(wrapper).props('ouvert')).toBe(false)
+        expect(hoisted.patch).not.toHaveBeenCalled()
+    })
+
+    it('présente « Terminer » comme un geste ordinaire, pas comme une perte', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+
+        expect(dialogueDeFin(wrapper).props('varianteConfirmation')).toBe('primary')
+    })
+
+    it('referme la question quand l’envoi finit, qu’il réussisse ou qu’il soit refusé', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+
+        for (const refus of [{}, { end_time: 'La fin précède le début.' }]) {
+            await boutonTerminer(wrapper).trigger('click')
+            await dialogueDeFin(wrapper).vm.$emit('confirmer')
+            expect(dialogueDeFin(wrapper).props('ouvert')).toBe(true)
+
+            wrapper.vm.endForm.errors = refus
+            hoisted.patch.mock.calls.at(-1)[2].onFinish()
+            await flushPromises()
+
+            expect(dialogueDeFin(wrapper).props('ouvert')).toBe(false)
+        }
+    })
+
+    it('verrouille le bouton du dialogue tant que la fin est en route', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+        await boutonTerminer(wrapper).trigger('click')
+        expect(dialogueDeFin(wrapper).props('enCours')).toBe(false)
+
+        wrapper.vm.endForm.processing = true
+        await flushPromises()
+
+        expect(dialogueDeFin(wrapper).props('enCours')).toBe(true)
+    })
+
     it('dit le refus de la fin sous le bouton, en alerte', async () => {
         const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
         expect(wrapper.find('[dusk="fasting-end-error"]').exists()).toBe(false)

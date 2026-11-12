@@ -56,6 +56,7 @@ const endForm = useForm({
     end_time: '',
     status: 'completed',
 })
+const finDemandee = ref(false)
 
 // Timer Logic
 const elapsedSeconds = ref(0)
@@ -109,6 +110,7 @@ watch(
         timerInterval.value = null
 
         if (!fast) {
+            finDemandee.value = false
             elapsedSeconds.value = 0
             progressPercentage.value = 0
             debutPrerempli = formatToLocalISO(new Date())
@@ -147,7 +149,6 @@ const startFast = () => {
         .post(route('tools.fasting.store'), { headers: geste ? auDepart(geste) : {} })
 }
 
-const finDemandee = ref(false)
 const refusDeLaFin = computed(() => Object.values(endForm.errors).find(Boolean))
 
 const endFast = () => {
@@ -389,6 +390,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
             titre="Terminer le jeûne ?"
             description="Il sera enregistré avec l'heure de maintenant."
             libelle-confirmation="Terminer"
+            variante-confirmation="primary"
             libelle-annulation="Continuer le jeûne"
             :en-cours="endForm.processing"
             @confirmer="endFast"

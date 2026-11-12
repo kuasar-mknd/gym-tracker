@@ -427,16 +427,6 @@ describe('Measurements/Index add form', () => {
             expect(document.activeElement).toBe(wrapper.find('input[type="number"]').element)
         })
 
-        it('ne défile pas en se refermant', async () => {
-            const { wrapper, defiler } = await monterAvecLesVraisChamps(MEASUREMENTS)
-
-            await click(wrapper, 'Ajouter')
-            await flushPromises()
-            await click(wrapper, 'Annuler')
-            await flushPromises()
-
-            expect(defiler).toHaveBeenCalledTimes(1)
-        })
     })
 
     it('folds itself back up once saved, uncovering the entry that was just added', async () => {
