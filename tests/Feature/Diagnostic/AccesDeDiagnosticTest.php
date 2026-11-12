@@ -20,11 +20,10 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
-use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Handler\NullHandler;
-use Monolog\LogRecord;
 use Spatie\Permission\Models\Role;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\GestionnaireQuiNEcritPas;
 
 use function Pest\Laravel\call;
 use function Pest\Laravel\get;
@@ -69,15 +68,6 @@ function accesDeDiagnosticLesLignes(): ArrayObject
     static $lignes = new ArrayObject();
 
     return $lignes;
-}
-
-final class GestionnaireQuiNEcritPas extends AbstractProcessingHandler
-{
-    #[\Override]
-    protected function write(LogRecord $record): void
-    {
-        throw new RuntimeException('Le disque est plein.');
-    }
 }
 
 /**
