@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\RevoqueLesJetonsDeDiagnostic;
 use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthentication;
 use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthenticationRecovery;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
@@ -30,6 +31,7 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
 
     use InteractsWithAppAuthentication;
     use InteractsWithAppAuthenticationRecovery;
+    use RevoqueLesJetonsDeDiagnostic;
 
     /**
      * @var list<string>
