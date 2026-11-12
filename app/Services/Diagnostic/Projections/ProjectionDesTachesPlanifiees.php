@@ -10,6 +10,7 @@ use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\TexteNonFiable;
 use App\Services\Diagnostic\ValeurLue;
 use App\Services\Diagnostic\Vocabulaire;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Spatie\ScheduleMonitor\Models\MonitoredScheduledTaskLogItem;
 use stdClass;
@@ -53,7 +54,7 @@ final class ProjectionDesTachesPlanifiees
      */
     public function liste(FenetreDeDiagnostic $fenetre): array
     {
-        $taches = TachePlanifiee::query()->select(self::COLONNES)->orderBy('name')->limit(LecturesBornees::GROUPES_AU_PLUS + 1)->get();
+        $taches = $this->taches()->orderBy('name')->limit(LecturesBornees::GROUPES_AU_PLUS + 1)->get();
         $montrees = $taches->take(LecturesBornees::GROUPES_AU_PLUS);
         $echecs = $this->echecs($fenetre, $montrees->modelKeys());
         $parTache = LecturesBornees::bornees($echecs)->groupBy('monitored_scheduled_task_id');
@@ -76,12 +77,27 @@ final class ProjectionDesTachesPlanifiees
      */
     public function detail(int $identifiant, FenetreDeDiagnostic $fenetre, bool $texteBrut): ?array
     {
-        $tache = TachePlanifiee::query()->select(self::COLONNES)->find($identifiant);
+        $tache = $this->taches()->whereKey($identifiant)->first();
 
         return match ($tache) {
             null => null,
             default => $this->detailDe($tache, $fenetre, $this->echecs($fenetre, [$identifiant]), $texteBrut),
         };
+    }
+
+    /**
+     * Les tâches, par leurs seules colonnes nommées, sous la borne de temps
+     * de la base : l'indication vit dans le `select` de la requête de base,
+     * que le modèle partage.
+     *
+     * @return Builder<TachePlanifiee>
+     */
+    private function taches(): Builder
+    {
+        $requete = TachePlanifiee::query();
+        LecturesBornees::requete($requete->getQuery(), self::COLONNES);
+
+        return $requete;
     }
 
     /**
@@ -131,8 +147,7 @@ final class ProjectionDesTachesPlanifiees
      */
     private function echecs(FenetreDeDiagnostic $fenetre, array $taches): Collection
     {
-        return MonitoredScheduledTaskLogItem::query()->toBase()
-            ->select(['id', 'monitored_scheduled_task_id', 'created_at'])
+        return LecturesBornees::requete(MonitoredScheduledTaskLogItem::query()->toBase(), ['id', 'monitored_scheduled_task_id', 'created_at'])
             ->selectRaw("json_unquote(json_extract(meta, '$.runtime')) as duree")
             ->selectRaw("json_unquote(json_extract(meta, '$.exit_code')) as code_de_sortie")
             ->whereIn('monitored_scheduled_task_id', $taches)
@@ -169,8 +184,7 @@ final class ProjectionDesTachesPlanifiees
      */
     private function messages(array $identifiants): array
     {
-        return MonitoredScheduledTaskLogItem::query()->toBase()
-            ->select('id')
+        return LecturesBornees::requete(MonitoredScheduledTaskLogItem::query()->toBase(), ['id'])
             ->selectRaw("substring(cast(json_unquote(json_extract(meta, '$.failure_message')) as binary), 1, ?) as message", [ExpurgeLeTexte::OCTETS_LUS])
             ->whereIn('id', $identifiants)
             ->pluck('message', 'id')

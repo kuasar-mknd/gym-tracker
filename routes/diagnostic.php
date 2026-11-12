@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Diagnostic\DetailDUneExceptionController;
+use App\Http\Controllers\Diagnostic\DetailDUneTacheController;
 use App\Http\Controllers\Diagnostic\EtatController;
 use App\Http\Controllers\Diagnostic\ListeDesExceptionsController;
+use App\Http\Controllers\Diagnostic\ListeDesTachesController;
 use App\Http\Controllers\Diagnostic\OccurrencesDUneExceptionController;
 use App\Http\Controllers\Diagnostic\RefuseLesOptionsController;
 use App\Http\Controllers\Diagnostic\SanteDuDiagnosticController;
@@ -36,6 +38,15 @@ Route::middleware([ExigeUnJetonDeDiagnostic::class, ConditionalCspHeaders::class
         Route::get('exceptions/{identifiant}/occurrences', OccurrencesDUneExceptionController::class)
             ->where('identifiant', '[1-9][0-9]{0,17}')
             ->name('exceptions.occurrences');
+
+        /*
+         * Les tâches planifiées, sous la portée `sante` : même contrainte
+         * d'identifiant, sans liaison de modèle.
+         */
+        Route::get('taches', ListeDesTachesController::class)->name('taches.index');
+        Route::get('taches/{identifiant}', DetailDUneTacheController::class)
+            ->where('identifiant', '[1-9][0-9]{0,17}')
+            ->name('taches.show');
     });
 
 /*

@@ -180,6 +180,18 @@ it('marque les valeurs connues de la configuration, relues à chaque appel', fun
     expect(expurgeLeTexte('vers autre-courrier.example.org')->texte)->toBe('vers [hôte du courrier]');
 });
 
+it('ne masque un hôte d’un seul mot que tel qu’il est écrit, et un hôte pointé sans tenir compte de la casse', function (): void {
+    Config::set('database.connections.mysql.host', 'mysql');
+
+    expect(expurgeLeTexte('MySQL server has gone away')->texte)->toBe('MySQL server has gone away')
+        ->and(expurgeLeTexte('connexion à mysql refusée')->texte)->toBe('connexion à [hôte de la base] refusée');
+
+    Config::set('database.connections.mysql.host', 'base-canari.example.org');
+
+    expect(expurgeLeTexte('driver://BASE-CANARI.EXAMPLE.ORG:3306/gym ; dsn host=base-canari.example.org;dbname=gym')->texte)
+        ->toBe('driver://[hôte de la base]:3306/gym ; dsn host=[hôte de la base];dbname=gym');
+});
+
 it('ne cherche pas une valeur de moins de quatre caractères, ni au milieu d’un mot', function (): void {
     Config::set('database.connections.mysql.username', 'abc');
     Config::set('database.connections.mysql.database', 'gymz');
