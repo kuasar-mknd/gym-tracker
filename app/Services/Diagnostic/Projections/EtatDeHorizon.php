@@ -11,7 +11,8 @@ use Laravel\Horizon\Contracts\WorkloadRepository;
 
 /**
  * L'état d'Horizon tel que le diagnostic le rend : son statut, ses processus
- * et l'attente de chaque file. Lu dans les dépôts d'Horizon, jamais par son
+ * et, de chaque file, sa taille, l'attente qu'Horizon estime, l'âge de son plus
+ * ancien job en attente (`AgeDuPlusAncienEnAttente`) et ses processus. Lu dans les dépôts d'Horizon, jamais par son
  * API, qui porte des écritures et des charges utiles. Un cache injoignable
  * rend `illisible`, sans lever : le reste du diagnostic se lit quand même.
  */
@@ -34,12 +35,15 @@ final class EtatDeHorizon
      */
     private function lire(): array
     {
+        $maintenant = now()->getTimestamp();
+        $age = new AgeDuPlusAncienEnAttente();
         $maitres = collect(app(MasterSupervisorRepository::class)->all());
         $files = collect(app(WorkloadRepository::class)->get())
             ->map(static fn (mixed $file): array => [
                 'nom' => Vocabulaire::forme(Vocabulaire::IDENTIFIANT, JsonLu::champ($file, 'name')),
                 'taille' => ValeurLue::entier(JsonLu::champ($file, 'length')),
                 'attente_en_secondes' => ValeurLue::entier(JsonLu::champ($file, 'wait')),
+                'plus_ancien_en_secondes' => $age(ValeurLue::texte(JsonLu::champ($file, 'name')), $maintenant),
                 'processus' => ValeurLue::entier(JsonLu::champ($file, 'processes')),
             ])
             ->values();

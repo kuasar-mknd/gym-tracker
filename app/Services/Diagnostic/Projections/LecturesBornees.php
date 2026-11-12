@@ -64,6 +64,22 @@ final class LecturesBornees
     }
 
     /**
+     * Le nombre de lignes d'une requête, lu sous la borne de temps et jamais
+     * au-delà de la borne de lignes : `plafonne` dit que le vrai nombre est
+     * au moins `total`. Les clefs seules sont lues, sans tri (un index qui couvre
+     * la clause suffit, sans `filesort`), jamais un `count()`, qui perdrait
+     * l'indication d'optimiseur.
+     *
+     * @return array{total: int, plafonne: bool}
+     */
+    public static function compter(Builder $requete): array
+    {
+        $lues = count(self::requete($requete, ['id'])->limit(self::LIGNES_AU_PLUS + 1)->get());
+
+        return ['total' => min($lues, self::LIGNES_AU_PLUS), 'plafonne' => $lues > self::LIGNES_AU_PLUS];
+    }
+
+    /**
      * La base a-t-elle coupé la lecture parce qu'elle a duré plus que la borne ?
      */
     public static function tempsEcoule(QueryException $erreur): bool

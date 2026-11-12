@@ -56,7 +56,7 @@ function vocabulaireFermeFormes(): array
     return [
         'id' => $entier, 'ligne' => $entier, 'colonne' => $entier, 'nombre' => $entier, 'dernier_id' => $entier,
         'lignes_lues' => $entier, 'age_en_secondes' => $entier, 'marge_en_minutes' => $entier, 'code_de_sortie' => $entier,
-        'comptes_touches' => $entier, 'taille' => $entier, 'attente_en_secondes' => $entier, 'processus' => $entier, 'echecs_sur_7_jours' => $entier,
+        'comptes_touches' => $entier, 'taille' => $entier, 'attente_en_secondes' => $entier, 'plus_ancien_en_secondes' => $entier, 'echecs' => $entier, 'processus' => $entier, 'echecs_sur_7_jours' => $entier,
         'duree_en_secondes' => 'float',
         'echantillon' => 'bool', 'tronque' => 'bool',
         'suivant' => 'null',
@@ -96,7 +96,7 @@ function vocabulaireFermeConteneurs(): array
 {
     return [
         'resume', 'details', 'donnees', 'application', 'fenetre', 'sante', 'controles', 'taches_planifiees', 'taches', 'derniers_echecs', 'versions',
-        'exceptions', 'groupes', 'files', 'horizon', 'echecs', 'erreurs_navigateur', 'pile', 'navigateurs', 'portees',
+        'exceptions', 'groupes', 'files', 'horizon', 'echecs', 'echecs_par_file', 'erreurs_navigateur', 'pile', 'navigateurs', 'portees',
         'exception', 'tache_planifiee', 'echec_de_job', 'erreur_navigateur',
     ];
 }
