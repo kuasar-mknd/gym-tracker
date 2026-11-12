@@ -100,7 +100,7 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
                     ->waitFor('[dusk="weight-input-0-0"]', 15)
                     ->assertValue('[dusk="weight-input-0-0"]', '82.5')
                     ->assertValue('[dusk="reps-input-0-0"]', '5')
-                    ->assertAttribute('[dusk="complete-set-0-0"]', 'aria-label', 'Annuler la série')
+                    ->assertAttribute('[dusk="complete-set-0-0"]', 'aria-pressed', 'true')
                     ->waitFor('[dusk="etat-de-la-seance-en-attente"]', 15);
 
                 // « Terminer », à l'heure du geste, lue dans le navigateur autour du « Confirmer ».

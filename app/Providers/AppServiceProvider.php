@@ -17,6 +17,7 @@ use App\Support\BaseDeDonnees\ConnexionMariaDb;
 use App\Support\BaseDeDonnees\ConnexionMySql;
 use App\Support\ConnexionSociale\FournisseurApple;
 use App\Support\Courriels\GestionnaireDesCourriels;
+use App\Support\Journaux\GestionnaireDesJournaux;
 use App\Support\LiensDesCourriels;
 use App\Support\Sessions\GestionnaireDesSessions;
 use Closure;
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Log\LogManager;
 use Illuminate\Mail\MailManager;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Session\SessionManager;
@@ -65,6 +67,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\PersonalRecordService::class);
         $this->taireLesValeursCiteesParLeServeurDeBase();
         $this->taireLesAdressesDansLesErreursDEnvoi();
+        $this->taireLesAdressesDansLeJournalDeDernierRecours();
         $this->neJamaisFaireRenaitreUneSessionDetruite();
 
         if (config('app.env') === 'testing') {
@@ -192,6 +195,19 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->extend(
             'mail.manager',
             static fn (MailManager $_gestionnaire, Application $application): GestionnaireDesCourriels => new GestionnaireDesCourriels($application),
+        );
+    }
+
+    /**
+     * Le canal `emergency` n'est pas lu comme les autres : Laravel le bâtit
+     * à la main, sans `tap`. `GestionnaireDesJournaux` y pose le masque des
+     * adresses, par `extend()` comme le gestionnaire des courriels.
+     */
+    private function taireLesAdressesDansLeJournalDeDernierRecours(): void
+    {
+        $this->app->extend(
+            'log',
+            static fn (LogManager $_gestionnaire, Application $application): GestionnaireDesJournaux => new GestionnaireDesJournaux($application),
         );
     }
 

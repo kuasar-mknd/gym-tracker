@@ -92,6 +92,7 @@ class FetchBodyPartMeasurementsIndexAction
                 ->where('user_id', $idUtilisateur)
                 ->where('part', '>', $curseur))
             ->orderByDesc('measured_at')
+            ->orderByDesc('id')
             ->limit(2)
             ->get();
     }

@@ -6,10 +6,18 @@
  * n'importe où dans une longue séance, et un message qui sort de l'écran en
  * défilant ne dit rien.
  */
+import GlassButton from '@/Components/UI/GlassButton.vue'
+
 defineProps({
     /** Le message, ou rien. */
     message: { type: String, default: null },
+    /** Il reste jusqu'à sa fermeture : un bouton la propose. */
+    persistant: { type: Boolean, default: false },
+    /** La session a expiré : un lien mène à la connexion. */
+    reconnexion: { type: Boolean, default: false },
 })
+
+defineEmits(['fermer'])
 </script>
 
 <template>
@@ -26,6 +34,12 @@ defineProps({
             class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent z-toast left-sure-3 right-sure-3 top-sure-20 fixed rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
         >
             {{ message }}
+            <div v-if="persistant" class="mt-2 flex flex-wrap gap-2">
+                <GlassButton v-if="reconnexion" :href="route('login')" dusk="set-edit-error-reconnexion">
+                    Se reconnecter
+                </GlassButton>
+                <GlassButton dusk="set-edit-error-fermer" @click="$emit('fermer')">Fermer</GlassButton>
+            </div>
         </div>
     </Transition>
 </template>

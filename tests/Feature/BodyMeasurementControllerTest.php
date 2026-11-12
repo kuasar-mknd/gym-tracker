@@ -39,7 +39,8 @@ test('user can store a new body measurement', function (): void {
             'measured_at' => now()->format('Y-m-d'),
             'notes' => 'Feeling good',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Mesure ajoutée.');
 
     assertDatabaseHas('body_measurements', [
         'user_id' => $user->id,

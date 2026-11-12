@@ -181,6 +181,13 @@ final class GoalService
             return;
         }
 
+        // Une mensuration à zéro n'est pas une mesure : même garde que le critère.
+        if ($goal->type === GoalType::Measurement && $goal->target_value < $goal->start_value && $goal->current_value <= 0) {
+            $goal->progress_pct = 0.0;
+
+            return;
+        }
+
         /*
          * Le chemin parcouru se compte DANS LE SENS de la cible.
          *
@@ -589,23 +596,25 @@ final class GoalService
     {
         $mesures = [];
         $types = $goals->pluck('type')->unique();
-        $idsExercices = $goals->whereIn('type', [GoalType::Weight, GoalType::Volume])
+        $idsDesExercices = fn (GoalType $type): array => $goals->where('type', $type)
             ->pluck('exercise_id')
             ->filter()
             ->unique()
             ->toArray();
+        $idsExercicesDeCharge = $idsDesExercices(GoalType::Weight);
+        $idsExercicesDeVolume = $idsDesExercices(GoalType::Volume);
 
         if ($types->contains(GoalType::Frequency)) {
             // Les séances faites, comme le chemin d'un seul objectif (#2110).
             $mesures['seances_faites'] = $user->seancesFaites()->count();
         }
 
-        if ($types->contains(GoalType::Weight) && $idsExercices !== []) {
-            $mesures['max_weights'] = $this->preCalculateMaxWeights($user, $idsExercices);
+        if ($idsExercicesDeCharge !== []) {
+            $mesures['max_weights'] = $this->preCalculateMaxWeights($user, $idsExercicesDeCharge);
         }
 
-        if ($types->contains(GoalType::Volume) && $idsExercices !== []) {
-            $mesures['max_volumes'] = $this->preCalculateMaxVolumes($user, $idsExercices);
+        if ($idsExercicesDeVolume !== []) {
+            $mesures['max_volumes'] = $this->preCalculateMaxVolumes($user, $idsExercicesDeVolume);
         }
 
         /*

@@ -6,6 +6,7 @@ namespace App\Actions\Fasting;
 
 use App\Models\Fast;
 use App\Models\User;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
@@ -16,6 +17,11 @@ final class DemarrerUnJeuneAction
     public const int ATTENTE_DU_VERROU = 10;
 
     public const string MESSAGE = 'Un jeûne est déjà en cours.';
+
+    public static function verrouDuCompte(User $user): Lock
+    {
+        return Cache::lock("jeunes-du-compte:{$user->id}", self::VIE_DU_VERROU);
+    }
 
     /**
      * Vérification et création se tiennent sous le verrou des jeûnes du compte.
@@ -28,7 +34,7 @@ final class DemarrerUnJeuneAction
     public function execute(User $user, array $donnees): Fast
     {
         /** @var Fast $jeune */
-        $jeune = Cache::lock("jeunes-du-compte:{$user->id}", self::VIE_DU_VERROU)
+        $jeune = self::verrouDuCompte($user)
             ->block(self::ATTENTE_DU_VERROU, function () use ($user, $donnees): Fast {
                 if ($user->fasts()->where('status', 'active')->exists()) {
                     throw ValidationException::withMessages(['base' => self::MESSAGE]);

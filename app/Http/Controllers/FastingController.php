@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Fasting\DemarrerUnJeuneAction;
 use App\Actions\Fasting\FetchFastingIndexAction;
+use App\Actions\Fasting\MettreAJourUnJeuneAction;
 use App\Http\Requests\Api\StoreFastRequest;
 use App\Http\Requests\Api\UpdateFastRequest;
 use App\Models\Fast;
@@ -47,11 +48,11 @@ class FastingController extends Controller
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException Si le jeûne n'est pas celui de l'utilisateur.
      */
-    public function update(UpdateFastRequest $request, Fast $fast): RedirectResponse
+    public function update(UpdateFastRequest $request, Fast $fast, MettreAJourUnJeuneAction $mettreAJourUnJeune): RedirectResponse
     {
         $this->authorize('update', $fast);
 
-        $fast->update($request->validated());
+        $mettreAJourUnJeune->execute($this->user(), $fast, $request->validated());
 
         return back()->with('success', 'Jeûne mis à jour.');
     }

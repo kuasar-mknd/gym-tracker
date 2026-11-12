@@ -160,8 +160,50 @@ describe('RestTimer countdown', () => {
         vi.advanceTimersByTime(3000)
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
         expect(clock(wrapper)).toBe('0:00')
+    })
+
+    it('keeps the card on screen saying the rest is over, then closes it', async () => {
+        const wrapper = mountTimer({ duration: 3, autoStart: true })
+
+        vi.advanceTimersByTime(3000)
+        await wrapper.vm.$nextTick()
+
+        const statut = wrapper.get('[role="status"]')
+        expect(statut.text()).toBe('Repos terminé')
+        expect(wrapper.emitted('close')).toBeUndefined()
+
+        vi.advanceTimersByTime(3999)
+        expect(wrapper.emitted('close')).toBeUndefined()
+        vi.advanceTimersByTime(1)
+        expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
+    it('takes a new duration after the end, and no longer closes by itself', async () => {
+        const wrapper = mountTimer({ duration: 3, autoStart: true })
+        vi.advanceTimersByTime(3000)
+        await wrapper.vm.$nextTick()
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
+
+        await wrapper.setProps({ duration: 60 })
+
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos en cours')
+        expect(clock(wrapper)).toBe('1:00')
+        expect(toggleButton(wrapper).exists()).toBe(true)
+        vi.advanceTimersByTime(10000)
+        expect(wrapper.emitted('close')).toBeUndefined()
+    })
+
+    it('does not close a second time once the card is closed by hand during the end notice', async () => {
+        const wrapper = mountTimer({ duration: 3, autoStart: true })
+        vi.advanceTimersByTime(3000)
+        await wrapper.vm.$nextTick()
+
+        await wrapper.get('[dusk="close-timer-x"]').trigger('click')
+        vi.advanceTimersByTime(10000)
+
+        expect(wrapper.emitted('close')).toHaveLength(1)
     })
 
     it('finishes early when the rest is skipped', async () => {
@@ -169,7 +211,8 @@ describe('RestTimer countdown', () => {
 
         await button(wrapper, 'skip-rest-timer').trigger('click')
 
-        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
+        expect(wrapper.emitted('close')).toHaveLength(1)
         expect(clock(wrapper)).toBe('0:00')
     })
 
@@ -179,11 +222,11 @@ describe('RestTimer countdown', () => {
         await button(wrapper, 'close-timer-x').trigger('click')
 
         expect(wrapper.emitted('close')).toHaveLength(1)
-        expect(wrapper.emitted('finished')).toBeUndefined()
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos en cours')
 
         // Closing also stops the countdown; a hidden timer must not fire.
         vi.advanceTimersByTime(120000)
-        expect(wrapper.emitted('finished')).toBeUndefined()
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos en cours')
     })
 
     it('picks up a new rest duration while it is idle, but not mid-rest', async () => {
@@ -232,7 +275,7 @@ describe('le bip de fin, minuteur monté seul (#2112)', () => {
         vi.advanceTimersByTime(30000)
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
         expect(sorties).toHaveLength(1)
         expect(sorties[0].sonsAudibles).toHaveLength(1)
         expect(sorties[0].sonsAudibles[0]).toMatchObject({ frequence: 880, fin: 0.5 })
@@ -267,7 +310,7 @@ describe('le bip de fin, minuteur monté seul (#2112)', () => {
 
         await dansUnGeste(() => button(wrapper, 'skip-rest-timer').trigger('click'))
 
-        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
         expect(sorties).toHaveLength(1)
         expect(sorties[0].reprises.at(-1)).toEqual({ dansUnGeste: true, etat: 'interrupted' })
         expect(sorties[0].sonsAudibles).toHaveLength(1)
@@ -279,7 +322,7 @@ describe('le bip de fin, minuteur monté seul (#2112)', () => {
         vi.advanceTimersByTime(30000)
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
         expect(sorties).toHaveLength(0)
     })
 

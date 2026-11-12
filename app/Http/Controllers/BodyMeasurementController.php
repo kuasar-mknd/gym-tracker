@@ -58,7 +58,7 @@ class BodyMeasurementController extends Controller
 
         $this->statsCache->clearBodyMeasurementStats($this->user());
 
-        return redirect()->back();
+        return redirect()->back()->with('success', 'Mesure ajoutée.');
     }
 
     /**

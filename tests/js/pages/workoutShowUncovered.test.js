@@ -243,6 +243,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
         shallow: true,
         global: {
             directives: { press: {} },
+            mocks: { route: (...args) => globalThis.route(...args) },
             stubs: {
                 AuthenticatedLayout: LayoutStub,
                 GlassCard: passesSlot,
@@ -397,7 +398,7 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         expect(wrapper.find('[dusk="pr-trophy-0-0"]').exists()).toBe(true)
     })
 
-    it('rests for the exercise’s own time, and stops resting when the timer says it is done', async () => {
+    it('rests for the exercise’s own time, and stops resting when the timer closes after its end notice', async () => {
         const wrapper = await mountPage()
 
         await click(wrapper, 'complete-set-0-0')
@@ -409,7 +410,7 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         // applies when the exercise has none.
         expect(timer.props('duration')).toBe(90)
 
-        await emitOn(wrapper, RestTimerStub, 'finished')
+        await emitOn(wrapper, RestTimerStub, 'close')
 
         expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
     })
@@ -2483,6 +2484,7 @@ describe('Workouts/Show — la file hors-ligne prévient', () => {
     it('demande de se reconnecter quand la session a expiré, en comptant ce qui attend', async () => {
         const wrapper = await mountPage()
 
+        vi.useFakeTimers()
         window.dispatchEvent(
             new CustomEvent('sync:auth-required', { detail: { url: '/api/v1/sets/1', status: 419, pending: 3 } }),
         )
@@ -2491,6 +2493,13 @@ describe('Workouts/Show — la file hors-ligne prévient', () => {
         const message = wrapper.find('[dusk="set-edit-error"]').text()
         expect(message).toContain('session a expiré')
         expect(message).toContain('3 modifications')
+        expect(wrapper.find('[dusk="set-edit-error-reconnexion"]').attributes('href')).toBe('/login')
+
+        await vi.advanceTimersByTimeAsync(60000)
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(true)
+
+        await wrapper.find('[dusk="set-edit-error-fermer"]').trigger('click')
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
 
         wrapper.unmount()
     })
