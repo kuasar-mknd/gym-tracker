@@ -32,10 +32,12 @@ final class ProjectionDesFiles
 
     public const int BUDGET_DU_MESSAGE = 2_048;
 
+    public const int DERNIERS_ECHECS = 5;
+
     private const string NOM_DU_JOB = "case when json_valid(payload) then json_unquote(json_extract(payload, '$.displayName')) end as job";
 
     /**
-     * @return array{horizon: array<string, mixed>, echecs: array<int, array<string, mixed>>, lignes_lues: int, echantillon: bool, tronque: bool}
+     * @return array{horizon: array<string, mixed>, echecs: array<int, array<string, mixed>>, echecs_par_file: array<int, array{file: string|null, echecs: int}>, lignes_lues: int, echantillon: bool, tronque: bool}
      */
     public function liste(FenetreDeDiagnostic $fenetre): array
     {
@@ -53,8 +55,31 @@ final class ProjectionDesFiles
         return [
             'horizon' => new EtatDeHorizon()(),
             'echecs' => $groupes->take(LecturesBornees::GROUPES_AU_PLUS)->all(),
+            'echecs_par_file' => $this->parFile($lignes),
             ...LecturesBornees::bilan($lignes, $groupes),
+            'tronque' => $groupes->count() > LecturesBornees::GROUPES_AU_PLUS || $this->toutesLesFiles($lignes)->count() > LecturesBornees::GROUPES_AU_PLUS,
         ];
+    }
+
+    /**
+     * Les cinq derniers échecs des trente derniers jours, du plus récent au
+     * plus ancien : le job, la file, l'instant et la classe de l'exception
+     * levée. Avec `TexteBrut`, son message, sous `non_fiable` ; sans elle la
+     * clé n'existe pas. La charge utile n'est jamais rendue, ni la pile.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function derniers(FenetreDeDiagnostic $fenetre, bool $texteBrut): array
+    {
+        return ExceptionDUnJobEchoue::lire(
+            LecturesBornees::requete($this->echecs($fenetre), ['id', 'uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
+            ExceptionDUnJobEchoue::OCTETS_PAR_MORCEAU,
+        )
+            ->orderByDesc('id')
+            ->limit(self::DERNIERS_ECHECS)
+            ->get()
+            ->map(fn (stdClass $ligne): array => $this->dernier($ligne, $texteBrut))
+            ->all();
     }
 
     /**
@@ -66,7 +91,7 @@ final class ProjectionDesFiles
     public function detail(string $uuid, FenetreDeDiagnostic $fenetre, bool $texteBrut): ?array
     {
         $ligne = ExceptionDUnJobEchoue::avecLaPile(ExceptionDUnJobEchoue::lire(
-            $this->echecs($fenetre)->select(['uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
+            LecturesBornees::requete($this->echecs($fenetre), ['uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
             ExceptionDUnJobEchoue::OCTETS_PAR_MORCEAU,
         ))
             ->where('uuid', $uuid)
@@ -88,12 +113,41 @@ final class ProjectionDesFiles
     private function lignes(FenetreDeDiagnostic $fenetre): Collection
     {
         return ExceptionDUnJobEchoue::lire(
-            $this->echecs($fenetre)->select(['id', 'uuid', 'queue', 'failed_at as created_at'])->selectRaw(self::NOM_DU_JOB),
+            LecturesBornees::requete($this->echecs($fenetre), ['id', 'uuid', 'queue', 'failed_at as created_at'])->selectRaw(self::NOM_DU_JOB),
             ExceptionDUnJobEchoue::OCTETS_DE_LA_LISTE,
         )
             ->orderByDesc('id')
             ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
             ->get();
+    }
+
+    /**
+     * Les échecs lus, comptés par file, la plus touchée d'abord : au plus
+     * cinquante files, sans nouvelle lecture de la base.
+     *
+     * @param  Collection<int, stdClass>  $lignes
+     * @return array<int, array{file: string|null, echecs: int}>
+     */
+    private function parFile(Collection $lignes): array
+    {
+        return $this->toutesLesFiles($lignes)
+            ->take(LecturesBornees::GROUPES_AU_PLUS)
+            ->map(static fn (int $echecs, string $file): array => ['file' => $file === '' ? null : $file, 'echecs' => $echecs])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Les échecs lus, comptés par file, la plus touchée d'abord.
+     *
+     * @param  Collection<int, stdClass>  $lignes
+     * @return Collection<string, int>
+     */
+    private function toutesLesFiles(Collection $lignes): Collection
+    {
+        return LecturesBornees::bornees($lignes)
+            ->countBy(static fn (stdClass $ligne): string => Vocabulaire::forme(Vocabulaire::IDENTIFIANT, $ligne->queue) ?? '')
+            ->sortDesc();
     }
 
     /**
@@ -117,6 +171,28 @@ final class ProjectionDesFiles
         return DB::connection(is_string($connexion) ? $connexion : null)
             ->table(config()->string('queue.failed.table', 'failed_jobs'))
             ->where('failed_at', '>=', $fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS));
+    }
+
+    /**
+     * Un des derniers échecs : le détail, sans sa pile.
+     *
+     * @return array<string, mixed>
+     */
+    private function dernier(stdClass $ligne, bool $texteBrut): array
+    {
+        $exception = ExceptionDUnJobEchoue::levee($ligne->tete_de_l_exception, $ligne->fin_de_l_exception);
+
+        return [
+            'uuid' => Vocabulaire::forme(Vocabulaire::UUID, $ligne->uuid),
+            'job' => Vocabulaire::forme(Vocabulaire::CLASSE, $ligne->job),
+            'file' => Vocabulaire::forme(Vocabulaire::IDENTIFIANT, $ligne->queue),
+            'echoue_le' => ValeurLue::instant($ligne->failed_at),
+            'exception' => ExceptionDUnJobEchoue::classe($exception),
+            ...match ($texteBrut) {
+                true => ['non_fiable' => ['message' => new TexteNonFiable(ExceptionDUnJobEchoue::message($exception), self::BUDGET_DU_MESSAGE)]],
+                false => [],
+            },
+        ];
     }
 
     /**

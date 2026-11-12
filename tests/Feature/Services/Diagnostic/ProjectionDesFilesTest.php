@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Jobs\SyncUserGoals;
 use App\Services\Diagnostic\ExpurgeLeTexte;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
+use App\Services\Diagnostic\Projections\AgeDuPlusAncienEnAttente;
 use App\Services\Diagnostic\Projections\EtatDeHorizon;
 use App\Services\Diagnostic\Projections\ExceptionDUnJobEchoue;
 use App\Services\Diagnostic\Projections\LecturesBornees;
@@ -12,9 +13,11 @@ use App\Services\Diagnostic\Projections\ProjectionDesFiles;
 use App\Services\Diagnostic\TexteNonFiable;
 use App\Services\Diagnostic\ValeurLue;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Queue\RedisQueue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
@@ -254,24 +257,52 @@ it('ne lit que les 5 000 derniers échecs, et le dit', function (): void {
 it('dit l’état d’Horizon : arrêté, en pause, actif, et ses files', function (): void {
     expect(new EtatDeHorizon()())->toBe(['statut' => 'arrete', 'processus' => 0, 'files' => []]);
 
+    Carbon::setTestNow('2026-11-12 10:00:00');
+    $redis = Mockery::mock(RedisQueue::class);
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('default')->andReturn(now()->subSeconds(90)->getTimestamp());
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('notifications')->andReturn(null);
+    Queue::shouldReceive('connection')->with('redis')->andReturn($redis);
+    config()->set('queue.default', 'redis');
     test()->mock(MasterSupervisorRepository::class)->shouldReceive('all')->andReturn([(object) ['status' => 'running'], (object) ['status' => 'paused']]);
     test()->mock(WorkloadRepository::class)->shouldReceive('get')->andReturn([
-        ['name' => 'redis:default', 'length' => 4, 'wait' => 12, 'processes' => 3],
-        ['name' => 'redis:notifications', 'length' => 0, 'wait' => 0, 'processes' => 2],
+        ['name' => 'default', 'length' => 4, 'wait' => 12, 'processes' => 3],
+        ['name' => 'notifications', 'length' => 0, 'wait' => 0, 'processes' => 2],
     ]);
 
     expect(new EtatDeHorizon()())->toBe([
         'statut' => 'en_pause',
         'processus' => 5,
         'files' => [
-            ['nom' => 'redis:default', 'taille' => 4, 'attente_en_secondes' => 12, 'processus' => 3],
-            ['nom' => 'redis:notifications', 'taille' => 0, 'attente_en_secondes' => 0, 'processus' => 2],
+            ['nom' => 'default', 'taille' => 4, 'attente_en_secondes' => 12, 'plus_ancien_en_secondes' => 90, 'processus' => 3],
+            ['nom' => 'notifications', 'taille' => 0, 'attente_en_secondes' => 0, 'plus_ancien_en_secondes' => null, 'processus' => 2],
         ],
     ]);
 
     test()->mock(MasterSupervisorRepository::class)->shouldReceive('all')->andReturn([(object) ['status' => 'running']]);
 
     expect(new EtatDeHorizon()()['statut'])->toBe('actif');
+    Carbon::setTestNow();
+});
+
+it('ne dit pas l’âge du plus ancien job d’une file quand la connexion n’est pas Redis, ou illisible, sans lever', function (): void {
+    $age = new AgeDuPlusAncienEnAttente();
+    config()->set('queue.default', 'sync');
+
+    expect($age('default', 1_000))->toBeNull();
+
+    config()->set('queue.default', 'redis');
+    $redis = Mockery::mock(RedisQueue::class);
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('mails')->andThrow(new RuntimeException('redis injoignable'));
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('futur')->andReturn(2_000);
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('vieille')->andReturn(900);
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('vide')->andReturn(null);
+    Queue::shouldReceive('connection')->with('redis')->andReturn($redis);
+
+    expect($age('mails', 1_000))->toBeNull()
+        ->and($age('futur', 1_000))->toBe(0)
+        ->and($age('vide,vieille', 1_000))->toBe(100)
+        ->and($age('vide', 1_000))->toBeNull()
+        ->and($age('', 1_000))->toBeNull();
 });
 
 it('dit Horizon illisible quand son magasin ne répond pas, sans lever', function (): void {

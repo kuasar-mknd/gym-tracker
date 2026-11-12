@@ -6,6 +6,7 @@ use App\Http\Controllers\Diagnostic\DetailDUneExceptionController;
 use App\Http\Controllers\Diagnostic\DetailDUneTacheController;
 use App\Http\Controllers\Diagnostic\EtatController;
 use App\Http\Controllers\Diagnostic\ListeDesExceptionsController;
+use App\Http\Controllers\Diagnostic\ListeDesFilesController;
 use App\Http\Controllers\Diagnostic\ListeDesTachesController;
 use App\Http\Controllers\Diagnostic\OccurrencesDUneExceptionController;
 use App\Http\Controllers\Diagnostic\RefuseLesOptionsController;
@@ -47,6 +48,9 @@ Route::middleware([ExigeUnJetonDeDiagnostic::class, ConditionalCspHeaders::class
         Route::get('taches/{identifiant}', DetailDUneTacheController::class)
             ->where('identifiant', '[1-9][0-9]{0,17}')
             ->name('taches.show');
+
+        /* Les files et les jobs échoués, sous la portée `Files` : aucun paramètre. */
+        Route::get('files', ListeDesFilesController::class)->name('files.index');
     });
 
 /*
