@@ -164,12 +164,40 @@ describe('RestTimer countdown', () => {
         expect(clock(wrapper)).toBe('0:00')
     })
 
+    it('keeps the card on screen saying the rest is over, then closes it', async () => {
+        const wrapper = mountTimer({ duration: 3, autoStart: true })
+
+        vi.advanceTimersByTime(3000)
+        await wrapper.vm.$nextTick()
+
+        const statut = wrapper.get('[role="status"]')
+        expect(statut.text()).toBe('Repos terminé')
+        expect(wrapper.emitted('close')).toBeUndefined()
+
+        vi.advanceTimersByTime(3999)
+        expect(wrapper.emitted('close')).toBeUndefined()
+        vi.advanceTimersByTime(1)
+        expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
+    it('does not close a second time once the card is closed by hand during the end notice', async () => {
+        const wrapper = mountTimer({ duration: 3, autoStart: true })
+        vi.advanceTimersByTime(3000)
+        await wrapper.vm.$nextTick()
+
+        await wrapper.get('[dusk="close-timer-x"]').trigger('click')
+        vi.advanceTimersByTime(10000)
+
+        expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
     it('finishes early when the rest is skipped', async () => {
         const wrapper = mountTimer({ duration: 90, autoStart: true })
 
         await button(wrapper, 'skip-rest-timer').trigger('click')
 
         expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(wrapper.emitted('close')).toHaveLength(1)
         expect(clock(wrapper)).toBe('0:00')
     })
 

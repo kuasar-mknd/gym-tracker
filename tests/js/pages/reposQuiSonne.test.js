@@ -167,7 +167,7 @@ beforeAll(() => {
 beforeEach(() => {
     localStorage.clear()
     // La minuterie du repos et l'heure seulement : le reste de la page garde ses minuteries réelles.
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'Date'] })
     installerLaSortieWebKit()
     patch.mockReset()
     patch.mockResolvedValue({ data: {} })
@@ -203,6 +203,9 @@ describe('la fin du repos sur la page de séance (#2112)', () => {
 
             await attendre(90)
 
+            expect(page.get('[dusk="rest-timer-status"]').text()).toBe('Repos terminé')
+            await attendre(4)
+
             expect(minuteurAffiche(page)).toBe(false)
             expect(sorties).toHaveLength(1)
             expect(sorties[0].sonsAudibles).toHaveLength(1)
@@ -218,7 +221,7 @@ describe('la fin du repos sur la page de séance (#2112)', () => {
 
         for (const index of [0, 1, 2, 3]) {
             await toucher(page, `complete-set-0-${index}`)
-            await attendre(90)
+            await attendre(94)
             expect(minuteurAffiche(page)).toBe(false)
             entreDeuxRepos.push(sorties.map((sortie) => sortie.state))
         }
@@ -326,7 +329,7 @@ describe('la fin du repos sur la page de séance (#2112)', () => {
         expect(sorties[0].reprises.at(-1)).toEqual({ dansUnGeste: true, etat: 'interrupted' })
         expect(sorties[0].state).toBe('running')
 
-        await attendre(60)
+        await attendre(64)
 
         expect(minuteurAffiche(page)).toBe(false)
         expect(sorties).toHaveLength(1)

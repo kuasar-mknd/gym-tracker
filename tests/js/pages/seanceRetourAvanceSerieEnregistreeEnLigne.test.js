@@ -116,8 +116,12 @@ it('montre, au retour par Avance, la série enregistrée en ligne, sans écrire 
     expect(visites).toEqual([])
     expect(rangees()).toBe(2)
     expect(document.querySelector('[dusk="weight-input-0-0"]').value).toBe('85')
-    expect(document.querySelector('[dusk="complete-set-0-0"]').getAttribute('aria-label')).toBe('Valider la série')
-    expect(document.querySelector('[dusk="complete-set-0-1"]').getAttribute('aria-label')).toBe('Annuler la série')
+    expect(document.querySelector('[dusk="complete-set-0-0"]').getAttribute('aria-label')).toMatch(
+        /^Valider la série \d/,
+    )
+    expect(document.querySelector('[dusk="complete-set-0-1"]').getAttribute('aria-label')).toMatch(
+        /^Annuler la série \d/,
+    )
     expect(present('[dusk="set-unsynced-0-1"]')).toBe(false)
 
     // Elle a gardé son identifiant : la décocher vise la série en base.

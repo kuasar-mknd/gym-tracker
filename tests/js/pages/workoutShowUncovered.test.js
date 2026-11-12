@@ -397,7 +397,7 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         expect(wrapper.find('[dusk="pr-trophy-0-0"]').exists()).toBe(true)
     })
 
-    it('rests for the exercise’s own time, and stops resting when the timer says it is done', async () => {
+    it('rests for the exercise’s own time, and stops resting when the timer closes after its end notice', async () => {
         const wrapper = await mountPage()
 
         await click(wrapper, 'complete-set-0-0')
@@ -409,7 +409,7 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         // applies when the exercise has none.
         expect(timer.props('duration')).toBe(90)
 
-        await emitOn(wrapper, RestTimerStub, 'finished')
+        await emitOn(wrapper, RestTimerStub, 'close')
 
         expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
     })

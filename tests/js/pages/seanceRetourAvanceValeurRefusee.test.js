@@ -114,7 +114,9 @@ it('rend au retour par Avance la valeur et la coche que le serveur garde, quand 
     })
     const liberer = uneReponseRetenue(reseau.serveur)
     await cliquer('[dusk="complete-set-0-0"]')
-    expect(document.querySelector('[dusk="complete-set-0-0"]').getAttribute('aria-label')).toBe('Valider la série')
+    expect(document.querySelector('[dusk="complete-set-0-0"]').getAttribute('aria-label')).toMatch(
+        /^Valider la série \d/,
+    )
     window.addEventListener('popstate', liberer, { once: true })
 
     await naviguerDansLHistorique('back', '#liste-des-seances')
@@ -124,7 +126,9 @@ it('rend au retour par Avance la valeur et la coche que le serveur garde, quand 
 
     expect(reseau.serveur.resume().at(-1)).toBe('patch /api/v1/sets/3 {"is_completed":false}')
     expect(reseau.serveur.series.get(3).is_completed).toBe(true)
-    expect(document.querySelector('[dusk="complete-set-0-0"]').getAttribute('aria-label')).toBe('Annuler la série')
+    expect(document.querySelector('[dusk="complete-set-0-0"]').getAttribute('aria-label')).toMatch(
+        /^Annuler la série \d/,
+    )
     expect(visites).toEqual([])
 
     // Ce que la page relève comme confirmé est bien ce que le serveur garde : un nouveau refus y revient.

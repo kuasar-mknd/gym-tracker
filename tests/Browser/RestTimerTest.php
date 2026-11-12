@@ -36,7 +36,7 @@ class RestTimerTest extends DuskTestCase
         $browser->waitUsing(
             10,
             100,
-            fn (): bool => $this->toggleLabel($browser) === $label,
+            fn (): bool => str_starts_with($this->toggleLabel($browser), $label),
             "Le bouton de la serie devait porter « {$label} », il porte « {$this->toggleLabel($browser)} »",
         );
     }
