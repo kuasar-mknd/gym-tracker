@@ -136,9 +136,7 @@ it('montre, dans une visite plus ancienne de la même séance, l’exercice ajou
     expect(document.querySelector('[dusk="set-unsynced-1-0"]').getAttribute('aria-label')).toBe(
         'Série 1 non enregistrée',
     )
-    expect(document.querySelector('[dusk="complete-set-1-0"]').getAttribute('aria-label')).toMatch(
-        /^Annuler la série \d/,
-    )
+    expect(document.querySelector('[dusk="complete-set-1-0"]').getAttribute('aria-pressed')).toBe('true')
 
     // La saisie qui suit se fond dans la même entrée, qui reste seule.
     await saisir('[dusk="weight-input-1-0"]', '60')

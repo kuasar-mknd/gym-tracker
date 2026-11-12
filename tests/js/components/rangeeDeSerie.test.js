@@ -61,12 +61,12 @@ describe('la coche, le numéro et le retrait', () => {
         await wrapper.get('[dusk="complete-set-2-1"]').trigger('click')
 
         expect(wrapper.emitted('toggle')).toHaveLength(1)
-        expect(wrapper.get('[dusk="complete-set-2-1"]').attributes('aria-label')).toContain('Annuler la série 2')
+        expect(wrapper.get('[dusk="complete-set-2-1"]').attributes('aria-label')).toContain('Valider la série 2')
         expect(wrapper.find('[dusk="pr-trophy-2-1"]').exists()).toBe(true)
         expect(wrapper.get('[dusk="set-unsynced-2-1"]').attributes('aria-label')).toBe('Série 2 non enregistrée')
     })
 
-    it('nomme la coche avec la série et l’exercice, et dit si elle est enfoncée', async () => {
+    it('nomme la coche d’un libellé stable, et dit par `aria-pressed` si elle est enfoncée', async () => {
         const ouverte = monter()
         const coche = ouverte.get('[dusk="complete-set-2-1"]')
         expect(coche.attributes('aria-label')).toBe('Valider la série 2, exercice Développé couché')
@@ -74,10 +74,9 @@ describe('la coche, le numéro et le retrait', () => {
 
         const faite = monter({ set: { id: 9, weight: 80, reps: 5, is_completed: true, personal_record: { id: 3 } } })
         expect(faite.get('[dusk="complete-set-2-1"]').attributes('aria-label')).toBe(
-            'Annuler la série 2, exercice Développé couché, record personnel',
+            'Valider la série 2, exercice Développé couché, record personnel',
         )
         expect(faite.get('[dusk="complete-set-2-1"]').attributes('aria-pressed')).toBe('true')
-        expect(faite.get('[dusk="pr-trophy-2-1"] [role="img"]').attributes('aria-label')).toBe('Record personnel')
     })
 
     it('numérote le bouton de retrait visible dès sm comme celui du glissement', () => {

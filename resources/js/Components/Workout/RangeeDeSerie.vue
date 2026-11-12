@@ -64,7 +64,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 class="group focus-visible:ring-accent-primary relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition focus-visible:ring-2 focus-visible:outline-none"
                 :class="set.is_completed ? 'bg-accent-state text-text-main' : 'bg-surface-sunken text-text-muted'"
                 :aria-pressed="set.is_completed ? 'true' : 'false'"
-                :aria-label="`${set.is_completed ? 'Annuler' : 'Valider'} la série ${index + 1}, exercice ${line.exercise.name}${set.personal_record ? ', record personnel' : ''}`"
+                :aria-label="`Valider la série ${index + 1}, exercice ${line.exercise.name}${set.personal_record ? ', record personnel' : ''}`"
             >
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -75,7 +75,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     class="bg-accent-warning text-text-on-accent absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full shadow-sm"
                     :dusk="`pr-trophy-${lineIndex}-${index}`"
                 >
-                    <GlassIcon name="stars" class="text-xs font-bold" label="Record personnel" />
+                    <GlassIcon name="stars" class="text-xs font-bold" />
                 </div>
             </button>
             <!-- Le numero porte le deplacement au CLAVIER. Le

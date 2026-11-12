@@ -83,13 +83,11 @@ const props = defineProps({
 /**
  * Component Emits
  *
- * @event finished - Fired when the timer reaches 0. La carte reste alors
- *   affichée, « Repos terminé » (`role="status"`), puis se ferme d'elle-même.
  * @event close - Fired when the user closes the timer, or a few seconds
- *   after the end of the rest. Un parent ferme la carte sur `close`, pas sur
- *   `finished`.
+ *   after the end of the rest, que la carte annonce entre-temps
+ *   (« Repos terminé », `role="status"`). Un parent ferme la carte sur `close`.
  */
-const emit = defineEmits(['finished', 'close', 'update:autoRestTimer'])
+const emit = defineEmits(['close', 'update:autoRestTimer'])
 
 // --- State ---
 
@@ -227,7 +225,7 @@ const jouerLeBipDeFin = (contexte) => {
 }
 
 /**
- * La fin du repos : le retour haptique, le bip, puis `finished`.
+ * La fin du repos : le retour haptique, le bip, puis l'annonce « Repos terminé ».
  *
  * La fin naturelle arrive dans le rappel de la minuterie, hors de tout geste :
  * le bip se joue sur la sortie que le geste du départ a ouverte, jamais sur une
@@ -246,8 +244,6 @@ const finishTimer = () => {
 
     termine.value = true
     fermeture.value = setTimeout(() => emit('close'), DELAI_DE_FERMETURE_MS)
-
-    emit('finished')
 }
 
 /** Closes the timer component. */
@@ -290,6 +286,8 @@ watch(
     () => props.duration,
     (newVal) => {
         if (!isActive.value) {
+            clearTimeout(fermeture.value)
+            termine.value = false
             timeLeft.value = newVal
         }
     },

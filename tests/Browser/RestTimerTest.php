@@ -25,7 +25,7 @@ class RestTimerTest extends DuskTestCase
      */
     private function toggleLabel(Browser $browser): string
     {
-        return (string) $browser->attribute('[dusk="complete-set-0-0"]', 'aria-label');
+        return (string) $browser->attribute('[dusk="complete-set-0-0"]', 'aria-pressed');
     }
 
     /**
@@ -36,7 +36,7 @@ class RestTimerTest extends DuskTestCase
         $browser->waitUsing(
             10,
             100,
-            fn (): bool => str_starts_with($this->toggleLabel($browser), $label),
+            fn (): bool => $this->toggleLabel($browser) === $label,
             "Le bouton de la serie devait porter « {$label} », il porte « {$this->toggleLabel($browser)} »",
         );
     }
@@ -129,11 +129,11 @@ class RestTimerTest extends DuskTestCase
         // En instructions plutot qu'en chaine fluide : `tap()` ne declare pas
         // son type de retour, et l'enchainer rendait la methode `mixed`.
         $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
-        $this->waitForToggle($browser, 'Valider la série');
+        $this->waitForToggle($browser, 'false');
         $this->waitForCompletionInDatabase($browser, $seance, false);
 
         $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
-        $this->waitForToggle($browser, 'Annuler la série');
+        $this->waitForToggle($browser, 'true');
         $this->waitForCompletionInDatabase($browser, $seance, true);
 
         return $browser->waitFor('[dusk="skip-rest-timer"]', 15);
@@ -208,12 +208,12 @@ class RestTimerTest extends DuskTestCase
             // 2. Close via "X" button — desormais la seule affordance de
             // fermeture, le bouton « Fermer » qui la doublait ayant ete retire.
             $browser->click('@close-timer-x')
-                ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
+                ->waitUntilMissing('[dusk="rest-timer"]', 10);
 
             // 3. Trigger again and use "Skip" (Passer)
             $this->retriggerRestTimer($browser, $workout)
                 ->click('@skip-rest-timer')
-                ->waitUntilMissing('[dusk="skip-rest-timer"]', 10)
+                ->waitUntilMissing('[dusk="rest-timer"]', 10)
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('timer-failure-'.$sizeMacro);
