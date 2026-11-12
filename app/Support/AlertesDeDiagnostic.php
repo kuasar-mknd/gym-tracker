@@ -142,6 +142,13 @@ final class AlertesDeDiagnostic
      */
     public function jetonInvalidePresente(JetonDeDiagnostic $jeton, CarbonInterface $maintenant): void
     {
+        $marque = 'diagnostic:alerte:presentation-vue:'.$jeton->identifiant.':'.$maintenant->format('Y-m-d\TH:i');
+        $surSql = JournalDuDiagnostic::lEcritureSeraitEnSql();
+
+        if ($surSql && rescue(static fn (): bool => Cache::has($marque), false, true)) {
+            return;
+        }
+
         rescue(static fn (): bool => Cache::put(self::CLE_DE_LA_DERNIERE_PRESENTATION, $maintenant->toIso8601String(), $maintenant->copy()->addDays(2)), false, true);
 
         $this->sansLever(function () use ($jeton, $maintenant): void {
@@ -159,6 +166,10 @@ final class AlertesDeDiagnostic
                 new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::JetonInvalidePresente, [self::fin($jeton)]),
             );
         });
+
+        if ($surSql) {
+            rescue(static fn (): bool => Cache::put($marque, true, 120), false, true);
+        }
     }
 
     public function debitDepasse(JetonDeDiagnostic $jeton): void

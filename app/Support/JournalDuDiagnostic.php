@@ -96,11 +96,11 @@ final class JournalDuDiagnostic
 
     /**
      * Sur un cache `database` (ou une bascule qui le nomme), chaque compteur
-     * serait une écriture SQL que le premier venu déclencherait à volonté : le
+     * serait une écriture SQL par requête non authentifiée : le
      * refus n'est alors ni compté ni journalisé. Un cache en mémoire ne
      * remplace pas Redis, Octane le vide à chaque requête.
      */
-    private static function lEcritureSeraitEnSql(): bool
+    public static function lEcritureSeraitEnSql(): bool
     {
         $defaut = config('cache.default');
         $pilote = is_string($defaut) ? config('cache.stores.'.$defaut.'.driver') : null;

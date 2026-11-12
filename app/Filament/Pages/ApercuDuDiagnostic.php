@@ -15,6 +15,7 @@ use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
+use JsonException;
 
 /**
  * « Système › Aperçu du diagnostic » (#2032) : pour les portées choisies,
@@ -94,8 +95,8 @@ final class ApercuDuDiagnostic extends Page
         $details = new ApercuDesDetails()($choix->portees, $fenetre, $resume->enveloppe['donnees']);
 
         return [
-            'resume' => $resume->json(lisible: true),
-            'details' => $details->json(lisible: true),
+            'resume' => self::lisible($resume),
+            'details' => self::lisible($details),
             'invisibles' => $resume->invisiblesRetires + $details->invisiblesRetires,
             'structure' => $this->structure($resume, $details),
             'portees' => array_map(static fn (PorteeDeDiagnostic $portee): string => $portee->value, $choix->portees),
@@ -115,5 +116,19 @@ final class ApercuDuDiagnostic extends Page
             ['resume' => $resume->structure(), 'details' => $details->structure()],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PRETTY_PRINT,
         );
+    }
+
+    /**
+     * Le JSON lisible de l'enveloppe, ou un bloc « illisible » quand elle ne
+     * s'encode pas : la page ne répond pas 500 pour une valeur que l'agent
+     * recevrait, lui, en 500.
+     */
+    public static function lisible(EnveloppeRendue $enveloppe): string
+    {
+        try {
+            return $enveloppe->json(lisible: true);
+        } catch (JsonException) {
+            return 'Enveloppe illisible : elle ne s\'encode pas en JSON.';
+        }
     }
 }

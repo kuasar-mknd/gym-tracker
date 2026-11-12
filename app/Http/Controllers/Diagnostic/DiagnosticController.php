@@ -71,13 +71,13 @@ abstract class DiagnosticController extends Controller
 
     protected function repondre(Request $request, EnveloppeRendue $rendue): Response
     {
-        $this->poser($request, ExigeUnJetonDeDiagnostic::ELEMENTS, count($rendue->enveloppe['donnees']));
-
         $corps = $rendue->json();
 
         if (strlen($corps) >= EnveloppeRendue::OCTETS_AU_PLUS) {
             throw new LogicException('Une réponse du diagnostic dépasse 256 Kio.');
         }
+
+        $this->poser($request, ExigeUnJetonDeDiagnostic::ELEMENTS, count($rendue->enveloppe['donnees']));
 
         return new Response($corps, 200, ['Content-Type' => 'application/json']);
     }

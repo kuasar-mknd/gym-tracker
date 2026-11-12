@@ -485,6 +485,58 @@ it('juge le débit sur le compte rendu par l’incrément, non sur une lecture q
     accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete)->assertStatus(429);
 });
 
+it('répond en GET et HEAD à un sous-chemin inconnu de /diagnostic comme à un chemin hors du préfixe', function (string $methode, bool $json): void {
+    $serveur = ['HTTP_ACCEPT' => $json ? 'application/json' : 'text/html'];
+
+    $horsDuPrefixe = accesDeDiagnosticTout(call($methode, '/ce-chemin-n-existe-pas', server: $serveur));
+    $sousLePrefixe = accesDeDiagnosticTout(call($methode, '/diagnostic/ce-chemin-n-existe-pas', server: $serveur));
+    $sousLaVersion = accesDeDiagnosticTout(call($methode, '/diagnostic/v1/ce-chemin-n-existe-pas', server: $serveur));
+
+    expect($horsDuPrefixe['statut'])->toBe(404)
+        ->and($sousLePrefixe)->toBe($horsDuPrefixe)
+        ->and($sousLaVersion)->toBe($horsDuPrefixe);
+})->with(['GET', 'HEAD'])->with([true, false]);
+
+it('rend le Retry-After le plus long quand la minute et l’heure sont épuisées', function (): void {
+    $cree = accesDeDiagnosticUnJeton();
+    $entete = accesDeDiagnosticBearer($cree['en_clair']);
+
+    foreach (range(1, 10) as $minute) {
+        foreach (range(1, 30) as $rang) {
+            accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete);
+        }
+
+        Carbon::setTestNow(now()->addSeconds(61));
+    }
+
+    foreach (range(1, 30) as $rang) {
+        accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete)->assertStatus(429);
+    }
+
+    $refus = accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete);
+
+    $refus->assertStatus(429);
+    expect((int) $refus->headers->get('Retry-After'))->toBeGreaterThan(60);
+});
+
+it('n’écrit pas en base à chaque présentation d’un jeton révoqué ou expiré quand le cache par défaut est `database`', function (string $cause): void {
+    config()->set('cache.default', 'database');
+    [$uri, $entete] = accesDeDiagnosticSituation($cause);
+    accesDeDiagnosticAppeler($uri, $entete);
+    $ecritures = new ArrayObject();
+    DB::listen(function ($requete) use ($ecritures): void {
+        if (! str_starts_with(strtolower(ltrim($requete->sql)), 'select')) {
+            $ecritures->append($requete->sql);
+        }
+    });
+
+    foreach (range(1, 5) as $rang) {
+        accesDeDiagnosticAppeler($uri, $entete)->assertNotFound();
+    }
+
+    expect($ecritures->getArrayCopy())->toBe([]);
+})->with(['révoqué', 'expiré']);
+
 it('lit la ligne du jeton avant de décider de l’interrupteur : la même lecture, coupé ou non', function (bool $actif): void {
     config()->set('app.diagnostic_enabled', $actif);
     $entete = 'Bearer '.JetonDeDiagnostic::composer(Str::lower(Str::random(12)), Str::random(48));
@@ -573,6 +625,9 @@ it('refuse une réponse de 256 Kio et plus, et sert celle qui reste en dessous',
     $auPlafond = accesDeDiagnosticAppeler('/diagnostic/v1/test-enveloppe', $entete);
 
     expect(strlen((string) $dessous->getContent()))->toBe(App\Services\Diagnostic\EnveloppeRendue::OCTETS_AU_PLUS - 1);
+    $lignes = collect(accesDeDiagnosticLesLignes()->getArrayCopy())->pluck('contexte');
+    expect($lignes->last())->toMatchArray(['statut' => 500, 'elements' => 0])
+        ->and($lignes->first())->toMatchArray(['statut' => 200, 'elements' => 1]);
     $dessous->assertOk();
     $auPlafond->assertStatus(500)->assertExactJson(['erreur' => 'erreur-interne', 'note' => EnveloppeDeDiagnostic::NOTE]);
 });

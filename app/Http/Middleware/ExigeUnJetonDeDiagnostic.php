@@ -26,17 +26,16 @@ use Throwable;
  * limiteurs se relisent à chaque requête, jamais d'une propriété ou d'un
  * singleton.
  *
- * Dans l'ordre : l'interrupteur `DIAGNOSTIC_ENABLED` ; HTTPS en production ;
- * `Authorization: Bearer` de la forme exacte du jeton, et nulle part
- * ailleurs ; la ligne cherchée par l'identifiant et l'empreinte du secret
- * comparée par `hash_equals`, contre une empreinte factice quand
- * l'identifiant est inconnu ; ni révoqué ni expiré ; un créateur qui existe
- * et garde la capacité ; la portée que la route déclare dans `PORTEES`, lue
- * par son nom ; enfin les deux limiteurs du jeton.
- *
- * L'en-tête, la ligne et le secret s'examinent avant l'interrupteur, pour
- * qu'une requête bien formée coûte la même lecture qu'il soit coupé ou non.
- * La portée se juge après les limiteurs : un 403 compte comme un appel.
+ * Dans l'ordre : l'en-tête `Authorization: Bearer` de la forme exacte du
+ * jeton, et nulle part ailleurs ; la ligne cherchée par l'identifiant et
+ * l'empreinte du secret comparée par `hash_equals`, contre une empreinte
+ * factice quand l'identifiant est inconnu (ces trois lectures se font avant
+ * l'interrupteur, pour qu'une requête bien formée coûte la même lecture
+ * qu'il soit coupé ou non) ; l'interrupteur `DIAGNOSTIC_ENABLED` ; HTTPS en
+ * production ; ni révoqué ni expiré ; un créateur qui existe et garde la
+ * capacité ; la route déclarée dans `PORTEES` ; les deux limiteurs du jeton ;
+ * enfin la portée, que la route déclare dans `PORTEES` et qui se lit par son
+ * nom : un 403 compte donc comme un appel.
  *
  * Tout refus d'avant le jeton, et celui d'une route sans portée, lève un
  * `NotFoundHttpException` nu, que le
@@ -224,7 +223,7 @@ class ExigeUnJetonDeDiagnostic
         $parHeure = 'diagnostic:debit:heure:'.$jeton->identifiant;
 
         if (RateLimiter::hit($parMinute, 60) > self::REQUETES_PAR_MINUTE) {
-            return max(1, RateLimiter::availableIn($parMinute));
+            return max(1, RateLimiter::availableIn($parMinute), RateLimiter::tooManyAttempts($parHeure, self::REQUETES_PAR_HEURE) ? RateLimiter::availableIn($parHeure) : 0);
         }
 
         if (RateLimiter::hit($parHeure, 3600) > self::REQUETES_PAR_HEURE) {

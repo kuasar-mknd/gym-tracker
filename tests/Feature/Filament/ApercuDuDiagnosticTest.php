@@ -231,3 +231,12 @@ it('ne charge aucune classe que nomme le message d’un job échoué : la comman
         ->and(data_get(apercuDuDiagnosticJson($page, 'resume'), 'donnees.files.echecs.0.exception'))->toBe(RuntimeException::class)
         ->and(data_get(apercuDuDiagnosticJson($page, 'details'), 'donnees.echec_de_job.exception'))->toBe(RuntimeException::class);
 });
+
+it('rend un bloc illisible, non une 500, quand une enveloppe ne s’encode pas', function (): void {
+    $enveloppe = new App\Services\Diagnostic\EnveloppeRendue(
+        ['donnees' => ['valeur' => NAN], 'suivant' => null, 'tronque' => false, 'echantillon' => false, 'genere_le' => null, 'note' => ''],
+        0,
+    );
+
+    expect(App\Filament\Pages\ApercuDuDiagnostic::lisible($enveloppe))->toContain('illisible');
+});
