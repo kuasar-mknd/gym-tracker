@@ -9,7 +9,9 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\PersonalRecordService;
+use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
 
 /**
@@ -101,4 +103,56 @@ it('prend le verrou des records quand une des quatre colonnes change', function 
     'poids' => ['weight', 50],
     'validée' => ['is_completed', true],
     'échauffement' => ['is_warmup', true],
+]);
+
+/**
+ * @param  array<string, float>  $valeurs  La valeur stockée de chaque type.
+ */
+function recordsEgaliteSansSerie(User $user, Exercise $exercice, array $valeurs): void
+{
+    foreach ($valeurs as $type => $valeur) {
+        PersonalRecord::query()->create(['user_id' => $user->id, 'exercise_id' => $exercice->id, 'type' => $type, 'value' => $valeur, 'achieved_at' => now()->subDays(3)]);
+    }
+}
+
+it('n’annonce pas un record que la reconstruction retrouve à la même valeur', function (): void {
+    Queue::fake();
+    [$user, $exercice, $ligne] = recordsEgaliteScene();
+    $user->notificationPreferences()->create(['type' => 'personal_record', 'is_enabled' => true]);
+    Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => 1.1, 'reps' => 3, 'is_warmup' => false, 'is_completed' => true]);
+    recordsEgaliteSansSerie($user, $exercice, ['max_weight' => 1.1, 'max_1rm' => 1.21, 'max_volume_set' => 3.3]);
+
+    app(PersonalRecordService::class)->recompute($user, $exercice->id);
+
+    Queue::assertNotPushed(SendQueuedNotifications::class);
+});
+
+it('annonce le record que la reconstruction donne à une série au-dessus de sa valeur d’avant', function (): void {
+    Queue::fake();
+    [$user, $exercice, $ligne] = recordsEgaliteScene();
+    $user->notificationPreferences()->create(['type' => 'personal_record', 'is_enabled' => true]);
+    Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => 3.33, 'reps' => 1, 'is_warmup' => false, 'is_completed' => true]);
+    recordsEgaliteSansSerie($user, $exercice, ['max_weight' => 3.3, 'max_1rm' => 3.3, 'max_volume_set' => 3.3]);
+
+    app(PersonalRecordService::class)->recompute($user, $exercice->id);
+
+    Queue::assertPushed(SendQueuedNotifications::class, 3);
+});
+
+it('compare les volumes au centième : battu de peu, jamais abaissé', function (float $stocke, float $volume, bool $battu): void {
+    [$user, $exercice, $ligne] = recordsEgaliteScene();
+    recordsEgaliteSansSerie($user, $exercice, ['max_volume_set' => $stocke]);
+    $serie = Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => $volume, 'reps' => 1, 'is_warmup' => false, 'is_completed' => true]);
+
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie($serie, $user);
+
+    $record = PersonalRecord::query()->where('user_id', $user->id)->where('type', 'max_volume_set')->firstOrFail();
+
+    expect((float) $record->value)->toBe($battu ? $volume : $stocke)
+        ->and($record->set_id)->toBe($battu ? $serie->id : null);
+})->with([
+    '3,30 battu par 3,33' => [3.30, 3.33, true],
+    '3,30 battu par 3,31' => [3.30, 3.31, true],
+    '3,34 non battu par 3,31' => [3.34, 3.31, false],
+    '3,34 non battu par 3,33' => [3.34, 3.33, false],
 ]);
