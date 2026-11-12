@@ -160,6 +160,8 @@ return [
     'uuid' => 'Le champ :attribute doit être un UUID valide.',
 
     'attributes' => [
+        'depuis' => 'depuis',
+        'avant' => 'avant',
         'name' => 'nom',
         'username' => 'nom d\'utilisateur',
         'email' => 'adresse e-mail',
