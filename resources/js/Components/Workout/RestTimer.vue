@@ -18,6 +18,9 @@ import { useSortieAudio } from '@/composables/useSortieAudio'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassToggle from '@/Components/UI/GlassToggle.vue'
 
+/** Combien de temps « Repos terminé » reste affiché avant que la carte se ferme. */
+const DELAI_DE_FERMETURE_MS = 4000
+
 /**
  * Component Props
  *
@@ -68,7 +71,7 @@ const props = defineProps({
      * geste qui a lancé le repos : la fin y sonne. La page la tient parce que
      * le minuteur se démonte à chaque fin, bip compris. Monté seul, sans
      * elle, le minuteur ouvre la sienne dans ses propres gestes et la rend en
-     * partant : un parent qui le démonte à `finished` lui passe donc la sienne,
+     * partant : un parent qui le démonte à sa fermeture lui passe donc la sienne,
      * sans quoi le bip se couperait aussitôt parti.
      */
     sortieAudio: {
@@ -80,10 +83,11 @@ const props = defineProps({
 /**
  * Component Emits
  *
- * @event finished - Fired when the timer reaches 0.
- * @event close - Fired when the user manually closes the timer.
+ * @event close - Fired when the user closes the timer, or a few seconds
+ *   after the end of the rest, que la carte annonce entre-temps
+ *   (« Repos terminé », `role="status"`). Un parent ferme la carte sur `close`.
  */
-const emit = defineEmits(['finished', 'close', 'update:autoRestTimer'])
+const emit = defineEmits(['close', 'update:autoRestTimer'])
 
 // --- State ---
 
@@ -98,6 +102,12 @@ const timer = ref(null)
 
 /** Timestamp (ms) when the timer should finish. */
 const endTime = ref(null)
+
+/** Le repos est fini : la carte le dit, quelques secondes, avant de se fermer. */
+const termine = ref(false)
+
+/** Le minuteur qui ferme la carte une fois la fin annoncée. */
+const fermeture = ref(null)
 
 /** Où sonne la fin : la sortie de la page, ou la sienne quand il est monté seul. */
 const sortieAudio = props.sortieAudio ?? useSortieAudio()
@@ -190,6 +200,7 @@ const skipTimer = () => {
     triggerHaptic('tap')
     sortieAudio.preparer()
     finishTimer()
+    close()
 }
 
 /**
@@ -214,7 +225,7 @@ const jouerLeBipDeFin = (contexte) => {
 }
 
 /**
- * La fin du repos : le retour haptique, le bip, puis `finished`.
+ * La fin du repos : le retour haptique, le bip, puis l'annonce « Repos terminé ».
  *
  * La fin naturelle arrive dans le rappel de la minuterie, hors de tout geste :
  * le bip se joue sur la sortie que le geste du départ a ouverte, jamais sur une
@@ -231,13 +242,15 @@ const finishTimer = () => {
 
     sortieAudio.jouer(jouerLeBipDeFin)
 
-    emit('finished')
+    termine.value = true
+    fermeture.value = setTimeout(() => emit('close'), DELAI_DE_FERMETURE_MS)
 }
 
 /** Closes the timer component. */
 const close = () => {
     triggerHaptic('tap')
     pauseTimer()
+    clearTimeout(fermeture.value)
     emit('close')
 }
 
@@ -258,6 +271,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
+    clearTimeout(fermeture.value)
     pauseTimer()
 })
 
@@ -272,6 +286,8 @@ watch(
     () => props.duration,
     (newVal) => {
         if (!isActive.value) {
+            clearTimeout(fermeture.value)
+            termine.value = false
             timeLeft.value = newVal
         }
     },
@@ -304,7 +320,14 @@ watch(
             <div class="p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
-                        <div class="text-text-main/60 text-xs font-bold tracking-wider uppercase">Repos en cours</div>
+                        <div
+                            role="status"
+                            class="text-xs font-bold tracking-wider uppercase"
+                            :class="termine ? 'text-text-main' : 'text-text-main/60'"
+                            dusk="rest-timer-status"
+                        >
+                            {{ termine ? 'Repos terminé' : 'Repos en cours' }}
+                        </div>
                         <div class="text-text-main text-3xl font-black tabular-nums" role="timer" aria-atomic="true">
                             {{ formatTime(timeLeft) }}
                         </div>
@@ -312,6 +335,7 @@ watch(
 
                     <div class="flex shrink-0 items-center gap-2">
                         <button
+                            v-if="!termine"
                             @click="toggleTimer"
                             class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
@@ -340,7 +364,7 @@ watch(
                     </div>
                 </div>
 
-                <div class="mt-4 flex gap-2">
+                <div v-if="!termine" class="mt-4 flex gap-2">
                     <!-- Custom "Glass" button for skip to ensure style consistency -->
                     <button
                         @click="skipTimer"
