@@ -408,17 +408,21 @@ jobs:
                   SECONDES_DE_CHAUFFE: 480
                   ESSAIS_PAR_ORDRE: 8
               run: |
-                  debut=$(date +%s%3N)
+                  # Horloge monotone, en millisecondes : /proc/uptime ne recule pas
+                  # quand NTP corrige l'heure du runner (l'heure murale de
+                  # `date` donnait des durées négatives, « page rendue en 0,-5 s »).
+                  horloge() { read -r secondes _ < /proc/uptime; echo $(( ${secondes%.*} * 1000 + 10#${secondes#*.} * 10 )); }
+                  debut=$(horloge)
                   precedent=$debut
                   session=""
                   releve=""
                   essais=1
-                  ecoule() { echo $(( $(date +%s%3N) - debut )); }
+                  ecoule() { echo $(( $(horloge) - debut )); }
                   a_bout() { [ "$(ecoule)" -ge $(( SECONDES_DE_CHAUFFE * 1000 )) ]; }
                   en_secondes() { printf '%d,%d s' $(( $1 / 1000 )) $(( $1 % 1000 / 100 )); }
                   reste() { r=$(( SECONDES_DE_CHAUFFE - $(ecoule) / 1000 )); if [ "$r" -gt 0 ]; then echo "$r"; else echo 1; fi; }
                   noter() {
-                      maintenant=$(date +%s%3N)
+                      maintenant=$(horloge)
                       releve="${releve:+$releve, }$1 en $(en_secondes $(( maintenant - precedent )))"
                       if [ "$essais" -gt 1 ]; then releve="$releve et $essais essais"; fi
                       precedent=$maintenant
