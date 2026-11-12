@@ -4,6 +4,7 @@ import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
 import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 const formPost = vi.fn()
+const succes = { differe: false, rappel: null }
 const routerDelete = vi.fn()
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -30,6 +31,12 @@ vi.mock('@inertiajs/vue3', async () => {
                 processing: false,
                 post: (url, options = {}) => {
                     formPost(url, Object.fromEntries(Object.keys(initial).map((name) => [name, form[name]])))
+                    if (succes.differe) {
+                        succes.rappel = options.onSuccess
+
+                        return
+                    }
+
                     options.onSuccess?.()
                 },
                 // Inertia's reset() puts back the fields it is named, or every
@@ -151,6 +158,8 @@ const occurrences = (wrapper, needle) => wrapper.text().split(needle).length - 1
 
 beforeEach(() => {
     formPost.mockReset()
+    succes.differe = false
+    succes.rappel = null
     routerDelete.mockReset()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 })
@@ -481,7 +490,8 @@ describe('Measurements/Index add form', () => {
             expect(document.activeElement).toBe(wrapper.get('button[aria-label="Ajouter une mesure"]').element)
         })
 
-        it('laisse le focus où il est quand il n’était pas sur le formulaire à l’enregistrement', async () => {
+        it('laisse le focus où l’utilisateur l’a mis pendant que la requête était en vol', async () => {
+            succes.differe = true
             const { wrapper } = await monterAvecLesVraisChamps(MEASUREMENTS)
             await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
             await flushPromises()
@@ -489,12 +499,26 @@ describe('Measurements/Index add form', () => {
             const ailleurs = document.createElement('button')
             document.body.appendChild(ailleurs)
             onTestFinished(() => ailleurs.remove())
-            ailleurs.focus()
 
             await wrapper.find('form').trigger('submit')
+            ailleurs.focus()
+            await succes.rappel()
             await flushPromises()
 
             expect(document.activeElement).toBe(ailleurs)
+        })
+
+        it('rend le focus au bouton quand la requête aboutit après un délai et que le focus est perdu', async () => {
+            succes.differe = true
+            const { wrapper } = await monterAvecLesVraisChamps(MEASUREMENTS)
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+            await flushPromises()
+            await wrapper.find('form').trigger('submit')
+
+            await succes.rappel()
+            await flushPromises()
+
+            expect(document.activeElement).toBe(wrapper.get('button[aria-label="Ajouter une mesure"]').element)
         })
 
         it('fait de même depuis le bouton de l’état vide', async () => {

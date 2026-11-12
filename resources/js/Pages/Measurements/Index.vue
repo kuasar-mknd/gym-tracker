@@ -66,16 +66,15 @@ const boutonDuFormulaire = () => {
 
 /** « Enregistrer » disparaît avec le formulaire : le focus revient à qui l'a ouvert. */
 const submit = () => {
-    const actif = document.activeElement
-    const focusSurLeFormulaire = actif === null || actif === document.body || formulaire.value?.contains(actif) === true
-
     form.post(route('body-measurements.store'), {
         onSuccess: async () => {
             form.reset('weight', 'body_fat', 'notes')
             showAddForm.value = false
             await nextTick()
 
-            if (focusSurLeFormulaire) {
+            const actif = document.activeElement
+
+            if (actif === null || actif === document.body) {
                 boutonDuFormulaire()?.focus()
             }
         },

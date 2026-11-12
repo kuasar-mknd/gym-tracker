@@ -118,7 +118,7 @@ describe('ce que dit la file hors ligne', () => {
         expect(editError.value).toBeNull()
     })
 
-    it('dit ensemble la session expirée et le stockage plein, sans lien de connexion', () => {
+    it('dit ensemble la session expirée et le stockage plein, avec le lien et la réserve sur les fournisseurs', () => {
         const { erreurDeSaisie, handleSyncAuthRequired, handleSyncStorageFull } = monter()
 
         handleSyncStorageFull({ detail: { pending: 2 } })
@@ -127,9 +127,9 @@ describe('ce que dit la file hors ligne', () => {
         expect(erreurDeSaisie.value.message).toContain('session a expiré')
         expect(erreurDeSaisie.value.message).toContain('ne survivront pas à un rechargement')
         expect(erreurDeSaisie.value.message).toBe(
-            'Ta session a expiré et le stockage du téléphone est plein : 2 modifications en attente ne survivront pas à un rechargement. Reste sur la page : un rechargement, ou une connexion par Google, GitHub ou Apple, les perdrait. Libère de la place sur le téléphone.',
+            'Ta session a expiré et le stockage du téléphone est plein : 2 modifications en attente ne survivront pas à un rechargement. Reconnecte-toi par mot de passe, pas par Google, GitHub ou Apple, qui rechargent la page. Libère de la place sur le téléphone.',
         )
-        expect(erreurDeSaisie.value.reconnexion).toBe(false)
+        expect(erreurDeSaisie.value.reconnexion).toBe(true)
         expect(erreurDeSaisie.value.persistant).toBe(true)
     })
 
@@ -141,7 +141,7 @@ describe('ce que dit la file hors ligne', () => {
 
         expect(erreurDeSaisie.value.message).toContain('session a expiré')
         expect(erreurDeSaisie.value.message).toContain('stockage du téléphone est plein')
-        expect(erreurDeSaisie.value.reconnexion).toBe(false)
+        expect(erreurDeSaisie.value.reconnexion).toBe(true)
     })
 
     it('un message persistant remplace un refus ordinaire et son minuteur ne l’efface pas', () => {
@@ -192,7 +192,7 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncAuthRequired({ detail: { pending: 2, refusee: true } })
 
         expect(editError.value).toBe(
-            'Ta session a expiré et le stockage du téléphone est plein : 1 modification en attente ne survivra pas à un rechargement. Reste sur la page : un rechargement, ou une connexion par Google, GitHub ou Apple, les perdrait. Libère de la place sur le téléphone. 1 modification a été écartée.',
+            'Ta session a expiré et le stockage du téléphone est plein : 1 modification en attente ne survivra pas à un rechargement. Reconnecte-toi par mot de passe, pas par Google, GitHub ou Apple, qui rechargent la page. Libère de la place sur le téléphone. 1 modification a été écartée.',
         )
     })
 
@@ -203,8 +203,20 @@ describe('ce que dit la file hors ligne', () => {
         handleSyncAuthRequired({ detail: { pending: 1, refusee: true } })
 
         expect(editError.value).toBe(
-            'Ta session a expiré et le stockage du téléphone est plein. 1 modification a été écartée.',
+            'Ta session a expiré et le stockage du téléphone est plein : reconnecte-toi. 1 modification a été écartée.',
         )
+    })
+
+    it('offre la reconnexion dans le message combiné quand rien n’attend en mémoire', () => {
+        const { erreurDeSaisie, handleSyncAuthRequired, handleSyncStorageFull } = monter()
+
+        handleSyncStorageFull({ detail: { pending: 0 } })
+        handleSyncAuthRequired({ detail: { pending: 0 } })
+
+        expect(erreurDeSaisie.value.message).toBe(
+            'Ta session a expiré et le stockage du téléphone est plein : reconnecte-toi.',
+        )
+        expect(erreurDeSaisie.value.reconnexion).toBe(true)
     })
 
     it('accorde de même le message de stockage plein', () => {

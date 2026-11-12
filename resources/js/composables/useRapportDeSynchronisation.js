@@ -164,7 +164,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
     }
 
-    /** Session expirée et stockage plein se disent ensemble, sans lien de connexion : la page de connexion offre des fournisseurs qui rechargent la page. */
+    /** Session expirée et stockage plein se disent ensemble ; la file n'est qu'en mémoire : une connexion par fournisseur recharge la page et la perd. */
     const direLaFile = () => {
         const attente = Math.max(sessionExpiree ?? 0, stockagePlein ?? 0)
         const pluriel = attente > 1
@@ -178,9 +178,9 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         if (sessionExpiree !== null && stockagePlein !== null) {
             reportEditFailure(
                 attente === 0
-                    ? `Ta session a expiré et le stockage du téléphone est plein.${ecartee}`
-                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Reste sur la page : un rechargement, ou une connexion par Google, GitHub ou Apple, les perdrait. Libère de la place sur le téléphone.${ecartee}`,
-                { persistante: true },
+                    ? `Ta session a expiré et le stockage du téléphone est plein : reconnecte-toi.${ecartee}`
+                    : `Ta session a expiré et le stockage du téléphone est plein : ${sort}. Reconnecte-toi par mot de passe, pas par Google, GitHub ou Apple, qui rechargent la page. Libère de la place sur le téléphone.${ecartee}`,
+                { persistante: true, avecReconnexion: true },
             )
         } else if (sessionExpiree !== null) {
             const suite =
