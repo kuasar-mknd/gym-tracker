@@ -161,6 +161,52 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+         * L'audit de l'accès de diagnostic (#2032) : une ligne par appel
+         * servi, sur stderr (les journaux des conteneurs, hors de portée du
+         * lecteur du panneau) et dans un fichier quotidien gardé 90 jours.
+         * Le niveau est posé ici, pas par LOG_LEVEL : un appel servi s'écrit
+         * toujours, et la pile ne tait aucune erreur d'écriture, que la garde
+         * rend en 500. Sous `storage/logs/diagnostic`, hors de ce que
+         * `journaux:purger` efface à quatorze jours. Les refus ont leur canal,
+         * gardé 14 jours.
+         */
+        'diagnostic' => [
+            'driver' => 'stack',
+            'channels' => ['diagnostic_stderr', 'diagnostic_fichier'],
+            'ignore_exceptions' => false,
+        ],
+
+        'diagnostic_stderr' => [
+            'driver' => 'monolog',
+            'tap' => [JournalSansAdresse::class],
+            'level' => 'info',
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
+            'formatter' => env('LOG_STDERR_FORMATTER'),
+            'processors' => [PsrLogMessageProcessor::class],
+        ],
+
+        'diagnostic_fichier' => [
+            'driver' => 'daily',
+            'tap' => [JournalSansAdresse::class],
+            'path' => storage_path('logs/diagnostic/audit.log'),
+            'level' => 'info',
+            'days' => 90,
+            'replace_placeholders' => true,
+        ],
+
+        'diagnostic_refus' => [
+            'driver' => 'daily',
+            'tap' => [JournalSansAdresse::class],
+            'path' => storage_path('logs/diagnostic/refus.log'),
+            'level' => 'info',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,

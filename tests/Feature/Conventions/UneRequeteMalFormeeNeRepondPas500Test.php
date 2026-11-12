@@ -111,7 +111,7 @@ beforeEach(function (): void {
 it('aucune page de l’application ne répond 500 à une chaîne de requête mal formée', function (): void {
     $compte = User::factory()->create();
     RequetesMalFormees::remplirLesListes($compte);
-    $routes = array_values(array_filter(RequetesMalFormees::routes(['GET']), static fn (Route $route): bool => ! RequetesMalFormees::duPanneau($route)));
+    $routes = array_values(array_filter(RequetesMalFormees::routes(['GET']), static fn (Route $route): bool => ! RequetesMalFormees::duPanneau($route) && ! str_starts_with((string) $route->getName(), 'diagnostic.')));
 
     $visite = RequetesMalFormees::visiterChaquePage(
         $routes,

@@ -7,6 +7,7 @@ namespace Tests\Support;
 use App\Http\Middleware\OuvreLaSession;
 use App\Http\Middleware\VerifieLeCompteDeLEcriture;
 use App\Models\Exercise;
+use App\Models\JetonDeDiagnostic;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
@@ -139,6 +140,12 @@ final class EntetesLus
             OuvreLaSession::ENTETE => [
                 'attendue' => static fn (User $compte): string => OuvreLaSession::PRECHAUFFAGE,
                 'refus' => null,
+                'methodes' => ['GET', 'HEAD'],
+            ],
+            // ExigeUnJetonDeDiagnostic : un jeton de la forme exacte, sinon la réponse d'un chemin inconnu (404), sous GET et HEAD seulement.
+            'Authorization' => [
+                'attendue' => static fn (User $compte): string => 'Bearer '.JetonDeDiagnostic::composer(str_repeat('a', JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT), str_repeat('b', JetonDeDiagnostic::LONGUEUR_DU_SECRET)),
+                'refus' => 404,
                 'methodes' => ['GET', 'HEAD'],
             ],
             // VerifieLeCompteDeLEcriture : un autre compte que celui de la session répond 409.

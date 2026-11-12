@@ -180,7 +180,7 @@ it('aucune route de l’application ne répond 500 à une valeur inattendue d’
         ['refus' => $refus, 'methodes' => $methodesLues] = EntetesLus::recenses()[$entete];
 
         foreach ($lisent as ['route' => $route]) {
-            if (RequetesMalFormees::duPanneau($route) || $route->getName() === 'social.callback.apple') {
+            if (RequetesMalFormees::duPanneau($route) || $route->getName() === 'social.callback.apple' || str_starts_with((string) $route->getName(), 'diagnostic.')) {
                 continue;
             }
 

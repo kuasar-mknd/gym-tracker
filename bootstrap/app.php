@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Support\Facades\Route::get('/up', \App\Http\Controllers\SanteController::class);
             \Illuminate\Support\Facades\Route::get('/sonde', \App\Http\Controllers\SondeController::class)->name('sonde');
 
+            // L'accès de diagnostic (#2032), hors des groupes : toujours
+            // enregistré, c'est la garde qui le coupe (`DIAGNOSTIC_ENABLED`).
+            \Illuminate\Support\Facades\Route::group([], base_path('routes/diagnostic.php'));
+
             // Les routes chargées, un identifiant de modèle n'y admet que des
             // chiffres (#2049) ; le docbloc de la classe dit pourquoi ici.
             \App\Support\IdentifiantsDesRoutes::poserSur(\Illuminate\Support\Facades\Route::getRoutes()->getRoutes());
