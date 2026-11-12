@@ -54,6 +54,7 @@ final class VolumeStatsService
                     ->where('started_at', '>=', now()->subDays($jours))
                     ->select(['id', 'started_at', 'started_at_offset', 'name', 'workout_volume'])
                     ->orderBy('started_at')
+                    ->orderBy('id')
                     ->get();
 
                 $trend = [];
@@ -169,6 +170,7 @@ final class VolumeStatsService
                     ->whereNotNull('ended_at')
                     ->select(['id', 'started_at', 'started_at_offset', 'name', 'workout_volume'])
                     ->latest('started_at')
+                    ->latest('id')
                     ->limit($limit)
                     ->get()
                     ->reverse();
@@ -293,15 +295,12 @@ final class VolumeStatsService
             function () use ($user, $months, $debutDuMois): array {
                 // Le regroupement et la somme se font en SQL : ramener des mois
                 // entiers de séances en PHP pour les additionner ne tiendrait pas
-                // sur un long historique. Le format de date dépend du pilote,
-                // MySQL et SQLite ne l'écrivant pas pareil.
-                $driver = \Illuminate\Support\Facades\DB::getDriverName();
-                $monthFormat = $driver === 'sqlite' ? "strftime('%Y-%m', started_at)" : "DATE_FORMAT(started_at, '%Y-%m')";
+                // sur un long historique.
 
                 $results = $user->workouts()
                     ->toBase()
                     ->where('started_at', '>=', $debutDuMois->copy()->subMonths($months - 1))
-                    ->selectRaw("{$monthFormat} as month, SUM(workout_volume) as volume")
+                    ->selectRaw("DATE_FORMAT(started_at, '%Y-%m') as month, SUM(workout_volume) as volume")
                     ->groupBy('month')
                     ->pluck('volume', 'month');
 

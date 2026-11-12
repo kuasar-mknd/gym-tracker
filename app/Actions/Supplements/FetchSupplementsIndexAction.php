@@ -48,6 +48,7 @@ final class FetchSupplementsIndexAction
         // elle, déclare `array<string, mixed>`.
         return Supplement::forUser($user->id)
             ->with(['latestLog'])
+            ->orderBy('id')
             ->get()
             ->map(fn (Supplement $supplement): array => new SupplementResource($supplement)->toArray(request()))
             ->values();

@@ -388,7 +388,8 @@ test('une mensuration à zéro n’atteint pas un objectif à la baisse', functi
     $this->service->updateGoalProgress($goal);
 
     expect($goal->current_value)->toBe(0.0)
-        ->and($goal->completed_at)->toBeNull();
+        ->and($goal->completed_at)->toBeNull()
+        ->and($goal->progress_pct)->toBe(0.0);
 });
 
 /**
