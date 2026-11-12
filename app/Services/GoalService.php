@@ -73,7 +73,7 @@ final class GoalService
 
         $cas = 'case id '.implode(' ', $quand).' end';
         $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas
-            .', updated_at = ? where user_id = ? and id in ('.implode(', ', array_fill(0, count($identifiants), '?')).')';
+            .', updated_at = ? where user_id = ? and id in ('.implode(', ', array_map(static fn (): string => '?', $identifiants)).')';
 
         \Illuminate\Support\Facades\DB::update($requete, [
             ...$liaisons['current_value'],
@@ -195,11 +195,9 @@ final class GoalService
          * atteint en descendant. Seule une mensuration arrive ici en
          * descendant (plus haut).
          */
-        $descendant = $goal->target_value < $goal->start_value;
+        $sens = $goal->target_value <=> $goal->start_value;
 
-        $parcouru = $descendant
-            ? $goal->start_value - $goal->current_value
-            : $goal->current_value - $goal->start_value;
+        $parcouru = ($goal->current_value - $goal->start_value) * $sens;
 
         $aParcourir = abs($goal->target_value - $goal->start_value);
 
@@ -473,7 +471,7 @@ final class GoalService
          * mesure de 80 pouces, soit deux metres de tour de taille.
          */
         $goal->current_value = ($mesure['unit'] ?? null) === 'in'
-            ? (float) $valeur * 2.54
+            ? $valeur * 2.54
             : (float) $valeur;
     }
 
@@ -589,10 +587,6 @@ final class GoalService
      */
     private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
     {
-        if ($goals->isEmpty()) {
-            return [];
-        }
-
         $mesures = [];
         $types = $goals->pluck('type')->unique();
         $idsExercices = $goals->whereIn('type', [GoalType::Weight, GoalType::Volume])

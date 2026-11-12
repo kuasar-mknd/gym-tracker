@@ -144,7 +144,7 @@ return [
             fn (string $model): string => 'App\\Models\\'.$model,
             [
                 'Achievement', 'ActivityLog', 'Admin', 'BaseMeasurement', 'BodyMeasurement', 'BodyPartMeasurement',
-                'DailyJournal', 'ErreurNavigateur', 'ExceptionEnregistree', 'Exercise', 'Fast', 'Goal', 'Habit', 'HabitLog', 'IntervalTimer',
+                'DailyJournal', 'ErreurNavigateur', 'ExceptionEnregistree', 'Exercise', 'Fast', 'Goal', 'Habit', 'HabitLog', 'IntervalTimer', 'JetonDeDiagnostic',
                 'MacroCalculation', 'NotificationPreference', 'PersonalRecord', 'Plate', 'Set',
                 'Supplement', 'SupplementLog', 'TachePlanifiee', 'User', 'UserAchievement', 'WarmupPreference',
                 'WaterLog', 'WilksScore', 'Workout', 'WorkoutLine', 'WorkoutTemplate',
@@ -165,11 +165,13 @@ return [
         App\DTOs\Stats\WeeklyVolumeTrendPoint::class,
         App\DTOs\Stats\WeightHistoryPoint::class,
 
+        App\Enums\EvenementDAlerteDeDiagnostic::class,
         App\Enums\ExerciseCategory::class,
         App\Enums\GoalType::class,
         App\Enums\MotifDeLaTentative::class,
         App\Enums\PersonalRecordType::class,
         App\Enums\PorteeDeDiagnostic::class,
+        App\Enums\RaisonDeRevocationDuJeton::class,
         App\Enums\VerdictDeLaBase::class,
 
         // What Eloquent results are actually built out of.

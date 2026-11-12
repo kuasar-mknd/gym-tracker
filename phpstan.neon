@@ -89,6 +89,19 @@ parameters:
         - identifier: shipmonk.deadMethod
           path: app/Policies/*
           message: '#::deleteAny\b#'
+        # Filament appelle l'action afficherLeJeton par son nom (`{nom}Action`),
+        # jamais en toutes lettres.
+        - identifier: shipmonk.deadMethod
+          path: app/Filament/Pages/AccesDeDiagnostic.php
+          message: '#::afficherLeJetonAction\b#'
+        # Les trois alertes que la garde HTTP du diagnostic appellera (#2032,
+        # etape 3) n'ont encore d'appelant que dans leurs tests : la garde
+        # arrive dans une PR suivante. Cet ignore est a retirer avec elle :
+        # PHPStan ne signale l'ignore inutile que lorsque les trois methodes
+        # ont un appelant ; tant qu'une seule n'en a pas, il reste muet.
+        - identifier: shipmonk.deadMethod
+          path: app/Support/AlertesDeDiagnostic.php
+          message: '#::(premierUsage|jetonInvalidePresente|debitDepasse)\b#'
         # Les cas d'enum sont instancies a l'execution par from(), via les casts
         # Eloquent — jamais ecrits en toutes lettres hors des tests. Le detecteur
         # ne peut pas voir cette voie. Ce n'est pas une hypothese : #899 rapporte

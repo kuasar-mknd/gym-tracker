@@ -154,6 +154,13 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('03:45');
 
 /*
+ * Un jeton de diagnostic survit `JetonDeDiagnostic::JOURS_DE_CONSERVATION` jours
+ * à sa fin, expiré ou révoqué (#2032), puis s'efface.
+ */
+\Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\JetonDeDiagnostic::class]])
+    ->dailyAt('03:55');
+
+/*
  * Un compte ouvert par l'inscription dont l'adresse n'a jamais été prouvée
  * s'efface au bout de `User::JOURS_AVANT_LA_PURGE` jours : l'adresse d'un
  * autre, tapée à l'inscription, ne reste pas occupée. Un à un, par `delete()`,
