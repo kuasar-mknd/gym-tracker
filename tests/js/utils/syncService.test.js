@@ -609,7 +609,7 @@ describe('SyncService session expirée', () => {
         expect(service.queue).toHaveLength(2)
         expect(localStorage.getItem('offline_sync_failed')).toBeNull()
         expect(listener).toHaveBeenCalledTimes(1)
-        expect(listener.mock.calls[0][0].detail).toEqual({ url: '/api/v1/sets/1', status, pending: 2 })
+        expect(listener.mock.calls[0][0].detail).toEqual({ url: '/api/v1/sets/1', status, pending: 2, refusee: false })
     })
 
     it('repart après la reconnexion', async () => {
@@ -639,6 +639,28 @@ describe('SyncService session expirée', () => {
         expect(service.failedRequests()[0].url).toBe('/api/v1/sets/1')
         expect(service.queue).toHaveLength(1)
         expect(service.queue[0].url).toBe('/api/v1/sets/2')
+    })
+
+    it('dit à la troisième porte fermée que l’écriture est refusée, et pas avant', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch(), aQueuedPatch('/api/v1/sets/2')]))
+        request.mockRejectedValue({ response: { status: 419 } })
+
+        const annonces = []
+        const listener = (event) => annonces.push(event.detail)
+        window.addEventListener('sync:auth-required', listener)
+
+        const service = await chargé()
+        await service.processQueue()
+        await service.processQueue()
+
+        window.removeEventListener('sync:auth-required', listener)
+
+        expect(annonces.slice(0, 3).map((detail) => [detail.url, detail.refusee])).toEqual([
+            ['/api/v1/sets/1', false],
+            ['/api/v1/sets/1', false],
+            ['/api/v1/sets/1', true],
+        ])
+        expect(annonces[2].pending).toBe(2)
     })
 
     it('survit à un rechargement avec le compte de tentatives', async () => {

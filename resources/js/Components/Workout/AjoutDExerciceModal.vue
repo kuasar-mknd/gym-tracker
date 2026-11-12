@@ -34,8 +34,11 @@ watch(searchQuery, garderLaRecherche)
 const showCreateForm = ref(false)
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
 
+/** Ce qui a été tapé, sans les espaces autour : une recherche d'espaces ne cherche rien. */
+const requete = computed(() => searchQuery.value.trim())
+
 const filteredExercises = computed(() => {
-    const q = sansAccents(searchQuery.value).trim()
+    const q = sansAccents(requete.value)
 
     return q ? props.exercises.filter((e) => sansAccents(e.name).includes(q)) : props.exercises
 })
@@ -46,7 +49,7 @@ const choisir = (exerciseId) => {
 }
 
 const quickCreate = () => {
-    createExerciseForm.name = searchQuery.value
+    createExerciseForm.name = requete.value
     showCreateForm.value = true
 }
 
@@ -133,7 +136,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                 </div>
                 <div class="min-h-0 space-y-3 overflow-y-auto" dusk="liste-des-exercices">
                     <GlassEmptyState
-                        v-if="exercises.length === 0 && !searchQuery"
+                        v-if="exercises.length === 0 && !requete"
                         taille="ligne"
                         title="Aucun exercice, crée le premier"
                         action-label="Créer un exercice"
@@ -141,17 +144,17 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         @action="quickCreate"
                     />
                     <button
-                        v-if="filteredExercises.length === 0 && searchQuery"
+                        v-if="filteredExercises.length === 0 && requete"
                         type="button"
                         @click="quickCreate"
                         dusk="quick-create-exercise"
                         class="border-border hover:border-accent-state focus-visible:ring-accent-state flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition focus-visible:ring-2 focus-visible:outline-none"
                     >
                         <span class="text-text-muted mb-2 block text-sm italic"
-                            >Aucun résultat pour "{{ searchQuery }}"</span
+                            >Aucun résultat pour "{{ requete }}"</span
                         >
                         <span class="text-accent-state-deep font-bold tracking-wider uppercase"
-                            >Créer "{{ searchQuery }}"</span
+                            >Créer "{{ requete }}"</span
                         >
                     </button>
 

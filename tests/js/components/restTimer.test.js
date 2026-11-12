@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))
 
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import { triggerHaptic } from '@/composables/useHaptics'
 import { dansUnGeste, installerLaSortieWebKit, retirerLaSortieWebKit, sorties } from '../utils/sortieAudioWebKit'
 
 const mountTimer = (props = {}) =>
@@ -216,6 +217,17 @@ describe('RestTimer countdown', () => {
         expect(clock(wrapper)).toBe('0:00')
     })
 
+    it('vibre pour « Passer » puis pour la fin, sans qu’un second appui efface le motif de fin', async () => {
+        vi.mocked(triggerHaptic).mockClear()
+        const wrapper = mountTimer({ duration: 90, autoStart: true })
+
+        await button(wrapper, 'skip-rest-timer').trigger('click')
+
+        expect(vi.mocked(triggerHaptic).mock.calls.map(([motif]) => motif)).toEqual(['tap', 'timer'])
+        vi.advanceTimersByTime(10000)
+        expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
     it('closes without claiming the rest was completed', async () => {
         const wrapper = mountTimer({ duration: 90, autoStart: true })
 
@@ -227,6 +239,64 @@ describe('RestTimer countdown', () => {
         // Closing also stops the countdown; a hidden timer must not fire.
         vi.advanceTimersByTime(120000)
         expect(wrapper.get('[role="status"]').text()).toBe('Repos en cours')
+    })
+
+    it('retire Pause et Passer à la fin naturelle du repos, et garde « Fermer »', async () => {
+        const wrapper = mountTimer({ duration: 3, autoStart: true })
+        expect(toggleButton(wrapper).exists()).toBe(true)
+        expect(button(wrapper, 'skip-rest-timer').exists()).toBe(true)
+
+        vi.advanceTimersByTime(3000)
+        await wrapper.vm.$nextTick()
+
+        expect(toggleButton(wrapper)).toBeUndefined()
+        expect(button(wrapper, 'skip-rest-timer').exists()).toBe(false)
+        expect(button(wrapper, 'close-timer-x').exists()).toBe(true)
+    })
+
+    describe('le focus, quand Pause et Passer disparaissent', () => {
+        let wrapper
+
+        const monterAttache = () => {
+            wrapper = mount(RestTimer, {
+                props: { duration: 3, autoStart: true },
+                attachTo: document.body,
+                global: { directives: { press: {} } },
+            })
+
+            return wrapper
+        }
+
+        afterEach(() => wrapper?.unmount())
+
+        it.each([
+            ['Pause', (cible) => toggleButton(cible).element],
+            ['Passer', (cible) => button(cible, 'skip-rest-timer').element],
+        ])('passe de « %s » à « Fermer le minuteur »', async (_nom, boutonFocalise) => {
+            monterAttache()
+            boutonFocalise(wrapper).focus()
+            expect(document.activeElement).toBe(boutonFocalise(wrapper))
+
+            vi.advanceTimersByTime(3000)
+            await wrapper.vm.$nextTick()
+            await wrapper.vm.$nextTick()
+
+            expect(document.activeElement).toBe(button(wrapper, 'close-timer-x').element)
+        })
+
+        it('ne prend pas le focus à qui écrit ailleurs pendant le repos', async () => {
+            const champ = document.createElement('input')
+            document.body.appendChild(champ)
+            monterAttache()
+            champ.focus()
+
+            vi.advanceTimersByTime(3000)
+            await wrapper.vm.$nextTick()
+            await wrapper.vm.$nextTick()
+
+            expect(document.activeElement).toBe(champ)
+            champ.remove()
+        })
     })
 
     it('picks up a new rest duration while it is idle, but not mid-rest', async () => {

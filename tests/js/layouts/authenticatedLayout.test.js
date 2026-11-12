@@ -937,6 +937,13 @@ describe('AuthenticatedLayout — the frame around the page', () => {
         expect(wrapper.get('#main-content').find('[data-testid="page-content"]').exists()).toBe(true)
     })
 
+    /** Le contenu reçoit le focus par programme (la fermeture d'un message, le lien d'évitement) : `main` l'accepte. */
+    it('lets the main content take focus from a script', () => {
+        const wrapper = mountLayout()
+
+        expect(wrapper.get('#main-content').attributes('tabindex')).toBe('-1')
+    })
+
     /** A skip link pointing at an id nothing carries skips to nowhere. */
     it('gives the skip link something to skip to', () => {
         const wrapper = mountLayout()

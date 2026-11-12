@@ -12,7 +12,7 @@
   - "Liquid Glass" aesthetics (Apple Human Interface Guidelines).
 -->
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { useSortieAudio } from '@/composables/useSortieAudio'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -109,6 +109,11 @@ const termine = ref(false)
 /** Le minuteur qui ferme la carte une fois la fin annoncée. */
 const fermeture = ref(null)
 
+/** Pause et Passer disparaissent à la fin du repos : le focus qu'ils portaient passe à « Fermer ». */
+const boutonPause = ref(null)
+const boutonPasser = ref(null)
+const boutonFermer = ref(null)
+
 /** Où sonne la fin : la sortie de la page, ou la sienne quand il est monté seul. */
 const sortieAudio = props.sortieAudio ?? useSortieAudio()
 
@@ -200,7 +205,8 @@ const skipTimer = () => {
     triggerHaptic('tap')
     sortieAudio.preparer()
     finishTimer()
-    close()
+    clearTimeout(fermeture.value)
+    emit('close')
 }
 
 /**
@@ -234,6 +240,8 @@ const jouerLeBipDeFin = (contexte) => {
  * son seul qui prévient.
  */
 const finishTimer = () => {
+    const focusSurUnBoutonRetire = [boutonPause.value, boutonPasser.value].includes(document.activeElement)
+
     pauseTimer()
     timeLeft.value = 0
 
@@ -244,6 +252,10 @@ const finishTimer = () => {
 
     termine.value = true
     fermeture.value = setTimeout(() => emit('close'), DELAI_DE_FERMETURE_MS)
+
+    if (focusSurUnBoutonRetire) {
+        nextTick(() => boutonFermer.value?.focus())
+    }
 }
 
 /** Closes the timer component. */
@@ -336,6 +348,7 @@ watch(
                     <div class="flex shrink-0 items-center gap-2">
                         <button
                             v-if="!termine"
+                            ref="boutonPause"
                             @click="toggleTimer"
                             class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
@@ -346,6 +359,7 @@ watch(
                         </button>
 
                         <button
+                            ref="boutonFermer"
                             @click="close"
                             dusk="close-timer-x"
                             class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
@@ -367,6 +381,7 @@ watch(
                 <div v-if="!termine" class="mt-4 flex gap-2">
                     <!-- Custom "Glass" button for skip to ensure style consistency -->
                     <button
+                        ref="boutonPasser"
                         @click="skipTimer"
                         dusk="skip-rest-timer"
                         class="focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/20 text-text-main hover:bg-surface-card/30 min-h-touch flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"

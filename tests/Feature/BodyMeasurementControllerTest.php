@@ -72,7 +72,8 @@ test('user can delete a body measurement', function (): void {
 
     actingAs($user)
         ->delete(route('body-measurements.destroy', $measurement))
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Mesure supprimée.');
 
     assertDatabaseMissing('body_measurements', [
         'id' => $measurement->id,

@@ -68,20 +68,28 @@ describe('la coche, le numéro et le retrait', () => {
     it('nomme la coche d’un libellé stable, et dit par `aria-pressed` si elle est enfoncée', async () => {
         const ouverte = monter()
         const coche = ouverte.get('[dusk="complete-set-2-1"]')
-        expect(coche.attributes('aria-label')).toBe('Valider la série 2, exercice Développé couché')
+        expect(coche.attributes('aria-label')).toBe('Valider la série 2, Développé couché')
+        expect(coche.attributes('aria-describedby')).toBeUndefined()
         expect(coche.attributes('aria-pressed')).toBe('false')
 
         const faite = monter({ set: { id: 9, weight: 80, reps: 5, is_completed: true, personal_record: { id: 3 } } })
-        expect(faite.get('[dusk="complete-set-2-1"]').attributes('aria-label')).toBe(
-            'Valider la série 2, exercice Développé couché, record personnel',
-        )
-        expect(faite.get('[dusk="complete-set-2-1"]').attributes('aria-pressed')).toBe('true')
+        const cocheFaite = faite.get('[dusk="complete-set-2-1"]')
+        // Le nom ne change pas quand le serveur répond « record » : c'est la description qui le dit.
+        expect(cocheFaite.attributes('aria-label')).toBe('Valider la série 2, Développé couché')
+        expect(cocheFaite.attributes('aria-pressed')).toBe('true')
+        const description = faite.get(`[id="${cocheFaite.attributes('aria-describedby')}"]`)
+        expect(description.text()).toBe('Record personnel')
+        expect(description.classes()).toContain('sr-only')
     })
 
-    it('numérote le bouton de retrait visible dès sm comme celui du glissement', () => {
+    it('numérote le bouton de retrait visible dès sm comme celui du glissement, et nomme l’exercice', () => {
         const wrapper = monter()
-        expect(wrapper.get('[dusk="remove-set-2-1"]').attributes('aria-label')).toBe('Supprimer la série 2')
-        expect(wrapper.get('[dusk="swipe-remove-set-2-1"]').attributes('aria-label')).toBe('Supprimer la série 2')
+        expect(wrapper.get('[dusk="remove-set-2-1"]').attributes('aria-label')).toBe(
+            'Supprimer la série 2, Développé couché',
+        )
+        expect(wrapper.get('[dusk="swipe-remove-set-2-1"]').attributes('aria-label')).toBe(
+            'Supprimer la série 2, Développé couché',
+        )
     })
 
     it('estompe le fond d’une série faite, pas ses valeurs', () => {
@@ -97,6 +105,7 @@ describe('la coche, le numéro et le retrait', () => {
         const numero = mobile.get('[dusk="reorder-set-2-1"]')
         expect(numero.element.tagName).toBe('BUTTON')
         expect(numero.attributes('data-poignee-clavier')).toBe('')
+        expect(numero.attributes('aria-label')).toBe('Déplacer la série 2, Développé couché')
 
         await numero.trigger('keydown', { key: 'ArrowUp' })
         await numero.trigger('keydown', { key: 'ArrowDown' })

@@ -1,7 +1,7 @@
 <script setup>
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { computed, useId } from 'vue'
+import { computed, useId, watch } from 'vue'
 
 /**
  * Demander confirmation avant un geste irréversible.
@@ -68,6 +68,7 @@ const props = defineProps({
     varianteConfirmation: {
         type: String,
         default: 'danger',
+        validator: (variante) => ['danger', 'primary'].includes(variante),
     },
 
     /**
@@ -78,6 +79,12 @@ const props = defineProps({
     libelleAnnulation: {
         type: String,
         default: 'Annuler',
+    },
+
+    /** Rend l'élément qui prend le focus à la fermeture quand le bouton d'origine a disparu. */
+    focusApres: {
+        type: Function,
+        default: null,
     },
 
     /** Vrai tant que la requête est en vol : le bouton se verrouille. */
@@ -99,6 +106,24 @@ const emit = defineEmits(['confirmer', 'annuler'])
 const idTitre = useId()
 
 const decrit = computed(() => props.description !== '')
+
+/** `Modal` retire le dialogue 200 ms après la demande : le focus ne se pose qu'ensuite. */
+const APRES_LA_FERMETURE_MS = 250
+
+watch(
+    () => props.ouvert,
+    (ouvert, etaitOuvert) => {
+        if (!etaitOuvert || ouvert || props.focusApres === null) {
+            return
+        }
+
+        setTimeout(() => {
+            if (document.activeElement === null || document.activeElement === document.body) {
+                props.focusApres()?.focus()
+            }
+        }, APRES_LA_FERMETURE_MS)
+    },
+)
 </script>
 
 <template>

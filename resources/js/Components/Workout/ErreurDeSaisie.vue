@@ -17,7 +17,19 @@ defineProps({
     reconnexion: { type: Boolean, default: false },
 })
 
-defineEmits(['fermer'])
+const emit = defineEmits(['fermer'])
+
+/** « Fermer » retire le bouton focalisé : le focus passe au contenu principal, sans attendre la transition. */
+const fermer = () => {
+    const actif = document.activeElement
+    const perdu = actif === null || actif === document.body || actif.closest('[dusk="set-edit-error"]') !== null
+
+    emit('fermer')
+
+    if (perdu) {
+        document.getElementById('main-content')?.focus({ preventScroll: true })
+    }
+}
 </script>
 
 <template>
@@ -31,14 +43,14 @@ defineEmits(['fermer'])
             v-if="message"
             role="alert"
             dusk="set-edit-error"
-            class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent z-toast left-sure-3 right-sure-3 top-sure-20 fixed rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
+            class="border-accent-danger/30 danger-fill z-toast left-sure-3 right-sure-3 top-sure-20 fixed rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
         >
             {{ message }}
             <div v-if="persistant" class="mt-2 flex flex-wrap gap-2">
                 <GlassButton v-if="reconnexion" :href="route('login')" dusk="set-edit-error-reconnexion">
                     Se reconnecter
                 </GlassButton>
-                <GlassButton dusk="set-edit-error-fermer" @click="$emit('fermer')">Fermer</GlassButton>
+                <GlassButton dusk="set-edit-error-fermer" @click="fermer">Fermer</GlassButton>
             </div>
         </div>
     </Transition>

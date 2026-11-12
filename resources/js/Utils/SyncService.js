@@ -2100,6 +2100,7 @@ class SyncService {
                                 url: config.url,
                                 status: error?.response?.status ?? null,
                                 pending: this.enAttente(),
+                                refusee: config.authAttempts >= MAX_AUTH_ATTEMPTS,
                             },
                         }),
                     )

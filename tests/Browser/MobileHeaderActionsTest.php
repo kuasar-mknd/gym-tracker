@@ -57,6 +57,54 @@ class MobileHeaderActionsTest extends DuskTestCase
         });
     }
 
+    /**
+     * Le formulaire de poids s'ouvre depuis le « + » de l'en-tête mobile, et ses
+     * trois champs s'empilent en une colonne à 375 px. Vitest ne lit que des
+     * noms de classe ; ici, c'est la mise en page que Chrome calcule.
+     */
+    public function test_weight_form_opens_from_the_plus_in_one_column_with_the_weight_focused(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $user = User::factory()->create();
+
+            $browser->loginAs($user)
+                ->resizeToIphoneMini()
+                ->visit(route('body-measurements.index'))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('button[aria-label="Ajouter une mesure"]', 10)
+                ->click('button[aria-label="Ajouter une mesure"]')
+                ->waitFor('main form', 10);
+
+            /** @var array{champs: list<array{haut: float, gauche: float, droite: float}>, poidsFocalise: bool, largeur: int} $lecture */
+            $lecture = $browser->script(<<<'JS'
+                const champs = [...document.querySelectorAll('main form input')].slice(0, 3).map((champ) => {
+                    const boite = champ.getBoundingClientRect();
+
+                    return { haut: boite.top, gauche: boite.left, droite: boite.right };
+                });
+
+                return {
+                    champs,
+                    poidsFocalise: document.activeElement === document.querySelector('main form input'),
+                    largeur: document.documentElement.clientWidth,
+                };
+                JS)[0];
+
+            $this->assertCount(3, $lecture['champs']);
+            $this->assertTrue($lecture['poidsFocalise'], 'le focus doit être sur le champ du poids');
+
+            foreach ($lecture['champs'] as $rang => $champ) {
+                $this->assertLessThanOrEqual($lecture['largeur'], $champ['droite'], "le champ {$rang} déborde de l'écran");
+                $this->assertGreaterThan(200, $champ['droite'] - $champ['gauche'], "le champ {$rang} est trop étroit pour une colonne unique");
+
+                if ($rang > 0) {
+                    $this->assertGreaterThan($lecture['champs'][$rang - 1]['haut'], $champ['haut'], "le champ {$rang} n'est pas sous le précédent");
+                }
+            }
+        });
+    }
+
     public function test_mobile_header_shows_the_page_title(): void
     {
         $this->browse(function (Browser $browser): void {

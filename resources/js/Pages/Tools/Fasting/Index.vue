@@ -57,13 +57,12 @@ const endForm = useForm({
     status: 'completed',
 })
 const finDemandee = ref(false)
+const titreDuDepart = ref(null)
 
-// Timer Logic
 const elapsedSeconds = ref(0)
 const progressPercentage = ref(0)
 const timerInterval = ref(null)
 
-// Format seconds into HH:mm:ss
 const formatDuration = (seconds) => {
     const h = Math.floor(seconds / 3600)
     const m = Math.floor((seconds % 3600) / 60)
@@ -262,7 +261,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
             </div>
 
             <GlassCard v-else class="mx-auto max-w-md">
-                <h3 class="titre-carte mb-6">Démarrer un jeûne</h3>
+                <h3 ref="titreDuDepart" tabindex="-1" class="titre-carte mb-6">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
@@ -392,6 +391,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
             libelle-confirmation="Terminer"
             variante-confirmation="primary"
             libelle-annulation="Continuer le jeûne"
+            :focus-apres="() => titreDuDepart"
             :en-cours="endForm.processing"
             @confirmer="endFast"
             @annuler="finDemandee = false"

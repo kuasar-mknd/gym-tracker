@@ -24,6 +24,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import { useFiltreDansLUrl } from '@/composables/useFiltreDansLUrl'
 import { EXERCISE_CATEGORIES, EXERCISE_TYPES, CATEGORY_BORDER_COLORS, TYPE_ICONS } from '@/Utils/constants'
 import { compte } from '@/Utils/nombre'
+import { sansAccents } from '@/Utils/sansAccents'
 import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
@@ -129,11 +130,13 @@ const demanderSuppression = (id) => {
     retenirSuppression(localExercises.value.find((exercice) => exercice.id === id) ?? { id })
 }
 
+/** La recherche telle qu'on la compare : sans espaces autour, ni accents, ni majuscules. */
+const requete = computed(() => sansAccents(searchQuery.value).trim())
+
 // Filter exercises based on the search query and selected category
 const filteredExercises = computed(() => {
     return localExercises.value.filter((exercise) => {
-        const matchesSearch =
-            !searchQuery.value || exercise.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+        const matchesSearch = !requete.value || sansAccents(exercise.name).includes(requete.value)
         const matchesCategory = activeCategory.value === 'all' || exercise.category === activeCategory.value
         return matchesSearch && matchesCategory
     })
@@ -155,7 +158,7 @@ const filteredExercises = computed(() => {
 const libraryIsEmpty = computed(() => localExercises.value.length === 0)
 
 /** Ce que l'utilisateur peut relacher pour revoir quelque chose. */
-const hasActiveFilter = computed(() => searchQuery.value !== '' || activeCategory.value !== 'all')
+const hasActiveFilter = computed(() => requete.value !== '' || activeCategory.value !== 'all')
 
 const clearFilters = () => {
     searchQuery.value = ''
@@ -258,7 +261,11 @@ const typeLabel = (type) => {
                     catégorie filtrait — le cas que cet état ne savait pas voir.
                 -->
                 <GlassEmptyState
-                    :title="searchQuery ? 'Aucun résultat pour ' + searchQuery : 'Aucun exercice dans cette catégorie'"
+                    :title="
+                        searchQuery.trim()
+                            ? 'Aucun résultat pour ' + searchQuery.trim()
+                            : 'Aucun exercice dans cette catégorie'
+                    "
                     description="Essaie un autre filtre, ou crée un nouvel exercice."
                     icon="search_off"
                     color="violet"

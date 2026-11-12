@@ -273,7 +273,52 @@ describe('Fasting — le compteur du jeûne en cours', () => {
             await flushPromises()
 
             expect(dialogueDeFin(wrapper).props('ouvert')).toBe(false)
+            // Le refus, lui, reste dit sous le bouton une fois le dialogue refermé ; le succès n'en dit aucun.
+            const alerte = wrapper.find('[dusk="fasting-end-error"]')
+            expect(alerte.exists() ? alerte.text() : null).toBe(refus.end_time ?? null)
         }
+    })
+
+    describe('le focus, quand le jeûne terminé emporte le bouton qui avait ouvert la question', () => {
+        let wrapper
+
+        const monterAttache = async () => {
+            wrapper = mount(FastingIndex, {
+                props: { activeFast: runningFast(3600, 16 * 60), history: emptyHistory },
+                attachTo: document.body,
+                global: { directives: { press: {} }, stubs: { AuthenticatedLayout: passesSlot } },
+            })
+            await flushPromises()
+        }
+
+        afterEach(() => wrapper?.unmount())
+
+        it('passe au titre du formulaire de départ, une fois le dialogue refermé', async () => {
+            await monterAttache()
+            await boutonTerminer(wrapper).trigger('click')
+            boutonTerminer(wrapper).element.focus()
+
+            await wrapper.setProps({ activeFast: null })
+            await vi.advanceTimersByTimeAsync(250)
+
+            const titre = wrapper.findAll('h3').find((candidat) => candidat.text() === 'Démarrer un jeûne')
+            expect(titre.attributes('tabindex')).toBe('-1')
+            expect(document.activeElement).toBe(titre.element)
+        })
+
+        it('ne prend pas le focus à qui est déjà ailleurs', async () => {
+            await monterAttache()
+            await boutonTerminer(wrapper).trigger('click')
+            const champ = document.createElement('input')
+            document.body.appendChild(champ)
+            champ.focus()
+
+            await wrapper.setProps({ activeFast: null })
+            await vi.advanceTimersByTimeAsync(250)
+
+            expect(document.activeElement).toBe(champ)
+            champ.remove()
+        })
     })
 
     it('verrouille le bouton du dialogue tant que la fin est en route', async () => {

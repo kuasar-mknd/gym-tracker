@@ -228,6 +228,58 @@ describe('Measurements/Index headline figures', () => {
         expect(carte.props('tendance')).toEqual({ texte: 'depuis la dernière pesée', sens: 'stable' })
     })
 
+    it.each([
+        ['74.54', '74.50'],
+        ['74.46', '74.50'],
+    ])(
+        'lit comme stable un écart sous 0,05 kg (%s contre %s), sans signe ni flèche que l’écran ne montre pas',
+        async (dernier, precedent) => {
+            const presqueStable = [
+                { ...MEASUREMENTS[0], weight: dernier },
+                { ...MEASUREMENTS[1], weight: precedent },
+            ]
+
+            const wrapper = await mountPage(MeasurementsIndex, { measurements: presqueStable })
+
+            expect(wrapper.vm.weightDiff).toBe(0)
+            expect(statistique(wrapper, 'Évolution')).toBe('0')
+            const carte = wrapper.findAllComponents(GlassStat).find((c) => c.props('libelle') === 'Évolution')
+            expect(carte.props('tendance').sens).toBe('stable')
+        },
+    )
+
+    it('arrondit l’écart à la décimale lue, et garde le sens d’un écart qui s’y lit encore', async () => {
+        const wrapper = await mountPage(MeasurementsIndex, {
+            measurements: [
+                { ...MEASUREMENTS[0], weight: '74.56' },
+                { ...MEASUREMENTS[1], weight: '74.50' },
+            ],
+        })
+
+        expect(wrapper.vm.weightDiff).toBe(0.1)
+        expect(statistique(wrapper, 'Évolution')).toBe('+0,1')
+        const carte = wrapper.findAllComponents(GlassStat).find((c) => c.props('libelle') === 'Évolution')
+        expect(carte.props('tendance').sens).toBe('hausse')
+    })
+
+    it('arrondit une perte et un gain de même taille à la même valeur, une moitié exacte comprise', async () => {
+        const perte = await mountPage(MeasurementsIndex, {
+            measurements: [
+                { ...MEASUREMENTS[0], weight: '80.00' },
+                { ...MEASUREMENTS[1], weight: '80.25' },
+            ],
+        })
+        const gain = await mountPage(MeasurementsIndex, {
+            measurements: [
+                { ...MEASUREMENTS[0], weight: '80.25' },
+                { ...MEASUREMENTS[1], weight: '80.00' },
+            ],
+        })
+
+        expect(perte.vm.weightDiff).toBe(-0.3)
+        expect(gain.vm.weightDiff).toBe(0.3)
+    })
+
     it('falls back to the last day body fat was measured, because most weigh-ins skip it', async () => {
         // The newest entry has no body_fat: reading measurements[0] blindly
         // would blank a figure the user did record a week ago.
@@ -409,12 +461,24 @@ describe('Measurements/Index add form', () => {
         it('défile jusqu’au formulaire et donne le focus au poids, depuis le « + » de l’en-tête', async () => {
             const { wrapper, defiler } = await monterAvecLesVraisChamps(MEASUREMENTS)
 
-            await click(wrapper, 'Ajouter')
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
             await flushPromises()
 
             expect(defiler).toHaveBeenCalledTimes(1)
             expect(defiler.mock.contexts[0]).toBe(wrapper.find('form').element)
             expect(document.activeElement).toBe(wrapper.find('input[type="number"]').element)
+        })
+
+        it('rend le focus au bouton qui l’a ouverte une fois enregistrée', async () => {
+            const { wrapper } = await monterAvecLesVraisChamps(MEASUREMENTS)
+
+            await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+            await flushPromises()
+            await wrapper.find('form').trigger('submit')
+            await flushPromises()
+
+            expect(wrapper.find('form').exists()).toBe(false)
+            expect(document.activeElement).toBe(wrapper.get('button[aria-label="Ajouter une mesure"]').element)
         })
 
         it('fait de même depuis le bouton de l’état vide', async () => {

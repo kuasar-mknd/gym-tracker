@@ -161,6 +161,28 @@ describe('Exercises/Index — filtrage et regroupement', () => {
         wrapper.unmount()
     })
 
+    it('trouve « Développé couché » en tapant « developpe », sans accent', async () => {
+        const wrapper = mountPage([PECS, BACK, PECS_2])
+
+        await wrapper.find('#search-exercises-input').setValue('developpe')
+
+        expect(renderedCards(wrapper).map((card) => card.name)).toEqual(['Développé couché'])
+
+        wrapper.unmount()
+    })
+
+    it('ne tient pas compte des espaces autour de la recherche, et une recherche d’espaces ne filtre rien', async () => {
+        const wrapper = mountPage([PECS, BACK, PECS_2])
+
+        await wrapper.find('#search-exercises-input').setValue('  tractions ')
+        expect(renderedCards(wrapper)).toEqual([{ name: 'Tractions', category: 'Dos' }])
+
+        await wrapper.find('#search-exercises-input').setValue('   ')
+        expect(renderedCards(wrapper)).toHaveLength(3)
+
+        wrapper.unmount()
+    })
+
     it('filtre sur un fragment de nom, pas seulement sur le début', async () => {
         const wrapper = mountPage([PECS, BACK, PECS_2])
 
