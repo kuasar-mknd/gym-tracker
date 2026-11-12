@@ -14,8 +14,10 @@ import Modal from '@/Components/UI/Modal.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import { EXERCISE_CATEGORIES, EXERCISE_TYPES } from '@/Utils/constants'
+import { sansAccents } from '@/Utils/sansAccents'
 import { garderLaRecherche, lireLaRecherche } from '@/Utils/rechercheDExercice'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -33,9 +35,9 @@ const showCreateForm = ref(false)
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
 
 const filteredExercises = computed(() => {
-    const q = searchQuery.value.toLowerCase().trim()
+    const q = sansAccents(searchQuery.value).trim()
 
-    return q ? props.exercises.filter((e) => e.name.toLowerCase().includes(q)) : props.exercises
+    return q ? props.exercises.filter((e) => sansAccents(e.name).includes(q)) : props.exercises
 })
 
 const choisir = (exerciseId) => {
@@ -130,6 +132,14 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                     />
                 </div>
                 <div class="min-h-0 space-y-3 overflow-y-auto" dusk="liste-des-exercices">
+                    <GlassEmptyState
+                        v-if="exercises.length === 0 && !searchQuery"
+                        taille="ligne"
+                        title="Aucun exercice, crée le premier"
+                        action-label="Créer un exercice"
+                        action-id="empty-create-exercise"
+                        @action="quickCreate"
+                    />
                     <button
                         v-if="filteredExercises.length === 0 && searchQuery"
                         type="button"

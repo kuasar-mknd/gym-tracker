@@ -107,7 +107,7 @@ watch(
     () => props.exercises,
     (exercices) => (localExercises.value = bibliotheque(exercices)),
 )
-const { unsyncedSetIds, clearUnsynced, markUnsynced, editError, reportEditFailure, reportSyncFailure } =
+const { unsyncedSetIds, clearUnsynced, markUnsynced, erreurDeSaisie, reportEditFailure, reportSyncFailure } =
     useRapportDeSynchronisation({
         page,
         exercices: () => localExercises.value,
@@ -274,7 +274,7 @@ onUnmounted(() => {
         back-route="workouts.index"
         largeur="moyenne"
     >
-        <ErreurDeSaisie :message="editError" />
+        <ErreurDeSaisie v-bind="erreurDeSaisie" />
 
         <template #header-actions>
             <button
