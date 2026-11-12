@@ -13,6 +13,16 @@ use Illuminate\Support\Carbon;
 
 class StatsOverview extends StatsOverviewWidget
 {
+    /**
+     * Ces encarts montrent des comptes (noms, adresses, effectifs) : ils
+     * suivent la capacité qui ouvre la liste des utilisateurs.
+     */
+    #[\Override]
+    public static function canView(): bool
+    {
+        return auth()->user()?->can('ViewAny:User') === true;
+    }
+
     #[\Override]
     protected ?string $pollingInterval = '30s';
 

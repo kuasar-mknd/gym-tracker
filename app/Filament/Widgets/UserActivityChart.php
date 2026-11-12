@@ -11,6 +11,16 @@ use Illuminate\Support\Carbon;
 
 class UserActivityChart extends ChartWidget
 {
+    /**
+     * Ces encarts montrent des comptes (noms, adresses, effectifs) : ils
+     * suivent la capacité qui ouvre la liste des utilisateurs.
+     */
+    #[\Override]
+    public static function canView(): bool
+    {
+        return auth()->user()?->can('ViewAny:User') === true;
+    }
+
     #[\Override]
     protected ?string $heading = 'Inscriptions';
 

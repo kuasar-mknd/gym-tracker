@@ -15,7 +15,7 @@ use Tests\Support\FilamentAdminPanel;
 use Tests\Support\HorlogeQuiPasseMinuit;
 
 beforeEach(function (): void {
-    $this->actingAs(FilamentAdminPanel::admin(), 'admin');
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:User']), 'admin');
 });
 
 /**

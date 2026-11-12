@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -33,7 +34,7 @@ use Illuminate\Notifications\Notification;
  * Mise en file, et seulement après la validation de la transaction : un
  * changement annulé ne doit rien annoncer.
  */
-final class AdresseDuCompteChangee extends Notification implements ShouldQueue
+final class AdresseDuCompteChangee extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
 
