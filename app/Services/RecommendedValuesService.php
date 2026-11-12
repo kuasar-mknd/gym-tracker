@@ -193,7 +193,9 @@ final class RecommendedValuesService
      * l'utilisateur corrige ensuite. Une serie validee sans avoir ete touchee
      * garde ces valeurs : la retenir comme historique proposerait 0 kg a la
      * seance suivante, et ce 0 se propagerait de seance en seance. Une serie de
-     * poids de corps (0 kg mais des repetitions saisies) reste un historique.
+     * poids de corps reste un historique des qu'une valeur differe du
+     * pre-remplissage ; a 10 repetitions pile, 0 kg, 0 km et 0 ou 30 s, elle
+     * est indiscernable d'une serie non touchee et est donc passee.
      */
     private function estRestéeAuPréRemplissage(Set $set): bool
     {
