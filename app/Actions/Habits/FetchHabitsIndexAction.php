@@ -34,6 +34,7 @@ final class FetchHabitsIndexAction
         return [
             'habits' => fn (): \Illuminate\Database\Eloquent\Collection => $user->habits()
                 ->where('archived', false)
+                ->orderBy('id')
                 ->with([
                     /*
                      * `$query` type, sinon il est `mixed` et l'appel qui suit ne

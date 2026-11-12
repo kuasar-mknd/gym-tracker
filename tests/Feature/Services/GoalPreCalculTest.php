@@ -468,3 +468,36 @@ it('ne relit pas l’utilisateur pour chaque objectif', function (): void {
         ->toBe([88.0, 88.0, 85.0, 3.0, 80.0, 500.0, 1.0])
         ->and(lecturesDeLaTableDObjectifs($sql, 'users'))->toBe(0);
 });
+
+it('ne lit que les exercices de chaque type d’objectif', function (): void {
+    $user = User::factory()->create();
+    $deCharge = Exercise::factory()->create();
+    $deVolume = Exercise::factory()->create();
+
+    recordDeForceDObjectif($user, $deCharge, 80);
+    recordDeForceDObjectif($user, $deVolume, 90);
+    seanceDeVolumeDObjectif($user, $deCharge, 50, 10);
+    seanceDeVolumeDObjectif($user, $deVolume, 60, 10);
+
+    $objectifDeCharge = objectifASynchroniser($user, GoalType::Weight, ['exercise_id' => $deCharge->id]);
+    $objectifDeVolume = objectifASynchroniser($user, GoalType::Volume, ['exercise_id' => $deVolume->id]);
+
+    /** @var array<string, list<mixed>> $liaisons */
+    $liaisons = [];
+    DB::listen(function (QueryExecuted $requete) use (&$liaisons): void {
+        foreach (['personal_records', 'workout_lines'] as $table) {
+            if (str_contains($requete->sql, "`{$table}`")) {
+                $liaisons[$table] = $requete->bindings;
+            }
+        }
+    });
+
+    app(GoalService::class)->syncGoals($user);
+
+    DB::getEventDispatcher()->forget(QueryExecuted::class);
+
+    expect($objectifDeCharge->refresh()->current_value)->toBe(80.0)
+        ->and($objectifDeVolume->refresh()->current_value)->toBe(600.0)
+        ->and(array_slice($liaisons['personal_records'], 1, -1))->toBe([$deCharge->id])
+        ->and(array_slice($liaisons['workout_lines'], 1, -1))->toBe([$deVolume->id]);
+});
