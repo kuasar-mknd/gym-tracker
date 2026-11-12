@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Fasting\DemarrerUnJeuneAction;
 use App\Models\Fast;
 use App\Models\User;
 
@@ -105,6 +106,58 @@ describe('FastingController', function (): void {
                 'id' => $fast->id,
                 'status' => 'completed',
             ]);
+        });
+
+        it('refuses to reactivate a fast while another one is active', function (): void {
+            $user = User::factory()->create();
+            Fast::factory()->create(['user_id' => $user->id, 'status' => 'active']);
+            $termine = Fast::factory()->create(['user_id' => $user->id, 'status' => 'completed']);
+
+            actingAs($user)
+                ->patch(route('tools.fasting.update', $termine), ['status' => 'active'])
+                ->assertRedirect()
+                ->assertSessionHasErrors(['base' => DemarrerUnJeuneAction::MESSAGE]);
+
+            expect($user->fasts()->where('status', 'active')->count())->toBe(1)
+                ->and($termine->refresh()->status)->toBe('completed');
+        });
+
+        it('reactivates a finished fast when none is active', function (): void {
+            $user = User::factory()->create();
+            $termine = Fast::factory()->create(['user_id' => $user->id, 'status' => 'completed']);
+
+            actingAs($user)
+                ->patch(route('tools.fasting.update', $termine), ['status' => 'active'])
+                ->assertSessionHasNoErrors();
+
+            expect($termine->refresh()->status)->toBe('active');
+        });
+
+        it('lets the active fast keep its active status while it is edited', function (): void {
+            $user = User::factory()->create();
+            $fast = Fast::factory()->create(['user_id' => $user->id, 'status' => 'active']);
+
+            actingAs($user)
+                ->patch(route('tools.fasting.update', $fast), ['status' => 'active', 'type' => '18:6'])
+                ->assertSessionHasNoErrors();
+
+            expect($fast->refresh()->status)->toBe('active')->and($fast->type)->toBe('18:6');
+        });
+
+        it('still lets a fast be broken or edited without a status change', function (): void {
+            $user = User::factory()->create();
+            $fast = Fast::factory()->create(['user_id' => $user->id, 'status' => 'active']);
+            $autre = Fast::factory()->create(['user_id' => $user->id, 'status' => 'completed']);
+
+            actingAs($user)
+                ->patch(route('tools.fasting.update', $fast), ['status' => 'broken'])
+                ->assertSessionHasNoErrors();
+            actingAs($user)
+                ->patch(route('tools.fasting.update', $autre), ['type' => '20:4'])
+                ->assertSessionHasNoErrors();
+
+            expect($fast->refresh()->status)->toBe('broken')
+                ->and($autre->refresh()->type)->toBe('20:4');
         });
 
         it('prevents a user from updating another user\'s fast', function (): void {

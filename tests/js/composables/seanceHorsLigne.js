@@ -45,6 +45,7 @@ export const MOTIF_D_UN_IDENTIFIANT = '[1-9][0-9]*'
 /** Les adresses de Ziggy dont la séance se sert, telles que le serveur les déclare. */
 const ADRESSES_DE_LA_SEANCE = {
     dashboard: 'dashboard',
+    login: 'login',
     'workouts.show': 'workouts/{workout}',
     'api.v1.workouts.store': 'api/v1/workouts',
     'api.v1.workouts.finish': 'api/v1/workouts/finish',
