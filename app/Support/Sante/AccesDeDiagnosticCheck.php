@@ -12,8 +12,9 @@ use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
 
 /**
- * L'état de l'accès de diagnostic (#2032) : « Fermé », ou « N jeton(s)
- * actif(s) jusqu'au … ».
+ * L'état de l'accès de diagnostic (#2032) : « Fermé », « N jeton(s) actif(s)
+ * jusqu'au … » (la plus lointaine des expirations), ou « Ouvert, aucun jeton
+ * actif » quand l'accès est ouvert sans jeton.
  *
  * Orange pendant vingt-quatre heures après la présentation d'un jeton révoqué
  * ou expiré (la trace que pose `AlertesDeDiagnostic::jetonInvalidePresente()`,

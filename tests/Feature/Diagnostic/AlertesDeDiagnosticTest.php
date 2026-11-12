@@ -12,10 +12,18 @@ use App\Models\Admin;
 use App\Models\JetonDeDiagnostic;
 use App\Notifications\AlerteDeDiagnostic;
 use App\Support\AlertesDeDiagnostic;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
+use Illuminate\Database\QueryException;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Testing\Fakes\NotificationFake;
 use PragmaRX\Google2FA\Google2FA;
 use Spatie\Permission\Models\Role;
 use Tests\Support\FilamentAdminPanel;
@@ -23,7 +31,8 @@ use Tests\Support\FilamentAdminPanel;
 /*
  * Les alertes de l'accès de diagnostic (#2032) : ce qui part, vers qui, avec
  * quoi, et la limite de chaque déclencheur dans le temps. L'horloge est
- * arrêtée, puis avancée : la limite se juge sur elle.
+ * arrêtée, puis avancée : la limite se juge sur elle, et ses durées sont
+ * écrites en dur ici (900 s, 3 600 s), jamais lues dans le code qu'elles jugent.
  */
 beforeEach(function (): void {
     Carbon::setTestNow('2026-11-12 10:00:00');
@@ -47,19 +56,29 @@ function alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic $evenement)
     return $alertes->filter(fn (array $envoi): bool => $envoi['notification']->evenement === $evenement)->count();
 }
 
-it('alerte à la création, sans le nom du jeton ni son identifiant entier', function (): void {
+/**
+ * Un jeton créé par l'action, par un super administrateur doté de la double authentification.
+ *
+ * @return array{jeton: JetonDeDiagnostic, en_clair: string}
+ */
+function alertesDeDiagnosticCreerUnJeton(string $nom = 'Agent'): array
+{
     $admin = FilamentAdminPanel::admin(['view-diagnostic']);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
     $secret = new Google2FA()->generateSecretKey();
     $admin->forceFill(['app_authentication_secret' => $secret])->save();
 
-    $cree = resolve(CreeUnJetonDeDiagnosticAction::class)->execute(
+    return resolve(CreeUnJetonDeDiagnosticAction::class)->execute(
         $admin->refresh(),
-        'Nom <b>venu de dehors</b>',
+        $nom,
         [PorteeDeDiagnostic::Sante, PorteeDeDiagnostic::Exceptions],
         7,
         new Google2FA()->getCurrentOtp($secret),
     );
+}
+
+it('alerte à la création, sans le nom du jeton ni son identifiant entier', function (): void {
+    $cree = alertesDeDiagnosticCreerUnJeton('Nom <b>venu de dehors</b>');
 
     Notification::assertSentOnDemand(AlerteDeDiagnostic::class, function (AlerteDeDiagnostic $alerte, array $canaux, AnonymousNotifiable $destinataire) use ($cree): bool {
         $courriel = $alerte->toMail($destinataire);
@@ -140,8 +159,55 @@ it('lit une liste d’adresses et ignore les vides', function (): void {
     expect(AlertesDeDiagnostic::adresses())->toBe(['a@example.org', 'b@example.org']);
 });
 
+it('ne retient que des adresses seules et bien formées', function (string|array $configuree, array $attendues): void {
+    config()->set('health.notifications.mail.to', $configuree);
+
+    expect(AlertesDeDiagnostic::adresses())->toBe($attendues);
+})->with([
+    'une adresse' => ['alertes@example.org', ['alertes@example.org']],
+    'deux adresses en une chaîne' => ['a@example.org, b@example.org', []],
+    'un texte quelconque' => ['pas-une-adresse', []],
+    'un texte et une adresse en liste' => [['pas-une-adresse', 'b@example.org'], ['b@example.org']],
+    'vide' => ['', []],
+]);
+
+it('refuse la création quand HEALTH_TO_ADDRESS ne porte aucune adresse valide', function (string $configuree): void {
+    config()->set('health.notifications.mail.to', $configuree);
+
+    try {
+        alertesDeDiagnosticCreerUnJeton();
+        $motif = null;
+    } catch (CreationDeJetonRefusee $refus) {
+        $motif = $refus->motif;
+    }
+
+    expect($motif)->toBe(CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE);
+})->with(['pas-une-adresse', 'a@example.org, b@example.org', '']);
+
+/**
+ * Remplace l'envoi des notifications par un faux qui appelle d'abord `$auEnvoi`.
+ */
+function alertesDeDiagnosticObserverLEnvoi(Closure $auEnvoi): void
+{
+    Notification::swap(new class($auEnvoi) extends NotificationFake
+    {
+        public function __construct(private readonly Closure $auEnvoi)
+        {
+        }
+
+        #[Override]
+        public function send($notifiables, $notification): void
+        {
+            ($this->auEnvoi)();
+
+            parent::send($notifiables, $notification);
+        }
+    });
+}
+
 it('ne défait pas ce qu’il annonce quand l’envoi échoue', function (): void {
-    Notification::shouldReceive('route')->andThrow(new RuntimeException('file injoignable'));
+    Exceptions::fake();
+    alertesDeDiagnosticObserverLEnvoi(static fn (): never => throw new RuntimeException('file injoignable'));
     $jeton = JetonDeDiagnostic::factory()->create();
 
     resolve(AlertesDeDiagnostic::class)->jetonCree($jeton);
@@ -149,6 +215,70 @@ it('ne défait pas ce qu’il annonce quand l’envoi échoue', function (): voi
 
     expect($revoques)->toHaveCount(1)
         ->and($jeton->refresh()->revoque_le)->not->toBeNull();
+    Exceptions::assertReported(RuntimeException::class);
+});
+
+it('ne lève rien quand la file est en panne dans une transaction englobante', function (): void {
+    Exceptions::fake();
+    Facade::clearResolvedInstance(ChannelManager::class);
+    app()->forgetInstance(ChannelManager::class);
+    config()->set('queue.default', 'database');
+    config()->set('queue.connections.database.table', 'table_de_file_absente');
+    $jeton = JetonDeDiagnostic::factory()->create();
+
+    $revoques = DB::transaction(fn (): array => resolve(RevoqueLesJetonsDeDiagnosticAction::class)->execute(RaisonDeRevocationDuJeton::Manuelle));
+
+    expect($revoques)->toHaveCount(1)
+        ->and($jeton->refresh()->revoque_le)->not->toBeNull();
+    Exceptions::assertReported(QueryException::class);
+});
+
+it('envoie la création après le verrou et la transaction de la création', function (): void {
+    $niveau = DB::transactionLevel();
+    $observe = [];
+    alertesDeDiagnosticObserverLEnvoi(function () use (&$observe): void {
+        $verrou = Cache::lock('diagnostic:creation', 5);
+        $observe = ['niveau' => DB::transactionLevel(), 'verrou_libre' => $verrou->get()];
+        $verrou->release();
+    });
+
+    alertesDeDiagnosticCreerUnJeton();
+
+    expect($observe)->toBe(['niveau' => $niveau, 'verrou_libre' => true]);
+});
+
+it('ne fait jamais échouer la requête valide quand le cache tombe', function (string $methode): void {
+    Exceptions::fake();
+    $jeton = JetonDeDiagnostic::factory()->revoque()->create();
+    Cache::shouldReceive('add', 'increment', 'put', 'forget')->andThrow(new RuntimeException('cache injoignable'));
+
+    resolve(AlertesDeDiagnostic::class)->{$methode}($jeton);
+
+    Exceptions::assertReported(RuntimeException::class);
+})->with(['premierUsage', 'jetonInvalidePresente', 'debitDepasse']);
+
+it('envoie quand la trace de la présentation ne s’écrit pas', function (): void {
+    Exceptions::fake();
+    $jeton = JetonDeDiagnostic::factory()->revoque()->create();
+    Cache::extend('sans-trace', fn (): Repository => new Repository(new class() extends ArrayStore
+    {
+        #[Override]
+        public function put($key, $value, $seconds)
+        {
+            if (str_contains((string) $key, 'presentation-d-un-jeton-mort')) {
+                throw new RuntimeException('trace refusée');
+            }
+
+            return parent::put($key, $value, $seconds);
+        }
+    }));
+    config()->set('cache.stores.sans-trace', ['driver' => 'sans-trace']);
+    config()->set('cache.default', 'sans-trace');
+
+    resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton);
+
+    Exceptions::assertReported(RuntimeException::class);
+    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente))->toBe(1);
 });
 
 it('alerte du premier usage une seule fois par jeton, quel que soit le temps passé', function (): void {
@@ -164,46 +294,88 @@ it('alerte du premier usage une seule fois par jeton, quel que soit le temps pas
     expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::PremierUsage))->toBe(2);
 });
 
+it('rend le créneau du premier usage quand rien n’a pu partir, et réessaie au prochain appel', function (): void {
+    $jeton = JetonDeDiagnostic::factory()->create();
+    $alertes = resolve(AlertesDeDiagnostic::class);
+
+    config()->set('health.notifications.mail.to', '');
+    $alertes->premierUsage($jeton);
+    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::PremierUsage))->toBe(0);
+
+    config()->set('health.notifications.mail.to', 'alertes@example.org');
+    $alertes->premierUsage($jeton);
+    $alertes->premierUsage($jeton);
+
+    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::PremierUsage))->toBe(1);
+});
+
+it('rend le créneau du débit quand l’envoi échoue, et réessaie au prochain appel', function (): void {
+    Exceptions::fake();
+    $jeton = JetonDeDiagnostic::factory()->create();
+    $alertes = resolve(AlertesDeDiagnostic::class);
+
+    alertesDeDiagnosticObserverLEnvoi(static fn (): never => throw new RuntimeException('file injoignable'));
+    $alertes->debitDepasse($jeton);
+
+    Notification::swap(new NotificationFake());
+    $alertes->debitDepasse($jeton);
+    $alertes->debitDepasse($jeton);
+
+    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::DebitDepasse))->toBe(1);
+});
+
 it('alerte d’un jeton mort présenté une fois par quinze minutes', function (): void {
     $jeton = JetonDeDiagnostic::factory()->expire()->create();
     $autre = JetonDeDiagnostic::factory()->revoque()->create();
     $alertes = resolve(AlertesDeDiagnostic::class);
+    $envoyees = fn (): int => alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente);
 
     $alertes->jetonInvalidePresente($jeton);
     $alertes->jetonInvalidePresente($jeton);
     $alertes->jetonInvalidePresente($autre);
 
-    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente))->toBe(2);
+    expect($envoyees())->toBe(2);
 
-    Carbon::setTestNow(now()->addSeconds(AlertesDeDiagnostic::SECONDES_ENTRE_DEUX_PRESENTATIONS - 1));
+    Carbon::setTestNow(now()->addSeconds(899));
     $alertes->jetonInvalidePresente($jeton);
-    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente))->toBe(2);
+    expect($envoyees())->toBe(2);
 
-    Carbon::setTestNow(now()->addSeconds(1));
+    Carbon::setTestNow(now()->addSecond());
     $alertes->jetonInvalidePresente($jeton);
-    expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente))->toBe(3);
+    expect($envoyees())->toBe(3);
 });
 
-it('passe à une alerte par jour dès la onzième présentation d’un jeton mort', function (): void {
+it('passe à un courriel par jour civil dès la onzième présentation, sans jamais dépasser un par quinze minutes', function (): void {
     $jeton = JetonDeDiagnostic::factory()->revoque()->create();
     $alertes = resolve(AlertesDeDiagnostic::class);
     $envoyees = fn (): int => alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente);
 
-    foreach (range(1, AlertesDeDiagnostic::PRESENTATIONS_AVANT_LA_CADENCE_JOURNALIERE) as $presentation) {
+    foreach (range(1, 10) as $presentation) {
         $alertes->jetonInvalidePresente($jeton);
-        Carbon::setTestNow(now()->addSeconds(AlertesDeDiagnostic::SECONDES_ENTRE_DEUX_PRESENTATIONS));
+        expect($envoyees())->toBe($presentation);
+
+        if ($presentation < 10) {
+            Carbon::setTestNow(now()->addSeconds(900));
+        }
     }
 
+    $alertes->jetonInvalidePresente($jeton);
     expect($envoyees())->toBe(10);
 
+    Carbon::setTestNow(now()->addSeconds(900));
     $alertes->jetonInvalidePresente($jeton);
     expect($envoyees())->toBe(11);
 
-    Carbon::setTestNow(now()->addSeconds(AlertesDeDiagnostic::SECONDES_ENTRE_DEUX_PRESENTATIONS * 4));
+    Carbon::setTestNow(now()->addSeconds(900));
+    $alertes->jetonInvalidePresente($jeton);
     $alertes->jetonInvalidePresente($jeton);
     expect($envoyees())->toBe(11);
 
-    Carbon::setTestNow(now()->addSeconds(AlertesDeDiagnostic::SECONDES_PAR_JOUR));
+    Carbon::setTestNow('2026-11-13 00:00:00');
+    $alertes->jetonInvalidePresente($jeton);
+    expect($envoyees())->toBe(12);
+
+    Carbon::setTestNow(now()->addSeconds(900));
     $alertes->jetonInvalidePresente($jeton);
     expect($envoyees())->toBe(12);
 });
@@ -230,11 +402,11 @@ it('alerte d’un débit dépassé une fois par heure et par jeton', function ()
     $alertes->debitDepasse($autre);
     expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::DebitDepasse))->toBe(2);
 
-    Carbon::setTestNow(now()->addSeconds(AlertesDeDiagnostic::SECONDES_ENTRE_DEUX_DEBITS_DEPASSES - 1));
+    Carbon::setTestNow(now()->addSeconds(3599));
     $alertes->debitDepasse($jeton);
     expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::DebitDepasse))->toBe(2);
 
-    Carbon::setTestNow(now()->addSeconds(1));
+    Carbon::setTestNow(now()->addSecond());
     $alertes->debitDepasse($jeton);
     expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::DebitDepasse))->toBe(3);
 });

@@ -8,9 +8,10 @@ use App\Enums\EvenementDAlerteDeDiagnostic;
 use App\Enums\RaisonDeRevocationDuJeton;
 use App\Models\JetonDeDiagnostic;
 use App\Notifications\AlerteDeDiagnostic;
+use Closure;
+use DateTimeInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Les alertes de l'accès de diagnostic (#2032), vers `HEALTH_TO_ADDRESS`.
@@ -19,28 +20,44 @@ use Illuminate\Support\Facades\RateLimiter;
  * révocation ; `premierUsage()`, `jetonInvalidePresente()` et
  * `debitDepasse()` sont ce que la garde HTTP appellera, avec la ligne du
  * jeton connu : jamais le texte présenté, qui ne borne aucune clef. Aucune ne
- * lit ni n'écrit en base : un refus n'écrit rien. Les limites vivent dans le
- * cache, et une clef évincée coûte un courriel de plus, jamais un de moins.
- * Une alerte qui échoue est rapportée et ne défait ni ne retarde ce qu'elle
- * annonce.
+ * lit ni n'écrit en base : un refus n'écrit rien.
+ *
+ * Aucune ne lève : une panne du cache, de la file ou du courrier est
+ * rapportée, et ce que l'alerte annonce (une création, une révocation, une
+ * requête valide) n'en est ni défait ni retardé. L'envoi n'attend aucune
+ * validation de transaction : le courrier ne dépend d'aucune ligne en base.
+ *
+ * Les limites vivent dans le cache, et une clef évincée coûte un courriel de
+ * plus, jamais un de moins. Un créneau n'est pris que si le courriel part : un
+ * envoi sans adresse valide ou en échec rend le créneau, et le prochain appel
+ * réessaie.
+ *
+ * - Premier usage : un courriel par jeton, pour toute sa vie.
+ * - Jeton révoqué ou expiré présenté : un courriel par jeton et par quinze
+ *   minutes jusqu'à la dixième présentation ; dès la onzième (compteur du
+ *   jeton, gardé quatre-vingt-dix jours), un courriel par jour civil (fuseau
+ *   de l'application) et toujours pas plus d'un par quinze minutes.
+ * - Débit dépassé : un courriel par jeton et par heure.
  */
 final class AlertesDeDiagnostic
 {
-    /** Une alerte de jeton présenté mort par jeton et par quinze minutes… */
-    public const int SECONDES_ENTRE_DEUX_PRESENTATIONS = 900;
-
-    /** … jusqu'à ce nombre de présentations dans la journée, puis une par jour. */
+    /** Le plus de présentations d'un jeton mort qui gardent la cadence de quinze minutes. */
     public const int PRESENTATIONS_AVANT_LA_CADENCE_JOURNALIERE = 10;
-
-    public const int SECONDES_PAR_JOUR = 86400;
-
-    public const int SECONDES_ENTRE_DEUX_DEBITS_DEPASSES = 3600;
 
     /** La trace que lit `AccesDeDiagnosticCheck` : l'instant de la dernière présentation d'un jeton mort. */
     public const string CLE_DE_LA_DERNIERE_PRESENTATION = 'sante:acces-de-diagnostic:presentation-d-un-jeton-mort';
 
+    private const int SECONDES_ENTRE_DEUX_PRESENTATIONS = 900;
+
+    private const int SECONDES_ENTRE_DEUX_DEBITS_DEPASSES = 3600;
+
+    private const int SECONDES_DU_CRENEAU_JOURNALIER = 172800;
+
+    private const int SECONDES_DU_COMPTEUR = JetonDeDiagnostic::JOURS_DE_CONSERVATION * 86400;
+
     /**
-     * Les adresses des alertes, vide si `HEALTH_TO_ADDRESS` l'est.
+     * Les adresses valides des alertes, vide si `HEALTH_TO_ADDRESS` l'est ou
+     * ne porte aucune adresse seule et bien formée.
      *
      * @return list<string>
      */
@@ -50,8 +67,14 @@ final class AlertesDeDiagnostic
         $adresses = [];
 
         foreach (is_array($configurees) ? $configurees : [$configurees] as $adresse) {
-            if (is_string($adresse) && trim($adresse) !== '') {
-                $adresses[] = trim($adresse);
+            if (! is_string($adresse)) {
+                continue;
+            }
+
+            $adresse = trim($adresse);
+
+            if ($adresse !== '' && filter_var($adresse, FILTER_VALIDATE_EMAIL) !== false) {
+                $adresses[] = $adresse;
             }
         }
 
@@ -96,77 +119,109 @@ final class AlertesDeDiagnostic
         ));
     }
 
-    /**
-     * Une fois par jeton, pour toute sa vie.
-     */
     public function premierUsage(JetonDeDiagnostic $jeton): void
     {
-        if (! Cache::add('diagnostic:alerte:premier-usage:'.$jeton->identifiant, true, $jeton->expire_le->copy()->addDay())) {
-            return;
-        }
-
-        $this->envoyer(new AlerteDeDiagnostic(
-            EvenementDAlerteDeDiagnostic::PremierUsage,
-            [self::fin($jeton)],
-            $jeton->portees,
-            $jeton->expire_le->toIso8601String(),
+        $this->sansLever(fn () => $this->envoyerSiLesCreneauxSontLibres(
+            [['diagnostic:alerte:premier-usage:'.$jeton->identifiant, $jeton->expire_le->copy()->addDay()]],
+            new AlerteDeDiagnostic(
+                EvenementDAlerteDeDiagnostic::PremierUsage,
+                [self::fin($jeton)],
+                $jeton->portees,
+                $jeton->expire_le->toIso8601String(),
+            ),
         ));
     }
 
     /**
-     * Un jeton révoqué ou expiré a été présenté. La trace que lit le contrôle
-     * de santé se pose à chaque présentation ; le courriel part une fois par
-     * jeton et par quinze minutes, puis, dès la onzième présentation de la
-     * journée, une fois par jour.
+     * La trace que lit le contrôle de santé se pose à chaque présentation,
+     * même quand le courriel ne part pas.
      */
     public function jetonInvalidePresente(JetonDeDiagnostic $jeton): void
     {
         $maintenant = now();
 
-        rescue(static fn (): bool => Cache::put(self::CLE_DE_LA_DERNIERE_PRESENTATION, $maintenant->toIso8601String(), $maintenant->copy()->addDays(2)), report: true);
+        rescue(static fn (): bool => Cache::put(self::CLE_DE_LA_DERNIERE_PRESENTATION, $maintenant->toIso8601String(), $maintenant->copy()->addDays(2)), false, true);
 
-        $compteur = 'diagnostic:alerte:presentations:'.$jeton->identifiant;
-        Cache::add($compteur, 0, self::SECONDES_PAR_JOUR);
-        $presentations = Cache::increment($compteur);
+        $this->sansLever(function () use ($jeton, $maintenant): void {
+            $compteur = 'diagnostic:alerte:presentations:'.$jeton->identifiant;
+            Cache::add($compteur, 0, self::SECONDES_DU_COMPTEUR);
+            $presentations = Cache::increment($compteur);
 
-        $parJour = is_int($presentations) && $presentations > self::PRESENTATIONS_AVANT_LA_CADENCE_JOURNALIERE;
+            $quinzeMinutes = ['diagnostic:alerte:jeton-mort:quinze-minutes:'.$jeton->identifiant, self::SECONDES_ENTRE_DEUX_PRESENTATIONS];
+            $parJour = is_int($presentations) && $presentations > self::PRESENTATIONS_AVANT_LA_CADENCE_JOURNALIERE;
 
-        $this->uneFoisParPeriode(
-            $parJour ? 'diagnostic:alerte:jeton-mort:jour:' : 'diagnostic:alerte:jeton-mort:quinze-minutes:',
-            $jeton,
-            $parJour ? self::SECONDES_PAR_JOUR : self::SECONDES_ENTRE_DEUX_PRESENTATIONS,
-            new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::JetonInvalidePresente, [self::fin($jeton)]),
-        );
+            $this->envoyerSiLesCreneauxSontLibres(
+                $parJour
+                    ? [['diagnostic:alerte:jeton-mort:jour:'.$jeton->identifiant.':'.$maintenant->format('Y-m-d'), self::SECONDES_DU_CRENEAU_JOURNALIER], $quinzeMinutes]
+                    : [$quinzeMinutes],
+                new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::JetonInvalidePresente, [self::fin($jeton)]),
+            );
+        });
+    }
+
+    public function debitDepasse(JetonDeDiagnostic $jeton): void
+    {
+        $this->sansLever(fn () => $this->envoyerSiLesCreneauxSontLibres(
+            [['diagnostic:alerte:debit:'.$jeton->identifiant, self::SECONDES_ENTRE_DEUX_DEBITS_DEPASSES]],
+            new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::DebitDepasse, [self::fin($jeton)]),
+        ));
     }
 
     /**
-     * Le débit d'un jeton a été dépassé : une alerte par heure et par jeton.
+     * Prend tous les créneaux, ou aucun, puis envoie ; un envoi qui ne part
+     * pas rend ceux qu'il avait pris.
+     *
+     * @param  list<array{0: string, 1: DateTimeInterface|int}>  $creneaux
      */
-    public function debitDepasse(JetonDeDiagnostic $jeton): void
+    private function envoyerSiLesCreneauxSontLibres(array $creneaux, AlerteDeDiagnostic $alerte): void
     {
-        $this->uneFoisParPeriode(
-            'diagnostic:alerte:debit:',
-            $jeton,
-            self::SECONDES_ENTRE_DEUX_DEBITS_DEPASSES,
-            new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::DebitDepasse, [self::fin($jeton)]),
-        );
-    }
+        $pris = [];
 
-    private function uneFoisParPeriode(string $prefixe, JetonDeDiagnostic $jeton, int $secondes, AlerteDeDiagnostic $alerte): void
-    {
-        if (RateLimiter::attempt($prefixe.$jeton->identifiant, 1, static fn (): bool => true, $secondes) === true) {
-            $this->envoyer($alerte);
+        foreach ($creneaux as [$cle, $duree]) {
+            if (! Cache::add($cle, true, $duree)) {
+                $this->rendre($pris);
+
+                return;
+            }
+
+            $pris[] = $cle;
+        }
+
+        if (! $this->envoyer($alerte)) {
+            $this->rendre($pris);
         }
     }
 
-    private function envoyer(AlerteDeDiagnostic $alerte): void
+    /**
+     * @param  list<string>  $cles
+     */
+    private function rendre(array $cles): void
+    {
+        foreach ($cles as $cle) {
+            Cache::forget($cle);
+        }
+    }
+
+    /**
+     * Vrai si le courriel est parti en file.
+     */
+    private function envoyer(AlerteDeDiagnostic $alerte): bool
     {
         $adresses = self::adresses();
 
         if ($adresses === []) {
-            return;
+            return false;
         }
 
-        rescue(static fn () => Notification::route('mail', $adresses)->notify($alerte), report: true);
+        return rescue(static function () use ($adresses, $alerte): bool {
+            Notification::route('mail', $adresses)->notify($alerte);
+
+            return true;
+        }, false, true);
+    }
+
+    private function sansLever(Closure $travail): void
+    {
+        rescue($travail, null, true);
     }
 }

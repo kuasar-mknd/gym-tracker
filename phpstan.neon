@@ -96,8 +96,9 @@ parameters:
           message: '#::afficherLeJetonAction\b#'
         # Les trois alertes que la garde HTTP du diagnostic appellera (#2032,
         # etape 3) n'ont encore d'appelant que dans leurs tests : la garde
-        # arrive dans une PR suivante. Cet ignore part avec elle, et PHPStan
-        # signalera l'ignore devenu inutile.
+        # arrive dans une PR suivante. Cet ignore est a retirer avec elle :
+        # PHPStan ne signale l'ignore inutile que lorsque les trois methodes
+        # ont un appelant ; tant qu'une seule n'en a pas, il reste muet.
         - identifier: shipmonk.deadMethod
           path: app/Support/AlertesDeDiagnostic.php
           message: '#::(premierUsage|jetonInvalidePresente|debitDepasse)\b#'

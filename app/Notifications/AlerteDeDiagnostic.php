@@ -20,7 +20,10 @@ use Illuminate\Support\Carbon;
  * le créateur tape, ni un texte venu de l'extérieur ne partent dans la file,
  * dans `failed_jobs` ou dans le courriel. Les jetons y sont désignés par les
  * quatre derniers caractères de leur identifiant ; les portées et la raison
- * sont des mots fermés ; l'expiration est un instant.
+ * sont des mots fermés ; l'expiration est un instant. Rien n'y dépend d'une
+ * ligne en base : elle part sans attendre la validation de la transaction qui
+ * l'englobe (`afterCommit` ferait lever l'appelant à la validation, hors de
+ * la garde d'`AlertesDeDiagnostic`).
  */
 final class AlerteDeDiagnostic extends Notification implements ShouldQueue
 {
@@ -37,7 +40,6 @@ final class AlerteDeDiagnostic extends Notification implements ShouldQueue
         public ?string $expireLe = null,
         public ?string $raison = null,
     ) {
-        $this->afterCommit();
     }
 
     /**
