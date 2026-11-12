@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Enums\EvenementDAlerteDeDiagnostic;
 use App\Enums\MotifDeLaTentative;
 use App\Models\User;
 use App\Notifications\AdresseDuCompteChangee;
+use App\Notifications\AlerteDeDiagnostic;
 use App\Notifications\LienDeChangementDAdresse;
 use App\Notifications\LienDOuvertureDuCompte;
 use App\Notifications\TentativeSurTonAdresse;
@@ -80,6 +82,15 @@ function courrielsEnFrancaisAEnvoyer(): array
             'courriel' => static fn (): MailMessage => new AdresseDuCompteChangee('nouvelle@example.org')->toMail(Notification::route('mail', 'nadia@exemple.org')),
         ],
     ];
+
+    foreach (EvenementDAlerteDeDiagnostic::cases() as $evenement) {
+        $courriels["alerte de diagnostic ({$evenement->value})"] = [
+            'avis' => AlerteDeDiagnostic::class,
+            'courriel' => static fn (): MailMessage => courrielsEnFrancaisLeMessage(
+                new AlerteDeDiagnostic($evenement, ['k3x9'], ['sante', 'exceptions'], '2026-11-19T10:00:00+01:00', 'manuelle')->toMail(Notification::route('mail', 'exploitant@example.org')),
+            ),
+        ];
+    }
 
     foreach (MotifDeLaTentative::cases() as $motif) {
         foreach (['ouvert' => false, 'en attente' => true] as $etat => $enAttente) {

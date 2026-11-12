@@ -7,6 +7,7 @@ namespace App\Actions\Diagnostic;
 use App\Enums\PorteeDeDiagnostic;
 use App\Models\Admin;
 use App\Models\JetonDeDiagnostic;
+use App\Support\AlertesDeDiagnostic;
 use Carbon\CarbonInterface;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Illuminate\Support\Facades\Cache;
@@ -86,6 +87,8 @@ final readonly class CreeUnJetonDeDiagnosticAction
         $cree = Cache::lock('diagnostic:creation', self::VIE_DU_VERROU)
             ->block(self::ATTENTE_DU_VERROU, fn (): array => DB::transaction(fn (): array => $this->creerSousLeVerrou($createur, $nom, $portees, $jours, $instant)));
 
+        resolve(AlertesDeDiagnostic::class)->jetonCree($cree['jeton']);
+
         return $cree;
     }
 
@@ -116,9 +119,7 @@ final readonly class CreeUnJetonDeDiagnosticAction
 
     private function adresseDesAlertesVide(): bool
     {
-        $adresses = config('health.notifications.mail.to');
-
-        return array_all(is_array($adresses) ? $adresses : [$adresses], fn ($adresse): bool => ! (is_string($adresse) && trim($adresse) !== ''));
+        return AlertesDeDiagnostic::adresses() === [];
     }
 
     /**

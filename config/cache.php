@@ -165,6 +165,7 @@ return [
         App\DTOs\Stats\WeeklyVolumeTrendPoint::class,
         App\DTOs\Stats\WeightHistoryPoint::class,
 
+        App\Enums\EvenementDAlerteDeDiagnostic::class,
         App\Enums\ExerciseCategory::class,
         App\Enums\GoalType::class,
         App\Enums\MotifDeLaTentative::class,

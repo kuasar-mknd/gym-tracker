@@ -7,6 +7,7 @@ namespace App\Actions\Diagnostic;
 use App\Enums\RaisonDeRevocationDuJeton;
 use App\Models\Admin;
 use App\Models\JetonDeDiagnostic;
+use App\Support\AlertesDeDiagnostic;
 
 /**
  * Révoque des jetons de diagnostic (#2032), toujours immédiatement : la
@@ -44,6 +45,8 @@ final readonly class RevoqueLesJetonsDeDiagnosticAction
                 $revoques[] = $jeton;
             }
         }
+
+        resolve(AlertesDeDiagnostic::class)->jetonsRevoques($revoques, $raison);
 
         return $revoques;
     }
