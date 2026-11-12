@@ -21,7 +21,7 @@ it('refuse de changer le propriétaire d’un supplément enregistré', function
     expect(Supplement::query()->findOrFail($supplement->id)->user_id)->toBe($avant->id);
 })->with([
     'par affectation' => function (Supplement $supplement, User $compte): bool {
-        $supplement->user_id = $compte->id;
+        $supplement->setAttribute('user_id', $compte->id);
 
         return $supplement->save();
     },

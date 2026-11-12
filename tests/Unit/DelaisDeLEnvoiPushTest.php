@@ -10,9 +10,8 @@ uses(Tests\TestCase::class);
  * 10 s au total (le paquet laissait 30 s) et 5 s pour se connecter.
  */
 it('borne la durée d’un envoi push par des délais explicites', function (): void {
-    $options = config('webpush.client_options');
+    $options = config()->array('webpush.client_options');
 
-    expect($options)->toBeArray()
-        ->and($options['timeout'] ?? null)->toBeInt()->toBeGreaterThan(0)
+    expect($options['timeout'] ?? null)->toBeInt()->toBeGreaterThan(0)
         ->and($options['connect_timeout'] ?? null)->toBeInt()->toBeGreaterThan(0);
 });
