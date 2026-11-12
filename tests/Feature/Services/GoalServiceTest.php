@@ -392,6 +392,34 @@ test('une mensuration à zéro n’atteint pas un objectif à la baisse', functi
         ->and($goal->progress_pct)->toBe(0.0);
 });
 
+test('une mensuration entre zéro et un compte : barre pleine et objectif atteint', function (): void {
+    $user = User::factory()->create();
+
+    BodyPartMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'part' => 'Waist',
+        'value' => 0.5,
+        'unit' => 'cm',
+        'measured_at' => Carbon::now(),
+    ]);
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'Waist',
+        'start_value' => 90,
+        'current_value' => 90,
+        'target_value' => 80,
+        'completed_at' => null,
+    ]);
+
+    $this->service->updateGoalProgress($goal);
+
+    expect($goal->current_value)->toBe(0.5)
+        ->and($goal->completed_at)->not->toBeNull()
+        ->and($goal->progress_pct)->toBe(100.0);
+});
+
 /**
  * Un objectif de mensuration sans mensuration choisie revient à sa valeur de
  * départ : barre à zéro, jamais atteint (#2132).

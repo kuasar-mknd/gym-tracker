@@ -498,8 +498,6 @@ it('ne lit que les exercices de chaque type d’objectif', function (): void {
 
     expect($objectifDeCharge->refresh()->current_value)->toBe(80.0)
         ->and($objectifDeVolume->refresh()->current_value)->toBe(600.0)
-        ->and($liaisons['personal_records'])->toContain($deCharge->id)
-        ->and($liaisons['personal_records'])->not->toContain($deVolume->id)
-        ->and($liaisons['workout_lines'])->toContain($deVolume->id)
-        ->and($liaisons['workout_lines'])->not->toContain($deCharge->id);
+        ->and(array_slice($liaisons['personal_records'], 1, -1))->toBe([$deCharge->id])
+        ->and(array_slice($liaisons['workout_lines'], 1, -1))->toBe([$deVolume->id]);
 });

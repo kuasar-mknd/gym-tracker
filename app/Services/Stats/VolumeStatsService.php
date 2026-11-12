@@ -296,7 +296,6 @@ final class VolumeStatsService
                 // Le regroupement et la somme se font en SQL : ramener des mois
                 // entiers de séances en PHP pour les additionner ne tiendrait pas
                 // sur un long historique.
-
                 $results = $user->workouts()
                     ->toBase()
                     ->where('started_at', '>=', $debutDuMois->copy()->subMonths($months - 1))
