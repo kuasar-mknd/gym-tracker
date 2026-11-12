@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 it('calculates volume history correctly', function (): void {
     $user = User::factory()->create();
@@ -300,7 +301,7 @@ it('pagine par vingt et precharge les lignes, leur exercice et leur compte de se
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $derniere->id]);
     Set::factory()->count(3)->create(['workout_line_id' => $workoutLine->id]);
 
-    $workouts = app(FetchWorkoutsIndexAction::class)->execute($user)['workouts'];
+    $workouts = app(FetchWorkoutsIndexAction::class)->execute($user)['workouts']();
 
     // Vingt par page, pas dix-neuf ni vingt-et-une.
     expect($workouts->perPage())->toBe(20);
@@ -323,4 +324,16 @@ it('pagine par vingt et precharge les lignes, leur exercice et leur compte de se
 
     // `withCount('sets')` : trois series posees, pas une quantite tiree.
     expect($ligneChargee->sets_count)->toBe(3);
+});
+
+it('départage par identifiant décroissant les séances qui commencent à la même seconde', function (): void {
+    $user = User::factory()->create();
+    Workout::factory()->count(22)->create(['user_id' => $user->id, 'started_at' => '2026-08-10 08:00:00']);
+
+    DB::enableQueryLog();
+    app(FetchWorkoutsIndexAction::class)->execute($user)['workouts']();
+    $tris = collect(DB::getQueryLog())->map(fn (array $entree): string => $entree['query'])->filter(fn (string $sql): bool => str_contains($sql, 'from `workouts`') && str_contains($sql, 'order by'));
+
+    expect($tris)->toHaveCount(1)
+        ->and($tris->first())->toContain('order by `started_at` desc, `id` desc');
 });

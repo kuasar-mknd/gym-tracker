@@ -130,7 +130,8 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                     class="font-display text-text-muted mt-1 text-2xl font-black"
                     title="Pas de mois précédent à comparer"
                 >
-                    —
+                    <span aria-hidden="true">—</span>
+                    <span class="sr-only">Pas de mois précédent</span>
                 </div>
                 <div
                     v-else

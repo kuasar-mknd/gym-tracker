@@ -76,7 +76,7 @@ test('the session screen renders sets in creation order', function () use ($line
 
     $data = app(FetchWorkoutShowAction::class)->execute($user, $workout);
 
-    expect($data['workout']->workoutLines->firstOrFail()->sets->pluck('id')->all())->toBe($expected);
+    expect($data['workout']()->workoutLines->firstOrFail()->sets->pluck('id')->all())->toBe($expected);
 });
 
 /**

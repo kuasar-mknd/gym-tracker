@@ -124,7 +124,7 @@ it('rend une grille de sept jours, du lundi au dimanche, quand lundi commence pe
     $user = User::factory()->create();
     HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
 
-    $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates'];
+    $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates']();
 
     expect(array_column($semaine, 'day'))->toBe(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 })->with([1, 2, 3]);
@@ -142,7 +142,7 @@ it('met en avant un seul jour de la grille, aujourd hui, quand lundi commence pe
     $user = User::factory()->create();
     HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
 
-    $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates'];
+    $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates']();
 
     // Le dimanche de la semaine qui s'achève, ou le lundi de celle qui
     // commence, chacun dans sa grille.

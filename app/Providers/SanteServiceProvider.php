@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Support\Sante\AccesDeDiagnosticCheck;
 use App\Support\Sante\AnnonceDeVersion;
 use App\Support\Sante\DossierDesSauvegardesCheck;
 use App\Support\Sante\ReglagesDeLaBaseCheck;
@@ -58,6 +59,7 @@ final class SanteServiceProvider extends ServiceProvider
             QueueCheck::new()->label("File d'attente")->onQueue('default')->failWhenHealthJobTakesLongerThanMinutes(5),
             ScheduleCheck::new()->label('Planificateur')->heartbeatMaxAgeInMinutes(2),
             TachesPlanifieesCheck::new(),
+            AccesDeDiagnosticCheck::new(),
             HorizonCheck::new()->label('Travailleurs Horizon'),
             VersionsDesConteneursCheck::new(),
             VersionsDesServicesCheck::new(),

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\GoalService;
+use App\Support\VersionDeCache;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -290,6 +291,184 @@ it('signale une copie du propriétaire restée vide', function (): void {
         ->expectsOutputToContain('OK propriétaire recopié sur les lignes de séance')
         ->expectsOutputToContain("séance {$idSeance} (compte {$user->id}) : 1 série(s) dont la copie vaut NULL")
         ->expectsOutputToContain('1 écart(s)');
+});
+
+/*
+ * La date recopiée sur les lignes (#1513). `workout_lines.workout_started_at`
+ * recopie le début de la séance, pour qu'un index serve à la fois le filtre et
+ * l'ordre des lectures par compte (#1601) : les statistiques fenêtrées et les
+ * valeurs proposées. Deux écrivains la tiennent, la copie
+ * posée à l'enregistrement de la ligne et la propagation quand la séance
+ * change de date ; aucun contrôle ne la comparait au début de sa séance, et
+ * une ligne écrite en base sans elle, ou restée à l'ancienne date, sortait de
+ * ces lectures sans que rien ne le dise.
+ */
+
+/**
+ * Le début d'une séance tel que la base le tient, la valeur que la copie doit
+ * porter.
+ */
+function coherenceDebutDeLaSeance(int $idSeance): string
+{
+    $debut = DB::table('workouts')->where('id', $idSeance)->value('started_at');
+
+    return is_string($debut) ? $debut : '';
+}
+
+it('signale une date de séance recopiée sur les lignes qui s’écarte du début de la séance, ou qui reste vide', function (): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    $vide = WorkoutLine::factory()->create([
+        'workout_id' => $idSeance,
+        'exercise_id' => $set->workoutLine->exercise_id,
+    ]);
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-01-01 08:00:00']);
+    DB::table('workout_lines')->where('id', $vide->id)->update(['workout_started_at' => null]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 date de séance recopiée sur ses lignes')
+        ->expectsOutputToContain(sprintf('séance %d (début %s) : 2 ligne(s) dont la copie vaut NULL, 2026-01-01 08:00:00', $idSeance, coherenceDebutDeLaSeance($idSeance)))
+        ->expectsOutputToContain('1 écart(s)');
+});
+
+it('laisse passer une date recopiée égale au début de sa séance', function (): void {
+    [, $set] = compteCoherent();
+
+    expect(DB::table('workout_lines')->where('id', $set->workout_line_id)->value('workout_started_at'))
+        ->toBe(coherenceDebutDeLaSeance($set->workoutLine->workout_id));
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(0)
+        ->expectsOutputToContain('OK date de séance recopiée sur ses lignes');
+});
+
+/*
+ * La réparation passe par l'écrivain de la propagation,
+ * `Workout::recopierLeDebutSurSesLignes()`, celui que la séance appelle quand
+ * elle change de date : aucun écrivain ne s'ajoute. Elle ne touche que les
+ * séances en écart, et oublie ensuite les statistiques et les valeurs
+ * proposées de leur compte, qui se lisent les unes et les autres sur la
+ * copie.
+ */
+it('recopie par --repair le début de la séance sur ses lignes, par l’écrivain de la propagation, sur les seules séances en écart', function (): void {
+    [$user, $set] = compteCoherent();
+    [$voisin] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-01-01 08:00:00']);
+
+    $versions = static fn (User $compte): array => [
+        VersionDeCache::lire("stats-version.seances.{$compte->id}"),
+        VersionDeCache::lire("recommended_values:version:{$compte->id}"),
+    ];
+    $avant = $versions($user);
+    $avantDuVoisin = $versions($voisin);
+
+    $requetes = coherenceRequetesPendant(function (): void {
+        $this->artisan('app:verify-data-coherence', ['--repair' => true])
+            ->expectsOutputToContain('1 séance(s) dont le début a été recopié sur les lignes')
+            ->expectsOutputToContain('OK date de séance recopiée sur ses lignes')
+            ->assertExitCode(0)
+            ->run();
+    });
+
+    $miseAJour = array_values(array_filter($requetes, static fn (string $sql): bool => str_starts_with($sql, 'update `workout_lines`')));
+    $apres = $versions($user);
+    $apresDuVoisin = $versions($voisin);
+
+    expect(DB::table('workout_lines')->where('id', $set->workout_line_id)->value('workout_started_at'))->toBe(coherenceDebutDeLaSeance($idSeance))
+        ->and($miseAJour)->toHaveCount(1)
+        ->and($miseAJour[0] ?? '')->toContain('`workout_id` = ?')
+        ->and($apres[0])->not->toBe($avant[0])
+        ->and($apres[1])->not->toBe($avant[1])
+        ->and($apresDuVoisin)->toBe($avantDuVoisin);
+});
+
+/*
+ * L'heure que le fuseau de l'application saute au passage à l'heure d'été
+ * (2026-03-29 02:30:00 n'existe pas à Europe/Paris). Seule une écriture hors du
+ * cast la pose en base (constructeur de requêtes, migration, import, fuseau
+ * changé depuis l'écriture) ; relue par le cast, elle devient 03:30 CEST. La
+ * copie recopie l'heure murale que la base tient, celle que le contrôle compare
+ * en SQL : recopiée depuis l'instant relu, elle valait 03:30, et le contrôle
+ * restait en erreur après chaque `--repair`, qui la comptait pourtant comme
+ * recopiée. Seul ce contrôle est jugé ici : la date de dernière séance du
+ * compte, relue par le cast, a son propre écart à cette heure.
+ */
+it('recopie par --repair l’heure murale d’un début que l’heure d’été saute, et le contrôle repasse au vert', function (): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['started_at' => '2026-03-29 02:30:00', 'started_at_offset' => null]);
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-01-01 08:00:00']);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->expectsOutputToContain('1 séance(s) dont le début a été recopié sur les lignes');
+
+    expect(DB::table('workout_lines')->where('id', $set->workout_line_id)->value('workout_started_at'))->toBe('2026-03-29 02:30:00');
+
+    $this->artisan('app:verify-data-coherence')
+        ->expectsOutputToContain('OK date de séance recopiée sur ses lignes');
+});
+
+it('recopie l’heure murale d’un début que l’heure d’été saute sur une ligne qui s’enregistre', function (): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['started_at' => '2026-03-29 02:30:00', 'started_at_offset' => null]);
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-03-29 02:30:00']);
+
+    $ligne = WorkoutLine::factory()->create([
+        'workout_id' => $idSeance,
+        'exercise_id' => $set->workoutLine->exercise_id,
+    ]);
+
+    expect(DB::table('workout_lines')->where('id', $ligne->id)->value('workout_started_at'))->toBe('2026-03-29 02:30:00');
+
+    $this->artisan('app:verify-data-coherence')
+        ->expectsOutputToContain('OK date de séance recopiée sur ses lignes');
+});
+
+/*
+ * L'heure que le passage à l'heure d'hiver répète (#2159) : les deux
+ * occurrences s'écrivent 02:30:00 avec leur décalage, et la copie, à l'heure
+ * murale, vaut 02:30:00 dans l'une comme dans l'autre.
+ */
+it('recopie l’heure murale d’un début pris dans l’une ou l’autre occurrence de l’heure que l’heure d’hiver répète', function (int $decalage): void {
+    [, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('workouts')->where('id', $idSeance)->update(['started_at' => '2026-10-25 02:30:00', 'started_at_offset' => $decalage]);
+    DB::table('workout_lines')->where('id', $set->workout_line_id)->update(['workout_started_at' => '2026-01-01 08:00:00']);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->expectsOutputToContain('1 séance(s) dont le début a été recopié sur les lignes');
+
+    $ligne = WorkoutLine::factory()->create([
+        'workout_id' => $idSeance,
+        'exercise_id' => $set->workoutLine->exercise_id,
+    ]);
+
+    expect(DB::table('workout_lines')->whereIn('id', [$set->workout_line_id, $ligne->id])->pluck('workout_started_at')->all())
+        ->toBe(['2026-10-25 02:30:00', '2026-10-25 02:30:00']);
+
+    $this->artisan('app:verify-data-coherence')
+        ->expectsOutputToContain('OK date de séance recopiée sur ses lignes');
+})->with(['première occurrence (CEST)' => [120], 'seconde occurrence (CET)' => [60]]);
+
+it('ne réécrit par --repair aucune ligne quand chaque date recopiée est juste', function (): void {
+    compteCoherent();
+
+    $requetes = coherenceRequetesPendant(function (): void {
+        $this->artisan('app:verify-data-coherence', ['--repair' => true])
+            ->expectsOutputToContain('0 séance(s) dont le début a été recopié sur les lignes')
+            ->assertExitCode(0)
+            ->run();
+    });
+
+    expect(array_values(array_filter($requetes, static fn (string $sql): bool => str_starts_with($sql, 'update `workout_lines`'))))->toBe([]);
 });
 
 /**

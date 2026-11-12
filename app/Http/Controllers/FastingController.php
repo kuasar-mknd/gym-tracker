@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Fasting\DemarrerUnJeuneAction;
 use App\Actions\Fasting\FetchFastingIndexAction;
 use App\Http\Requests\Api\StoreFastRequest;
 use App\Http\Requests\Api\UpdateFastRequest;
@@ -27,21 +28,16 @@ class FastingController extends Controller
     }
 
     /**
-     * Rien ici n'empêche un second jeûne simultané : la garde est une règle de
-     * `StoreFastRequest`, qui refuse la requête avant d'arriver jusqu'ici.
+     * `StoreFastRequest` refuse tôt un second jeûne ; l'action le revérifie
+     * sous le verrou du compte, que deux requêtes simultanées franchissent.
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de démarrer un jeûne.
      */
-    public function store(StoreFastRequest $request): RedirectResponse
+    public function store(StoreFastRequest $request, DemarrerUnJeuneAction $demarrerUnJeune): RedirectResponse
     {
         $this->authorize('create', Fast::class);
 
-        $user = $this->user();
-
-        $user->fasts()->create([
-            ...$request->validated(),
-            'status' => 'active',
-        ]);
+        $demarrerUnJeune->execute($this->user(), $request->validated());
 
         return back()->with('success', 'Jeûne commencé.');
     }

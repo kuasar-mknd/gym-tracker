@@ -23,24 +23,33 @@ final class FetchWorkoutsIndexAction
     }
 
     /**
-     * Fetch workouts and related statistics for the index page.
+     * Les props immédiates de la page des séances : la page de séances et le
+     * compte des exercices distincts.
+     *
+     * Chacune est une fermeture, qu'Inertia ne résout que si sa prop part dans
+     * la réponse : la requête de la prop différée `deferredData`, qui rejoue le
+     * contrôleur, relisait sinon la pagination et le compte pour les jeter
+     * aussitôt (#2148, étape 3a). L'horloge se lit une fois, ici, et les
+     * fermetures en gardent l'instant ; aucune ne la relit.
      *
      * @return array{
-     *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
-     *     totalExercises: int
+     *     workouts: \Closure(): \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
+     *     totalExercises: \Closure(): int
      * }
      */
     public function execute(User $user): array
     {
+        $maintenant = now();
+
         return [
-            'workouts' => $this->seancesDeLUtilisateur($user),
+            'workouts' => fn (): \Illuminate\Pagination\LengthAwarePaginator => $this->seancesDeLUtilisateur($user),
             // Distinct exercises, not workout lines. The card sits beside
             // "Total séances" and is labelled "Exercices", so it reads as a
             // count of entities — but workoutLines() is every line of every
             // session, so a bench press done in 40 sessions counted 40 times.
             // The figure had no relation to the library's "N exercices
             // disponibles" or to the Stats page's own Exercices card.
-            'totalExercises' => $this->getTotalExercises($user),
+            'totalExercises' => fn (): int => $this->getTotalExercises($user, $maintenant),
         ];
     }
 
@@ -89,13 +98,16 @@ final class FetchWorkoutsIndexAction
      * en cache — et la requete XHR de la prop differee rejoue le controleur, si
      * bien qu'il partait deux fois par affichage. Meme cache d'une heure que ses
      * voisines, plutot que de le rendre differe : la carte afficherait sinon 0
-     * avant de se corriger.
+     * avant de se corriger. Depuis qu'il est une fermeture (#2148, étape 3a),
+     * cette requête ne le calcule plus du tout.
+     *
+     * @param  Carbon  $maintenant  L'instant de l'opération, dont vient l'échéance de l'entrée.
      */
-    protected function getTotalExercises(User $user): int
+    protected function getTotalExercises(User $user, Carbon $maintenant): int
     {
         return (int) Cache::remember(
             ClesDeStats::seances($user, 'total_exercises'),
-            now()->addHour(),
+            $maintenant->copy()->addHour(),
             fn (): int => $this->compterExercicesDistincts($user)
         );
     }
@@ -322,6 +334,7 @@ final class FetchWorkoutsIndexAction
         ])
             ->where('user_id', $user->id)
             ->latest('started_at')
+            ->orderByDesc('id')
             ->paginate(20);
     }
 }

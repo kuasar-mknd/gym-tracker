@@ -23,6 +23,8 @@ const EXCEPTIONS = [
     /Pas encore de compte/,
     // Une requête restée sans réponse (#2048) : ce qui manque est la réponse, pas le contenu.
     /Pas de réponse du serveur/,
+    // Le texte pour lecteur d'écran du tiret d'une comparaison sans mois précédent.
+    /Pas de mois précédent/,
 ]
 
 /**

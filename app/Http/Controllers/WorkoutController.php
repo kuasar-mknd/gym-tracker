@@ -22,15 +22,19 @@ class WorkoutController extends Controller
     {
     }
 
+    /**
+     * La page des séances : la pagination et le compte des exercices arrivent
+     * en fermetures, que la requête de la prop différée, qui rejoue ce
+     * contrôleur, ne calcule plus (#2148, étape 3a).
+     */
     public function index(Request $request, FetchWorkoutsIndexAction $fetchWorkouts): \Inertia\Response
     {
         $this->authorize('viewAny', Workout::class);
 
         $user = $this->user();
-        $data = $fetchWorkouts->execute($user);
 
         return Inertia::render('Workouts/Index', [
-            ...$data,
+            ...$fetchWorkouts->execute($user),
             // ⚡ Bolt : les données lourdes du graphique et la liste des
             // exercices tiennent en une seule prop différée — une requête XHR au
             // lieu de deux, et un seul état de chargement à l'écran plutôt que
@@ -41,7 +45,9 @@ class WorkoutController extends Controller
 
     /**
      * La séance, et les plafonds d'une série : la page ramène dessous ce
-     * qu'elle recopie dans une série qu'elle ajoute (`Set::bornes()`).
+     * qu'elle recopie dans une série qu'elle ajoute (`Set::bornes()`). Toutes
+     * en fermetures : le rechargement de la seule séance ne calcule qu'elle
+     * (#2148, étape 3a).
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException Si la séance n'est pas celle de l'utilisateur (403).
      */
@@ -51,7 +57,7 @@ class WorkoutController extends Controller
 
         return Inertia::render('Workouts/Show', [
             ...$fetchWorkoutShow->execute($this->user(), $workout),
-            'bornesDUneSerie' => Set::bornes(),
+            'bornesDUneSerie' => Set::bornes(...),
         ]);
     }
 
