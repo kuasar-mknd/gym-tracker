@@ -12,6 +12,6 @@ uses(Tests\TestCase::class);
 it('borne la durée d’un envoi push par des délais explicites', function (): void {
     $options = config()->array('webpush.client_options');
 
-    expect($options['timeout'] ?? null)->toBeInt()->toBeGreaterThan(0)
-        ->and($options['connect_timeout'] ?? null)->toBeInt()->toBeGreaterThan(0);
+    expect($options['timeout'] ?? null)->toBeInt()->toBeGreaterThan(0)->toBeLessThanOrEqual(10)
+        ->and($options['connect_timeout'] ?? null)->toBeInt()->toBeGreaterThan(0)->toBeLessThanOrEqual(5);
 });

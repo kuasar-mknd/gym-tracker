@@ -5,11 +5,8 @@ declare(strict_types=1);
 use App\Models\ExceptionEnregistree;
 
 /*
- * Le retour d'Apple à la connexion (`form_post`) porte un champ `user`, un
- * document JSON avec le nom et l'adresse de la personne à sa première
- * inscription ; `id_token` (un JWT dont la charge porte l'adresse) et `code`
- * l'accompagnent. Une exception levée pendant la création du compte le gardait
- * trente jours en clair dans le corps de la requête.
+ * Le retour d'Apple à la connexion (`form_post`) : ses champs `user`,
+ * `id_token` et `code` sont masqués dans le corps enregistré.
  */
 it('masque le champ user que porte le retour d’Apple', function (): void {
     ExceptionEnregistree::query()->create([
