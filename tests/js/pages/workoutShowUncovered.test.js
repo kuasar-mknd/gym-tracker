@@ -243,6 +243,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
         shallow: true,
         global: {
             directives: { press: {} },
+            mocks: { route: (...args) => globalThis.route(...args) },
             stubs: {
                 AuthenticatedLayout: LayoutStub,
                 GlassCard: passesSlot,
@@ -2483,6 +2484,7 @@ describe('Workouts/Show — la file hors-ligne prévient', () => {
     it('demande de se reconnecter quand la session a expiré, en comptant ce qui attend', async () => {
         const wrapper = await mountPage()
 
+        vi.useFakeTimers()
         window.dispatchEvent(
             new CustomEvent('sync:auth-required', { detail: { url: '/api/v1/sets/1', status: 419, pending: 3 } }),
         )
@@ -2491,6 +2493,13 @@ describe('Workouts/Show — la file hors-ligne prévient', () => {
         const message = wrapper.find('[dusk="set-edit-error"]').text()
         expect(message).toContain('session a expiré')
         expect(message).toContain('3 modifications')
+        expect(wrapper.find('[dusk="set-edit-error-reconnexion"]').attributes('href')).toBe('/login')
+
+        await vi.advanceTimersByTimeAsync(60000)
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(true)
+
+        await wrapper.find('[dusk="set-edit-error-fermer"]').trigger('click')
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
 
         wrapper.unmount()
     })
