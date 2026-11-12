@@ -278,7 +278,10 @@ final class AppServiceProvider extends ServiceProvider
              * laissait le chiffre gonflé sur le profil pour de bon, parce que
              * rien ne recalculait le record que la série corrigée détenait.
              */
-            app(\App\Services\PersonalRecordService::class)->refreshRecordsHeldBy($set, $user);
+            if ($set->wasChanged(['weight', 'reps', 'is_completed', 'is_warmup'])) {
+                app(\App\Services\PersonalRecordService::class)->refreshRecordsHeldBy($set, $user);
+            }
+
             app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $user->id);
 
             /*

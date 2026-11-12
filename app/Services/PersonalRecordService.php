@@ -100,26 +100,11 @@ final class PersonalRecordService
      */
     protected function update(User $user, int $idExercice, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): ?PersonalRecord
     {
-        if ($pr !== null && $value <= $pr->value) {
+        if ($pr !== null && round($value, 2) <= round((float) $pr->value, 2)) {
             return null;
         }
 
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
-        /*
-         * `secondary_value` et `workout_id` sont ecrases juste apres.
-         *
-         * `refreshRecordsHeldBy()` s'execute dans la meme sauvegarde de serie
-         * (AppServiceProvider::registerSetEvents) et passe par `recompute()`,
-         * qui remplit les memes cinq champs ligne 179. Les retirer d'ici ne
-         * change donc rien d'observable, ce qui rend leurs mutants equivalents
-         * plutot que non couverts — un test qui pretendrait les tuer verifierait
-         * en realite l'ecriture de l'autre chemin.
-         *
-         * Ils restent la parce que `update()` doit se tenir seul : rien ne
-         * garantit que le second chemin l'accompagnera toujours.
-         *
-         * @pest-mutate-ignore RemoveArrayItem
-         */
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
 
         return $pr;
@@ -406,7 +391,7 @@ final class PersonalRecordService
             // Donné à une série qui ne le tenait pas, au-dessus de ce qu'il
             // portait, ou créé : sa synchronisation n'a pas écrit, et ne
             // l'annoncera pas (#2185).
-            if ($avant === null || ($avant['serie'] !== $meilleure['id'] && $valeur > $avant['valeur'])) {
+            if ($avant === null || ($avant['serie'] !== $meilleure['id'] && round($valeur, 2) > round($avant['valeur'], 2))) {
                 $aAnnoncer[$record->id] = ['record' => $record, 'avant' => $avant['valeur'] ?? null];
             }
         }

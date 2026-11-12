@@ -73,7 +73,7 @@ it('crée une série en deux écritures : la série et le volume de la séance',
     expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
         // Lectures comprises : le contrôleur ne cherche plus la ligne que l'action
         // cherche déjà (#1676).
-        ->and($mesure['requetes'])->toBe(14);
+        ->and($mesure['requetes'])->toBe(13);
 });
 
 it('modifie une série en deux écritures', function (): void {
