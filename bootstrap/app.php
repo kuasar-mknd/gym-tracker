@@ -479,4 +479,10 @@ return Application::configure(basePath: dirname(__DIR__))
          * absent one.
          */
         $exceptions->render(fn (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, \Illuminate\Http\Request $request): ?\Symfony\Component\HttpFoundation\Response => $speaksJson($request) ? $jsonNotFound() : null);
+
+        /*
+         * Under `/diagnostic` a 405 would tell an unauthenticated caller which
+         * paths are real routes: it becomes the 404 of an unknown path (#2032).
+         */
+        $exceptions->render(fn (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, \Illuminate\Http\Request $request): ?\Symfony\Component\HttpFoundation\Response => $request->is('diagnostic/*') ? $notFound($request) : null);
     })->create();

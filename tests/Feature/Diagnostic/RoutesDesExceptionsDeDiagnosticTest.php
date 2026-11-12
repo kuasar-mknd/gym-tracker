@@ -616,15 +616,15 @@ it('garde chaque réponse sous 256 Kio, même devant un message et une pile dém
     expect(routeExceptionsAppeler('/diagnostic/v1/exceptions/'.$identifiant, $cree['entete'])->json('donnees.exception.pile'))->toHaveCount(ProjectionDesExceptions::CADRES_AU_PLUS);
 });
 
-it('ne sert que la lecture : chaque méthode d’écriture est refusée', function (string $methode): void {
+it('ne sert que la lecture : chaque autre méthode est refusée comme un chemin inconnu', function (string $methode): void {
     $identifiant = routeExceptionsPlanter();
     $cree = routeExceptionsUnJeton();
 
     $reponse = $this->call($methode, '/diagnostic/v1/exceptions/'.$identifiant, server: ['HTTP_AUTHORIZATION' => $cree['entete'], 'HTTP_ACCEPT' => 'application/json']);
 
-    expect($reponse->getStatusCode())->toBe(405);
+    expect($reponse->getStatusCode())->toBe(404);
     expect(DB::table('filament_exceptions_table')->count())->toBe(1);
-})->with(['POST', 'PUT', 'PATCH', 'DELETE']);
+})->with(['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 
 it('nomme chaque route des exceptions dans PORTEES, sous la portée Exceptions', function (): void {
     expect(array_filter(App\Http\Middleware\ExigeUnJetonDeDiagnostic::PORTEES, static fn (?PorteeDeDiagnostic $portee, string $nom): bool => str_starts_with($nom, 'diagnostic.exceptions.'), ARRAY_FILTER_USE_BOTH))

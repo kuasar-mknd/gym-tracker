@@ -6,6 +6,7 @@ use App\Http\Controllers\Diagnostic\DetailDUneExceptionController;
 use App\Http\Controllers\Diagnostic\EtatController;
 use App\Http\Controllers\Diagnostic\ListeDesExceptionsController;
 use App\Http\Controllers\Diagnostic\OccurrencesDUneExceptionController;
+use App\Http\Controllers\Diagnostic\RefuseLesOptionsController;
 use App\Http\Controllers\Diagnostic\SanteDuDiagnosticController;
 use App\Http\Middleware\ConditionalCspHeaders;
 use App\Http\Middleware\ExigeUnJetonDeDiagnostic;
@@ -36,3 +37,9 @@ Route::middleware([ExigeUnJetonDeDiagnostic::class, ConditionalCspHeaders::class
             ->where('identifiant', '[1-9][0-9]{0,17}')
             ->name('exceptions.occurrences');
     });
+
+/*
+ * Hors du groupe, donc sans nom ni garde : le routeur sert lui-même `OPTIONS`
+ * sur une route réelle, avec `Allow`, avant la garde.
+ */
+Route::options('diagnostic/{chemin}', RefuseLesOptionsController::class)->where('chemin', '.+');

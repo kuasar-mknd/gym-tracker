@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\JetonDeDiagnostic;
-use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -20,7 +19,7 @@ use Illuminate\Support\Facades\Log;
  *
  * `refus()` écrit dans le canal `diagnostic_refus`, qui ne lève jamais : au
  * plus une ligne par identifiant connu et par minute, et une ligne de
- * synthèse par minute pour les refus anonymes, avec le compte de la minute
+ * synthèse par minute, avec le compte des refus anonymes de la minute
  * précédente. La cause est d'un vocabulaire fermé ; un texte présenté par le
  * client n'y entre pas.
  */
@@ -58,39 +57,55 @@ final class JournalDuDiagnostic
         ]);
     }
 
+    /**
+     * Le même travail de cache pour tout refus, d'un identifiant connu ou
+     * non : la durée ne dit pas si l'identifiant existe. Seule la clef du
+     * compteur change (`connus` ou `anonymes`), pas le nombre d'opérations.
+     */
     public function refus(string $cause, ?JetonDeDiagnostic $connu, ?string $adresse): void
     {
+        if (self::lEcritureSeraitEnSql()) {
+            return;
+        }
+
         rescue(function () use ($cause, $connu, $adresse): void {
             $maintenant = now();
             $minute = $maintenant->format('Y-m-d\TH:i');
+            $precedente = $maintenant->copy()->subMinute()->format('Y-m-d\TH:i');
 
-            if ($connu instanceof JetonDeDiagnostic) {
-                if (Cache::add('diagnostic:refus:jeton:'.$connu->identifiant.':'.$minute, true, self::SECONDES_DES_COMPTEURS)) {
-                    Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus', ['jeton' => $connu->identifiant, 'cause' => $cause, 'adresse' => $adresse]);
-                }
+            $cleDuCompteur = 'diagnostic:refus:'.($connu instanceof JetonDeDiagnostic ? 'connus' : 'anonymes').':'.$minute;
+            Cache::add($cleDuCompteur, 0, self::SECONDES_DES_COMPTEURS);
+            Cache::increment($cleDuCompteur);
 
-                return;
+            $premierDeLaLigne = Cache::add('diagnostic:refus:jeton:'.($connu instanceof JetonDeDiagnostic ? $connu->identifiant : 'anonyme').':'.$minute, true, self::SECONDES_DES_COMPTEURS);
+            $premierDeLaSynthese = Cache::add('diagnostic:refus:synthese:'.$minute, true, self::SECONDES_DES_COMPTEURS);
+            $compte = Cache::get('diagnostic:refus:anonymes:'.$precedente);
+
+            if ($connu instanceof JetonDeDiagnostic && $premierDeLaLigne) {
+                Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus', ['jeton' => $connu->identifiant, 'cause' => $cause, 'adresse' => $adresse]);
             }
 
-            $this->compterUnRefusAnonyme($maintenant);
+            if ($premierDeLaSynthese) {
+                Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus.synthese', [
+                    'minute_precedente' => $precedente,
+                    'refus_anonymes' => is_int($compte) ? $compte : 0,
+                ]);
+            }
         }, null, false);
     }
 
-    private function compterUnRefusAnonyme(CarbonInterface $maintenant): void
+    /**
+     * Sur un cache `database` (ou une bascule qui le nomme), chaque compteur
+     * serait une écriture SQL que le premier venu déclencherait à volonté : le
+     * refus n'est alors ni compté ni journalisé. Un cache en mémoire ne
+     * remplace pas Redis, Octane le vide à chaque requête.
+     */
+    private static function lEcritureSeraitEnSql(): bool
     {
-        $minute = $maintenant->format('Y-m-d\TH:i');
-        $cle = 'diagnostic:refus:anonymes:'.$minute;
-        Cache::add($cle, 0, self::SECONDES_DES_COMPTEURS);
-        Cache::increment($cle);
+        $defaut = config('cache.default');
+        $pilote = is_string($defaut) ? config('cache.stores.'.$defaut.'.driver') : null;
+        $noms = $pilote === 'failover' ? config('cache.stores.'.$defaut.'.stores') : [$defaut];
 
-        if (Cache::add('diagnostic:refus:synthese:'.$minute, true, self::SECONDES_DES_COMPTEURS)) {
-            $precedente = $maintenant->copy()->subMinute()->format('Y-m-d\TH:i');
-            $compte = Cache::get('diagnostic:refus:anonymes:'.$precedente);
-
-            Log::channel(self::CANAL_DES_REFUS)->info('diagnostic.refus.synthese', [
-                'minute_precedente' => $precedente,
-                'refus_anonymes' => is_int($compte) ? $compte : 0,
-            ]);
-        }
+        return array_any(is_array($noms) ? $noms : [], fn ($nom): bool => is_string($nom) && config('cache.stores.'.$nom.'.driver') === 'database');
     }
 }

@@ -146,7 +146,7 @@ it('ne part nulle part, sans rien planter, quand HEALTH_TO_ADDRESS est vide', fu
     resolve(RevoqueLesJetonsDeDiagnosticAction::class)->execute(RaisonDeRevocationDuJeton::Manuelle);
     $alertes->jetonCree($jeton);
     $alertes->premierUsage($jeton);
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     $alertes->debitDepasse($jeton);
 
     Notification::assertNothingSent();
@@ -252,7 +252,7 @@ it('ne fait jamais échouer la requête valide quand le cache tombe', function (
     $jeton = JetonDeDiagnostic::factory()->revoque()->create();
     Cache::shouldReceive('add', 'increment', 'put', 'forget')->andThrow(new RuntimeException('cache injoignable'));
 
-    resolve(AlertesDeDiagnostic::class)->{$methode}($jeton);
+    $methode === 'jetonInvalidePresente' ? resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton, now()) : resolve(AlertesDeDiagnostic::class)->{$methode}($jeton);
 
     Exceptions::assertReported(RuntimeException::class);
 })->with(['premierUsage', 'jetonInvalidePresente', 'debitDepasse']);
@@ -275,7 +275,7 @@ it('envoie quand la trace de la présentation ne s’écrit pas', function (): v
     config()->set('cache.stores.sans-trace', ['driver' => 'sans-trace']);
     config()->set('cache.default', 'sans-trace');
 
-    resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton);
+    resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton, now());
 
     Exceptions::assertReported(RuntimeException::class);
     expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente))->toBe(1);
@@ -324,24 +324,38 @@ it('rend le créneau du débit quand l’envoi échoue, et réessaie au prochain
     expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::DebitDepasse))->toBe(1);
 });
 
+it('pose le créneau du jour et la trace d’un jeton mort d’après l’instant de la garde, même si minuit est passé depuis', function (): void {
+    $jeton = JetonDeDiagnostic::factory()->expire()->create();
+    $instantDeLaGarde = Carbon::parse('2026-11-12 23:59:59');
+    Carbon::setTestNow($instantDeLaGarde);
+    Cache::put('diagnostic:alerte:presentations:'.$jeton->identifiant, AlertesDeDiagnostic::PRESENTATIONS_AVANT_LA_CADENCE_JOURNALIERE, 3600);
+    Carbon::setTestNow('2026-11-13 00:00:01');
+
+    resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton, $instantDeLaGarde);
+
+    expect(Cache::has('diagnostic:alerte:jeton-mort:jour:'.$jeton->identifiant.':2026-11-12'))->toBeTrue()
+        ->and(Cache::has('diagnostic:alerte:jeton-mort:jour:'.$jeton->identifiant.':2026-11-13'))->toBeFalse()
+        ->and(Cache::get(AlertesDeDiagnostic::CLE_DE_LA_DERNIERE_PRESENTATION))->toBe($instantDeLaGarde->toIso8601String());
+});
+
 it('alerte d’un jeton mort présenté une fois par quinze minutes', function (): void {
     $jeton = JetonDeDiagnostic::factory()->expire()->create();
     $autre = JetonDeDiagnostic::factory()->revoque()->create();
     $alertes = resolve(AlertesDeDiagnostic::class);
     $envoyees = fn (): int => alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente);
 
-    $alertes->jetonInvalidePresente($jeton);
-    $alertes->jetonInvalidePresente($jeton);
-    $alertes->jetonInvalidePresente($autre);
+    $alertes->jetonInvalidePresente($jeton, now());
+    $alertes->jetonInvalidePresente($jeton, now());
+    $alertes->jetonInvalidePresente($autre, now());
 
     expect($envoyees())->toBe(2);
 
     Carbon::setTestNow(now()->addSeconds(899));
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     expect($envoyees())->toBe(2);
 
     Carbon::setTestNow(now()->addSecond());
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     expect($envoyees())->toBe(3);
 });
 
@@ -351,7 +365,7 @@ it('passe à un courriel par jour civil dès la onzième présentation, sans jam
     $envoyees = fn (): int => alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente);
 
     foreach (range(1, 10) as $presentation) {
-        $alertes->jetonInvalidePresente($jeton);
+        $alertes->jetonInvalidePresente($jeton, now());
         expect($envoyees())->toBe($presentation);
 
         if ($presentation < 10) {
@@ -359,24 +373,24 @@ it('passe à un courriel par jour civil dès la onzième présentation, sans jam
         }
     }
 
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     expect($envoyees())->toBe(10);
 
     Carbon::setTestNow(now()->addSeconds(900));
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     expect($envoyees())->toBe(11);
 
     Carbon::setTestNow(now()->addSeconds(900));
-    $alertes->jetonInvalidePresente($jeton);
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
+    $alertes->jetonInvalidePresente($jeton, now());
     expect($envoyees())->toBe(11);
 
     Carbon::setTestNow('2026-11-13 00:00:00');
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     expect($envoyees())->toBe(12);
 
     Carbon::setTestNow(now()->addSeconds(900));
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     expect($envoyees())->toBe(12);
 });
 
@@ -384,9 +398,9 @@ it('pose la trace que lit le contrôle de santé à chaque présentation, même 
     $jeton = JetonDeDiagnostic::factory()->revoque()->create();
     $alertes = resolve(AlertesDeDiagnostic::class);
 
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
     Carbon::setTestNow(now()->addMinutes(5));
-    $alertes->jetonInvalidePresente($jeton);
+    $alertes->jetonInvalidePresente($jeton, now());
 
     expect(alertesDeDiagnosticLesEnvoyees(EvenementDAlerteDeDiagnostic::JetonInvalidePresente))->toBe(1)
         ->and(Cache::get(AlertesDeDiagnostic::CLE_DE_LA_DERNIERE_PRESENTATION))->toBe(now()->toIso8601String());

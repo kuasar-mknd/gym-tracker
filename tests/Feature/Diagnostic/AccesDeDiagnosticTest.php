@@ -441,18 +441,178 @@ it('compte le débit par jeton : un jeton à bout de souffle ne coupe pas l’au
     accesDeDiagnosticAppeler('/diagnostic/v1/etat', accesDeDiagnosticBearer($second['en_clair']))->assertOk();
 });
 
-it('ne compte aucun refus contre le débit d’un jeton', function (): void {
+it('ne compte aucun refus d’avant le jeton contre le débit d’un jeton', function (): void {
+    $cree = accesDeDiagnosticUnJeton();
+
+    foreach (range(1, 40) as $rang) {
+        accesDeDiagnosticAppeler('/diagnostic/v1/etat', 'Bearer '.JetonDeDiagnostic::composer($cree['jeton']->identifiant, Str::random(48)))->assertNotFound();
+    }
+
+    foreach (range(1, 30) as $rang) {
+        accesDeDiagnosticAppeler('/diagnostic/v1/etat', accesDeDiagnosticBearer($cree['en_clair']))->assertOk();
+    }
+});
+
+it('compte dans le débit le 403 d’une portée manquante : le trente et unième appel est un 429', function (): void {
     $cree = accesDeDiagnosticUnJeton(['exceptions']);
     $entete = accesDeDiagnosticBearer($cree['en_clair']);
 
-    foreach (range(1, 40) as $rang) {
+    foreach (range(1, 30) as $rang) {
         accesDeDiagnosticAppeler('/diagnostic/v1/sante', $entete)->assertForbidden();
     }
+
+    accesDeDiagnosticAppeler('/diagnostic/v1/sante', $entete)->assertStatus(429);
+    accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete)->assertStatus(429);
+});
+
+it('juge le débit sur le compte rendu par l’incrément, non sur une lecture qu’un autre travailleur a pu dépasser', function (): void {
+    $cree = accesDeDiagnosticUnJeton();
+    $entete = accesDeDiagnosticBearer($cree['en_clair']);
+    app()->instance(Illuminate\Cache\RateLimiter::class, new class(Cache::store()) extends Illuminate\Cache\RateLimiter
+    {
+        #[Override]
+        public function tooManyAttempts($key, $maxAttempts): bool
+        {
+            return false;
+        }
+    });
+    Illuminate\Support\Facades\RateLimiter::clearResolvedInstance(Illuminate\Cache\RateLimiter::class);
 
     foreach (range(1, 30) as $rang) {
         accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete)->assertOk();
     }
+
+    accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete)->assertStatus(429);
 });
+
+it('lit la ligne du jeton avant de décider de l’interrupteur : la même lecture, coupé ou non', function (bool $actif): void {
+    config()->set('app.diagnostic_enabled', $actif);
+    $entete = 'Bearer '.JetonDeDiagnostic::composer(Str::lower(Str::random(12)), Str::random(48));
+    /** @var ArrayObject<int, string> $requetes */
+    $requetes = new ArrayObject();
+    DB::listen(function ($requete) use ($requetes): void {
+        $requetes->append($requete->sql);
+    });
+
+    accesDeDiagnosticAppeler('/diagnostic/v1/etat', $entete)->assertNotFound();
+
+    expect($requetes)->toHaveCount(1)
+        ->and(implode(' ', $requetes->getArrayCopy()))->toContain('jetons_de_diagnostic');
+})->with([true, false]);
+
+it('fait le même travail de cache pour un refus d’identifiant connu et d’identifiant inconnu', function (): void {
+    Cache::extend('compte', fn (): Tests\Support\RepertoireQuiCompte => new Tests\Support\RepertoireQuiCompte());
+    config()->set('cache.stores.compte', ['driver' => 'compte']);
+    config()->set('cache.default', 'compte');
+    $connu = accesDeDiagnosticUnJeton()['jeton'];
+    $mesure = static function (string $identifiant): array {
+        Tests\Support\RepertoireQuiCompte::$operations = [];
+        accesDeDiagnosticAppeler('/diagnostic/v1/etat', 'Bearer '.JetonDeDiagnostic::composer($identifiant, Str::random(48)))->assertNotFound();
+
+        return Tests\Support\RepertoireQuiCompte::$operations;
+    };
+
+    $inconnuLaPremiere = $mesure(Str::lower(Str::random(12)));
+    $connuLaPremiere = $mesure($connu->identifiant);
+    $connuLaSuivante = $mesure($connu->identifiant);
+    $inconnuLaSuivante = $mesure(Str::lower(Str::random(12)));
+
+    expect($inconnuLaPremiere)->not->toBe([])
+        ->and($connuLaPremiere)->toBe($inconnuLaPremiere)
+        ->and($connuLaSuivante)->toBe($inconnuLaPremiere)
+        ->and($inconnuLaSuivante)->toBe($inconnuLaPremiere);
+});
+
+it('n’écrit rien en base pour un refus anonyme quand le cache par défaut est `database`', function (string $cause): void {
+    config()->set('cache.default', 'database');
+    [$uri, $entete] = accesDeDiagnosticSituation($cause);
+    $ecritures = new ArrayObject();
+    DB::listen(function ($requete) use ($ecritures): void {
+        if (! str_starts_with(strtolower(ltrim($requete->sql)), 'select')) {
+            $ecritures->append($requete->sql);
+        }
+    });
+
+    foreach (range(1, 3) as $rang) {
+        accesDeDiagnosticAppeler($uri, $entete);
+    }
+
+    expect($ecritures->getArrayCopy())->toBe([]);
+})->with(['coupé', 'absent', 'sans le mot Bearer', 'inconnu', 'au secret faux']);
+
+it('ne journalise ni ne compte un refus quand le cache par défaut est `database`, ni une bascule qui le nomme', function (string $defaut): void {
+    config()->set('cache.default', $defaut);
+
+    foreach (range(1, 3) as $rang) {
+        accesDeDiagnosticAppeler('/diagnostic/v1/etat', null);
+        accesDeDiagnosticAppeler('/diagnostic/v1/etat', 'Bearer '.JetonDeDiagnostic::composer(accesDeDiagnosticUnJeton()['jeton']->identifiant, Str::random(48)));
+    }
+
+    expect(accesDeDiagnosticLesLignes())->toHaveCount(0);
+})->with(['database', 'failover']);
+
+it('rend une 500 sans donnée quand l’enveloppe ne s’encode pas en JSON', function (): void {
+    $cree = accesDeDiagnosticUnJeton();
+    accesDeDiagnosticRouteQuiRend(['valeur' => NAN]);
+
+    $reponse = accesDeDiagnosticAppeler('/diagnostic/v1/test-enveloppe', accesDeDiagnosticBearer($cree['en_clair']));
+
+    $reponse->assertStatus(500)->assertExactJson(['erreur' => 'erreur-interne', 'note' => EnveloppeDeDiagnostic::NOTE]);
+    expect(collect(accesDeDiagnosticLesLignes()->getArrayCopy())->pluck('contexte.statut')->all())->toBe([500]);
+});
+
+it('refuse une réponse de 256 Kio et plus, et sert celle qui reste en dessous', function (): void {
+    $cree = accesDeDiagnosticUnJeton();
+    $entete = accesDeDiagnosticBearer($cree['en_clair']);
+    $base = strlen(accesDeDiagnosticEnveloppe(['texte' => ''])->json());
+
+    accesDeDiagnosticRouteQuiRend(['texte' => str_repeat('a', App\Services\Diagnostic\EnveloppeRendue::OCTETS_AU_PLUS - $base - 1)]);
+    $dessous = accesDeDiagnosticAppeler('/diagnostic/v1/test-enveloppe', $entete);
+
+    accesDeDiagnosticRouteQuiRend(['texte' => str_repeat('a', App\Services\Diagnostic\EnveloppeRendue::OCTETS_AU_PLUS - $base)]);
+    $auPlafond = accesDeDiagnosticAppeler('/diagnostic/v1/test-enveloppe', $entete);
+
+    expect(strlen((string) $dessous->getContent()))->toBe(App\Services\Diagnostic\EnveloppeRendue::OCTETS_AU_PLUS - 1);
+    $dessous->assertOk();
+    $auPlafond->assertStatus(500)->assertExactJson(['erreur' => 'erreur-interne', 'note' => EnveloppeDeDiagnostic::NOTE]);
+});
+
+/**
+ * @param  array<string, mixed>  $donnees
+ */
+function accesDeDiagnosticEnveloppe(array $donnees): App\Services\Diagnostic\EnveloppeRendue
+{
+    return new App\Services\Diagnostic\EnveloppeRendue(
+        ['donnees' => $donnees, 'suivant' => null, 'tronque' => false, 'echantillon' => false, 'genere_le' => null, 'note' => EnveloppeDeDiagnostic::NOTE],
+        0,
+    );
+}
+
+/**
+ * Une route sous la garde, qui rend cette enveloppe par le contrôleur de base.
+ * Elle porte le nom de la route d'état, que `PORTEES` ouvre à tout jeton.
+ *
+ * @param  array<string, mixed>  $donnees
+ */
+function accesDeDiagnosticRouteQuiRend(array $donnees): void
+{
+    $enveloppe = accesDeDiagnosticEnveloppe($donnees);
+    $controleur = new class($enveloppe) extends App\Http\Controllers\Diagnostic\DiagnosticController
+    {
+        public function __construct(private readonly App\Services\Diagnostic\EnveloppeRendue $enveloppe)
+        {
+        }
+
+        public function rendre(Illuminate\Http\Request $requete): Illuminate\Http\Response
+        {
+            return $this->servir($requete, fn (): App\Services\Diagnostic\EnveloppeRendue => $this->enveloppe);
+        }
+    };
+
+    Route::get('/diagnostic/v1/test-enveloppe', static fn (Illuminate\Http\Request $requete): Illuminate\Http\Response => $controleur->rendre($requete))
+        ->middleware([ExigeUnJetonDeDiagnostic::class])
+        ->name('diagnostic.etat');
+}
 
 it('alerte quand un jeton révoqué ou expiré est présenté, et pas pour un secret faux', function (): void {
     $revoque = accesDeDiagnosticUnJeton(attributs: ['revoque_le' => now()]);
@@ -589,14 +749,26 @@ it('ne laisse le jeton de diagnostic rien ouvrir d’autre', function (): void {
     $this->get('/dashboard', $entete)->assertUnauthorized();
 });
 
-it('ne sert rien en écriture', function (string $methode): void {
+it('répond à toute autre méthode que GET et HEAD comme à un chemin inconnu, avec ou sans jeton, et n’audite rien', function (string $methode, bool $json): void {
     $cree = accesDeDiagnosticUnJeton();
+    $serveur = static fn (?string $entete): array => ['HTTP_ACCEPT' => $json ? 'application/json' : 'text/html'] + ($entete === null ? [] : ['HTTP_AUTHORIZATION' => $entete]);
 
-    call($methode, '/diagnostic/v1/etat', server: ['HTTP_AUTHORIZATION' => accesDeDiagnosticBearer($cree['en_clair']), 'HTTP_ACCEPT' => 'application/json'])
-        ->assertStatus(405);
+    $inconnu = accesDeDiagnosticTout(call($methode, '/diagnostic/v1/ce-chemin-n-existe-pas', server: $serveur(null)));
+    $sansJeton = accesDeDiagnosticTout(call($methode, '/diagnostic/v1/etat', server: $serveur(null)));
+    $avecJeton = accesDeDiagnosticTout(call($methode, '/diagnostic/v1/etat', server: $serveur(accesDeDiagnosticBearer($cree['en_clair']))));
+    $uneAutre = accesDeDiagnosticTout(call($methode, '/diagnostic/v1/exceptions/12/occurrences', server: $serveur(null)));
+    $laRacine = accesDeDiagnosticTout(call($methode, '/diagnostic', server: $serveur(null)));
+    $horsDuPrefixe = accesDeDiagnosticTout(call($methode, '/ce-chemin-n-existe-pas', server: $serveur(null)));
 
-    expect(accesDeDiagnosticLesLignes())->toHaveCount(0);
-})->with(['POST', 'PUT', 'PATCH', 'DELETE']);
+    expect($inconnu['statut'])->toBe(404)
+        ->and($sansJeton)->toBe($inconnu)
+        ->and($avecJeton)->toBe($inconnu)
+        ->and($uneAutre)->toBe($inconnu)
+        ->and($laRacine)->toBe($inconnu)
+        ->and($horsDuPrefixe)->toBe($inconnu)
+        ->and($sansJeton['entetes'])->not->toHaveKey('Allow')
+        ->and(accesDeDiagnosticLesLignes())->toHaveCount(0);
+})->with(['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])->with([true, false]);
 
 it('relit la ligne du jeton à chaque requête : révoqué entre deux appels, il est refusé', function (): void {
     $cree = accesDeDiagnosticUnJeton();

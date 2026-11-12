@@ -8,6 +8,7 @@ use App\Enums\EvenementDAlerteDeDiagnostic;
 use App\Enums\RaisonDeRevocationDuJeton;
 use App\Models\JetonDeDiagnostic;
 use App\Notifications\AlerteDeDiagnostic;
+use Carbon\CarbonInterface;
 use Closure;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Cache;
@@ -134,12 +135,12 @@ final class AlertesDeDiagnostic
 
     /**
      * La trace que lit le contrôle de santé se pose à chaque présentation,
-     * même quand le courriel ne part pas.
+     * même quand le courriel ne part pas. L'instant est celui de la garde,
+     * qui a jugé l'expiration d'après lui : une seconde lecture de l'horloge
+     * pouvait tomber, près de minuit, sur le jour suivant.
      */
-    public function jetonInvalidePresente(JetonDeDiagnostic $jeton): void
+    public function jetonInvalidePresente(JetonDeDiagnostic $jeton, CarbonInterface $maintenant): void
     {
-        $maintenant = now();
-
         rescue(static fn (): bool => Cache::put(self::CLE_DE_LA_DERNIERE_PRESENTATION, $maintenant->toIso8601String(), $maintenant->copy()->addDays(2)), false, true);
 
         $this->sansLever(function () use ($jeton, $maintenant): void {

@@ -73,7 +73,13 @@ abstract class DiagnosticController extends Controller
     {
         $this->poser($request, ExigeUnJetonDeDiagnostic::ELEMENTS, count($rendue->enveloppe['donnees']));
 
-        return new Response($rendue->json(), 200, ['Content-Type' => 'application/json']);
+        $corps = $rendue->json();
+
+        if (strlen($corps) >= EnveloppeRendue::OCTETS_AU_PLUS) {
+            throw new LogicException('Une réponse du diagnostic dépasse 256 Kio.');
+        }
+
+        return new Response($corps, 200, ['Content-Type' => 'application/json']);
     }
 
     /**
