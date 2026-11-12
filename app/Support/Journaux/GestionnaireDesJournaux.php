@@ -6,6 +6,7 @@ namespace App\Support\Journaux;
 
 use Illuminate\Log\Logger;
 use Illuminate\Log\LogManager;
+use Psr\Log\LoggerInterface;
 
 /**
  * Le gestionnaire de journaux de l'application : le canal de dernier
@@ -17,7 +18,7 @@ use Illuminate\Log\LogManager;
  */
 class GestionnaireDesJournaux extends LogManager
 {
-    protected function createEmergencyLogger()
+    protected function createEmergencyLogger(): LoggerInterface
     {
         $journal = parent::createEmergencyLogger();
 
