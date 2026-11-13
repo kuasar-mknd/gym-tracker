@@ -11,7 +11,6 @@ use App\Notifications\AlerteDeDiagnostic;
 use Carbon\CarbonInterface;
 use Closure;
 use DateTimeInterface;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -21,9 +20,9 @@ use Illuminate\Support\Facades\Notification;
  * révocation ; `premierUsage()`, `jetonInvalidePresente()` et
  * `debitDepasse()` sont ce que la garde HTTP appellera, avec la ligne du
  * jeton connu : jamais le texte présenté, qui ne borne aucune clef. Aucune ne
- * lit ni n'écrit en base : un refus n'écrit rien. Elles écrivent dans le cache
- * par défaut ; `jetonInvalidePresente()` y borne son travail à une fois par
- * minute et par jeton quand ce cache est `database`, tant que l'envoi
+ * lit ni n'écrit en base : un refus n'écrit rien. Elles écrivent dans le magasin durable
+ * (`cache.limiter`, le défaut s'il est vide) ; `jetonInvalidePresente()` y borne son travail à une fois par
+ * minute et par jeton quand ce magasin est `database`, tant que l'envoi
  * aboutit : sans adresse valide, ou si la mise en file échoue, la marque de
  * la minute n'est pas posée et la présentation suivante réessaie.
  *
@@ -154,14 +153,14 @@ final class AlertesDeDiagnostic
             return;
         }
 
-        rescue(static fn (): bool => Cache::put(self::CLE_DE_LA_DERNIERE_PRESENTATION, $maintenant->toIso8601String(), $maintenant->copy()->addDays(2)), false, true);
+        rescue(static fn (): bool => MagasinDurable::depot()->put(self::CLE_DE_LA_DERNIERE_PRESENTATION, $maintenant->toIso8601String(), $maintenant->copy()->addDays(2)), false, true);
 
         $this->marquerLaPresentation($marque, $this->alerterDUnJetonMort($jeton, $maintenant));
     }
 
     private function presentationDejaVueCetteMinute(string $marque): bool
     {
-        return JournalDuDiagnostic::lEcritureSeraitEnSql() && rescue(static fn (): bool => Cache::has($marque), false, true);
+        return JournalDuDiagnostic::lEcritureSeraitEnSql() && rescue(static fn (): bool => MagasinDurable::depot()->has($marque), false, true);
     }
 
     /**
@@ -172,7 +171,7 @@ final class AlertesDeDiagnostic
     private function marquerLaPresentation(string $marque, bool $abouti): void
     {
         if ($abouti && JournalDuDiagnostic::lEcritureSeraitEnSql()) {
-            rescue(static fn (): bool => Cache::put($marque, true, 120), false, true);
+            rescue(static fn (): bool => MagasinDurable::depot()->put($marque, true, 120), false, true);
         }
     }
 
@@ -180,8 +179,8 @@ final class AlertesDeDiagnostic
     {
         return $this->sansLever(function () use ($jeton, $maintenant): bool {
             $compteur = 'diagnostic:alerte:presentations:'.$jeton->identifiant;
-            Cache::add($compteur, 0, self::SECONDES_DU_COMPTEUR);
-            $presentations = Cache::increment($compteur);
+            MagasinDurable::depot()->add($compteur, 0, self::SECONDES_DU_COMPTEUR);
+            $presentations = MagasinDurable::depot()->increment($compteur);
 
             $quinzeMinutes = ['diagnostic:alerte:jeton-mort:quinze-minutes:'.$jeton->identifiant, self::SECONDES_ENTRE_DEUX_PRESENTATIONS];
             $parJour = is_int($presentations) && $presentations > self::PRESENTATIONS_AVANT_LA_CADENCE_JOURNALIERE;
@@ -214,7 +213,7 @@ final class AlertesDeDiagnostic
         $pris = [];
 
         foreach ($creneaux as [$cle, $duree]) {
-            if (! Cache::add($cle, true, $duree)) {
+            if (! MagasinDurable::depot()->add($cle, true, $duree)) {
                 $this->rendre($pris);
 
                 return true;
@@ -238,7 +237,7 @@ final class AlertesDeDiagnostic
     private function rendre(array $cles): void
     {
         foreach ($cles as $cle) {
-            Cache::forget($cle);
+            MagasinDurable::depot()->forget($cle);
         }
     }
 

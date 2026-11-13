@@ -20,7 +20,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * D'où la règle, tenue par les deux bouts : chaque processus qui envoie (le
  * serveur web, Horizon ou un worker de file, le planificateur) a une sortie,
- * et aucun autre service, db et redis compris, n'en a.
+ * et aucun autre service, db et les deux redis compris, n'en a.
  */
 
 /**
@@ -181,12 +181,12 @@ it('donne une sortie au serveur web, à Horizon et au planificateur', function (
     ));
 });
 
-it('ne donne de sortie à aucun autre service, db et redis compris', function (): void {
+it('ne donne de sortie à aucun autre service, db et les deux redis compris', function (): void {
     [, $autres] = envoisServicesSelonLEnvoi();
     $composition = envoisComposition();
     $internes = envoisReseauxInternes($composition);
 
-    expect(array_keys($autres))->toContain('db', 'redis');
+    expect(array_keys($autres))->toContain('db', 'redis', 'redis-cache');
 
     $avecSortie = array_keys(array_filter(
         $autres,

@@ -19,6 +19,11 @@ x-app-env: &app-env
     REDIS_HOST: redis
     REDIS_PASSWORD: ${REDIS_PASSWORD}
     REDIS_PORT: 6379
+    # Le cache a sa propre instance ; les limiteurs et les battements de santé
+    # restent sur celle des données (#2151).
+    REDIS_CACHE_HOST: redis-cache
+    REDIS_CACHE_PORT: 6379
+    CACHE_DURABLE_STORE: redis-durable
     SESSION_DRIVER: redis
     CACHE_STORE: redis
     QUEUE_CONNECTION: redis
@@ -157,7 +162,9 @@ services:
             db:
                 condition: service_healthy
             redis:
-                condition: service_started
+                condition: service_healthy
+            redis-cache:
+                condition: service_healthy
 
     db:
         image: mysql:8.4
@@ -214,17 +221,22 @@ services:
     # (application arrêtée, copie du volume redis_data, retour par la copie).
     # Les reconstructions de l'image à la même version n'arrivent pas seules :
     # l'étiquette monte avec le lot de dépendances suivant.
+    # L'instance des données : file, Horizon, sessions, verrous, limiteurs et
+    # battements de santé. `noeviction` : pleine, elle refuse une écriture
+    # plutôt que de perdre une session ou un travail.
     redis:
         image: redis:8.10.3-alpine
         restart: always
         command: >
             redis-server
-            --requirepass ${REDIS_PASSWORD}
+            --requirepass ${REDIS_PASSWORD:?mot de passe de Redis}
             --maxmemory 128mb
-            --maxmemory-policy allkeys-lru
+            --maxmemory-policy noeviction
             --appendonly yes
             --appendfsync everysec
             --save 60 1000
+        environment:
+            REDISCLI_AUTH: ${REDIS_PASSWORD}
         volumes:
             - redis_data:/data
         deploy:
@@ -232,10 +244,38 @@ services:
                 limits:
                     memory: 256M
         healthcheck:
-            test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+            test: ['CMD-SHELL', '[ "$$(redis-cli ping)" = PONG ]']
             interval: 15s
             timeout: 5s
             retries: 3
+            start_period: 30s
+        networks:
+            - backend
+
+    # L'instance du cache : seul ce qui se recalcule y vit. Évincée à volonté
+    # (`allkeys-lru`), sans persistance ni volume : elle repart vide.
+    redis-cache:
+        image: redis:8.10.3-alpine
+        restart: always
+        command: >
+            redis-server
+            --requirepass ${REDIS_PASSWORD:?mot de passe de Redis}
+            --maxmemory 128mb
+            --maxmemory-policy allkeys-lru
+            --save ''
+            --appendonly no
+        environment:
+            REDISCLI_AUTH: ${REDIS_PASSWORD}
+        deploy:
+            resources:
+                limits:
+                    memory: 192M
+        healthcheck:
+            test: ['CMD-SHELL', '[ "$$(redis-cli ping)" = PONG ]']
+            interval: 15s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
         networks:
             - backend
 
@@ -278,6 +318,8 @@ services:
             db:
                 condition: service_healthy
             redis:
+                condition: service_healthy
+            redis-cache:
                 condition: service_healthy
 
     # Rien n'executait les taches planifiees.
@@ -335,6 +377,8 @@ services:
             db:
                 condition: service_healthy
             redis:
+                condition: service_healthy
+            redis-cache:
                 condition: service_healthy
 
 networks:
