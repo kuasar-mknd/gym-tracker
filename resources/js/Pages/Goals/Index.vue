@@ -27,6 +27,7 @@ const form = useForm({
     target_value: '',
     exercise_id: '',
     measurement_type: '',
+    period: 'total',
     deadline: '',
     start_value: '',
 })

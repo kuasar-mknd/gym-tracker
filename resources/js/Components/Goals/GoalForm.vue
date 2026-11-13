@@ -5,7 +5,7 @@
   same table drift apart — the create form used to be the only one, and it is
   the reason the edit page could not exist without duplicating it.
 
-  @prop {Object} form - Required. The Inertia form object holding the goal data and its errors.
+  @prop {Object} form - Required. The Inertia form object holding the goal data (type, period, target…) and its errors.
   @prop {Array} exercises - Required. Exercises selectable for a strength or volume goal.
   @prop {Array} measurementTypes - Required. Measurements selectable for a measurement goal.
   @prop {String} submitLabel - Text of the submit button.
@@ -51,6 +51,17 @@ const echeanceMinimale = computed(() =>
     props.form.deadline && props.form.deadline === echeanceDOrigine ? undefined : demainEnJourCalendaire(),
 )
 
+/**
+ * Sur quelle durée un objectif de fréquence compte ses séances. « Par semaine »
+ * repart de zéro chaque lundi ; le serveur en fixe le départ à zéro.
+ */
+const periodOptions = [
+    { value: 'total', label: 'Au total' },
+    { value: 'week', label: 'Par semaine (du lundi au dimanche)' },
+]
+
+const estHebdomadaire = computed(() => props.form.type === 'frequency' && props.form.period === 'week')
+
 const goalTypeOptions = [
     { value: 'weight', label: 'Force (Poids max)' },
     { value: 'frequency', label: 'Fréquence (Séances)' },
@@ -70,7 +81,13 @@ watch(
     // below read it. Left out, the `|| '?'` fallback — meant for the moment the
     // type is chosen and the target is not yet typed — became permanent, and
     // the question mark was saved as the goal's title.
-    () => [props.form.type, props.form.exercise_id, props.form.measurement_type, props.form.target_value],
+    () => [
+        props.form.type,
+        props.form.period,
+        props.form.exercise_id,
+        props.form.measurement_type,
+        props.form.target_value,
+    ],
     () => {
         if (!props.autoTitle || titleTouched.value) {
             return
@@ -98,7 +115,8 @@ watch(
             }
         } else if (props.form.type === 'frequency') {
             const seances = props.form.target_value ? compte(props.form.target_value, 'séance', 'séances') : '? séances'
-            props.form.title = `Atteindre ${seances} au total`
+            props.form.title =
+                props.form.period === 'week' ? `Faire ${seances} par semaine` : `Atteindre ${seances} au total`
         }
     },
 )
@@ -113,6 +131,14 @@ watch(
                     label="Type d'objectif"
                     :options="goalTypeOptions"
                     :error="form.errors.type"
+                />
+
+                <GlassSelect
+                    v-if="form.type === 'frequency'"
+                    v-model="form.period"
+                    label="Période"
+                    :options="periodOptions"
+                    :error="form.errors.period"
                 />
 
                 <GlassSelect
@@ -151,13 +177,15 @@ watch(
             <div class="space-y-4">
                 <GlassInput
                     v-model="form.target_value"
-                    label="Valeur Cible"
+                    :label="estHebdomadaire ? 'Séances par semaine' : 'Valeur Cible'"
                     type="number"
-                    step="0.1"
+                    :step="estHebdomadaire ? 1 : 0.1"
+                    :min="estHebdomadaire ? 1 : undefined"
                     required
                     :error="form.errors.target_value"
                 />
                 <GlassInput
+                    v-if="!estHebdomadaire"
                     v-model="form.start_value"
                     label="Valeur de Départ (Optionnel)"
                     type="number"
