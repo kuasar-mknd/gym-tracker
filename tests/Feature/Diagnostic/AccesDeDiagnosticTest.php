@@ -286,6 +286,17 @@ it('refuse comme un chemin inconnu quand la base ne répond pas', function (): v
     expect($refuse)->toBe($inconnu);
 });
 
+it('journalise la cause « createur », non « base », quand le secret du créateur est illisible', function (): void {
+    $cree = accesDeDiagnosticUnJeton();
+    DB::table('admins')->where('id', $cree['admin']->id)->update(['app_authentication_secret' => 'pas-un-secret-chiffre']);
+
+    accesDeDiagnosticAppeler('/diagnostic/v1/etat', accesDeDiagnosticBearer($cree['en_clair']))->assertNotFound();
+
+    $causes = collect(accesDeDiagnosticLesLignes()->getArrayCopy())->where('message', 'diagnostic.refus')->pluck('contexte.cause')->all();
+
+    expect($causes)->toBe(['createur']);
+});
+
 it('refuse comme un chemin inconnu quand seule la lecture des rôles du créateur échoue', function (): void {
     $cree = accesDeDiagnosticUnJeton();
     $inconnu = accesDeDiagnosticTout(accesDeDiagnosticAppeler('/diagnostic/v1/ce-chemin-n-existe-pas', null));

@@ -73,7 +73,6 @@ function alertesDeDiagnosticCreerUnJeton(string $nom = 'Agent'): array
 {
     $admin = FilamentAdminPanel::admin(['view-diagnostic']);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
-    $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
     $secret = new Google2FA()->generateSecretKey();
     $admin->forceFill(['app_authentication_secret' => $secret])->save();
 

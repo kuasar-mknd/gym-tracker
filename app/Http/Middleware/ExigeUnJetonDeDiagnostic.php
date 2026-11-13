@@ -12,6 +12,7 @@ use App\Support\AlertesDeDiagnostic;
 use App\Support\JournalDuDiagnostic;
 use Carbon\CarbonInterface;
 use Closure;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -119,13 +120,13 @@ class ExigeUnJetonDeDiagnostic
         $jeton = $ligne ?? throw new LogicException('Un jeton reconnu a une ligne.');
         $this->verifierLaVieDuJeton($request, $jeton, $maintenant);
 
-        $createurAutorise = $this->lire($request, static function () use ($jeton): bool {
+        $createurAutorise = $this->lire($request, function () use ($jeton): bool {
             $createur = $jeton->createur;
 
             return $createur instanceof Admin
                 && $createur->estSuperAdministrateur()
                 && $createur->can('view-diagnostic')
-                && filled($createur->getAppAuthenticationSecret());
+                && $this->aUnSecretLisible($createur);
         });
 
         if (! $createurAutorise) {
@@ -147,6 +148,19 @@ class ExigeUnJetonDeDiagnostic
         }
 
         return $this->sansCache($reponse);
+    }
+
+    /**
+     * Un secret absent ou que la clé ne déchiffre plus n'est pas une base
+     * qui ne répond pas : le refus garde la cause `createur`.
+     */
+    private function aUnSecretLisible(Admin $createur): bool
+    {
+        try {
+            return filled($createur->getAppAuthenticationSecret());
+        } catch (DecryptException) {
+            return false;
+        }
     }
 
     /**
