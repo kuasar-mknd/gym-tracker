@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\GoalType;
+use App\Jobs\SyncUserGoals;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -82,6 +83,27 @@ class Goal extends Model
                 default => 'cm',
             },
         };
+    }
+
+    #[\Override]
+    protected static function booted(): void
+    {
+        /*
+         * Un recalcul déjà parti a lu l'ancienne cible : il réécrirait la barre
+         * et l'atteinte d'avant. Celui-ci part après la validation de
+         * l'écriture et la relit. `syncGoals()` écrit par une requête, sans
+         * événement : aucune boucle.
+         */
+        $recalculer = function (self $goal): void {
+            $user = User::query()->find($goal->user_id);
+
+            if ($user instanceof User) {
+                SyncUserGoals::dispatch($user)->afterCommit();
+            }
+        };
+
+        static::saved($recalculer);
+        static::deleted($recalculer);
     }
 
     #[\Override]

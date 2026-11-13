@@ -14,6 +14,7 @@ use App\Models\WorkoutLine;
 use App\Services\GoalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
@@ -36,6 +37,7 @@ class GoalServicePerformanceTest extends TestCase
 
     public function test_sync_goals_does_not_query_once_per_goal(): void
     {
+        Queue::fake();
         $user = User::factory()->create();
         $exercises = Exercise::factory()->count(10)->create();
 

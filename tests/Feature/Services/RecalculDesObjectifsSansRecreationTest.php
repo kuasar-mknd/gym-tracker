@@ -11,6 +11,7 @@ use App\Services\GoalService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 
 /*
  * Le recalcul des objectifs ne crée jamais de ligne (#1985).
@@ -95,6 +96,7 @@ it('ne fait pas réapparaître un objectif supprimé pendant le recalcul', funct
 });
 
 it('écrit en une seule mise à jour les valeurs propres à chaque objectif modifié', function (): void {
+    Queue::fake();
     $this->freezeTime();
 
     $user = User::factory()->create();

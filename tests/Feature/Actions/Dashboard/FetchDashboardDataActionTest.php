@@ -29,6 +29,7 @@ use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 
 /**
  * Un utilisateur, et l'horloge arretee un jeudi de juin.
@@ -90,6 +91,7 @@ it('rend exactement les deux records les plus recents, du plus recent au plus an
 });
 
 it('rend exactement les deux objectifs actifs les plus recents, unite comprise', function (): void {
+    Queue::fake();
     $user = scenePourTableauDeBord();
 
     $ancien = Goal::factory()->create([

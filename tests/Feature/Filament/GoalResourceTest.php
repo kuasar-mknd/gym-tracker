@@ -18,6 +18,7 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -26,6 +27,7 @@ beforeEach(function (): void {
 });
 
 it('liste les objectifs avec leur propriétaire, leur type et leurs valeurs', function (): void {
+    Queue::fake();
     $owner = User::factory()->create(['name' => 'Objectif Owner']);
     $exercise = Exercise::factory()->create(['name' => 'Squat']);
     $goal = Goal::factory()->create([
