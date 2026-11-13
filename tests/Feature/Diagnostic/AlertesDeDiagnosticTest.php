@@ -531,5 +531,6 @@ it('garde le singulier pour un seul jeton révoqué, et chaque raison a son libe
     [RaisonDeRevocationDuJeton::Interrupteur, 'accès de diagnostic fermé'],
     [RaisonDeRevocationDuJeton::MotDePasseChange, 'mot de passe changé'],
     [RaisonDeRevocationDuJeton::DoubleAuthentificationRetiree, 'double authentification retirée'],
+    [RaisonDeRevocationDuJeton::DoubleAuthentificationChangee, 'double authentification changée'],
     [RaisonDeRevocationDuJeton::AdministrateurSupprime, 'administrateur supprimé'],
 ]);

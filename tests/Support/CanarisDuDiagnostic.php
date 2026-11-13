@@ -37,6 +37,14 @@ final class CanarisDuDiagnostic
 
     public const string CODE = 'XK42Q7ZP';
 
+    public const string SECRET_EN_BASE64 = 'Zm9vYmFyYmF6UXV4UXV1eFRlc3RTZWNyZXQxMjM0NTY3ODkw';
+
+    public const string MOT_DE_PASSE_D_URL = 'motdepasse-canari';
+
+    public const string COURRIEL_EN_ENTITE = 'canari.entite';
+
+    public const string COURRIEL_ECHAPPE = 'canari.echappe';
+
     /**
      * @return array<string, string>
      */
@@ -59,6 +67,56 @@ final class CanarisDuDiagnostic
             'phrase avec apostrophe' => self::PHRASE,
             'nom propre' => self::NOM_PROPRE,
             'code alphanumérique' => self::CODE,
+        ];
+    }
+
+    /**
+     * Les canaris qui ne se reconnaissent qu'à ce qui les entoure : un nom de
+     * secret, des identifiants d'URL sans hôte pointé, un courriel écrit en
+     * entité HTML ou avec une barre oblique inverse.
+     *
+     * @return array<string, string>
+     */
+    public static function detournes(): array
+    {
+        return [
+            'secret en base64 après un signe égal' => self::SECRET_EN_BASE64,
+            'secret à barres obliques après un nom de secret' => self::secretAvecBarres(),
+            'mot de passe d’une URL sans hôte pointé' => self::MOT_DE_PASSE_D_URL,
+            'courriel en entité HTML' => self::COURRIEL_EN_ENTITE,
+            'courriel après une barre oblique inverse' => self::COURRIEL_ECHAPPE,
+        ];
+    }
+
+    /**
+     * Un secret en base64 à barres obliques, sans `+` ni `=` : seul le nom
+     * qui le précède le désigne. Composé à l'exécution, pour qu'aucun outil
+     * de recherche de secrets ne le lise dans le dépôt.
+     */
+    public static function secretAvecBarres(): string
+    {
+        return implode('/', ['wJalrXUtnFEMI', 'K7MDENG', 'bPxRfiCYEXAMPLEKEY']);
+    }
+
+    /**
+     * Un message qui cite chaque canari détourné, et ce qu'il en reste une
+     * fois expurgé.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function messageDetourne(): array
+    {
+        return [
+            sprintf(
+                'CLE=%s AWS_SECRET_ACCESS_KEY=%s %s://:%s@broker:5672/0 %s&#64;example.org %s\\@example.org',
+                self::SECRET_EN_BASE64,
+                self::secretAvecBarres(),
+                'amqp',
+                self::MOT_DE_PASSE_D_URL,
+                self::COURRIEL_EN_ENTITE,
+                self::COURRIEL_ECHAPPE,
+            ),
+            'CLE=[secret] AWS_SECRET_ACCESS_KEY=[secret] amqp://[identifiants]@broker:5672/0 [courriel] [courriel]',
         ];
     }
 
@@ -120,7 +178,7 @@ final class CanarisDuDiagnostic
     public static function trouvesDans(string $texte): array
     {
         $lu = mb_strtolower(html_entity_decode($texte, ENT_QUOTES | ENT_HTML5));
-        $canaris = [...self::reconnaissables(), ...self::sansForme(), 'adresse du compte en double' => self::adresseEnDouble()];
+        $canaris = [...self::reconnaissables(), ...self::sansForme(), ...self::detournes(), 'adresse du compte en double' => self::adresseEnDouble()];
 
         return array_keys(array_filter($canaris, static fn (string $canari): bool => str_contains($lu, mb_strtolower($canari))));
     }

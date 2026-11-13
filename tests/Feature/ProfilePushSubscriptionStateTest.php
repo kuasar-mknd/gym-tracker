@@ -40,7 +40,7 @@ final class ProfilePushSubscriptionStateTest extends TestCase
         $user = User::factory()->create();
 
         $user->updatePushSubscription(
-            'https://push.example.com/endpoint',
+            'https://fcm.googleapis.com/fcm/send/endpoint',
             'a-public-key',
             'an-auth-token'
         );
@@ -60,7 +60,7 @@ final class ProfilePushSubscriptionStateTest extends TestCase
     public function test_another_users_subscription_does_not_count(): void
     {
         $subscribed = User::factory()->create();
-        $subscribed->updatePushSubscription('https://push.example.com/other', 'key', 'token');
+        $subscribed->updatePushSubscription('https://fcm.googleapis.com/fcm/send/other', 'key', 'token');
 
         $this->actingAs(User::factory()->create())
             ->get(route('profile.edit'))
