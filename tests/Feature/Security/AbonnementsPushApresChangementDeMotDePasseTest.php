@@ -335,12 +335,12 @@ it('n’envoie rien aux appareils retirés depuis l’instance qui avait chargé
 it('refuse la transmission d’une session fermée pendant la résolution de son adresse, et n’en garde rien', function (): void {
     [$compte, $record] = detachementPushCompteAvecUnRecord();
     $tablettePerdue = detachementPushAppareilConnecte($compte);
-    detachementPushPendantLaResolutionDe('lent.example.org', function () use ($compte): void {
+    detachementPushPendantLaResolutionDe('lent.fcm.googleapis.com', function () use ($compte): void {
         User::query()->findOrFail($compte->id)->update(['password' => detachementPushNouveauMotDePasse()]);
     });
     $adresses = detachementPushAdressesPoussees();
 
-    detachementPushTransmettre($tablettePerdue, 'https://lent.example.org/push/tablette-perdue')->assertUnauthorized();
+    detachementPushTransmettre($tablettePerdue, 'https://lent.fcm.googleapis.com/fcm/send/tablette-perdue')->assertUnauthorized();
 
     // Le mot de passe a bien changé pendant la requête, et la session refusée
     // reste fermée.
@@ -396,14 +396,14 @@ it('relit le compte sous le verrou de sa ligne, et écrit l’abonnement dans la
 it('n’écrit aucun abonnement pour un compte supprimé pendant la résolution de son adresse', function (): void {
     $compte = User::factory()->create();
     $appareil = detachementPushAppareilConnecte($compte);
-    detachementPushPendantLaResolutionDe('lent.example.org', function () use ($compte): void {
+    detachementPushPendantLaResolutionDe('lent.fcm.googleapis.com', function () use ($compte): void {
         User::query()->findOrFail($compte->id)->delete();
     });
 
-    detachementPushTransmettre($appareil, 'https://lent.example.org/push/appareil')->assertUnauthorized();
+    detachementPushTransmettre($appareil, 'https://lent.fcm.googleapis.com/fcm/send/appareil')->assertUnauthorized();
 
     expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
-        ->and(PushSubscription::query()->where('endpoint', 'https://lent.example.org/push/appareil')->exists())->toBeFalse();
+        ->and(PushSubscription::query()->where('endpoint', 'https://lent.fcm.googleapis.com/fcm/send/appareil')->exists())->toBeFalse();
 });
 
 /**

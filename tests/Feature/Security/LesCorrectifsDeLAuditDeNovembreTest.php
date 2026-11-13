@@ -46,7 +46,7 @@ it('ne garde ni l’adresse ni les clefs d’un abonnement Web Push dans la tabl
         'trace' => [],
         'method' => 'POST',
         'path' => 'push-subscriptions',
-        'body' => ['endpoint' => 'https://push.example.org/abonnement-secret', 'keys' => ['auth' => $clefs[0], 'p256dh' => $clefs[1]]],
+        'body' => ['endpoint' => 'https://fcm.googleapis.com/fcm/send/abonnement-secret', 'keys' => ['auth' => $clefs[0], 'p256dh' => $clefs[1]]],
     ])->fresh();
 
     $ecrit = json_encode($exception->getAttributes());

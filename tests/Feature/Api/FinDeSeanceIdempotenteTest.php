@@ -181,7 +181,7 @@ it('ne propose pas les notifications au compte abonné ni à celui qui a coupé 
         ->assertOk()
         ->assertJsonPath('meta.proposer_les_notifications', false);
 })->with([
-    'abonné' => [fn (User $compte): PushSubscription => $compte->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton')],
+    'abonné' => [fn (User $compte): PushSubscription => $compte->updatePushSubscription('https://fcm.googleapis.com/fcm/send/telephone', 'cle', 'jeton')],
     'records coupés' => [fn (User $compte) => NotificationPreference::factory()->create([
         'user_id' => $compte->id,
         'type' => 'personal_record',
