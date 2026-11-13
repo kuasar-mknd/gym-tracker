@@ -190,6 +190,7 @@ return [
 
         App\Enums\EvenementDAlerteDeDiagnostic::class,
         App\Enums\ExerciseCategory::class,
+        App\Enums\GoalPeriod::class,
         App\Enums\GoalType::class,
         App\Enums\MotifDeLaTentative::class,
         App\Enums\PersonalRecordType::class,

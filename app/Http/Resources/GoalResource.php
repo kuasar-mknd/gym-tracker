@@ -28,6 +28,7 @@ class GoalResource extends JsonResource
             'exercise_id' => $this->exercise_id,
             'exercise' => new ExerciseResource($this->whenLoaded('exercise')),
             'measurement_type' => $this->measurement_type,
+            'period' => $this->period,
             'deadline' => $this->deadline?->format('Y-m-d'),
             'completed_at' => $this->completed_at,
             'progress' => $this->progress_pct,

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\GoalPeriod;
 use App\Enums\GoalType;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Goal;
 use App\Rules\CibleAuMoinsEgaleAuDepart;
+use App\Rules\CibleEnSeancesParSemaine;
 use App\Rules\DateQueSaColonneTient;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -78,7 +80,16 @@ class GoalStoreRequest extends FormRequest
                     $this->input('type') !== GoalType::Measurement->value,
                     [new CibleAuMoinsEgaleAuDepart($this->input('start_value'))],
                 ),
+                // « N séances par semaine » : un entier de 1 à 14.
+                Rule::when($this->estHebdomadaire(), [new CibleEnSeancesParSemaine()]),
             ],
+            /*
+             * Absente du corps, la période ne se valide pas : la création
+             * prend `total`, la modification garde celle de l'objectif
+             * (`estHebdomadaire()`). Hors fréquence, `prepareForValidation()`
+             * la ramène à `total`.
+             */
+            'period' => ['sometimes', 'required', Rule::enum(GoalPeriod::class)],
             'exercise_id' => [
                 'bail',
                 'required_if:type,weight,volume',
@@ -112,6 +123,24 @@ class GoalStoreRequest extends FormRequest
              */
             'start_value' => ['sometimes', 'required', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
         ];
+    }
+
+    /**
+     * Un objectif de fréquence « par semaine » : la période envoyée, ou à
+     * défaut celle de l'objectif qu'on modifie.
+     */
+    private function estHebdomadaire(): bool
+    {
+        if ($this->input('type') !== GoalType::Frequency->value) {
+            return false;
+        }
+
+        $goal = $this->route('goal');
+        $periode = $this->has('period')
+            ? $this->input('period')
+            : ($goal instanceof Goal ? $goal->period->value : GoalPeriod::Total->value);
+
+        return $periode === GoalPeriod::Week->value;
     }
 
     /**
@@ -155,6 +184,18 @@ class GoalStoreRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->ramenerLesJoursAuFuseauDeLApplication(['deadline']);
+
+        /*
+         * La période ne sert qu'à la fréquence : un objectif qui change de type
+         * ne garde pas la sienne. Et le départ d'un objectif « par semaine »
+         * est zéro, la semaine repartant de zéro chaque lundi : il ne se tape
+         * pas, et la cible se juge contre lui.
+         */
+        if ($this->input('type') !== GoalType::Frequency->value) {
+            $this->merge(['period' => GoalPeriod::Total->value]);
+        } elseif ($this->estHebdomadaire()) {
+            $this->merge(['start_value' => 0]);
+        }
 
         if ($this->has('start_value') && $this->estVide($this->input('start_value'))) {
             $this->merge(['start_value' => 0]);

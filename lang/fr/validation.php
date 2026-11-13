@@ -255,6 +255,7 @@ return [
         'nutrition_score' => 'alimentation',
         'order' => 'position',
         'part' => 'partie du corps',
+        'period' => 'période',
         'pile' => 'pile d\'appels',
         'preferences' => 'préférences',
         'preferences.*' => 'préférence',

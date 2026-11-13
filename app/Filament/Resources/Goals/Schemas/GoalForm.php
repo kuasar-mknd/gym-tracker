@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Goals\Schemas;
 
+use App\Enums\GoalPeriod;
 use App\Enums\GoalType;
 use App\Http\Controllers\GoalController;
 use App\Models\Exercise;
 use App\Rules\CibleAuMoinsEgaleAuDepart;
+use App\Rules\CibleEnSeancesParSemaine;
 use App\Rules\DateQueSaColonneTient;
 use App\Services\Diagnostic\ValeurLue;
 use Filament\Forms\Components\DatePicker;
@@ -33,6 +35,17 @@ class GoalForm
         'frequency' => 'Fréquence (Séances)',
         'volume' => 'Volume (Max par séance)',
         'measurement' => 'Mensuration',
+    ];
+
+    /**
+     * Les périodes d'un objectif de fréquence, nommées comme le formulaire de
+     * l'application (`GoalForm.vue`).
+     *
+     * @var array<string, string>
+     */
+    public const array PERIODES = [
+        'total' => 'Au total',
+        'week' => 'Par semaine (du lundi au dimanche)',
     ];
 
     /**
@@ -87,14 +100,24 @@ class GoalForm
             Select::make('user_id')->label('Compte')->relationship('user', 'name')->searchable()->required()->live(),
             TextInput::make('title')->label('Titre')->required()->maxLength(255),
             Select::make('type')->label('Type')->options(self::TYPES)->required()->live(),
+            Select::make('period')->label('Période')->options(self::PERIODES)->default(GoalPeriod::Total->value)
+                ->required(fn (Get $get): bool => $get('type') === GoalType::Frequency->value)
+                ->visible(fn (Get $get): bool => $get('type') === GoalType::Frequency->value)
+                ->live()
+                ->helperText('« Par semaine » compte les séances faites du lundi au dimanche ; la valeur de départ ne sert pas.'),
             TextInput::make('target_value')->label('Valeur cible')->required()->numeric()
                 ->rule(
                     fn (Get $get): CibleAuMoinsEgaleAuDepart => new CibleAuMoinsEgaleAuDepart($get('start_value')),
-                    fn (Get $get): bool => $get('type') !== GoalType::Measurement->value,
+                    fn (Get $get): bool => $get('type') !== GoalType::Measurement->value && ! self::estHebdomadaire($get),
+                )
+                ->rule(
+                    new CibleEnSeancesParSemaine(),
+                    fn (Get $get): bool => self::estHebdomadaire($get),
                 ),
             TextInput::make('current_value')->label('Valeur actuelle')->numeric()->disabled()->hiddenOn(Operation::Create)
                 ->helperText(self::AVANCEMENT_CALCULE),
-            TextInput::make('start_value')->label('Valeur de départ')->required()->numeric()->default(0),
+            TextInput::make('start_value')->label('Valeur de départ')->required()->numeric()->default(0)
+                ->visible(fn (Get $get): bool => ! self::estHebdomadaire($get)),
             Select::make('exercise_id')->label('Exercice')
                 ->relationship('exercise', 'name', modifyQueryUsing: fn (Builder $query, Get $get): Builder => self::exercicesDuCompte($query, $get('user_id')))
                 ->searchable()
@@ -108,6 +131,16 @@ class GoalForm
             DateTimePicker::make('completed_at')->label('Atteint le')->disabled()->hiddenOn(Operation::Create)
                 ->helperText(self::AVANCEMENT_CALCULE),
         ];
+    }
+
+    /**
+     * Un objectif de fréquence « par semaine » : sa cible se juge par
+     * `CibleEnSeancesParSemaine`, comme à `GoalStoreRequest`, et son départ ne se
+     * tape pas ni ne se compare à la cible (il se lit zéro).
+     */
+    private static function estHebdomadaire(Get $get): bool
+    {
+        return $get('type') === GoalType::Frequency->value && $get('period') === GoalPeriod::Week->value;
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\GoalType;
 use App\Models\Goal;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 /**
  * Tient l'avancement des objectifs d'un utilisateur d'après son activité —
@@ -32,10 +33,12 @@ final class GoalService
      * séance.
      *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, lu une seule fois : la semaine des objectifs hebdomadaires, leur date d'atteinte et `updated_at` en viennent. À défaut, l'horloge.
      */
-    public function syncGoals(User $user): void
+    public function syncGoals(User $user, ?Carbon $maintenant = null): void
     {
-        $dirtyGoals = $this->objectifsRecalcules($user)->filter->isDirty();
+        $maintenant ??= now();
+        $dirtyGoals = $this->objectifsRecalcules($user, $maintenant)->filter->isDirty();
 
         if ($dirtyGoals->isEmpty()) {
             return;
@@ -79,7 +82,7 @@ final class GoalService
             ...$liaisons['current_value'],
             ...$liaisons['progress_pct'],
             ...$liaisons['completed_at'],
-            now(),
+            $maintenant,
             $user->id,
             ...$identifiants,
         ]);
@@ -95,10 +98,13 @@ final class GoalService
      * seconde définition pourrait donner tort à l'écrivain.
      *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge, lue ici une seule fois.
      * @return \Illuminate\Database\Eloquent\Collection<int, Goal>
      */
-    public function objectifsRecalcules(User $user): \Illuminate\Database\Eloquent\Collection
+    public function objectifsRecalcules(User $user, ?Carbon $maintenant = null): \Illuminate\Database\Eloquent\Collection
     {
+        $maintenant ??= now();
+
         /*
          * TOUS les objectifs, y compris ceux deja marques atteints.
          *
@@ -122,10 +128,10 @@ final class GoalService
          * comprises depuis #2131 : aucun ne repasse par son compte
          * (`$goal->user`), qu'il n'est donc plus utile de lui rattacher.
          */
-        $mesures = $this->preCalculateMetrics($user, $goals);
+        $mesures = $this->preCalculateMetrics($user, $goals, $maintenant);
 
         foreach ($goals as $goal) {
-            $this->updateGoalProgress($goal, $mesures);
+            $this->updateGoalProgress($goal, $mesures, $maintenant);
         }
 
         return $goals;
@@ -135,18 +141,21 @@ final class GoalService
      * Recalcule un objectif : sa valeur courante, puis son état et sa barre.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
+     * @param  array{seances_faites?: int, seances_de_la_semaine?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge, lue ici une seule fois.
      */
-    public function updateGoalProgress(Goal $goal, array $mesures = []): void
+    public function updateGoalProgress(Goal $goal, array $mesures = [], ?Carbon $maintenant = null): void
     {
+        $maintenant ??= now();
+
         match ($goal->type) {
             GoalType::Weight => $this->updateWeightGoal($goal, $mesures),
-            GoalType::Frequency => $this->updateFrequencyGoal($goal, $mesures),
+            GoalType::Frequency => $this->updateFrequencyGoal($goal, $mesures, $maintenant),
             GoalType::Volume => $this->updateVolumeGoal($goal, $mesures),
             GoalType::Measurement => $this->updateMeasurementGoal($goal, $mesures),
         };
 
-        $this->checkCompletion($goal);
+        $this->checkCompletion($goal, $maintenant);
         $this->updateProgressPercentage($goal);
     }
 
@@ -171,11 +180,13 @@ final class GoalService
          * base sous son départ voit sa barre suivre son état dès le prochain
          * recalcul. Seule la mensuration descend.
          */
+        $depart = $this->departLu($goal);
+
         $cibleLue = $goal->type === GoalType::Measurement
             ? $goal->target_value
-            : max($goal->target_value, $goal->start_value);
+            : max($goal->target_value, $depart);
 
-        if ($cibleLue === $goal->start_value) {
+        if ($cibleLue === $depart) {
             $goal->progress_pct = $goal->current_value >= $goal->target_value ? 100.0 : 0.0;
 
             return;
@@ -202,11 +213,11 @@ final class GoalService
          * atteint en descendant. Seule une mensuration arrive ici en
          * descendant (plus haut).
          */
-        $sens = $goal->target_value <=> $goal->start_value;
+        $sens = $goal->target_value <=> $depart;
 
-        $parcouru = ($goal->current_value - $goal->start_value) * $sens;
+        $parcouru = ($goal->current_value - $depart) * $sens;
 
-        $aParcourir = abs($goal->target_value - $goal->start_value);
+        $aParcourir = abs($goal->target_value - $depart);
 
         /*
          * Le plancher a zero n'est plus decoratif, contrairement au `max()` qui
@@ -275,11 +286,24 @@ final class GoalService
      * rien soulever en valaient trois (#2110). Le lot et le chemin d'un seul
      * objectif lisent la même relation, celle des succès de séances.
      *
+     * Un objectif « par semaine » (`Goal::estHebdomadaire()`) ne compte que les
+     * séances faites de la semaine du calendrier, du lundi au dimanche, à
+     * l'heure de l'application : sa valeur retombe à zéro chaque lundi.
+     *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{seances_faites?: int, seances_de_la_semaine?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
+     * @param  Carbon  $maintenant  L'instant de l'opération, d'où vient la semaine.
      */
-    protected function updateFrequencyGoal(Goal $goal, array $mesures = []): void
+    protected function updateFrequencyGoal(Goal $goal, array $mesures, Carbon $maintenant): void
     {
+        if ($goal->estHebdomadaire()) {
+            $goal->current_value = isset($mesures['seances_de_la_semaine']) && is_int($mesures['seances_de_la_semaine'])
+                ? $mesures['seances_de_la_semaine']
+                : $this->seancesDeLaSemaine($goal->user, $maintenant);
+
+            return;
+        }
+
         if (isset($mesures['seances_faites']) && is_int($mesures['seances_faites'])) {
             $goal->current_value = $mesures['seances_faites'];
 
@@ -297,6 +321,51 @@ final class GoalService
         $goal->user->seances_faites_count ??= $goal->user->seancesFaites()->count();
 
         $goal->current_value = $goal->user->seances_faites_count;
+    }
+
+    /**
+     * Le lundi 00:00 de la semaine de l'instant, et celui d'après : la fenêtre
+     * est semi-ouverte, `[lundi, lundi suivant[`.
+     *
+     * Elle se lit en heure murale du fuseau de l'application, celle où
+     * `workouts.started_at` s'écrit, et le lundi suivant se compte en jours du
+     * calendrier : la semaine du passage à l'heure d'hiver dure 169 heures, et
+     * sept fois vingt-quatre heures finiraient le dimanche à 23:00. Une borne
+     * haute à `endOfWeek()` perdrait la dernière microseconde de la semaine.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function semaineDe(Carbon $maintenant): array
+    {
+        $lundi = $maintenant->copy()->startOfWeek(Carbon::MONDAY);
+
+        return [$lundi, $lundi->copy()->addDays(7)];
+    }
+
+    /**
+     * Les séances faites (`User::seancesFaites()`) dont le début tombe dans la
+     * semaine de l'instant. Le jour d'une séance est la date de son début : une
+     * séance commencée le dimanche à 23:30 et finie le lundi est de la semaine
+     * qui s'achève. La lecture suit l'index `(user_id, started_at)`.
+     */
+    private function seancesDeLaSemaine(User $user, Carbon $maintenant): int
+    {
+        [$lundi, $lundiSuivant] = $this->semaineDe($maintenant);
+
+        return $user->seancesFaites()
+            ->where('workouts.started_at', '>=', $lundi)
+            ->where('workouts.started_at', '<', $lundiSuivant)
+            ->count();
+    }
+
+    /**
+     * La valeur de départ que la barre lit : zéro pour un objectif « par
+     * semaine », dont la valeur retombe à zéro chaque lundi, quoi que le champ
+     * porte (le panneau ne passe pas par la requête de l'application).
+     */
+    private function departLu(Goal $goal): float
+    {
+        return $goal->estHebdomadaire() ? 0.0 : $goal->start_value;
     }
 
     /**
@@ -525,14 +594,25 @@ final class GoalService
      * Les deux sens comptent : supprimer la séance ou la mesure qui avait
      * déclenché un objectif doit le rouvrir.
      *
+     * Un objectif « par semaine » est atteint pour la semaine de l'instant, pas
+     * pour de bon : sa date d'atteinte d'une semaine passée ne vaut plus rien,
+     * même quand le critère est de nouveau rempli (une séance du lundi suffit à
+     * un objectif d'une séance par semaine, avant que rien ne l'ait rouvert).
+     * Elle est effacée, puis reposée à l'instant de l'opération.
+     *
      * @param  Goal  $goal  L'objectif à revoir.
+     * @param  Carbon  $maintenant  L'instant de l'opération, qui date l'atteinte.
      */
-    protected function checkCompletion(Goal $goal): void
+    protected function checkCompletion(Goal $goal, Carbon $maintenant): void
     {
         $isCompleted = $this->isGoalCriteriaMet($goal);
 
+        if ($goal->estHebdomadaire() && $goal->completed_at !== null && $goal->completed_at->lt($this->semaineDe($maintenant)[0])) {
+            $goal->completed_at = null;
+        }
+
         if ($isCompleted && $goal->completed_at === null) {
-            $goal->completed_at = now();
+            $goal->completed_at = $maintenant;
 
             return;
         }
@@ -590,12 +670,12 @@ final class GoalService
      *
      * @param  User  $user  L'utilisateur concerné.
      * @param  \Illuminate\Support\Collection<int, Goal>  $goals  Les objectifs à servir.
-     * @return array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}
+     * @param  Carbon  $maintenant  L'instant de l'opération, d'où vient la semaine.
+     * @return array{seances_faites?: int, seances_de_la_semaine?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}
      */
-    private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
+    private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals, Carbon $maintenant): array
     {
         $mesures = [];
-        $types = $goals->pluck('type')->unique();
         $idsDesExercices = fn (GoalType $type): array => $goals->where('type', $type)
             ->pluck('exercise_id')
             ->filter()
@@ -604,9 +684,17 @@ final class GoalService
         $idsExercicesDeCharge = $idsDesExercices(GoalType::Weight);
         $idsExercicesDeVolume = $idsDesExercices(GoalType::Volume);
 
-        if ($types->contains(GoalType::Frequency)) {
+        $frequences = $goals->where('type', GoalType::Frequency);
+
+        if ($frequences->contains(static fn (Goal $goal): bool => ! $goal->estHebdomadaire())) {
             // Les séances faites, comme le chemin d'un seul objectif (#2110).
             $mesures['seances_faites'] = $user->seancesFaites()->count();
+        }
+
+        // Celles de la semaine, pour les objectifs « par semaine » : lues
+        // seulement s'il y en a un.
+        if ($frequences->contains(static fn (Goal $goal): bool => $goal->estHebdomadaire())) {
+            $mesures['seances_de_la_semaine'] = $this->seancesDeLaSemaine($user, $maintenant);
         }
 
         if ($idsExercicesDeCharge !== []) {
