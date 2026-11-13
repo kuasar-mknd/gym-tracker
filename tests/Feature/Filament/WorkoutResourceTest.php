@@ -322,6 +322,7 @@ it('renouvelle les versions du cache à la création, à la modification et à l
             ->callAction(DeleteAction::class),
         'suppression groupée' => Livewire::test(ListWorkouts::class)
             ->callTableBulkAction('delete', [$seance]),
+        default => throw new LogicException("Geste inconnu : {$geste}"),
     };
 
     $apres = clesDeCacheDuCompte($compte);
@@ -341,4 +342,91 @@ it('garde les versions du cache quand l’enregistrement ne change ni les dates,
         ->assertHasNoFormErrors();
 
     expect(clesDeCacheDuCompte($compte))->toBe($avant);
+});
+
+/*
+ * La fin d'une séance ne précède pas son début, et ne reste pas vide sous une
+ * autre séance en cours du compte : le démarrage refuse déjà d'en ouvrir une
+ * seconde, et le reste de l'application lit « la séance en cours » au
+ * singulier. Rouvrir une séance (vider sa fin) reste permis quand rien d'autre
+ * n'est en cours.
+ */
+dataset('enregistrements refusés d’une séance du panneau', [
+    'la page de modification' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->fillForm($donnees)
+        ->call('save')],
+    'l’action de modification de la table' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), $donnees)],
+]);
+
+it('refuse une fin qui précède le début', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-02-10 07:00:00'])->assertHasFormErrors(['ended_at']);
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-02-10 08:45:00');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('accepte une fin égale au début', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-02-10 07:30:00'])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-02-10 07:30:00');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('refuse de vider la fin d’une séance quand le compte a déjà une autre séance en cours', function (Closure $enregistrer): void {
+    $compte = User::factory()->create();
+    Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+    $terminee = Workout::factory()->create([
+        'user_id' => $compte->getKey(),
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    $enregistrer($terminee, ['ended_at' => null])->assertHasFormErrors(['ended_at']);
+
+    expect($terminee->fresh()?->ended_at)->not->toBeNull();
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('laisse rouvrir une séance quand le compte n’en a aucune autre en cours', function (Closure $enregistrer): void {
+    $compte = User::factory()->create();
+    $terminee = Workout::factory()->create([
+        'user_id' => $compte->getKey(),
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+    Workout::factory()->create(['user_id' => User::factory()->create()->getKey(), 'ended_at' => null]);
+
+    $enregistrer($terminee, ['ended_at' => null])->assertHasNoFormErrors();
+
+    expect($terminee->fresh()?->ended_at)->toBeNull();
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('laisse une séance déjà en cours le rester, même quand le compte en a une autre', function (Closure $enregistrer): void {
+    $compte = User::factory()->create();
+    Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+    $enCours = Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+
+    $enregistrer($enCours, ['name' => 'Toujours en cours'])->assertHasNoFormErrors();
+
+    expect($enCours->fresh()?->name)->toBe('Toujours en cours');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('refuse de créer une séance sans fin quand le compte en a déjà une en cours', function (): void {
+    $compte = User::factory()->create();
+    Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+
+    Livewire::test(CreateWorkout::class)
+        ->fillForm(['user_id' => $compte->getKey(), 'name' => 'Seconde séance', 'started_at' => '2026-03-01 10:00:00'])
+        ->call('create')
+        ->assertHasFormErrors(['ended_at']);
+
+    expect(Workout::query()->where('name', 'Seconde séance')->exists())->toBeFalse();
 });

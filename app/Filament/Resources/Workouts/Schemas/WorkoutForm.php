@@ -6,14 +6,17 @@ namespace App\Filament\Resources\Workouts\Schemas;
 
 use App\Models\Casts\InstantAvecSonDecalage;
 use App\Models\Workout;
+use App\Rules\AucuneAutreSeanceEnCours;
 use App\Rules\DateQueSaColonneTient;
 use Carbon\CarbonInterface;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Operation;
+use Illuminate\Contracts\Validation\ValidationRule;
 
 class WorkoutForm
 {
@@ -76,6 +79,12 @@ class WorkoutForm
                 DateTimePicker::make('ended_at')->label('Fin')
                     ->minDate(DateQueSaColonneTient::date()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::date()->dernierInstant())
+                    ->afterOrEqual('started_at')
+                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(
+                        $record instanceof Workout ? $record->user_id : $get('user_id'),
+                        $record?->id,
+                        $record instanceof Workout && $record->ended_at === null,
+                    ))
                     ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => self::avecLeDecalageEnregistre($state, $record?->ended_at)),
                 Textarea::make('notes')->label('Notes')
                     ->maxLength(1000)
