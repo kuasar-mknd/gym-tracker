@@ -148,7 +148,7 @@ it('refuse un autre service de Redis à une étiquette flottante ou à une autre
     $composition = redisCompositionLue('docker-compose.prod.yml');
     $production = redisImageDuService('docker-compose.prod.yml');
     $services = is_array($composition['services'] ?? null) ? $composition['services'] : [];
-    $composition['services'] = [$nom => ['image' => $image, 'restart' => 'always', 'networks' => ['backend']], ...$services];
+    $composition['services'] = [...$services, $nom => ['image' => $image, 'restart' => 'always', 'networks' => ['backend']]];
 
     expect(redisEcartsDesServices($composition))->toBe([str_replace('{production}', is_string($production) ? $production : '', $ecart)]);
 })->with([
