@@ -24,6 +24,8 @@ final class ProxysDeConfianceCheck extends Check
 
     private const int PLUS_LARGE_IPV6 = 64;
 
+    private const string CONSEIL = 'Régler TRUSTED_PROXIES sur l\'adresse précise sous laquelle le proxy inverse joint l\'application.';
+
     /**
      * Le libellé de la page « Santé » et du courriel d'alerte, qui
      * découperaient sinon le nom de classe.
@@ -52,27 +54,38 @@ final class ProxysDeConfianceCheck extends Check
         $result = Result::make()
             ->meta(['entrees' => count($proxys), 'larges' => count($larges), 'inertes' => count($inertes)])
             ->shortSummary($resume);
+        $constats = $this->constats($proxys, count($larges), count($inertes));
 
+        return $constats === []
+            ? $result->ok($resume)
+            : $result->warning($resume.' dont '.implode(' et ', $constats).'. '.self::CONSEIL);
+    }
+
+    /**
+     * @param  list<string>  $proxys
+     * @return list<string>
+     */
+    private function constats(array $proxys, int $larges, int $inertes): array
+    {
         $constats = [];
 
-        if ($larges !== []) {
-            $constats[] = count($larges).' trop large(s) ou invalide(s)';
+        if ($larges > 0) {
+            $constats[] = $larges.' trop large(s) ou invalide(s)';
         }
 
-        if ($inertes !== []) {
-            $constats[] = count($inertes).' qui ne fait confiance à aucun pair'.(
-                $this->resteUneEntreeUtilisable($proxys) ? '' : ' (le schéma HTTPS ne serait plus détecté)'
-            );
+        if ($inertes > 0) {
+            $constats[] = $inertes.' qui ne fait confiance à aucun pair'.$this->suiteDesInertes($proxys);
         }
 
-        if ($constats === []) {
-            return $result->ok($resume);
-        }
+        return $constats;
+    }
 
-        return $result->warning(
-            $resume.' dont '.implode(' et ', $constats).'. '
-            .'Régler TRUSTED_PROXIES sur l\'adresse précise sous laquelle le proxy inverse joint l\'application.',
-        );
+    /**
+     * @param  list<string>  $proxys
+     */
+    private function suiteDesInertes(array $proxys): string
+    {
+        return $this->resteUneEntreeUtilisable($proxys) ? '' : ' (le schéma HTTPS ne serait plus détecté)';
     }
 
     /**
@@ -121,16 +134,28 @@ final class ProxysDeConfianceCheck extends Check
     private function lire(string $proxy): ?array
     {
         $morceaux = explode('/', $proxy, 2);
-        $octets = filter_var($morceaux[0], FILTER_VALIDATE_IP) === false ? false : inet_pton($morceaux[0]);
+        $octets = $this->octetsDeLAdresse($morceaux[0]);
 
-        if ($octets === false) {
+        if ($octets === null) {
             return null;
         }
 
         $longueur = strlen($octets) * 8;
         $prefixe = $morceaux[1] ?? (string) $longueur;
 
-        return ctype_digit($prefixe) && (int) $prefixe <= $longueur ? [$octets, (int) $prefixe] : null;
+        return $this->prefixeValide($prefixe, $longueur) ? [$octets, (int) $prefixe] : null;
+    }
+
+    private function octetsDeLAdresse(string $adresse): ?string
+    {
+        $octets = filter_var($adresse, FILTER_VALIDATE_IP) === false ? false : inet_pton($adresse);
+
+        return $octets === false ? null : $octets;
+    }
+
+    private function prefixeValide(string $prefixe, int $longueur): bool
+    {
+        return ctype_digit($prefixe) && (int) $prefixe <= $longueur;
     }
 
     /**
@@ -182,7 +207,8 @@ final class ProxysDeConfianceCheck extends Check
         }
 
         $reste = $bits % 8;
+        $decalage = 8 - $reste;
 
-        return $reste === 0 || (ord($octets[$entiers]) >> (8 - $reste)) === (ord($bloc[$entiers]) >> (8 - $reste));
+        return $reste === 0 || ord($octets[$entiers]) >> $decalage === ord($bloc[$entiers]) >> $decalage;
     }
 }
