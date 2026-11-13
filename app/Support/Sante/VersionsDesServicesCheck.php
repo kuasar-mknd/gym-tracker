@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support\Sante;
 
+use App\Support\MagasinDurable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
@@ -113,7 +113,7 @@ final class VersionsDesServicesCheck extends Check
         $ecarts = $this->ecarts($constats);
 
         if ($ecarts === []) {
-            Cache::forget(self::CLE_DE_L_ECART);
+            MagasinDurable::depot()->forget(self::CLE_DE_L_ECART);
 
             return $oranges === [] ? $result->ok() : $result->warning(implode(' ', $oranges));
         }
@@ -230,14 +230,14 @@ final class VersionsDesServicesCheck extends Check
      */
     private function depuis(string $ecart): Carbon
     {
-        $garde = Cache::get(self::CLE_DE_L_ECART);
+        $garde = MagasinDurable::depot()->get(self::CLE_DE_L_ECART);
 
         if (is_array($garde) && ($garde['ecart'] ?? null) === $ecart && is_string($garde['depuis'] ?? null)) {
             return Carbon::parse($garde['depuis']);
         }
 
         $maintenant = now();
-        Cache::forever(self::CLE_DE_L_ECART, ['ecart' => $ecart, 'depuis' => $maintenant->toIso8601String()]);
+        MagasinDurable::depot()->forever(self::CLE_DE_L_ECART, ['ecart' => $ecart, 'depuis' => $maintenant->toIso8601String()]);
 
         return $maintenant;
     }

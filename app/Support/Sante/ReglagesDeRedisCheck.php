@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Sante;
 
-use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Support\Facades\Cache;
+use App\Support\MagasinDurable;
 use Illuminate\Support\Str;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
@@ -112,7 +111,7 @@ final class ReglagesDeRedisCheck extends Check
             $passage[$role] = $jugements[$role]['compteurs'] ?? $passage[$role] ?? null;
         }
 
-        $this->magasin()->forever(self::CLE_DU_PASSAGE_PRECEDENT, array_filter($passage, fn (?array $instance): bool => $instance !== null));
+        MagasinDurable::depot()->forever(self::CLE_DU_PASSAGE_PRECEDENT, array_filter($passage, fn (?array $instance): bool => $instance !== null));
 
         return $this->resultat($jugements, $cacheAPart);
     }
@@ -567,17 +566,6 @@ final class ReglagesDeRedisCheck extends Check
     }
 
     /**
-     * Le magasin des compteurs : le durable quand il est posé, pour qu'un
-     * cache à part qui repart vide ne les efface pas.
-     */
-    private function magasin(): Repository
-    {
-        $nom = config('cache.limiter');
-
-        return Cache::store(is_string($nom) && $nom !== '' ? $nom : null);
-    }
-
-    /**
      * Les compteurs du passage précédent, relus du cache sans rien croire
      * de leur forme.
      *
@@ -585,7 +573,7 @@ final class ReglagesDeRedisCheck extends Check
      */
     private function passagePrecedent(): array
     {
-        $lu = $this->magasin()->get(self::CLE_DU_PASSAGE_PRECEDENT);
+        $lu = MagasinDurable::depot()->get(self::CLE_DU_PASSAGE_PRECEDENT);
         $passage = [];
 
         foreach (is_array($lu) ? $lu : [] as $role => $instance) {

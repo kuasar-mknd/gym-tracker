@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\JetonDeDiagnostic;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -78,12 +77,12 @@ final class JournalDuDiagnostic
         $precedente = $maintenant->copy()->subMinute()->format('Y-m-d\TH:i');
 
         $cleDuCompteur = 'diagnostic:refus:'.self::genreDuRefus($connu).':'.$minute;
-        Cache::add($cleDuCompteur, 0, self::SECONDES_DES_COMPTEURS);
-        Cache::increment($cleDuCompteur);
+        MagasinDurable::depot()->add($cleDuCompteur, 0, self::SECONDES_DES_COMPTEURS);
+        MagasinDurable::depot()->increment($cleDuCompteur);
 
-        $premierDeLaLigne = Cache::add('diagnostic:refus:jeton:'.($connu->identifiant ?? 'anonyme').':'.$minute, true, self::SECONDES_DES_COMPTEURS);
-        $premierDeLaSynthese = Cache::add('diagnostic:refus:synthese:'.$minute, true, self::SECONDES_DES_COMPTEURS);
-        $compte = Cache::get('diagnostic:refus:anonymes:'.$precedente);
+        $premierDeLaLigne = MagasinDurable::depot()->add('diagnostic:refus:jeton:'.($connu->identifiant ?? 'anonyme').':'.$minute, true, self::SECONDES_DES_COMPTEURS);
+        $premierDeLaSynthese = MagasinDurable::depot()->add('diagnostic:refus:synthese:'.$minute, true, self::SECONDES_DES_COMPTEURS);
+        $compte = MagasinDurable::depot()->get('diagnostic:refus:anonymes:'.$precedente);
 
         $this->ecrireLaLigne($premierDeLaLigne ? $connu : null, $cause, $adresse);
         $this->ecrireLaSynthese($premierDeLaSynthese, $precedente, $compte);

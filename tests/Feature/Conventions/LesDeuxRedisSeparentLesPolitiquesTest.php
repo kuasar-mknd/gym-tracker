@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Providers\SanteServiceProvider;
+use App\Support\MagasinDurable;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Checks\QueueCheck;
 use Spatie\Health\Checks\Checks\ScheduleCheck;
@@ -138,6 +140,29 @@ it('retombe sur une seule instance quand REDIS_CACHE_HOST et REDIS_CACHE_PORT ma
     expect(config('database.redis.cache.host'))->toBe(config('database.redis.default.host'))
         ->and(config('database.redis.cache.port'))->toBe(config('database.redis.default.port'));
 });
+
+it('range ce qui doit survivre au cache sur le magasin que nomme cache.limiter', function (): void {
+    config()->set('cache.stores.durable-essai', ['driver' => 'array']);
+    config()->set('cache.limiter', 'durable-essai');
+    MagasinDurable::depot()->put('durable:essai', 1, 60);
+
+    expect(Cache::store('durable-essai')->get('durable:essai'))->toBe(1)
+        ->and(Cache::store()->get('durable:essai'))->toBeNull();
+
+    config()->set('cache.limiter');
+
+    expect(MagasinDurable::depot()->get('durable:essai'))->toBeNull();
+});
+
+it('ne laisse ni les alertes, ni le journal de diagnostic, ni les compteurs et écarts de santé dans le cache évinçable', function (string $fichier): void {
+    expect(file_get_contents(base_path($fichier)))->not->toContain('Cache::');
+})->with([
+    'app/Support/AlertesDeDiagnostic.php',
+    'app/Support/JournalDuDiagnostic.php',
+    'app/Support/Sante/VersionsDesServicesCheck.php',
+    'app/Support/Sante/ReglagesDeRedisCheck.php',
+    'app/Support/Sante/AccesDeDiagnosticCheck.php',
+]);
 
 it('passe les battements de la file et du planificateur par le magasin durable, quand il est posé', function (?string $durable, string $attendu): void {
     config()->set('cache.limiter', $durable);

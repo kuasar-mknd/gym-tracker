@@ -80,6 +80,9 @@ return [
             'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
         ],
 
+        /**
+         * Sur l'instance des données : le vider emporte file, sessions et verrous.
+         */
         'redis-durable' => [
             'driver' => 'redis',
             'connection' => 'default',

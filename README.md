@@ -59,7 +59,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 5 963 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4, et 14 contre un vrai Redis à l'image de la production (groupe `redis`, étape à part) | bloquant par PR |
+| **Tests backend** | 5 963 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4, et 16 contre un vrai Redis à l'image de la production (groupe `redis`, étape à part) | bloquant par PR |
 | **Tests frontend** | 4 292 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 192 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -78,16 +78,17 @@ La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand 
 
 La base et Redis ne suivent pas `v1` : `db` et `redis` lancent l'étiquette de la composition (`redis:8.10.3-alpine`, une version exacte), et retélécharger l'image de l'application ne les change pas. **À chaque release, la pile reçoit la composition de son tag** (`docker-compose.prod.yml`), puis se met à jour ; « Versions des services », dans la page « Santé », dit ensuite si `db` et `redis` servent la version qu'elle attend. Une release qui monte `redis` se déploie par la marche « Redis » de `.ai/rules/dependencies.md`, à une heure creuse : application arrêtée, Redis arrêté, copie du volume de données de redis, mise à jour, vérification, et retour par la copie si besoin ; la version d'avant ne relit plus le volume une fois l'AOF réécrit par la nouvelle. Une bascule de MySQL a sa propre marche, dans le même fichier.
 
-**Deux instances de Redis (#2151).** Le cache ne partage plus l'éviction de la file, des sessions et des verrous. La bascule se fait en quatre commandes, dans cet ordre :
+**Deux instances de Redis (#2151).** Le cache ne partage plus l'éviction de la file, des sessions et des verrous. Deux conditions avant de s'en servir : l'image de la release, celle qui connaît `REDIS_CACHE_HOST` et `CACHE_DURABLE_STORE`, est publiée et son `APP_VERSION` vérifié (« Versions des conteneurs ») avant de poser la nouvelle composition ; et un retour en arrière remet la composition d'avant, jamais l'image seule : l'ancienne image avec la nouvelle composition range le cache sur la base 1 de `redis`, en `noeviction`, qui refuse alors les écritures dès 128 Mo.
+
+La bascule se fait en trois commandes, dans cet ordre :
 
 ```sh
 docker compose -f docker-compose.prod.yml exec app php artisan cache:clear
 docker compose -f docker-compose.prod.yml up -d -t 60
-docker compose -f docker-compose.prod.yml exec app php artisan cache:clear
 docker compose -f docker-compose.prod.yml exec redis redis-cli -n 1 FLUSHDB ASYNC
 ```
 
-La première vide l'ancien cache avant que `redis` ne passe en `noeviction` : sans elle, il recharge jusqu'à 128 Mo d'ancien cache depuis son AOF et refuse sessions et mises en file. La deuxième met la pile à jour. La troisième vide ce qu'un ancien conteneur a pu écrire pendant la bascule, la quatrième les quelques clés restées dans l'ancienne base 1 (jamais `FLUSHALL`, jamais sans `-n 1`). Les compteurs des limiteurs repartent de zéro, et « Planificateur » comme « File d'attente » peuvent passer au rouge une fois, le temps du battement suivant. Pour revenir en arrière, remettre la composition de la release d'avant puis `docker compose -f docker-compose.prod.yml up -d --remove-orphans` (sans `--remove-orphans`, `redis-cache` reste lancé) : sessions et file restent dans `redis_data`, le cache repart vide.
+La première vide l'ancien cache avant que `redis` ne passe en `noeviction` : sans elle, il recharge jusqu'à 128 Mo d'ancien cache depuis son AOF et refuse sessions et mises en file. La deuxième met la pile à jour ; dès lors `app` écrit son cache sur `redis-cache`. La troisième vide la base 1 de `redis`, où les anciens conteneurs ont pu écrire pendant la bascule (jamais `FLUSHALL`, jamais sans `-n 1`) ; elle seule la vide, un `cache:clear` lancé après la mise à jour ne vide que `redis-cache`. Les compteurs des limiteurs repartent de zéro, et « Planificateur » comme « File d'attente » peuvent passer au rouge une fois, le temps du battement suivant. Pour revenir en arrière, remettre la composition de la release d'avant puis `docker compose -f docker-compose.prod.yml up -d --remove-orphans` (sans `--remove-orphans`, `redis-cache` reste lancé) : sessions et file restent dans `redis_data`, le cache repart vide. Revenir ensuite à la nouvelle composition, c'est refaire ces trois commandes : le cache a rempli la base 1 entre-temps.
 
 **Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
 
