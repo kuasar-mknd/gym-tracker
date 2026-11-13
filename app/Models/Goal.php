@@ -125,11 +125,9 @@ class Goal extends Model
          * événement : aucune boucle.
          */
         $recalculer = function (self $goal): void {
-            $user = User::query()->find($goal->user_id);
-
-            if ($user instanceof User) {
-                SyncUserGoals::dispatch($user)->afterCommit();
-            }
+            User::query()->whereKey($goal->user_id)->get()->each(
+                fn (User $user) => SyncUserGoals::dispatch($user)->afterCommit(),
+            );
         };
 
         static::saved($recalculer);

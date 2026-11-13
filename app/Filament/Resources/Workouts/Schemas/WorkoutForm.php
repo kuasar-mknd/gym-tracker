@@ -13,10 +13,13 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Operation;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Str;
+use Livewire\Component as Livewire;
 
 class WorkoutForm
 {
@@ -79,8 +82,8 @@ class WorkoutForm
                 DateTimePicker::make('ended_at')->label('Fin')
                     ->minDate(DateQueSaColonneTient::date()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::date()->dernierInstant())
-                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new FinNePrecedePasLeDebut(fn (): mixed => $get('started_at'), $record))
-                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(fn (): mixed => $get('user_id'), $record))
+                    ->rule(fn (Component $component, Livewire $livewire, ?Workout $record): ValidationRule => new FinNePrecedePasLeDebut(fn (): mixed => data_get($livewire, Str::beforeLast((string) $component->getStatePath(), '.').'.started_at'), $record))
+                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(fn (): mixed => data_get($record, 'user_id', $get->integer('user_id', true)), $record))
                     ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => HeureDuChampDeSeance::avecLeDecalage($state, $record?->ended_at)),
                 Textarea::make('notes')->label('Notes')
                     ->maxLength(1000)

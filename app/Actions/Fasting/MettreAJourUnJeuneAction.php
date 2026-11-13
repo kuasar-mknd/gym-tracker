@@ -6,12 +6,11 @@ namespace App\Actions\Fasting;
 
 use App\Models\Fast;
 use App\Models\User;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
 final class MettreAJourUnJeuneAction
 {
-    public const string MESSAGE_REPRISE_AVEC_FIN = 'Reprendre un jeûne ne se fait pas avec une fin.';
-
     /**
      * Passer à `active` un jeûne qui ne l'est pas vaut démarrer un jeûne :
      * l'autre jeûne en cours du compte se cherche sous le même verrou que
@@ -24,40 +23,18 @@ final class MettreAJourUnJeuneAction
      */
     public function execute(User $user, Fast $fast, array $donnees): Fast
     {
-        $reprend = ($donnees['status'] ?? null) === 'active' && $fast->status !== 'active';
-        $pose = isset($donnees['end_time']);
+        $reprend = Arr::get($donnees, 'status') === 'active' && $fast->status !== 'active';
 
-        throw_if($reprend && $pose, ValidationException::withMessages(['end_time' => self::MESSAGE_REPRISE_AVEC_FIN]));
-
-        if (! $reprend && ! $pose) {
+        if (! $reprend && ! isset($donnees['end_time'])) {
             $fast->update($donnees);
 
             return $fast;
         }
 
-        DemarrerUnJeuneAction::sousLeVerrou($user, fn () => $pose
-            ? FinDUnJeune::poser($fast, $donnees)
-            : $this->reprendre($user, $fast, $donnees));
+        DemarrerUnJeuneAction::sousLeVerrou($user, fn () => $reprend
+            ? ReprendreUnJeune::reprendre($user, $fast, $donnees)
+            : FinDUnJeune::poser($fast, $donnees));
 
         return $fast;
-    }
-
-    /**
-     * @param  array<string, mixed>  $donnees
-     *
-     * @throws ValidationException
-     */
-    private function reprendre(User $user, Fast $fast, array $donnees): void
-    {
-        $autreEnCours = $user->fasts()
-            ->where('status', 'active')
-            ->whereKeyNot($fast->getKey())
-            ->exists();
-
-        if ($autreEnCours) {
-            throw ValidationException::withMessages(['base' => DemarrerUnJeuneAction::MESSAGE]);
-        }
-
-        $fast->update($donnees);
     }
 }

@@ -30,6 +30,9 @@ final class AucuneAutreSeanceEnCours implements ValidationRule
     /** @phpstan-ignore shipmonk.deadProperty.neverRead (lue par Laravel) */
     public bool $implicit = true;
 
+    /**
+     * @param  Closure(): mixed  $compteSaisi
+     */
     public function __construct(private readonly Closure $compteSaisi, private readonly ?Workout $seance)
     {
     }
@@ -39,7 +42,6 @@ final class AucuneAutreSeanceEnCours implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $compte = $this->seance instanceof Workout ? $this->seance->user_id : ($this->compteSaisi)();
         $dejaEnCours = $this->seance instanceof Workout && $this->seance->ended_at === null;
 
         if (filled($value) || $dejaEnCours) {
@@ -47,7 +49,7 @@ final class AucuneAutreSeanceEnCours implements ValidationRule
         }
 
         $autre = Workout::query()
-            ->where('user_id', is_numeric($compte) ? (int) $compte : 0)
+            ->where('user_id', ($this->compteSaisi)())
             ->whereNull('ended_at')
             ->when($this->seance, fn ($requete, Workout $seance) => $requete->whereKeyNot($seance->id))
             ->exists();

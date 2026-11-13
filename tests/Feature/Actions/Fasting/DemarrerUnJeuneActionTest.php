@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Fasting\DemarrerUnJeuneAction;
 use App\Actions\Fasting\MettreAJourUnJeuneAction;
+use App\Actions\Fasting\ReprendreUnJeune;
 use App\Models\Fast;
 use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
@@ -145,7 +146,7 @@ it('refuse une reprise qui arrive avec une fin, sans rien écrire', function ():
     $jeune = Fast::factory()->for($user)->create(['status' => 'completed', 'end_time' => $fin, 'start_time' => now()->subHours(20)]);
 
     expect(fn () => app(MettreAJourUnJeuneAction::class)->execute($user, $jeune, ['status' => 'active', 'end_time' => now()]))
-        ->toThrow(ValidationException::class, MettreAJourUnJeuneAction::MESSAGE_REPRISE_AVEC_FIN);
+        ->toThrow(ValidationException::class, ReprendreUnJeune::MESSAGE_AVEC_FIN);
 
     expect($jeune->fresh()?->status)->toBe('completed')
         ->and($jeune->fresh()?->end_time?->getTimestamp())->toBe($fin->getTimestamp());

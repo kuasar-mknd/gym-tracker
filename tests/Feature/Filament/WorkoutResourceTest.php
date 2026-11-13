@@ -468,6 +468,30 @@ it('refuse par une erreur de validation, et non par une erreur 500, une date ill
         ->assertHasFormErrors([$champ]);
 })->with(['started_at', 'ended_at']);
 
+it('dit que la fin n’existe pas quand Laravel la laisse passer, et se tait sur la fin quand c’est le début qui n’existe pas', function (): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.ended_at', '99999-01-01 00:00:00')
+        ->call('save')
+        ->assertHasFormErrors(['ended_at' => 'Cette date n’existe pas.']);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.ended_at', '2026-02-30 08:45:00')
+        ->call('save')
+        ->assertHasFormErrors(['ended_at']);
+
+    $fin = Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.started_at', '2026-02-30 07:30:00')
+        ->call('save')
+        ->assertHasFormErrors(['started_at']);
+
+    expect($fin->errors()->get('data.ended_at'))->toBe([]);
+});
+
 it('refuse toujours une fin qui précède le début dans l’heure répétée', function (Closure $enregistrer): void {
     $fuseau = config()->string('app.timezone');
     $seance = Workout::factory()->create([

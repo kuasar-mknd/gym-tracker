@@ -24,6 +24,6 @@ final class FinDUnJeune
     {
         $termine = $fast->refresh()->status !== 'active' && $fast->end_time !== null;
 
-        $fast->update($termine ? array_diff_key($donnees, array_flip(['end_time', 'status'])) : $donnees);
+        $fast->update(array_diff_key($donnees, array_filter(['end_time' => $termine, 'status' => $termine])));
     }
 }

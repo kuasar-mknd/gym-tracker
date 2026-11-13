@@ -408,6 +408,8 @@ describe('le renouvellement quotidien', function (): void {
         $casse = Goal::factory()->create(['user_id' => $autreCasse->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 2, 'updated_at' => $avant]);
         DB::table('goals')->where('id', $casse->id)->update(['period' => 'WEEK ']);
 
+        Queue::fake();
+
         expect(Artisan::call('objectifs:renouveler-la-semaine'))->toBe(0);
 
         Queue::assertPushed(SyncUserGoals::class, 3);
