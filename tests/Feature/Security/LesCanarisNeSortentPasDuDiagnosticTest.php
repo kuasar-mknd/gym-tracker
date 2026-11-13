@@ -289,3 +289,37 @@ it('ne laisse aucun canari dans la pile d’un job dont le message imite une pil
         ->and(CanarisDuDiagnostic::trouvesDans((string) json_encode($structure, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))->toBe([])
         ->and(data_get($structure, 'details.donnees.echec_de_job.pile.0.fichier'))->toStartWith('vendor/laravel/framework/');
 });
+
+/*
+ * Un secret derrière un signe égal ou un nom de secret, des identifiants
+ * d'URL sans hôte pointé, un courriel en entité HTML ou après une barre
+ * oblique inverse : chacun écrit dans une erreur navigateur, lue par son
+ * détail sous `TexteBrut`.
+ */
+it('ne laisse aucun canari détourné dans le détail d’une erreur navigateur', function (): void {
+    [$message, $attendu] = CanarisDuDiagnostic::messageDetourne();
+
+    actingAs(User::factory()->create())
+        ->postJson(route('erreurs-navigateur.store'), [
+            'type' => 'error',
+            'message' => $message,
+            'source' => 'https://gym.example.org/build/assets/app-abc.js',
+            'ligne' => 1,
+            'colonne' => 2,
+            'pile' => "Error: {$message}\n    at app-abc.js:1:2",
+            'url' => 'https://gym.example.org/seances',
+        ])
+        ->assertNoContent();
+
+    $maintenant = now();
+    $fenetre = FenetreDeDiagnostic::jours(30, $maintenant);
+    $resume = new ResumeDuDiagnostic()(PorteeDeDiagnostic::cases(), $fenetre)->enveloppe['donnees'];
+    $details = array_map(
+        static fn (mixed $groupe): ?array => new ProjectionDesErreursNavigateur()->detail(ValeurLue::texte(data_get($groupe, 'empreinte')), $fenetre, true),
+        (array) data_get($resume, 'erreurs_navigateur.groupes'),
+    );
+    $json = new EnveloppeDeDiagnostic()(['details' => $details], $maintenant)->json();
+
+    expect($json)->toContain($attendu)
+        ->and(CanarisDuDiagnostic::trouvesDans($json))->toBe([]);
+});
