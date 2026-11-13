@@ -7,7 +7,7 @@ namespace App\Services\Stats;
 use App\Models\User;
 
 /**
- * Invalide les statistiques en cache d'un utilisateur. Les trois méthodes
+ * Invalide les statistiques en cache d'un utilisateur. Les deux méthodes
  * de séance ne font plus qu'une chose, tirer une version neuve des séances
  * (un ULID, `VersionDeCache`, #2151) : un renommage recalcule aussi le volume
  * hebdomadaire à la prochaine lecture, ce qui coûte une requête, contre une
@@ -15,11 +15,6 @@ use App\Models\User;
  */
 final class StatsCacheManager
 {
-    public function clearWorkoutMetadataStats(User $user): void
-    {
-        ClesDeStats::invaliderSeances($user);
-    }
-
     public function clearVolumeStats(User $user): void
     {
         ClesDeStats::invaliderSeances($user);

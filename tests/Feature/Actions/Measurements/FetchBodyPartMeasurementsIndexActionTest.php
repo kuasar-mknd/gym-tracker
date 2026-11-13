@@ -198,3 +198,17 @@ it('arrondit l ecart au centieme', function (): void {
      */
     expect($mesure['diff'])->toBe(3.25)->toBeFloat();
 });
+
+it('nomme une partie proposée sans interroger la base', function (): void {
+    $user = User::factory()->create();
+    $action = new App\Actions\Measurements\FetchBodyPartMeasurementShowAction();
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $libelle = $action->libelle($user, 'Waist');
+    $requetes = DB::getQueryLog();
+    DB::disableQueryLog();
+
+    expect($libelle)->toBe('Taille')
+        ->and($requetes)->toBe([]);
+});

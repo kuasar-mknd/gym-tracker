@@ -78,8 +78,8 @@ class FetchWorkoutTemplatesAction
                 'lignes' => array_map(static fn (array $ligne): array => [
                     'exercise' => [
                         'id' => $ligne['exercise_id'],
-                        'name' => $ligne['modele']->exercise?->name,
-                        'type' => $ligne['modele']->exercise?->type,
+                        'name' => $ligne['modele']->exercise->name,
+                        'type' => $ligne['modele']->exercise->type,
                     ],
                     'order' => $ligne['order'],
                     'cle' => $ligne['cle'],
