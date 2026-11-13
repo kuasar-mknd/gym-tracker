@@ -139,6 +139,7 @@ final class FetchDashboardDataAction
         return $user->personalRecords()
             ->with('exercise')
             ->latest('achieved_at')
+            ->latest('id')
             ->take(2)
             ->get();
     }
