@@ -144,13 +144,14 @@ final class PersonalRecordService
      */
     private const string CLASSEMENT = <<<'SQL'
         select * from (
-            select sets.id, sets.weight, sets.reps, coalesce(workout_lines.workout_started_at, (select workouts.started_at from workouts where workouts.id = workout_lines.workout_id)) as obtenu,
+            select sets.id, sets.weight, sets.reps, workouts.started_at as obtenu,
                    workout_lines.workout_id,
                    row_number() over (order by sets.weight desc, sets.id asc) as rang_max_weight,
                    row_number() over (order by (case when sets.reps <= 1 then sets.weight else sets.weight * (1 + sets.reps / 30) end) desc, sets.id asc) as rang_max_1rm,
                    row_number() over (order by sets.weight * sets.reps desc, sets.id asc) as rang_max_volume_set
               from sets
               join workout_lines on workout_lines.id = sets.workout_line_id
+              join workouts on workouts.id = workout_lines.workout_id
              where workout_lines.user_id = ?
                and workout_lines.exercise_id = ?
                and sets.is_warmup = 0

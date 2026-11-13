@@ -140,11 +140,11 @@ it('suit le début de la séance quand on le modifie, et ne touche pas les recor
     expect(datesDesRecords('workout_id', $seance->id))->toBe(array_fill(0, 3, '2026-11-09 18:45:00'));
 });
 
-it('date la reconstruction du début de la séance quand la ligne a perdu sa copie', function (): void {
+it('date la reconstruction du début de la séance quand la ligne a perdu sa copie ou la tient périmée', function (): void {
     Carbon::setTestNow('2026-11-13 18:00:00');
     [$user, $exercice, $seance, $ligne] = sceneDateDesRecords('2026-11-10 09:30:00');
     serieDatee($ligne, 100, 5);
-    DB::table('workout_lines')->where('id', $ligne->id)->update(['workout_started_at' => null]);
+    DB::table('workout_lines')->where('id', $ligne->id)->update(['workout_started_at' => '2020-01-01 00:00:00']);
 
     app(PersonalRecordService::class)->recompute($user, $exercice->id);
 
