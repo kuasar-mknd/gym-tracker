@@ -43,6 +43,9 @@ return [
         \SlevomatCodingStandard\Sniffs\Classes\ForbiddenPublicPropertySniff::class => [
             'exclude' => [
                 'app/Models/Casts/InstantAvecSonDecalage.php',
+                // Laravel lit `implicit` en propriété publique d'une règle
+                // (`Validator::isImplicit()`) : c'est ce qui la fait jouer sur un champ vide.
+                'app/Rules/AucuneAutreSeanceEnCours.php',
             ],
         ],
         // Une surcharge de `Store::setId()`, que Laravel nomme ainsi.
