@@ -156,7 +156,7 @@ const updatePreferences = () => {
                 <div class="space-y-3">
                     <GlassToggle
                         v-model="form.preferences.personal_record"
-                        label="Records Personnels (PR)"
+                        label="Records personnels (PR)"
                         description="Être prévenu quand tu bats un record."
                     />
 
@@ -176,7 +176,7 @@ const updatePreferences = () => {
                 <div class="space-y-4">
                     <GlassToggle
                         v-model="form.preferences.training_reminder"
-                        label="Rappels d'Entraînement"
+                        label="Rappels d'entraînement"
                         description="Un rappel à 18 h, les jours choisis, si aucune séance n'a été faite dans la journée."
                     />
 

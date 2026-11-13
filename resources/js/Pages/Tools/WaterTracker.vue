@@ -108,7 +108,7 @@
                             type="number"
                             label="Quantité personnalisée"
                             hide-label
-                            placeholder="Quantité personnalisée"
+                            placeholder="Ex. 330"
                             class="grow"
                         >
                             <template #suffix>
@@ -116,9 +116,9 @@
                             </template>
                         </GlassInput>
                         <GlassButton
-                            @click="addWater(customAmount)"
-                            :disabled="!customAmount"
-                            :loading="form.processing"
+                            @click="addWater(customAmount, true)"
+                            :disabled="!customAmount || form.processing"
+                            :loading="form.processing && saisiePersonnaliseeEnvoyee"
                             aria-label="Ajouter la quantité saisie"
                             class="h-12 !px-4"
                             variant="primary"
@@ -183,7 +183,7 @@
             :ouvert="suppressionDemandee"
             titre="Supprimer cette prise ?"
             :description="
-                entreeASupprimer ? `${entier(entreeASupprimer.amount)} ml seront retires de ton total du jour.` : ''
+                entreeASupprimer ? `${entier(entreeASupprimer.amount)} ml seront retirés de ton total du jour.` : ''
             "
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
@@ -249,13 +249,19 @@ const dashOffset = computed(() => {
     return circumference - (circumference * percentage.value) / 100
 })
 
-const addWater = (amount) => {
+/** Seul le bouton de la quantité saisie tourne : toucher « 250 ml » ne l'anime pas. */
+const saisiePersonnaliseeEnvoyee = ref(false)
+
+const addWater = (amount, personnalisee = false) => {
     if (!amount) return
 
     form.amount = parseInt(amount)
     form.consumed_at = new Date().toISOString()
     form.post(route('tools.water.store'), {
         preserveScroll: true,
+        onStart: () => {
+            saisiePersonnaliseeEnvoyee.value = personnalisee
+        },
         onSuccess: () => {
             customAmount.value = ''
             form.reset()

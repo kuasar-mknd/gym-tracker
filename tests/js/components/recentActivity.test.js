@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
+import { CIBLE, hauteurDuRendu } from '../conventions/ciblesTactiles'
 import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 /**
@@ -74,6 +75,15 @@ const mountActivity = async (props) => {
 
 /** The one card standing for a session, as the reader sees it. */
 const cardFor = (wrapper, index = 0) => wrapper.findAll('a[href^="/workouts.show"]')[index]
+
+describe('« Voir tout »', () => {
+    it('offre au doigt une zone de 44 px de haut', async () => {
+        const wrapper = await mountActivity({ recentWorkouts: [session()] })
+        const lien = wrapper.get('a[href="/workouts.index"]')
+
+        expect(hauteurDuRendu(lien.element)).toBeGreaterThanOrEqual(CIBLE)
+    })
+})
 
 describe('quand rien n’a encore été fait', () => {
     it('propose de commencer plutôt que d’afficher une liste vide', async () => {

@@ -55,6 +55,21 @@ describe('WeightEvolutionCard headline', () => {
     })
 })
 
+describe('WeightEvolutionCard sans pesée sur la période', () => {
+    it('ne dit pas « pas encore de données » quand un poids est affiché', async () => {
+        const card = await mountCard({ latestWeight: '45', weightHistory: [] })
+
+        expect(card.text()).toContain('Aucune pesée sur cette période')
+        expect(card.text()).not.toContain('Pas encore de données de poids')
+    })
+
+    it('garde « pas encore de données » quand rien n’a jamais été pesé', async () => {
+        const card = await mountCard({ latestWeight: null, weightHistory: [] })
+
+        expect(card.text()).toContain('Pas encore de données de poids')
+    })
+})
+
 describe('WeightEvolutionCard trend badge', () => {
     it('points down, in green, when the weight dropped', async () => {
         const card = await mountCard({ latestWeight: '82.5', weightChange: -1.2 })

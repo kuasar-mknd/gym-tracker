@@ -276,7 +276,7 @@ describe('le mois du calendrier', () => {
 
         expect(enTeteDuCalendrier()).toEqual(['Avril 2026'])
         expect(document.querySelector('[dusk="calendar-day-2026-04-10"]')?.getAttribute('aria-label')).toBe(
-            '10 Avril 2026, séance',
+            '10 avril 2026, 1 séance',
         )
         // Le bouton n'a pas été remonté : le focus du clavier ne le quitte pas.
         expect(document.querySelector('button[aria-label="Mois suivant"]')).toBe(suivant)

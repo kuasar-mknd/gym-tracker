@@ -53,7 +53,12 @@ defineProps({
                     </div>
                 </template>
                 <WeightHistoryChart v-if="weightHistory?.length > 0" compact :data="weightHistory" />
-                <GlassEmptyState v-else taille="ligne" icon="monitor_weight" title="Pas encore de données de poids" />
+                <GlassEmptyState
+                    v-else
+                    taille="ligne"
+                    icon="monitor_weight"
+                    :title="latestWeight ? 'Aucune pesée sur cette période' : 'Pas encore de données de poids'"
+                />
             </Deferred>
         </div>
 

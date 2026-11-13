@@ -72,7 +72,9 @@ describe('BodyMetricsGrid', () => {
     })
 
     it('pointe la flèche vers le haut sur une progression', async () => {
-        const wrapper = await mountGrid({ monthlyComparison: { current_volume: 1000, percentage: 12 } })
+        const wrapper = await mountGrid({
+            monthlyComparison: { current_volume: 1000, previous_volume: 900, percentage: 12 },
+        })
 
         expect(wrapper.findAll('span.material-symbols-outlined').at(-1).text()).toBe('trending_up')
         expect(trendBadge(wrapper).text().replace(/\s+/g, ' ')).toContain('+12 %')
@@ -80,7 +82,9 @@ describe('BodyMetricsGrid', () => {
     })
 
     it('pointe la flèche vers le bas sur un recul, sans signe plus', async () => {
-        const wrapper = await mountGrid({ monthlyComparison: { current_volume: 1000, percentage: -8 } })
+        const wrapper = await mountGrid({
+            monthlyComparison: { current_volume: 1000, previous_volume: 1100, percentage: -8 },
+        })
 
         expect(wrapper.findAll('span.material-symbols-outlined').at(-1).text()).toBe('trending_down')
         const badge = trendBadge(wrapper).text().replace(/\s+/g, ' ')
@@ -89,14 +93,31 @@ describe('BodyMetricsGrid', () => {
         expect(trendBadge(wrapper).classes()).toContain('text-trend-down')
     })
 
-    it('traite un mois identique comme une progression nulle, pas comme un recul', async () => {
-        // La borne : `> 0` au lieu de `>= 0` peindrait « 0 % » en rouge avec une
-        // flèche descendante.
-        const wrapper = await mountGrid({ monthlyComparison: { current_volume: 1000, percentage: 0 } })
+    it('traite un mois identique comme une variation nulle : sans flèche, sans couleur de tendance', async () => {
+        const wrapper = await mountGrid({
+            monthlyComparison: { current_volume: 1000, previous_volume: 1000, percentage: 0 },
+        })
 
-        expect(wrapper.findAll('span.material-symbols-outlined').at(-1).text()).toBe('trending_up')
         expect(trendBadge(wrapper).text().replace(/\s+/g, ' ')).toContain('0 %')
-        expect(trendBadge(wrapper).classes()).toContain('text-trend-up')
+        expect(trendBadge(wrapper).find('span.material-symbols-outlined').exists()).toBe(false)
+        expect(trendBadge(wrapper).classes()).not.toContain('text-trend-up')
+        expect(trendBadge(wrapper).classes()).not.toContain('text-trend-down')
+    })
+
+    it('ne dit pas « 0 % » quand le mois précédent est vide : rien à comparer', async () => {
+        const wrapper = await mountGrid({
+            monthlyComparison: { current_volume: 1000, previous_volume: 0, percentage: null },
+        })
+
+        expect(trendBadge(wrapper).exists()).toBe(false)
+    })
+
+    it('garde la pastille sur une seule ligne', async () => {
+        const wrapper = await mountGrid({
+            monthlyComparison: { current_volume: 1000, previous_volume: 900, percentage: 12 },
+        })
+
+        expect(trendBadge(wrapper).classes()).toContain('whitespace-nowrap')
     })
 
     it('annonce l’absence d’historique plutôt qu’un graphique vide', async () => {

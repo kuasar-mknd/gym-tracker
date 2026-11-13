@@ -12,6 +12,12 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Modifié
 
 ### Corrigé
+- **Les notifications lues restent lisibles** : la carte lue n'est plus grisée par l'opacité ni sa date écrite à 30 % ; l'état se lit à une pastille (et à « Non lue » pour un lecteur d'écran) sur les notifications non lues.
+- **Les zones tactiles de l'interrupteur du profil, du poids de l'accueil et de « Voir tout » d'Activité récente atteignent 44 px de haut** : un pseudo-élément déborde la zone sans changer l'aspect.
+- **Calendrier : « Aujourd'hui » ne tronque plus le titre, le détail du jour touché défile dans la vue, et le nom d'un jour s'écrit « 26 août 2026, 2 séances »** : le bouton passe de l'en-tête à la barre de mois, le détail s'amène au-dessus de la barre du bas, le mois prend sa minuscule et le nombre de séances s'accorde.
+- **Page Eau : « retirés », une invite que « ML » ne coupe plus, et le spinner du bouton « + » ne tourne que pour la quantité saisie** : toucher « 250 ml » n'anime plus le bouton voisin.
+- **Accueil et statistiques plus lisibles à 375 px** : la valeur d'un record et son unité ne se séparent plus et un nom long se tronque avec son libellé complet ; la pastille du volume du mois tient sur une ligne et disparaît sans mois précédent à comparer (sans flèche à 0 %) ; le poids corporel sans pesée sur la période ne dit plus « Pas encore de données » ; une seule pesée invite à une deuxième au lieu de tracer un point invisible.
+- **Libellés en casse française et durée du bandeau en fr-CH** : « Gérer tes objectifs », « Modifier le profil », « Rappels d'entraînement », « Records personnels », « Poids max », « 1RM estimé » ; la durée d'une séance en cours s'écrit « 1 899 h 13 min » (milliers fr-CH), « 45 min 07 s » sous l'heure.
 
 ### Optimisé
 
