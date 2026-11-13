@@ -9,6 +9,7 @@ use App\Enums\GoalType;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Goal;
 use App\Rules\CibleAuMoinsEgaleAuDepart;
+use App\Rules\CibleEnSeancesParSemaine;
 use App\Rules\DateQueSaColonneTient;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -79,14 +80,8 @@ class GoalStoreRequest extends FormRequest
                     $this->input('type') !== GoalType::Measurement->value,
                     [new CibleAuMoinsEgaleAuDepart($this->input('start_value'))],
                 ),
-                /*
-                 * « N séances par semaine » : un nombre entier de séances, d'une
-                 * au moins (zéro serait atteint d'emblée) à deux par jour.
-                 */
-                Rule::when(
-                    $this->estHebdomadaire(),
-                    ['integer', 'min:1', 'max:'.Goal::SEANCES_PAR_SEMAINE_MAX],
-                ),
+                // « N séances par semaine » : un entier de 1 à 14.
+                Rule::when($this->estHebdomadaire(), [new CibleEnSeancesParSemaine()]),
             ],
             /*
              * Absente du corps, la période ne se valide pas : la création

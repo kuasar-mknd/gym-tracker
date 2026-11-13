@@ -669,6 +669,7 @@ describe('GoalForm', () => {
             expect(fieldLabels(wrapper)).not.toContain('Valeur Cible')
             expect(fieldLabels(wrapper)).not.toContain('Valeur de Départ (Optionnel)')
             expect(fieldNamed(wrapper, 'Séances par semaine').attributes('min')).toBe('1')
+            expect(fieldNamed(wrapper, 'Séances par semaine').attributes('max')).toBe('14')
 
             wrapper.unmount()
         })

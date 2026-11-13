@@ -181,6 +181,7 @@ watch(
                     type="number"
                     :step="estHebdomadaire ? 1 : 0.1"
                     :min="estHebdomadaire ? 1 : undefined"
+                    :max="estHebdomadaire ? 14 : undefined"
                     required
                     :error="form.errors.target_value"
                 />
