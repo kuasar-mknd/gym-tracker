@@ -403,9 +403,11 @@ it('décode les entités HTML, jusqu’à trois fois, avant de masquer', functio
 
 /*
  * Les identifiants d'une URL vont jusqu'au dernier `@` de leur mot, quel que
- * soit ce que le mot de passe contient (`/`, `?`, `#`), brut ou écrit en
- * `%xx` : le décodage passe avant le masque. Un blanc décodé (`%20`) n'arrête
- * pas non plus le masque ; un blanc écrit tel quel finit le mot.
+ * soit ce que le mot de passe contient (`/`, `?`, `#`, `@`), brut ou écrit en
+ * `%xx`, et même quand il porte un blanc écrit autrement qu'en clair (`%20`,
+ * `%C2%A0`, `&#32;`, `&nbsp;`…). Ne sont pas couverts : un blanc écrit en clair
+ * (il finit le mot), un deux-points encodé (`%3A`) entre le compte et le mot
+ * de passe, un mot de passe de plus de 256 caractères.
  */
 it('masque les identifiants d’une URL dont le mot de passe porte un caractère de chemin', function (string $motDePasse): void {
     $message = sprintf('connexion à %s://%s:%s@%s', 'amqp', 'compte', $motDePasse, 'broker:5672/0');
@@ -419,6 +421,13 @@ it('masque les identifiants d’une URL dont le mot de passe porte un caractère
     'un dièse encodé' => ['pa%23ssword'],
     'un blanc encodé' => ['pa%20ssword'],
     'un blanc encodé deux fois' => ['pa%2520ssword'],
+    'un espace insécable encodé' => ['pa%C2%A0ssword'],
+    'un espace cadratin encodé' => ['pa%E2%80%83ssword'],
+    'un blanc en entité décimale' => ['pa&#32;ssword'],
+    'un blanc en entité décimale sans point-virgule' => ['pa&#32ssword'],
+    'une tabulation en entité' => ['pa&#9;ssword'],
+    'un blanc en entité hexadécimale' => ['pa&#x20;ssword'],
+    'un espace insécable en entité nommée' => ['pa&nbsp;ssword'],
     'une tabulation encodée' => ['pa%09ssword'],
     'un arobase' => ['pa@ssword'],
 ]);
@@ -428,6 +437,36 @@ it('arrête les identifiants d’une URL au blanc, à la guillemet et à la fin 
 
     expect(expurgeLeTexte($url."\nécrire à jean@example.org")->texte)->toBe("amqp://[identifiants]@broker/0\nécrire à [courriel]")
         ->and(expurgeLeTexte('"'.$url.'" puis jean@example.org')->texte)->toBe('"amqp://[identifiants]@broker/0" puis [courriel]');
+});
+
+/*
+ * Un octet décodé qui ne forme pas d'UTF-8 valide est remplacé : le reste du
+ * texte se lit, et le champ n'est pas `[illisible]`.
+ */
+it('remplace un octet décodé invalide sans rendre le champ illisible', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'un octet isolé' => ['texte %FF fin', 'texte ? fin'],
+    'un é en Latin-1 dans une requête' => ['GET /recherche?q=%E9t%E9 404', 'GET /recherche?[requête] 404'],
+    'un é en Latin-1 dans un chemin' => ['chemin /tmp/caf%E9.txt', 'chemin [chemin]?[requête]'],
+    'un octet isolé décodé au deuxième passage' => ['texte %25FF fin', 'texte ? fin'],
+    'un octet isolé dans des identifiants d’URL' => ['amqp://compte:pa%FFss@broker/0 fin', 'amqp://[identifiants]@broker/0 fin'],
+]);
+
+it('remplace un début de caractère que la borne de 8 Kio coupe', function (): void {
+    $texte = expurgeLeTexte(str_repeat('a', 8_183).'%C3%A9%C3', 20_000)->texte;
+
+    expect($texte)->toBe(str_repeat('a', 8_183).'é?');
+});
+
+/*
+ * Deux ambiguïtés acceptées : un `@` dans le chemin d'une URL à port se lit
+ * comme la fin d'identifiants, et un nom de secret emporte ce qui suit sa
+ * valeur jusqu'au blanc.
+ */
+it('accepte de trop masquer quand la forme est ambiguë', function (): void {
+    expect(expurgeLeTexte('https://example.org:8443/a@b')->texte)->toBe('https://[identifiants]@b')
+        ->and(expurgeLeTexte('x password=abcdefgh&user=jean fin')->texte)->toBe('x password=[secret] fin');
 });
 
 /*
@@ -550,6 +589,9 @@ it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $ad
     'des noms de secret entre apostrophes sans fin' => ["password => '".str_repeat('a', 8_200)],
     'des noms de secret échappés' => [str_repeat('key\\":\\"', 1_024)],
     'des entités sans point-virgule' => [str_repeat('&#64', 2_048)],
+    'des identifiants d’URL à blancs encodés en UTF-8' => [str_repeat('a://b:%C2%A0', 700)],
+    'des identifiants d’URL à blancs en entité' => [str_repeat('a://b:&#32;', 746)],
+    'des octets invalides décodés' => [str_repeat('%FF%E9', 1_366)],
     'des entités' => [str_repeat('&amp;', 1_639)],
     'des entités d’arobase' => [str_repeat('&#64;', 1_639)],
     'des barres obliques inverses' => [str_repeat('\\', 8_192)],

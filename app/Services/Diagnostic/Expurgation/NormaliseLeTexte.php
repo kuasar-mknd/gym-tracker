@@ -29,6 +29,11 @@ final class NormaliseLeTexte
      */
     private const string IDENTIFIANTS_D_URL = '/(?<=:\/\/)[^\s\/?#@"\'<>:]{0,64}:[^\s"\'<>]{1,256}@/u';
 
+    /**
+     * Un caractère écrit en `%xx` (un à quatre octets d'UTF-8) ou en entité.
+     */
+    private const string BLANC_ECRIT = '/%[0-7][0-9a-f]|%[c-d][0-9a-f]%[89ab][0-9a-f]|%e[0-9a-f](?:%[89ab][0-9a-f]){2}|%f[0-4](?:%[89ab][0-9a-f]){3}|&#\d{1,7};|&#x[0-9a-f]{1,6};|&[a-z][a-z0-9]{1,31};/i';
+
     public function __invoke(string $texte): string
     {
         return $this->nfkc($this->decoder($this->decoder($this->decoder($this->nfkc($texte)))));
@@ -37,7 +42,7 @@ final class NormaliseLeTexte
     private function decoder(string $texte): string
     {
         return html_entity_decode(
-            rawurldecode($this->sansBlancEncode($this->entitesNumeriquesFermees($texte))),
+            mb_scrub(rawurldecode($this->sansBlancEncode($this->entitesNumeriquesFermees($texte))), 'UTF-8'),
             ENT_QUOTES | ENT_HTML5,
             'UTF-8',
         );
@@ -57,20 +62,32 @@ final class NormaliseLeTexte
     }
 
     /**
-     * Un blanc écrit en `%xx` dans les identifiants d'une URL, décodé,
-     * finirait le mot que le masque lit : il devient un `_`, le mot de passe
-     * étant masqué en entier.
+     * Un blanc écrit autrement qu'en clair dans les identifiants d'une URL
+     * (`%20`, `%C2%A0`, `&#32;`, `&nbsp;`), que le décodage ou la
+     * normalisation ferait finir le mot que le masque lit, devient un `_` : le
+     * mot de passe est masqué en entier.
      */
     private function sansBlancEncode(string $texte): string
     {
         $remplace = preg_replace_callback(
             self::IDENTIFIANTS_D_URL,
-            static fn (array $identifiants): string => preg_replace('/%(?:20|09|0[a-d])/i', '%5F', $identifiants[0]) ?? '',
+            fn (array $identifiants): string => Motifs::remplacerParFonction(
+                self::BLANC_ECRIT,
+                fn (array $ecrit): string => $this->estUnBlanc($ecrit[0]) ? '_' : $ecrit[0],
+                $identifiants[0],
+            ),
             $texte,
         );
         Motifs::verifierLeDernierAppel();
 
         return $remplace ?? '';
+    }
+
+    private function estUnBlanc(string $ecrit): bool
+    {
+        $lu = $this->nfkc(html_entity_decode(mb_scrub(rawurldecode($ecrit), 'UTF-8'), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        return Motifs::trouver('/^[\p{Z}\s]+$/u', $lu) !== null;
     }
 
     private function nfkc(string $texte): string
