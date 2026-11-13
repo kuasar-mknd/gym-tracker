@@ -59,3 +59,6 @@ Réglé le 2026-10-18 (#2088). `AppServiceProvider::register()` remplace le gest
 
 ## Le gestionnaire des journaux est le nôtre : le canal de dernier recours masque les adresses
 Réglé le 2026-11-12 (#2258). `AppServiceProvider::register()` remplace le gestionnaire des journaux de Laravel par `App\Support\Journaux\GestionnaireDesJournaux`, par `extend('log')` comme celui des courriels : Laravel bâtit le canal `emergency` à la main, sans `tap`, et la sous-classe y pose `JournalSansAdresse` (`.ai/rules/readme.md`). Ne pas rendre la classe `final` : la façade `Log` la moque dans les tests.
+
+## « Proxys de confiance » juge la liste résolue, jamais la variable, et seulement en production
+Réglé le 2026-11-13. Le défaut de `TRUSTED_PROXIES` (boucle locale et trois plages privées) reste, pour qu'une installation qui ne règle rien garde HTTPS derrière son proxy inverse ; `ProxysDeConfianceCheck` (`app/Support/Sante`, enregistré dans `SanteServiceProvider`) lit `config('trustedproxy.proxies')`, donc le défaut compris, et passe à l'orange dès qu'une entrée couvre plus qu'un /24 (IPv4) ou un /64 (IPv6), `*` compris. Hors production, il rend vert sans rien juger. Un contrôle qui juge la variable plutôt que la liste laisserait le défaut, justement le cas à signaler, au vert.
