@@ -145,9 +145,10 @@ watch(
                     v-model="form.period"
                     label="Période"
                     :options="periodOptions"
+                    :described-by="estHebdomadaire ? 'aide-periode' : ''"
                     :error="form.errors.period"
                 />
-                <p v-if="estHebdomadaire" class="text-text-muted -mt-2 text-xs">
+                <p v-if="estHebdomadaire" id="aide-periode" class="text-text-muted -mt-2 text-xs">
                     Du lundi au dimanche, remis à zéro chaque lundi.
                 </p>
 

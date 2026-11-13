@@ -25,7 +25,7 @@ defineOptions({
     inheritAttrs: false,
 })
 
-defineProps({
+const props = defineProps({
     modelValue: {
         type: [String, Number],
         default: '',
@@ -69,6 +69,12 @@ defineProps({
         type: String,
         default: '',
     },
+
+    /** L'id d'un texte d'aide posé par l'appelant, lu avec l'erreur par `aria-describedby`. */
+    describedBy: {
+        type: String,
+        default: '',
+    },
     size: {
         type: String,
         default: 'md', // sm | md | lg
@@ -91,6 +97,8 @@ const selectId = computed(() => {
 const errorId = computed(() => {
     return `${selectId.value}-error`
 })
+
+const describedByIds = computed(() => [props.describedBy, props.error ? errorId.value : ''].filter(Boolean).join(' '))
 
 const sizeClasses = {
     // text-base (16px) is deliberate even at this compact height: iOS auto-zooms
@@ -125,7 +133,7 @@ const isRequired = computed(() => {
                 @change="$emit('update:modelValue', $event.target.value)"
                 :disabled="disabled"
                 :aria-invalid="!!error"
-                :aria-describedby="error ? errorId : undefined"
+                :aria-describedby="describedByIds || undefined"
                 :class="[
                     'glass-input w-full appearance-none pr-10',
                     sizeClasses[size],

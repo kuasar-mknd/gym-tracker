@@ -729,6 +729,8 @@ describe('GoalForm', () => {
     it('explique la semaine sous la période plutôt que dans le libellé de l’option', () => {
         const wrapper = mountGoalForm(goalForm({ type: 'frequency', period: 'week' }))
         expect(wrapper.text()).toContain('Du lundi au dimanche')
+        expect(fieldNamed(wrapper, 'Période').attributes('aria-describedby')).toBe('aide-periode')
+        expect(wrapper.get('#aide-periode').text()).toContain('Du lundi au dimanche')
 
         const total = mountGoalForm(goalForm({ type: 'frequency', period: 'total' }))
         expect(total.text()).not.toContain('Du lundi au dimanche')

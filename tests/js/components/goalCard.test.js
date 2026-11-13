@@ -229,6 +229,9 @@ describe('GoalCard — figures', () => {
         })
 
         expect(statTile(wrapper, 'Cible')).toBe('Cible 10 séances')
+        const unite = wrapper.findAll('.grid > div')[1].get('span').classes()
+        expect(unite).not.toContain('block')
+        expect(unite).not.toContain('leading-tight')
         expect(wrapper.text()).toContain('COMPLÉTÉ')
     })
 

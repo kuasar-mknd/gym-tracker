@@ -128,6 +128,23 @@ describe('GlassSelect', () => {
         expect(wrapper.get(`#${select.attributes('aria-describedby')}`).text()).toContain('Catégorie obligatoire')
     })
 
+    it('lit l’aide et l’erreur ensemble, l’une ou l’autre, ou aucune', () => {
+        const les = (props) =>
+            mountSelect({ options: ['a'], ...props })
+                .find('select')
+                .attributes('aria-describedby')
+        const erreur = (wrapper) => wrapper.find('select').attributes('aria-describedby')
+
+        const both = mountSelect({ options: ['a'], describedBy: 'aide', error: 'Non' })
+        expect(erreur(both).split(' ')).toHaveLength(2)
+        expect(erreur(both).split(' ')[0]).toBe('aide')
+        expect(both.get(`#${erreur(both).split(' ')[1]}`).text()).toContain('Non')
+
+        expect(les({ describedBy: 'aide' })).toBe('aide')
+        expect(les({ error: 'Non' })).toMatch(/-error$/)
+        expect(les({})).toBeUndefined()
+    })
+
     it('does not claim to be invalid when there is no error', () => {
         const wrapper = mountSelect({ options: ['a'] })
 
