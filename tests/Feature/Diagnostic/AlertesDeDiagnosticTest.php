@@ -258,7 +258,10 @@ it('envoie la création après le verrou et la transaction de la création', fun
 it('ne fait jamais échouer la requête valide quand le cache tombe', function (string $methode): void {
     Exceptions::fake();
     $jeton = JetonDeDiagnostic::factory()->revoque()->create();
-    Cache::shouldReceive('add', 'increment', 'put', 'forget')->andThrow(new RuntimeException('cache injoignable'));
+    $injoignable = Mockery::mock(Repository::class);
+    $injoignable->shouldReceive('add', 'increment', 'put', 'forget')->andThrow(new RuntimeException('cache injoignable'));
+    config()->set('cache.limiter', 'durable-essai');
+    Cache::shouldReceive('store')->with('durable-essai')->andReturn($injoignable);
 
     $methode === 'jetonInvalidePresente' ? resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton, now()) : resolve(AlertesDeDiagnostic::class)->{$methode}($jeton);
 
@@ -528,5 +531,6 @@ it('garde le singulier pour un seul jeton révoqué, et chaque raison a son libe
     [RaisonDeRevocationDuJeton::Interrupteur, 'accès de diagnostic fermé'],
     [RaisonDeRevocationDuJeton::MotDePasseChange, 'mot de passe changé'],
     [RaisonDeRevocationDuJeton::DoubleAuthentificationRetiree, 'double authentification retirée'],
+    [RaisonDeRevocationDuJeton::DoubleAuthentificationChangee, 'double authentification changée'],
     [RaisonDeRevocationDuJeton::AdministrateurSupprime, 'administrateur supprimé'],
 ]);

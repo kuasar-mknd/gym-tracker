@@ -346,6 +346,32 @@ describe('la création et la modification', function (): void {
         expect($objectif->refresh()->period)->toBe(GoalPeriod::Total);
     });
 
+    it('tient les bornes d\'un objectif par semaine modifié sans période, et son départ à zéro', function (mixed $cible): void {
+        $compte = User::factory()->create();
+        $objectif = hebdoObjectif($compte, cible: 3);
+        $corps = hebdoCorps(['target_value' => $cible, 'start_value' => 5]);
+        unset($corps['period']);
+
+        actingAs($compte)->put(route('goals.update', $objectif), $corps)
+            ->assertSessionHasErrors('target_value');
+
+        expect($objectif->refresh()->target_value)->toBe(3.0)
+            ->and($objectif->period)->toBe(GoalPeriod::Week);
+    })->with(['quinze' => [15], 'une demi-séance' => [2.5], 'zéro' => [0]]);
+
+    it('ramène à zéro le départ d\'un objectif par semaine modifié sans période', function (): void {
+        $compte = User::factory()->create();
+        $objectif = hebdoObjectif($compte, cible: 3);
+        $corps = hebdoCorps(['target_value' => 4, 'start_value' => 5]);
+        unset($corps['period']);
+
+        actingAs($compte)->put(route('goals.update', $objectif), $corps)->assertSessionHasNoErrors();
+
+        expect($objectif->refresh()->period)->toBe(GoalPeriod::Week)
+            ->and($objectif->target_value)->toBe(4.0)
+            ->and($objectif->start_value)->toBe(0.0);
+    });
+
     it('passe la période à la page de modification et à la liste', function (): void {
         $compte = User::factory()->create();
         $objectif = hebdoObjectif($compte);

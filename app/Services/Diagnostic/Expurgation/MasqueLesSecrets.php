@@ -8,7 +8,10 @@ namespace App\Services\Diagnostic\Expurgation;
  * Septième étape de l'expurgation : ce qui ressemble à un secret devient
  * `[secret]`.
  *
- * `Bearer …`, le jeton de diagnostic (`gtdiag_…`), les JWT, les suites de 40
+ * `Bearer …`, le jeton de diagnostic (`gtdiag_…`), la valeur qui suit un nom
+ * de secret (`key`, `token`, `password`… avant `:`, `=` ou `=>`, quelle que soit
+ * sa forme : un secret en base64 à barres obliques n'en a aucune), les JWT,
+ * les suites de 40
  * caractères ou plus en base64 : sans `/`, quand elles mêlent minuscules,
  * majuscules et chiffres, comme un secret tiré au hasard et à la différence
  * d'un nom de migration ; avec `/`, seulement quand elles portent un `+` ou
@@ -47,6 +50,15 @@ final class MasqueLesSecrets
     public const string MOTIF_DU_JETON = '/gtdiag_[a-z0-9]{12}_[A-Za-z0-9]{48}/';
 
     /**
+     * La valeur qui suit un nom de secret (`key`, `secret`, `token`,
+     * `jeton`, `password`, `passwd`, `pwd`, `signature`, précédé de 32
+     * caractères de mot au plus, `AWS_SECRET_ACCESS_KEY`), après `:` ou `=`,
+     * entre guillemets ou non : le nom désigne un secret que sa forme ne
+     * désigne pas.
+     */
+    private const string MOTIF_D_UN_NOM_DE_SECRET = '/(?<![A-Za-z0-9])[A-Za-z0-9_-]{0,32}(?:key|secret|token|jeton|password|passwd|pwd|signature)\\\\?["\']?\]?\s{0,4}(?:=>|[:=])\s{0,4}\\\\?(?:"\K[^"\n]{8,4096}|\'\K[^\'\n]{8,4096}|\K[^\s"\'<>]{8,4096})/iu';
+
+    /**
      * Chaque motif et sa marque, dans l'ordre où ils s'appliquent.
      *
      * @var array<string, string>
@@ -54,9 +66,10 @@ final class MasqueLesSecrets
     private const array MOTIFS = [
         self::MOTIF_BEARER => 'Bearer [secret]',
         self::MOTIF_DU_JETON => '[secret]',
+        self::MOTIF_D_UN_NOM_DE_SECRET => '[secret]',
         '/(?<![\w-])eyJ[\w-]{2,4096}\.[\w-]{2,4096}\.[\w-]{0,4096}/' => '[secret]',
-        '/(?<![\w+\/=-])(?=[\w+-]{0,4096}[a-z])(?=[\w+-]{0,4096}[A-Z])(?=[\w+-]{0,4096}\d)[\w+-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
-        '/(?<![\w+\/=-])(?=[\w+\/-]{0,4096}(?:\+|=))[\w+\/-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
+        '/(?<![\w+\/-])(?=[\w+-]{0,4096}[a-z])(?=[\w+-]{0,4096}[A-Z])(?=[\w+-]{0,4096}\d)[\w+-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
+        '/(?<![\w+\/-])(?=[\w+\/-]{0,4096}(?:\+|=))[\w+\/-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
         '/(?<![0-9A-Za-z])(?:0x)?[0-9a-f]{32,4096}(?![0-9A-Za-z])/i' => '[secret]',
     ];
 

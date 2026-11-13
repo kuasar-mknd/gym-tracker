@@ -12,6 +12,7 @@ use App\Support\AlertesDeDiagnostic;
 use App\Support\JournalDuDiagnostic;
 use Carbon\CarbonInterface;
 use Closure;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -32,8 +33,8 @@ use Throwable;
  * factice quand l'identifiant est inconnu (ces trois lectures se font avant
  * l'interrupteur, pour qu'une requête bien formée coûte la même lecture
  * qu'il soit coupé ou non) ; l'interrupteur `DIAGNOSTIC_ENABLED` ; HTTPS en
- * production ; ni révoqué ni expiré ; un créateur qui existe et garde la
- * capacité ; la route déclarée dans `PORTEES` ; les deux limiteurs du jeton ;
+ * production ; ni révoqué ni expiré ; un créateur qui existe, garde la
+ * capacité et garde sa double authentification ; la route déclarée dans `PORTEES` ; les deux limiteurs du jeton ;
  * enfin la portée, que la route déclare dans `PORTEES` et qui se lit par son
  * nom : un 403 compte donc comme un appel.
  *
@@ -119,10 +120,13 @@ class ExigeUnJetonDeDiagnostic
         $jeton = $ligne ?? throw new LogicException('Un jeton reconnu a une ligne.');
         $this->verifierLaVieDuJeton($request, $jeton, $maintenant);
 
-        $createurAutorise = $this->lire($request, static function () use ($jeton): bool {
+        $createurAutorise = $this->lire($request, function () use ($jeton): bool {
             $createur = $jeton->createur;
 
-            return $createur instanceof Admin && $createur->estSuperAdministrateur() && $createur->can('view-diagnostic');
+            return $createur instanceof Admin
+                && $createur->estSuperAdministrateur()
+                && $createur->can('view-diagnostic')
+                && $this->aUnSecretLisible($createur);
         });
 
         if (! $createurAutorise) {
@@ -144,6 +148,19 @@ class ExigeUnJetonDeDiagnostic
         }
 
         return $this->sansCache($reponse);
+    }
+
+    /**
+     * Un secret absent ou que la clé ne déchiffre plus n'est pas une base
+     * qui ne répond pas : le refus garde la cause `createur`.
+     */
+    private function aUnSecretLisible(Admin $createur): bool
+    {
+        try {
+            return filled($createur->getAppAuthenticationSecret());
+        } catch (DecryptException) {
+            return false;
+        }
     }
 
     /**

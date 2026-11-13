@@ -33,14 +33,6 @@ return [
     'database_connection' => env('WEBPUSH_DB_CONNECTION', env('DB_CONNECTION', 'mysql')),
 
     /**
-     * The Guzzle client options used by Minishlink\WebPush.
-     */
-    'client_options' => [
-        'timeout' => 10,
-        'connect_timeout' => 5,
-    ],
-
-    /**
      * The automatic padding in bytes used by Minishlink\WebPush.
      * Set to false to support Firefox Android with v1 endpoint.
      */

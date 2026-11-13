@@ -59,6 +59,7 @@ function routeFilesUnJeton(array $portees = ['files']): array
 {
     $admin = FilamentAdminPanel::admin(['view-diagnostic']);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
+    $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
     $identifiant = Str::lower(Str::random(JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT));
     $secret = Str::random(JetonDeDiagnostic::LONGUEUR_DU_SECRET);
 

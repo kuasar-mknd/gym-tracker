@@ -48,8 +48,10 @@ class RenouvelerLesObjectifsHebdomadaires extends Command
 
         /*
          * Les objectifs par semaine qui gardent une valeur ou une date
-         * d'atteinte et que rien n'a recalculés depuis le lundi : un recalcul
-         * qui change quelque chose avance `updated_at`. La période se compare
+         * d'atteinte et dont la ligne n'a pas été écrite depuis le lundi : un
+         * recalcul qui change une valeur avance `updated_at`, un recalcul qui
+         * n'en change aucune ne l'écrit pas, et l'objectif est alors relancé
+         * chaque jour, sans effet, jusqu'à la semaine suivante. La période se compare
          * octet par octet, comme le cast qui la relit (`.ai/rules/database.md`).
          */
         $comptes = Goal::query()

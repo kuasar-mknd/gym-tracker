@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Diagnostic\Expurgation;
 
 /**
- * Sixième étape de l'expurgation : les courriels, les adresses IP, les noms
+ * Sixième étape de l'expurgation : les identifiants d'une URL (ce qui sépare
+ * `://` du dernier `@` du mot, mot de passe de chemin compris, même devant un hôte
+ * sans point), les courriels (une barre
+ * oblique inverse devant l'arobase n'y change rien), les adresses IP, les noms
  * d'hôte, les chaînes de requête et les fragments remplacés par une marque.
  *
  * Une adresse IPv4 se reconnaît à ses quatre nombres, quel que soit son
@@ -55,7 +58,9 @@ final class MasqueLesCoordonnees
      * @var array<string, string>
      */
     private const array MOTIFS = [
-        '/[\w.+-]{1,64}@(?:\[[^\]\n]{1,64}\]|(?:[\w-]{1,63}\.){1,8}[\w-]{2,24})/u' => '[courriel]',
+        '/(?<=:\/\/)[^\s\/?#@"\'<>:]{0,64}:[^\s"\'<>]{1,256}@/u' => '[identifiants]@',
+        '/(?<=:\/\/)(?:[^\s\/?#\[\]]|\[[^\]\n]{1,64}\]){1,512}@/u' => '[identifiants]@',
+        '/[\w.+-]{1,64}\\\\?@(?:\[[^\]\n]{1,64}\]|(?:[\w-]{1,63}\.){1,8}[\w-]{2,24})/u' => '[courriel]',
         '/(?<![\w:])(?:[0-9a-f]{1,4}:){1,7}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?(?::'.self::ADRESSE_IPV4.')?'.self::APRES_UNE_ADRESSE
             .'|(?<![\w:])::[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6}(?::'.self::ADRESSE_IPV4.')?'.self::APRES_UNE_ADRESSE
             .'|(?<![\w:])(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}'.self::APRES_UNE_ADRESSE.'/i' => '[adresse IP]',
