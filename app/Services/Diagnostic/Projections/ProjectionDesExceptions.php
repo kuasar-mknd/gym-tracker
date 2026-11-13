@@ -101,7 +101,7 @@ final class ProjectionDesExceptions
     public function occurrences(int $identifiant, ?int $avant, FenetreDeDiagnostic $fenetre): ?array
     {
         $depuis = $fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS);
-        $groupe = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'type', 'file', 'line'])
+        $groupe = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['type', 'file', 'line'])
             ->where('id', $identifiant)
             ->where('created_at', '>=', $depuis)
             ->first();
@@ -136,7 +136,6 @@ final class ProjectionDesExceptions
             ->where('created_at', '>=', $depuis)
             ->orderByDesc('id')
             ->offset(LecturesBornees::LIGNES_AU_PLUS - 1)
-            ->limit(1)
             ->first();
 
         return $dernieres instanceof stdClass ? ValeurLue::entier($dernieres->id) : null;
@@ -173,7 +172,6 @@ final class ProjectionDesExceptions
             ->where('line', $groupe->line)
             ->where('created_at', '>=', $depuis)
             ->where('id', '<', $plancher)
-            ->limit(1)
             ->first() instanceof stdClass;
     }
 
@@ -228,7 +226,7 @@ final class ProjectionDesExceptions
             ->pluck('route_context', 'id');
 
         return $groupes
-            ->map(static fn (array $groupe): array => [...$groupe, 'route' => NomDeRoute::du($routes->get(ValeurLue::entier($groupe['dernier_id']) ?? 0))])
+            ->map(static fn (array $groupe): array => [...$groupe, 'route' => NomDeRoute::du($routes->get(ValeurLue::entier($groupe['dernier_id'])))])
             ->values()
             ->all();
     }

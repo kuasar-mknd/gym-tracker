@@ -62,7 +62,7 @@ final class ProjectionDesTachesPlanifiees
 
         return [
             'taches' => $montrees
-                ->map(fn (TachePlanifiee $tache): array => $this->tache($tache, $fenetre, $parTache->get(ValeurLue::entier($tache->getKey()) ?? 0, new Collection()), self::ECHECS_DU_RESUME, false))
+                ->map(fn (TachePlanifiee $tache): array => $this->tache($tache, $fenetre, $parTache->get(ValeurLue::entier($tache->getKey()), new Collection()), self::ECHECS_DU_RESUME, false))
                 ->values()
                 ->all(),
             ...LecturesBornees::bilan($echecs, $taches),
@@ -181,7 +181,7 @@ final class ProjectionDesTachesPlanifiees
             ->keyBy('id');
 
         foreach ($montres as $echec) {
-            $mesure = $mesures->get(ValeurLue::entier($echec->id) ?? 0);
+            $mesure = $mesures->get(ValeurLue::entier($echec->id));
             $echec->duree = $mesure->duree ?? null;
             $echec->code_de_sortie = $mesure->code_de_sortie ?? null;
         }
@@ -209,25 +209,24 @@ final class ProjectionDesTachesPlanifiees
      * que l'expurgation en garderait, coupés en base en octets.
      *
      * @param  array<array-key, mixed>  $identifiants
-     * @return array<array-key, mixed>
+     * @return Collection<array-key, mixed>
      */
-    private function messages(array $identifiants): array
+    private function messages(array $identifiants): Collection
     {
         return LecturesBornees::requete(MonitoredScheduledTaskLogItem::query()->toBase(), ['id'])
             ->selectRaw("substring(cast(json_unquote(json_extract(meta, '$.failure_message')) as binary), 1, ?) as message", [ExpurgeLeTexte::OCTETS_LUS])
             ->whereIn('id', $identifiants)
-            ->pluck('message', 'id')
-            ->all();
+            ->pluck('message', 'id');
     }
 
     /**
      * Un échec : sa date, sa durée, son code de sortie et, quand les
      * messages sont lus, son message.
      *
-     * @param  array<array-key, mixed>|null  $messages
+     * @param  Collection<array-key, mixed>|null  $messages
      * @return array<string, mixed>
      */
-    private static function echec(stdClass $ligne, ?array $messages): array
+    private static function echec(stdClass $ligne, ?Collection $messages): array
     {
         return [
             'le' => ValeurLue::instant($ligne->created_at),
@@ -235,7 +234,7 @@ final class ProjectionDesTachesPlanifiees
             'code_de_sortie' => ValeurLue::entier($ligne->code_de_sortie),
             ...match ($messages) {
                 null => [],
-                default => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::morceau($messages[ValeurLue::entier($ligne->id) ?? 0] ?? null), self::BUDGET_DU_MESSAGE)]],
+                default => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::morceau($messages->get(ValeurLue::entier($ligne->id))), self::BUDGET_DU_MESSAGE)]],
             },
         ];
     }

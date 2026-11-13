@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Diagnostic\Projections;
 
+use App\Services\Diagnostic\ValeurLue;
+
 /**
  * Une colonne JSON lue sans modèle : le tableau qu'elle contient, ou un
  * tableau vide si elle est nulle, illisible ou n'en contient pas.
@@ -15,7 +17,7 @@ final class JsonLu
      */
     public static function tableau(mixed $json): array
     {
-        $decode = json_decode(is_string($json) ? $json : '', true);
+        $decode = json_decode(ValeurLue::texte($json), true);
 
         return is_array($decode) ? $decode : [];
     }

@@ -7,6 +7,7 @@ use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\ProjectionDesExceptions;
 use App\Services\Diagnostic\TexteNonFiable;
+use App\Services\Diagnostic\ValeurLue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -207,4 +208,61 @@ it('rend une méthode inventée ou un code hors forme comme une valeur nulle', f
 
     expect(array_intersect_key($detail ?? [], array_flip(['methode', 'code', 'route', 'gabarit'])))
         ->toBe(['code' => null, 'methode' => null, 'route' => 'inconnue.du.routeur', 'gabarit' => null]);
+});
+
+it('ne confond pas deux groupes qui ne diffèrent que par leur type, leur fichier ou leur ligne', function (): void {
+    exceptionsDiagnosticEnregistrer();
+    exceptionsDiagnosticEnregistrer(['type' => LogicException::class]);
+    exceptionsDiagnosticEnregistrer(['file' => base_path('app/Models/Workout.php')]);
+    exceptionsDiagnosticEnregistrer(['line' => 13]);
+
+    $groupes = new ProjectionDesExceptions()->liste(exceptionsDiagnosticFenetre())['groupes'];
+
+    expect($groupes)->toHaveCount(4)
+        ->and(array_column($groupes, 'nombre'))->toBe([1, 1, 1, 1]);
+});
+
+/*
+ * Une page compte 25 occurrences : le curseur n'existe qu'à la vingt-sixième,
+ * et la lecture en demande une de plus que la page pour le savoir.
+ */
+it('ne donne de curseur suivant qu’au-delà de 25 occurrences', function (int $occurrences, ?int $rang): void {
+    $identifiants = array_map(static fn (int $ligne): int => exceptionsDiagnosticEnregistrer()->id, range(1, $occurrences));
+    $requetes = [];
+    DB::listen(static function ($requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
+    $page = new ProjectionDesExceptions()->occurrences($identifiants[0], null, exceptionsDiagnosticFenetre());
+
+    expect($page['suivant'] ?? null)->toBe($rang === null ? null : $identifiants[$occurrences - 1 - $rang])
+        ->and(array_column($page['occurrences'] ?? [], 'id'))->toBe(array_slice(array_reverse($identifiants), 0, 25))
+        ->and(array_values(array_filter($requetes, static fn (string $sql): bool => str_contains($sql, 'limit 26'))))->toHaveCount(1);
+})->with([
+    'vingt-cinq' => [25, null],
+    'vingt-six' => [26, 24],
+]);
+
+/*
+ * Le plancher est la 5 000e ligne la plus récente de la fenêtre : une
+ * occurrence plus ancienne n'est pas lue, et la page le dit.
+ */
+it('ne remonte pas, pour les occurrences, au-delà de la 5 000e ligne la plus récente', function (): void {
+    $ligne = [
+        'type' => RuntimeException::class, 'code' => '0', 'message' => 'boum', 'file' => base_path('app/Models/User.php'), 'line' => 7,
+        'trace' => '[]', 'method' => 'GET', 'path' => '/', 'created_at' => now(), 'updated_at' => now(),
+    ];
+    DB::table('filament_exceptions_table')->insert(array_fill(0, 4, $ligne));
+    $autres = array_fill(0, 4_998, [...$ligne, 'line' => 8]);
+
+    foreach (array_chunk($autres, 1_000) as $lot) {
+        DB::table('filament_exceptions_table')->insert($lot);
+    }
+
+    $identifiants = DB::table('filament_exceptions_table')->where('line', 7)->orderBy('id')->pluck('id')->all();
+    $page = new ProjectionDesExceptions()->occurrences(ValeurLue::entier($identifiants[3]) ?? 0, null, exceptionsDiagnosticFenetre());
+
+    expect(array_column($page['occurrences'] ?? [], 'id'))->toBe([$identifiants[3], $identifiants[2]])
+        ->and($page['echantillon'] ?? null)->toBeTrue()
+        ->and($page['suivant'] ?? null)->toBeNull();
 });

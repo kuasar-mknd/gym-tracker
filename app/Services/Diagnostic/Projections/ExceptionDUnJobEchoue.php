@@ -123,7 +123,7 @@ final class ExceptionDUnJobEchoue
 
     public static function message(mixed $texte): string
     {
-        $tete = explode("\nStack trace:", is_string($texte) ? $texte : '', 2)[0];
+        $tete = explode("\nStack trace:", ValeurLue::texte($texte))[0];
 
         return self::sansLEndroit(self::morceau(self::APRES_LA_CLASSE, $tete, 'message') ?? $tete);
     }
@@ -158,7 +158,7 @@ final class ExceptionDUnJobEchoue
 
     private static function morceau(string $motif, mixed $texte, int|string $groupe): ?string
     {
-        $trouve = preg_match($motif, is_string($texte) ? $texte : '', $morceaux);
+        $trouve = preg_match($motif, ValeurLue::texte($texte), $morceaux);
 
         return match ($trouve) {
             1 => $morceaux[$groupe] ?? null,
