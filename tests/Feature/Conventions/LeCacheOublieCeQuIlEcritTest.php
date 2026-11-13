@@ -8,6 +8,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\StatsCacheManager;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
@@ -147,4 +148,42 @@ it('n’oublie aucune clé de statistique qu’il a fait écrire quand la versio
         $ecrites,
         count($nouvelles)
     ));
+});
+
+/*
+ * Une séance écrite ou supprimée hors des actions de l'application, comme le
+ * fait le panneau, ne passait par aucun gestionnaire : `Workout::booted()`
+ * renouvelle seul les versions, et le compte peut ne plus exister quand il le
+ * fait.
+ */
+it('n’oublie aucune clé de statistique qu’il a fait écrire quand une séance est supprimée sans le gestionnaire', function (): void {
+    $user = compteAvecSeancePourLesStatistiques();
+
+    Cache::flush();
+
+    faireEcrireLesStatistiquesDe($user);
+    $ecrites = count(clesDeStatistiques());
+    $avantRelecture = clesDeStatistiques();
+
+    $user->workouts()->firstOrFail()->delete();
+
+    faireEcrireLesStatistiquesDe($user);
+
+    $nouvelles = array_values(array_diff(clesDeStatistiques(), $avantRelecture));
+    expect(count($nouvelles))->toBe($ecrites, sprintf(
+        "%d clés écrites avant la suppression, %d clés neuves après : un lecteur relit une entrée d'avant la suppression",
+        $ecrites,
+        count($nouvelles)
+    ));
+});
+
+it('renouvelle la version des séances d’un compte par son identifiant, compte disparu compris', function (): void {
+    $user = User::factory()->create();
+    $avant = ClesDeStats::seances($user, 'sonde');
+    $identifiant = $user->id;
+
+    $user->delete();
+    ClesDeStats::invaliderSeancesDuCompte($identifiant);
+
+    expect(ClesDeStats::seances($user, 'sonde'))->not->toBe($avant);
 });

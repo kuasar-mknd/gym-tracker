@@ -32,7 +32,16 @@ final class ClesDeStats
 
     public static function invaliderSeances(User $user): void
     {
-        VersionDeCache::renouveler("stats-version.seances.{$user->id}");
+        self::invaliderSeancesDuCompte($user->id);
+    }
+
+    /**
+     * Le même renouvellement, par l'identifiant : le compte peut ne plus
+     * exister quand le rappel d'après validation s'exécute.
+     */
+    public static function invaliderSeancesDuCompte(int $idUtilisateur): void
+    {
+        VersionDeCache::renouveler("stats-version.seances.{$idUtilisateur}");
     }
 
     public static function invaliderMesures(User $user): void

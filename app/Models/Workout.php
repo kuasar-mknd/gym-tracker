@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Casts\InstantAvecSonDecalage;
+use App\Services\RecommendedValuesService;
+use App\Services\Stats\ClesDeStats;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -315,6 +317,22 @@ class Workout extends Model
             ->format(InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE);
     }
 
+    /**
+     * Renouvelle les versions des statistiques de séances et des valeurs
+     * proposées du compte après la validation de la transaction de l'écrivain,
+     * ou son annulation : `ActiveWorkoutService::oublierApresLaTransaction()`.
+     */
+    private static function renouvelerLesVersionsApresLaTransaction(int $idUtilisateur): void
+    {
+        $renouveler = static function () use ($idUtilisateur): void {
+            ClesDeStats::invaliderSeancesDuCompte($idUtilisateur);
+            app(RecommendedValuesService::class)->invaliderPour($idUtilisateur);
+        };
+
+        DB::afterCommit($renouveler);
+        DB::afterRollBack($renouveler);
+    }
+
     #[\Override]
     protected static function booted(): void
     {
@@ -372,6 +390,20 @@ class Workout extends Model
 
         static::saved($clearCache);
         static::deleted($clearCache);
+
+        static::created(function (self $workout): void {
+            self::renouvelerLesVersionsApresLaTransaction($workout->user_id);
+        });
+
+        static::updated(function (self $workout): void {
+            if ($workout->wasChanged(['started_at', 'ended_at', 'name'])) {
+                self::renouvelerLesVersionsApresLaTransaction($workout->user_id);
+            }
+        });
+
+        static::deleted(function (self $workout): void {
+            self::renouvelerLesVersionsApresLaTransaction($workout->user_id);
+        });
 
         static::deleting(function (self $workout): void {
             /*

@@ -8,6 +8,9 @@ use App\Filament\Resources\Workouts\Pages\ListWorkouts;
 use App\Filament\Resources\Workouts\WorkoutResource;
 use App\Models\User;
 use App\Models\Workout;
+use App\Services\RecommendedValuesService;
+use App\Services\Stats\ClesDeStats;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -269,3 +272,73 @@ it('lit une heure changée avec le décalage enregistré quand il redonne cette 
     'contre-épreuve : début changé avant l’heure répétée, où le décalage enregistré va encore' => [false, ['started_at' => '2026-10-25 01:40:00'], '2026-10-24T23:40:00.000000Z', '2026-10-25T00:50:00.000000Z'],
     'contre-épreuve : fin changée après l’heure répétée, où le décalage enregistré ne va plus' => [false, ['ended_at' => '2026-10-25 03:20:00'], '2026-10-25T00:30:00.000000Z', '2026-10-25T02:20:00.000000Z'],
 ]);
+
+/*
+ * Le panneau écrit les séances sans passer par les actions de l'application, qui
+ * seules renouvelaient les versions de cache des statistiques et des valeurs
+ * proposées : une séance créée, changée ou supprimée au panneau laissait les
+ * chiffres d'avant jusqu'à leur échéance. La suppression, qui efface lignes et
+ * séries en base sans événement de série, ne renouvelait jamais les valeurs
+ * proposées. `Workout::booted()` les renouvelle après la transaction de
+ * l'écrivain. Les clefs se relisent par leurs lecteurs au moment de
+ * l'assertion, jamais depuis une variable remplie avant l'écriture.
+ */
+
+/**
+ * Les deux clefs que lit l'application pour ce compte, à cet instant.
+ *
+ * @return array{string, string}
+ */
+function clesDeCacheDuCompte(User $compte): array
+{
+    return [
+        ClesDeStats::seances($compte, 'sonde'),
+        RecommendedValuesService::cleDeCache($compte->id, 1, 1),
+    ];
+}
+
+it('renouvelle les versions du cache à la création, à la modification et à la suppression d’une séance du panneau', function (string $geste): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create([
+        'user_id' => $compte->getKey(),
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+    $avant = clesDeCacheDuCompte($compte);
+
+    match ($geste) {
+        'création' => Livewire::test(CreateWorkout::class)
+            ->fillForm(['user_id' => $compte->getKey(), 'started_at' => '2026-03-01 10:00:00'])
+            ->call('create')
+            ->assertHasNoFormErrors(),
+        'page de modification' => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+            ->fillForm(['ended_at' => '2026-02-10 09:15:00'])
+            ->call('save')
+            ->assertHasNoFormErrors(),
+        'action de la table' => Livewire::test(ListWorkouts::class)
+            ->callAction(TestAction::make('edit')->table($seance), ['started_at' => '2026-02-09 07:30:00'])
+            ->assertHasNoFormErrors(),
+        'suppression' => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+            ->callAction(DeleteAction::class),
+        'suppression groupée' => Livewire::test(ListWorkouts::class)
+            ->callTableBulkAction('delete', [$seance]),
+    };
+
+    $apres = clesDeCacheDuCompte($compte);
+
+    expect($apres[0])->not->toBe($avant[0])
+        ->and($apres[1])->not->toBe($avant[1]);
+})->with(['création', 'page de modification', 'action de la table', 'suppression', 'suppression groupée']);
+
+it('garde les versions du cache quand l’enregistrement ne change ni les dates, ni le nom', function (): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->getKey()]);
+    $avant = clesDeCacheDuCompte($compte);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->fillForm(['notes' => 'Une note de plus.'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect(clesDeCacheDuCompte($compte))->toBe($avant);
+});
