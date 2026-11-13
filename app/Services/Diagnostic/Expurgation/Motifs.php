@@ -21,6 +21,17 @@ final class Motifs
     }
 
     /**
+     * Le texte dont chaque occurrence du motif est remplacée par ce que rend
+     * la fonction.
+     *
+     * @param  callable(array<array-key, string>): string  $remplacement
+     */
+    public static function remplacerParFonction(string $motif, callable $remplacement, string $texte): string
+    {
+        return self::verifier(preg_replace_callback($motif, $remplacement, $texte));
+    }
+
+    /**
      * Les morceaux de la première occurrence du motif, `null` s'il n'y en a
      * pas.
      *
