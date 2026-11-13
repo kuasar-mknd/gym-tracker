@@ -103,7 +103,7 @@ const statusColor = computed(() => {
                 </div>
             </div>
 
-            <div class="text-right">
+            <div class="shrink-0 text-right whitespace-nowrap">
                 <div class="font-display text-lg font-black italic drop-shadow-sm" :class="statusColor">
                     {{ pourcentage(progress, 0) }}
                 </div>
@@ -162,9 +162,11 @@ const statusColor = computed(() => {
                     <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Cible</p>
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ nombre(goal.target_value) }}
-                        <span class="text-text-muted text-2xs font-bold not-italic">{{
-                            uniteDeLaCible(goal.target_value)
-                        }}</span>
+                        <span
+                            class="text-text-muted text-2xs font-bold not-italic"
+                            :class="parSemaine ? 'block leading-tight' : ''"
+                            >{{ uniteDeLaCible(goal.target_value) }}</span
+                        >
                     </p>
                 </div>
             </div>
