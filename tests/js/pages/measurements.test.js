@@ -350,6 +350,17 @@ describe('Measurements/Index charts', () => {
         expect(occurrences(wrapper, 'Aucune donnée')).toBe(1)
     })
 
+    it('ne trace pas une courbe d’un seul point : il invite à une deuxième pesée', async () => {
+        const wrapper = await mountPage(MeasurementsIndex, {
+            measurements: MEASUREMENTS,
+            bodyStats: { weightHistory: [BODY_STATS.weightHistory[0]], bodyFatHistory: [] },
+        })
+
+        expect(wrapper.findComponent(WeightHistoryChart).exists()).toBe(false)
+        expect(occurrences(wrapper, 'Ajoute une deuxième pesée pour voir l’évolution'.replace('’', "'"))).toBe(1)
+        expect(occurrences(wrapper, 'Aucune donnée')).toBe(1)
+    })
+
     it('holds both cards while the deferred stats are still on their way', async () => {
         // No bodyStats prop at all: the page falls back to two empty series.
         const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })

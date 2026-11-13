@@ -11,7 +11,7 @@
 import { Link } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { compte } from '@/Utils/nombre'
+import { compte, entier } from '@/Utils/nombre'
 import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
 
 const props = defineProps({
@@ -57,7 +57,8 @@ const updateElapsed = () => {
     const h = Math.floor(diff / 3600)
     const m = Math.floor((diff % 3600) / 60)
     const s = diff % 60
-    elapsed.value = h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s).padStart(2, '0')}s`
+    elapsed.value =
+        h > 0 ? `${entier(h)} h ${String(m).padStart(2, '0')} min` : `${m} min ${String(s).padStart(2, '0')} s`
 }
 
 onMounted(() => {

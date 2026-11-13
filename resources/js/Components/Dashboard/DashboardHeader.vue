@@ -79,7 +79,7 @@ const streakLabel = computed(() => {
                     v-if="formattedWeight"
                     :href="route('body-measurements.index')"
                     dusk="dashboard-latest-weight"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary mt-1 inline-flex items-center gap-1 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary relative mt-1 inline-flex items-center gap-1 rounded-lg text-xs font-bold before:absolute before:-inset-x-2 before:-inset-y-3.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <GlassIcon name="monitor_weight" size="xs" />
                     {{ formattedWeight }} kg

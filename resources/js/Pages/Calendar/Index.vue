@@ -1,11 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { parseCalendarDate } from '@/Utils/date'
+import { NOMS_DES_MOIS, parseCalendarDate } from '@/Utils/date'
 import { compte } from '@/Utils/nombre'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -33,24 +33,9 @@ const pendingMonth = ref(props.month)
 
 const selectedDate = ref(null)
 
-const monthNames = [
-    'Janvier',
-    'Février',
-    'Mars',
-    'Avril',
-    'Mai',
-    'Juin',
-    'Juillet',
-    'Août',
-    'Septembre',
-    'Octobre',
-    'Novembre',
-    'Décembre',
-]
-
 const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
-const currentMonthName = computed(() => monthNames[currentMonth.value - 1])
+const currentMonthName = computed(() => NOMS_DES_MOIS[currentMonth.value - 1])
 
 const calendarGrid = computed(() => {
     const days = []
@@ -166,9 +151,15 @@ const goToToday = () => {
     viserLeMois(today.getFullYear(), today.getMonth() + 1)
 }
 
-const selectDate = (day) => {
+const detailsDuJour = ref(null)
+
+const selectDate = async (day) => {
     if (!day.day) return
     selectedDate.value = day
+
+    // Le détail s'ouvre sous la grille, sous la barre du bas : on l'amène dans la vue.
+    await nextTick()
+    detailsDuJour.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
 }
 
 /**
@@ -186,10 +177,10 @@ const cellBorderClasses = (index) => [
  * the button's accessible name is what actually exposes the information.
  */
 const dayLabel = (day) => {
-    const parts = [`${day.day} ${currentMonthName.value} ${currentYear.value}`]
+    const parts = [`${day.day} ${currentMonthName.value.toLowerCase()} ${currentYear.value}`]
 
     if (day.hasWorkout) {
-        parts.push('séance')
+        parts.push(compte(day.workouts.length, 'séance', 'séances'))
     }
 
     if (day.hasJournal) {
@@ -218,17 +209,6 @@ const formatDateFull = (dateStr) => {
     <Head title="Calendrier" />
 
     <AuthenticatedLayout page-title="Calendrier">
-        <template #header-actions>
-            <GlassButton
-                @click="goToToday"
-                class="px-3!"
-                dusk="calendar-today"
-                v-if="currentMonth !== new Date().getMonth() + 1 || currentYear !== new Date().getFullYear()"
-            >
-                Aujourd'hui
-            </GlassButton>
-        </template>
-
         <div class="space-y-6">
             <!-- Calendar Navigation -->
             <div class="flex items-center justify-between">
@@ -236,9 +216,20 @@ const formatDateFull = (dateStr) => {
                     <GlassIcon name="chevron_left" />
                 </GlassButton>
 
-                <h2 class="titre-carte" dusk="calendar-heading">
-                    {{ currentMonthName }} <span class="text-accent-primary-deep">{{ currentYear }}</span>
-                </h2>
+                <div class="flex min-w-0 flex-col items-center gap-1">
+                    <h2 class="titre-carte" dusk="calendar-heading">
+                        {{ currentMonthName }} <span class="text-accent-primary-deep">{{ currentYear }}</span>
+                    </h2>
+                    <GlassButton
+                        v-if="currentMonth !== new Date().getMonth() + 1 || currentYear !== new Date().getFullYear()"
+                        @click="goToToday"
+                        class="px-3!"
+                        size="sm"
+                        dusk="calendar-today"
+                    >
+                        Aujourd'hui
+                    </GlassButton>
+                </div>
 
                 <GlassButton @click="changeMonth(1)" class="px-3!" aria-label="Mois suivant">
                     <GlassIcon name="chevron_right" />
@@ -311,7 +302,12 @@ const formatDateFull = (dateStr) => {
             </GlassCard>
 
             <!-- Selected Day Details -->
-            <div v-if="selectedDayDetails" dusk="calendar-day-details" class="animate-slide-up space-y-4">
+            <div
+                v-if="selectedDayDetails"
+                ref="detailsDuJour"
+                dusk="calendar-day-details"
+                class="animate-slide-up scroll-mb-32 space-y-4"
+            >
                 <div class="flex items-center gap-2">
                     <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
                     <h3 class="titre-carte">

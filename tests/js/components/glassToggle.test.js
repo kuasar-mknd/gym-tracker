@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 
+import { CIBLE, hauteurDuRendu } from '../conventions/ciblesTactiles'
 import GlassToggle from '@/Components/UI/GlassToggle.vue'
 
 const mountToggle = (props = {}) =>
@@ -10,6 +11,15 @@ const mountToggle = (props = {}) =>
     })
 
 const control = (wrapper) => wrapper.get('button[role="switch"]')
+
+describe('GlassToggle zone tactile', () => {
+    it.each(['sm', 'md'])('atteint 44 px de haut en taille %s sans changer le curseur', (size) => {
+        const bouton = control(mountToggle({ modelValue: false, size }))
+
+        expect(hauteurDuRendu(bouton.element)).toBeGreaterThanOrEqual(CIBLE)
+        expect(bouton.classes()).toContain('relative')
+    })
+})
 
 describe('GlassToggle', () => {
     it('asks for the opposite of what it currently shows', async () => {

@@ -108,7 +108,7 @@ const formatDate = (date) => {
                     v-for="notification in notifications.data"
                     :key="notification.id"
                     :data-notification-id="notification.id"
-                    :class="['transition', !notification.read_at ? 'ring-accent-primary/30 ring-1' : 'opacity-70']"
+                    :class="['transition', !notification.read_at ? 'ring-accent-primary/30 ring-1' : '']"
                 >
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex gap-4">
@@ -164,9 +164,18 @@ const formatDate = (date) => {
                                 </svg>
                             </div>
                             <div>
-                                <h4 class="text-text-main font-semibold">{{ notification.data.title }}</h4>
+                                <h4 class="text-text-main font-semibold">
+                                    <span
+                                        v-if="!notification.read_at"
+                                        data-unread-dot
+                                        class="bg-accent-primary mr-2 inline-block size-2 rounded-full align-middle"
+                                        aria-hidden="true"
+                                    />
+                                    <span v-if="!notification.read_at" class="sr-only">Non lue : </span>
+                                    {{ notification.data.title }}
+                                </h4>
                                 <p class="text-text-muted text-sm">{{ notification.data.message }}</p>
-                                <span class="text-text-muted/30 text-2xs mt-2 block tracking-wider uppercase">
+                                <span class="text-text-muted text-2xs mt-2 block tracking-wider uppercase">
                                     {{ formatDate(notification.created_at) }}
                                 </span>
                             </div>

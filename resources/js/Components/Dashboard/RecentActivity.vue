@@ -26,7 +26,7 @@ const emit = defineEmits(['startWorkout'])
             <h3 class="text-text-muted sur-titre">Activité Récente</h3>
             <Link
                 :href="route('workouts.index')"
-                class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary rounded-md text-xs font-bold tracking-wider uppercase transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary relative rounded-md text-xs font-bold tracking-wider uppercase transition-colors before:absolute before:-inset-x-2 before:-inset-y-3.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 Voir tout
             </Link>

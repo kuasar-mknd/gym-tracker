@@ -5,15 +5,19 @@ const post = vi.fn()
 const routerDelete = vi.fn()
 let form
 
-vi.mock('@inertiajs/vue3', () => ({
-    Head: { template: '<div />' },
-    router: { delete: (...args) => routerDelete(...args) },
-    useForm: (data) => {
-        form = { ...data, processing: false, errors: {}, post, reset: vi.fn() }
+vi.mock('@inertiajs/vue3', async () => {
+    const { reactive } = await vi.importActual('vue')
 
-        return form
-    },
-}))
+    return {
+        Head: { template: '<div />' },
+        router: { delete: (...args) => routerDelete(...args) },
+        useForm: (data) => {
+            form = reactive({ ...data, processing: false, errors: {}, post, reset: vi.fn() })
+
+            return form
+        },
+    }
+})
 
 const haptic = vi.fn()
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...a) => haptic(...a) }))
@@ -45,10 +49,11 @@ const mountPage = (props = {}) =>
                 // an empty custom amount from being logged, and a stub that
                 // drops it would let a test pass on the other half alone.
                 GlassButton: {
-                    props: ['disabled'],
-                    template: '<button :disabled="disabled"><slot /></button>',
+                    props: ['disabled', 'loading'],
+                    template: '<button :disabled="disabled" :data-loading="loading"><slot /></button>',
                 },
                 GlassInput: { template: '<input />' },
+                ConfirmDialog: { props: ['description'], template: '<p class="dialogue">{{ description }}</p>' },
             },
         },
     })
@@ -127,5 +132,40 @@ describe('logging a glass', () => {
         wrapper.vm.addWater('')
 
         expect(post).not.toHaveBeenCalled()
+    })
+})
+
+describe('les retouches de lecture', () => {
+    const boutonDeLaQuantiteSaisie = (wrapper) => wrapper.findAll('button').find((button) => button.text() === 'add')
+
+    it('ne fait tourner que le bouton de la quantité saisie', async () => {
+        const wrapper = mountPage()
+
+        await wrapper.findAll('button')[0].trigger('click')
+        form.processing = true
+        await wrapper.vm.$nextTick()
+
+        expect(boutonDeLaQuantiteSaisie(wrapper).attributes('data-loading')).toBe('false')
+
+        wrapper.vm.addWater(330, true)
+        post.mock.calls.at(-1)[1].onStart()
+        await wrapper.vm.$nextTick()
+
+        expect(boutonDeLaQuantiteSaisie(wrapper).attributes('data-loading')).toBe('true')
+    })
+
+    it('propose une invite que le suffixe « ML » ne coupe pas', () => {
+        const wrapper = mountPage()
+
+        expect(wrapper.get('input').attributes('placeholder')).toBe('Ex. 330')
+    })
+
+    it('accorde « retirés » dans la confirmation de suppression', async () => {
+        const wrapper = mountPage()
+
+        wrapper.vm.demanderSuppression({ id: 1, amount: 250 })
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.get('.dialogue').text()).toContain('seront retirés de ton total du jour')
     })
 })

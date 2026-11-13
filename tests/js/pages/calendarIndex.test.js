@@ -114,7 +114,20 @@ describe('marking the days that have something on them', () => {
 
         // The dots carry their meaning through colour alone, which a screen
         // reader cannot read out.
-        expect(wrapper.vm.dayLabel(realDays(wrapper)[9])).toBe('10 Février 2026, séance, journal')
+        expect(wrapper.vm.dayLabel(realDays(wrapper)[9])).toBe('10 février 2026, 1 séance, journal')
+    })
+
+    it('accorde le nombre de séances dans le nom du jour', () => {
+        const wrapper = mountPage({
+            year: 2026,
+            month: 8,
+            workouts: [
+                { date: '2026-08-26', id: 1 },
+                { date: '2026-08-26', id: 2 },
+            ],
+        })
+
+        expect(wrapper.vm.dayLabel(realDays(wrapper)[25])).toBe('26 août 2026, 2 séances')
     })
 
     it('marks today, and only today', () => {
@@ -441,6 +454,28 @@ describe('what the arrows and the heading do', () => {
 
         expect(away.find('[dusk="calendar-today"]').exists()).toBe(true)
         expect(home.find('[dusk="calendar-today"]').exists()).toBe(false)
+    })
+
+    it("pose « Aujourd'hui » dans la barre de mois, où le titre ne le tronque pas", () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date(2026, 1, 10))
+
+        const wrapper = mountPage({ year: 2026, month: 3 })
+        const titre = wrapper.get('[dusk="calendar-heading"]').element
+
+        expect(titre.parentElement.contains(wrapper.get('[dusk="calendar-today"]').element)).toBe(true)
+    })
+
+    it('amène le détail du jour touché dans la vue', async () => {
+        const defiler = vi.fn()
+        Element.prototype.scrollIntoView = defiler
+
+        const wrapper = mountPage({ year: 2026, month: 2 })
+        await wrapper.find('[dusk="calendar-day-2026-02-10"]').trigger('click')
+        await wrapper.vm.$nextTick()
+
+        expect(defiler).toHaveBeenCalledTimes(1)
+        delete Element.prototype.scrollIntoView
     })
 
     it('brings the heading home once the jump lands, and closes the open day', async () => {

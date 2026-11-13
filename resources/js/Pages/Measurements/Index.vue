@@ -279,8 +279,14 @@ const latestBodyFat = computed(() => {
                         <div class="h-64">
                             <WeightHistoryChart
                                 hauteur="h-full"
-                                v-if="bodyStats?.weightHistory && bodyStats.weightHistory.length > 0"
+                                v-if="bodyStats?.weightHistory && bodyStats.weightHistory.length > 1"
                                 :data="bodyStats.weightHistory"
+                            />
+                            <GlassEmptyState
+                                v-else-if="bodyStats?.weightHistory?.length === 1"
+                                taille="ligne"
+                                icon="query_stats"
+                                title="Ajoute une deuxième pesée pour voir l'évolution"
                             />
                             <GlassEmptyState v-else taille="ligne" icon="query_stats" title="Aucune donnée" />
                         </div>

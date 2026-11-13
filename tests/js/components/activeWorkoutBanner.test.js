@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import { mount } from '@vue/test-utils'
 
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
+import { entier } from '@/Utils/nombre'
 
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${params.workout}`
@@ -48,27 +49,34 @@ afterEach(() => vi.useRealTimers())
  */
 describe('ActiveWorkoutBanner elapsed time', () => {
     it('counts minutes and seconds under the hour, both padded', async () => {
-        // 7 seconds, not 10: an unpadded value would read "45m 7s".
+        // 7 seconds, not 10: an unpadded value would read "45 min 7 s".
         const wrapper = await mountRunningFor(45 * 60 + 7)
 
-        expect(wrapper.text()).toContain('45m 07s')
+        expect(wrapper.text()).toContain('45 min 07 s')
     })
 
     it('switches to hours and minutes once the session passes an hour', async () => {
         const wrapper = await mountRunningFor(2 * 3600 + 5 * 60 + 30)
 
-        expect(wrapper.text()).toContain('2h 05m')
-        expect(wrapper.text()).not.toContain('125m')
+        expect(wrapper.text()).toContain('2 h 05 min')
+        expect(wrapper.text()).not.toContain('125 min')
+    })
+
+    it("écrit les heures d'une séance ancienne en fr-CH, avec le séparateur de milliers", async () => {
+        const wrapper = await mountRunningFor(1899 * 3600 + 13 * 60)
+
+        expect(wrapper.text()).toContain(`${entier(1899)} h 13 min`)
+        expect(wrapper.text()).not.toContain('1899')
     })
 
     it('keeps counting while the banner is on screen', async () => {
         const wrapper = await mountRunningFor(58)
-        expect(wrapper.text()).toContain('0m 58s')
+        expect(wrapper.text()).toContain('0 min 58 s')
 
         vi.advanceTimersByTime(3000)
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.text()).toContain('1m 01s')
+        expect(wrapper.text()).toContain('1 min 01 s')
     })
 
     it('stops counting once it leaves the screen', () => {
@@ -132,7 +140,7 @@ describe('ActiveWorkoutBanner — horloge décalée et forme compacte', () => {
         const wrapper = mountBanner({ started_at: startedSecondsAgo(-90) })
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.text()).toContain('0m 00s')
+        expect(wrapper.text()).toContain('0 min 00 s')
         expect(wrapper.text()).not.toContain('-')
         wrapper.unmount()
     })
@@ -152,7 +160,7 @@ describe('ActiveWorkoutBanner — horloge décalée et forme compacte', () => {
         await wrapper.vm.$nextTick()
 
         expect(wrapper.text()).toContain('Push A')
-        expect(wrapper.text()).toContain('2m 05s')
+        expect(wrapper.text()).toContain('2 min 05 s')
         expect(wrapper.text()).not.toContain('En cours')
         expect(wrapper.get('a').attributes('href')).toBe('/workouts.show/12')
         wrapper.unmount()

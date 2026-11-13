@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { Deferred } from '@inertiajs/vue3'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
@@ -10,12 +11,17 @@ import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const BodyFatChart = graphiqueAsynchrone(() => import('@/Components/Stats/BodyFatChart.vue'))
 
-defineProps({
+const props = defineProps({
     bodyFat: Number,
     bodyFatHistory: Array,
     monthlyComparison: Object,
     deferredData: Object,
 })
+
+/** Sans volume le mois précédent, il n'y a rien à comparer : la pastille ne dirait que « 0 % ». */
+const comparaisonPossible = computed(() => (props.monthlyComparison?.previous_volume ?? 0) > 0)
+
+const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? 0)
 </script>
 
 <template>
@@ -73,18 +79,22 @@ defineProps({
                         </p>
                     </div>
                     <div
+                        v-if="comparaisonPossible"
                         :class="[
-                            'flex items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold',
-                            (monthlyComparison?.percentage || 0) >= 0
+                            'flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold whitespace-nowrap',
+                            variationDuMois > 0
                                 ? 'bg-trend-up/10 text-trend-up'
-                                : 'bg-trend-down/10 text-trend-down',
+                                : variationDuMois < 0
+                                  ? 'bg-trend-down/10 text-trend-down'
+                                  : 'bg-surface-sunken text-text-muted',
                         ]"
                     >
                         <GlassIcon
-                            :name="(monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down'"
+                            v-if="variationDuMois !== 0"
+                            :name="variationDuMois > 0 ? 'trending_up' : 'trending_down'"
                             size="xs"
                         />
-                        {{ variation(monthlyComparison?.percentage ?? 0, '%') }}
+                        {{ variation(variationDuMois, '%') }}
                     </div>
                 </div>
             </Deferred>

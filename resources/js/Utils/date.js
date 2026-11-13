@@ -8,6 +8,22 @@
  */
 export const LANGUE_DES_DATES = 'fr-FR'
 
+/** Les mois du calendrier, de janvier à décembre. */
+export const NOMS_DES_MOIS = [
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+]
+
 /**
  * Reads a calendar day (`YYYY-MM-DD`) as local midnight.
  *

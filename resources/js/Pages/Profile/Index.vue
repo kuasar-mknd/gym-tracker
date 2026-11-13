@@ -50,7 +50,7 @@ const menuGroups = [
                 name: 'Objectifs',
                 icon: 'tour',
                 route: 'goals.index',
-                description: 'Gérer tes targets',
+                description: 'Gérer tes objectifs',
                 color: 'text-accent-state-deep',
                 bgColor: 'bg-accent-state/50',
             },
@@ -102,7 +102,7 @@ const menuGroups = [
         title: 'Compte',
         items: [
             {
-                name: 'Modifier Profil',
+                name: 'Modifier le profil',
                 icon: 'person_edit',
                 route: 'profile.edit',
                 description: 'Infos & Préférences',

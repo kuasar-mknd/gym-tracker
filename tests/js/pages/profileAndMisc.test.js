@@ -594,7 +594,18 @@ describe('Notifications/Index — marking as read', () => {
         const wrapper = mountNotifications()
 
         expect(wrapper.get('[data-notification-id="n-1"]').classes()).toContain('ring-1')
-        expect(wrapper.get('[data-notification-id="n-2"]').classes()).toContain('opacity-70')
+        expect(wrapper.get('[data-notification-id="n-1"]').find('[data-unread-dot]').exists()).toBe(true)
+        expect(wrapper.get('[data-notification-id="n-2"]').find('[data-unread-dot]').exists()).toBe(false)
+    })
+
+    it('ne grise pas une notification lue et lit sa date en plein contraste', () => {
+        const wrapper = mountNotifications()
+        const lue = wrapper.get('[data-notification-id="n-2"]')
+
+        expect(lue.classes().join(' ')).not.toMatch(/opacity/)
+        expect(wrapper.get('span.uppercase').classes()).not.toContain('text-text-muted/30')
+        expect(wrapper.get('span.uppercase').classes()).toContain('text-text-muted')
+        expect(wrapper.get('[data-notification-id="n-1"]').text()).toContain('Non lue')
     })
 })
 

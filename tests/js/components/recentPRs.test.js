@@ -29,10 +29,10 @@ describe('RecentPRs', () => {
 
         expect(cards(wrapper)).toHaveLength(2)
         expect(cards(wrapper)[0].text()).toContain('Développé couché')
-        expect(cards(wrapper)[0].text()).toContain('Poids Max')
+        expect(cards(wrapper)[0].text()).toContain('Poids max')
         expect(cards(wrapper)[0].text()).toContain('120 kg')
         expect(cards(wrapper)[1].text()).toContain('Squat')
-        expect(cards(wrapper)[1].text()).toContain('1RM Estimé')
+        expect(cards(wrapper)[1].text()).toContain('1RM estimé')
         expect(cards(wrapper)[1].text()).toContain('137,5 kg')
     })
 

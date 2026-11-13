@@ -56,8 +56,8 @@ const trackClasses = computed(() => {
         'relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none'
 
     const sizeMap = {
-        sm: 'h-5 w-9',
-        md: 'h-6 w-11',
+        sm: "h-5 w-9 before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']",
+        md: "h-6 w-11 before:absolute before:-inset-y-2.5 before:inset-x-0 before:content-['']",
     }
 
     const stateClass = props.modelValue

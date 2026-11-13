@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { mount } from '@vue/test-utils'
 
+import { CIBLE, hauteurDuRendu } from '../conventions/ciblesTactiles'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
 
 beforeAll(() => {
@@ -48,6 +49,12 @@ describe('DashboardHeader body weight', () => {
 
         expect(header.find('[dusk="dashboard-latest-weight"]').exists()).toBe(false)
         expect(header.text()).not.toContain('kg')
+    })
+
+    it('offre au doigt une zone de 44 px de haut', () => {
+        const lien = mountHeader('75.50').get('[dusk="dashboard-latest-weight"]')
+
+        expect(hauteurDuRendu(lien.element)).toBeGreaterThanOrEqual(CIBLE)
     })
 
     it('leads to the measurements page, where the figure can be changed', () => {

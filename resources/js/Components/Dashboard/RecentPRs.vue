@@ -19,7 +19,7 @@ defineProps({
     >
         <div class="relative z-10 mb-6">
             <h3 class="text-accent-primary-deep sur-titre mb-1">Réussites</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic">Records Personnels</p>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic">Records personnels</p>
         </div>
 
         <!-- PR Bar Chart -->
@@ -29,28 +29,30 @@ defineProps({
 
         <div class="space-y-3">
             <GlassCard v-for="pr in recentPRs" :key="pr.id" padding="p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
                         <div
-                            class="from-accent-warning to-accent-primary flex size-12 items-center justify-center rounded-xl bg-linear-to-br shadow-lg"
+                            class="from-accent-warning to-accent-primary flex size-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br shadow-lg"
                         >
                             <GlassIcon name="star" class="text-text-on-accent" />
                         </div>
-                        <div>
-                            <div class="text-text-main font-bold">{{ pr.exercise?.name }}</div>
+                        <div class="min-w-0">
+                            <div class="text-text-main truncate font-bold" :title="pr.exercise?.name">
+                                {{ pr.exercise?.name }}
+                            </div>
                             <div class="text-text-muted text-xs">
                                 {{
                                     pr.type === 'max_weight'
-                                        ? 'Poids Max'
+                                        ? 'Poids max'
                                         : pr.type === 'max_1rm'
-                                          ? '1RM Estimé'
+                                          ? '1RM estimé'
                                           : 'Volume'
                                 }}
                             </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <div class="font-display text-accent-primary-deep text-2xl font-black">
+                    <div class="shrink-0 text-right">
+                        <div class="font-display text-accent-primary-deep text-2xl font-black whitespace-nowrap">
                             {{ pr.type === 'max_volume_set' ? volume(pr.value) : poids(pr.value) }}
                         </div>
                     </div>
