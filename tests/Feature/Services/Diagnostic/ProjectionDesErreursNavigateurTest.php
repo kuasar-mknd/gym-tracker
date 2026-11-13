@@ -152,6 +152,8 @@ it('ne rend jamais le nom de l’hôte de la page, quelle qu’en soit la forme,
     'une adresse collée dans le chemin' => ['https://gym.example.org/x/http://serveur/y', '//[hôte]/x/[segment]'],
     'un compte dans un segment encodé' => ['https://gym.example.org/p/u%3Ap%40serveur', '//[hôte]/p/[segment]'],
     'un compte sans schéma' => ['u:hunter2@serveur.example/chemin', ''],
+    'un hôte sans chemin' => ['https://serveur', '//[hôte]'],
+    'une adresse que l’analyse refuse' => ['http:///x', ''],
 ]);
 
 /*
@@ -221,3 +223,13 @@ it('range chaque agent dans une famille fermée', function (?string $agent, stri
     'un robot' => ['curl/8', 'autre'],
     'rien' => [null, 'autre'],
 ]);
+
+it('ne rend aucun texte d’une occurrence effacée entre deux lectures, sans lever', function (): void {
+    $texte = new ReflectionMethod(ProjectionDesErreursNavigateur::class, 'texteDe');
+
+    expect($texte->invoke(new ProjectionDesErreursNavigateur(), null))->toEqual([
+        'message' => new TexteNonFiable('', ProjectionDesErreursNavigateur::BUDGET_DU_MESSAGE),
+        'page' => new TexteNonFiable('', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
+        'pile' => new TexteNonFiable('', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PILE),
+    ]);
+});

@@ -9,10 +9,16 @@ use App\Services\Diagnostic\Projections\JsonLu;
 use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\NomDeRoute;
 use App\Services\Diagnostic\Projections\PileSansArguments;
+use App\Services\Diagnostic\Projections\RegroupeLesOccurrences;
 use App\Services\Diagnostic\ValeurLue;
 use App\Services\Diagnostic\Vocabulaire;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Exceptions;
 use Tests\Support\ExceptionQueLeDiagnosticNeChargePas;
 
 uses(Tests\TestCase::class);
@@ -207,4 +213,49 @@ it('lit le choix de la page : les premières portées par défaut, les connues s
         ->and(ChoixDeLApercu::de(['portees' => ['', 'files', 'inventee', ['x'], 'texte-brut'], 'jours' => '7']))->toEqual(new ChoixDeLApercu([PorteeDeDiagnostic::Files, PorteeDeDiagnostic::TexteBrut], 7))
         ->and(ChoixDeLApercu::de(['portees' => 'files', 'jours' => 'x']))->toEqual(new ChoixDeLApercu([PorteeDeDiagnostic::Sante, PorteeDeDiagnostic::Exceptions], 1))
         ->and(ChoixDeLApercu::de(['portees' => [''], 'jours' => 30]))->toEqual(new ChoixDeLApercu([], 30));
+});
+
+it('rend les cadres d’une pile JSON en liste, quelles que soient les clés du tableau décodé', function (): void {
+    $pile = '{"a":{"function":"premiere"},"b":{"function":"seconde"}}';
+
+    expect(PileSansArguments::duJson($pile, 5))->toBe([
+        ['fichier' => null, 'ligne' => null, 'appel' => 'premiere'],
+        ['fichier' => null, 'ligne' => null, 'appel' => 'seconde'],
+    ]);
+});
+
+it('ne rapporte pas une pile en texte que l’expression ne sait pas lire', function (): void {
+    Exceptions::fake();
+    ini_set('pcre.backtrack_limit', '1');
+
+    try {
+        $cadres = PileSansArguments::duTexte('#0 '.str_repeat('a', 500).'(12): Foo->bar(x)', 5);
+    } finally {
+        ini_restore('pcre.backtrack_limit');
+    }
+
+    expect($cadres)->toBe([]);
+    Exceptions::assertNothingReported();
+});
+
+it('ne pose l’indication de durée que sur une connexion MySQL', function (): void {
+    $sqlite = new SQLiteConnection(new PDO('sqlite::memory:'));
+    /** @var ConnectionInterface&Mockery\MockInterface $connexion */
+    $connexion = Mockery::mock(ConnectionInterface::class);
+    $autre = new Builder($connexion, $sqlite->getQueryGrammar(), $sqlite->getPostProcessor());
+
+    expect(LecturesBornees::requete(new Builder($sqlite)->from('t'), ['id', 'nom'])->toSql())->toBe('select "id", "nom" from "t"')
+        ->and(LecturesBornees::requete($autre->from('t'), ['id', 'nom'])->toSql())->toBe('select "id", "nom" from "t"');
+});
+
+it('range à égalité le groupe de la dernière occurrence la plus récente d’abord, quel que soit l’ordre des lignes', function (): void {
+    /** @var Collection<int, stdClass> $lignes */
+    $lignes = new Collection([
+        (object) ['id' => 3, 'type' => 'a', 'created_at' => '2026-10-12 06:00:00'],
+        (object) ['id' => 5, 'type' => 'b', 'created_at' => '2026-10-12 07:00:00'],
+    ]);
+
+    $groupes = new RegroupeLesOccurrences()($lignes, static fn (stdClass $ligne): string => ValeurLue::texte($ligne->type), static fn (stdClass $ligne): array => ['type' => $ligne->type]);
+
+    expect($groupes->pluck('type')->all())->toBe(['b', 'a']);
 });

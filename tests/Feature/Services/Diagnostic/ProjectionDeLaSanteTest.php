@@ -10,6 +10,8 @@ use App\Support\Sante\AnnonceDeVersion;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Exceptions;
+use Spatie\Health\ResultStores\ResultStore;
 use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResult;
 use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResults;
 
@@ -86,4 +88,24 @@ it('rend ce que chaque conteneur annonce, et des valeurs nulles pour qui ne s’
         ['conteneur' => 'worker', 'version' => '1.6.1', 'revision' => 'e76e9b68', 'depuis' => '2026-10-12T10:00:00+02:00', 'annonce_le' => '2026-10-12T10:00:00+02:00'],
         ['conteneur' => 'scheduler', 'version' => null, 'revision' => null, 'depuis' => null, 'annonce_le' => null],
     ])->and(new ProjectionDesVersions()->application())->toBe(['version' => '1.6.1', 'revision' => 'e76e9b68', 'environnement' => 'testing']);
+});
+
+it('rend un message vide pour un contrôle qui n’en a pas, sous TexteBrut', function (): void {
+    santeDiagnosticPassage('2026-10-12 09:55:00', new StoredCheckResult('Database', 'Base', null, 'ok', 'ok'));
+
+    $controles = new ProjectionDeLaSante()->detail(FenetreDeDiagnostic::depuis(null, now()), true)['controles'];
+
+    expect($controles[0]['non_fiable'] ?? null)->toEqual([
+        'resume' => new TexteNonFiable('ok', ProjectionDeLaSante::BUDGET_DU_RESUME),
+        'message' => new TexteNonFiable('', ProjectionDeLaSante::BUDGET_DU_MESSAGE),
+    ]);
+});
+
+it('ne rapporte pas un magasin de contrôles qui ne répond pas, et ne rend rien', function (): void {
+    Exceptions::fake();
+    test()->mock(ResultStore::class)->shouldReceive('latestResults')->andThrow(new RuntimeException('cache injoignable'));
+
+    expect(new ProjectionDeLaSante()->liste(FenetreDeDiagnostic::depuis(null, now())))
+        ->toBe(['dernier_passage_le' => null, 'age_en_secondes' => null, 'controles' => []]);
+    Exceptions::assertNothingReported();
 });

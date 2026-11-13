@@ -17,6 +17,7 @@ use Illuminate\Queue\RedisQueue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
@@ -310,4 +311,83 @@ it('dit Horizon illisible quand son magasin ne répond pas, sans lever', functio
 
     expect(new EtatDeHorizon()())->toBe(['statut' => 'illisible', 'processus' => null, 'files' => []])
         ->and(new ProjectionDesFiles()->liste(filesDiagnosticFenetre())['horizon']['statut'])->toBe('illisible');
+});
+
+it('ne lit pas une connexion qui n’est pas Redis, même quand elle sait dire un âge', function (): void {
+    config()->set('queue.default', 'autre');
+    Queue::shouldReceive('connection')->with('autre')->andReturn(new class()
+    {
+        public function creationTimeOfOldestPendingJob(string $file): int
+        {
+            return 900;
+        }
+    });
+
+    expect(new AgeDuPlusAncienEnAttente()('default', 1_000))->toBeNull();
+});
+
+it('ne rapporte pas une file illisible, ne lit pas un nom de file vide, et arrondit la date de création à la seconde', function (): void {
+    Exceptions::fake();
+    config()->set('queue.default', 'redis');
+    $redis = Mockery::mock(RedisQueue::class);
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('mails')->andThrow(new RuntimeException('redis injoignable'));
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('vieille')->andReturn(900);
+    $redis->shouldReceive('creationTimeOfOldestPendingJob')->with('decimale')->andReturn('900.7');
+    Queue::shouldReceive('connection')->with('redis')->andReturn($redis);
+    $age = new AgeDuPlusAncienEnAttente();
+
+    expect($age('mails', 1_000))->toBeNull()
+        ->and($age('vieille,', 1_000))->toBe(100)
+        ->and($age('decimale', 1_000))->toBe(100);
+    Exceptions::assertNothingReported();
+});
+
+it('ne compte pas de processus pour une file qui n’en annonce pas', function (): void {
+    test()->mock(WorkloadRepository::class)->shouldReceive('get')->andReturn([
+        ['name' => 'default', 'length' => 1, 'wait' => 0, 'processes' => 3],
+        ['name' => 'sans-processus', 'length' => 0, 'wait' => 0],
+    ]);
+    config()->set('queue.default', 'sync');
+
+    $horizon = new EtatDeHorizon()();
+
+    expect($horizon['processus'])->toBe(3)
+        ->and(array_column($horizon['files'], 'processus'))->toBe([3, null]);
+});
+
+/*
+ * Cinquante groupes, ou cinquante files, tiennent dans la liste : seul le
+ * cinquante et unième la tronque.
+ */
+it('ne dit la liste tronquée qu’au-delà de cinquante groupes ou de cinquante files', function (int $jobs, int $files, bool $tronque): void {
+    foreach (range(1, max($jobs, $files)) as $rang) {
+        filesDiagnosticEchec([
+            'payload' => json_encode(['displayName' => 'App\\Jobs\\Travail'.min($rang, $jobs)]),
+            'queue' => 'file'.min($rang, $files),
+        ]);
+    }
+
+    $liste = new ProjectionDesFiles()->liste(filesDiagnosticFenetre());
+
+    expect($liste['tronque'])->toBe($tronque)
+        ->and($liste['echecs'])->toHaveCount(min($jobs, 50))
+        ->and($liste['echecs_par_file'])->toHaveCount(min($files, 50));
+})->with([
+    'cinquante groupes' => [50, 1, false],
+    'cinquante files' => [1, 50, false],
+    'cinquante et un groupes' => [51, 1, true],
+    'cinquante et une files' => [1, 51, true],
+]);
+
+it('lit les échecs sur la connexion que la configuration nomme pour eux', function (): void {
+    config()->set('database.connections.echecs_a_part', config('database.connections.'.config()->string('database.default')));
+    config()->set('queue.failed.database', 'echecs_a_part');
+    $connexions = [];
+    DB::listen(static function ($requete) use (&$connexions): void {
+        $connexions[] = $requete->connectionName;
+    });
+
+    new ProjectionDesFiles()->liste(filesDiagnosticFenetre());
+
+    expect($connexions)->toContain('echecs_a_part');
 });

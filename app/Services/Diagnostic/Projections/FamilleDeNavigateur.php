@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Diagnostic\Projections;
 
+use App\Services\Diagnostic\ValeurLue;
+
 /**
  * La famille d'un navigateur, d'après sa chaîne d'agent : une liste fermée
  * (edge, opera, samsung, chrome, firefox, safari, autre).
@@ -13,7 +15,7 @@ final class FamilleDeNavigateur
 {
     public static function de(mixed $agent): string
     {
-        $texte = is_string($agent) ? $agent : '';
+        $texte = ValeurLue::texte($agent);
 
         return match (true) {
             str_contains($texte, 'Edg/') => 'edge',

@@ -12,6 +12,7 @@ use App\Services\Diagnostic\Vocabulaire;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use stdClass;
 
 /**
@@ -163,10 +164,14 @@ final class ProjectionDesErreursNavigateur
     private static function page(string $url): string
     {
         $adresse = parse_url($url);
-        $chemin = is_array($adresse) ? self::chemin($adresse['path'] ?? '') : '';
+
+        if (! is_array($adresse)) {
+            return '';
+        }
+
+        $chemin = self::chemin($adresse['path'] ?? '');
 
         return match (true) {
-            ! is_array($adresse) => '',
             isset($adresse['host']) => '//[hôte]'.$chemin,
             default => str_starts_with($chemin, '/') ? $chemin : '',
         };
@@ -178,7 +183,7 @@ final class ProjectionDesErreursNavigateur
      */
     private static function chemin(string $chemin): string
     {
-        return implode('/', array_map(self::segment(...), explode('/', (string) preg_replace('#//.*$#s', '', $chemin))));
+        return implode('/', array_map(self::segment(...), explode('/', Str::before($chemin, '//'))));
     }
 
     /**

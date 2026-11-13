@@ -223,3 +223,18 @@ it('ne lit du message d’un échec que les 8 Kio que l’expurgation garde, cou
 
     expect($message)->toEqual(new TexteNonFiable(str_repeat('€', 2_730).'?', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE));
 });
+
+it('ne lit des tâches que cinquante et une, la dernière ne servant qu’à dire que la liste est tronquée', function (): void {
+    tachesDiagnosticTache('app:une');
+    $requetes = [];
+    DB::listen(static function ($requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
+    new ProjectionDesTachesPlanifiees()->liste(tachesDiagnosticFenetre());
+
+    $lectures = array_values(array_filter($requetes, static fn (string $sql): bool => str_contains($sql, 'from `monitored_scheduled_tasks`')));
+
+    expect($lectures)->toHaveCount(1)
+        ->and($lectures[0])->toEndWith('limit 51');
+});

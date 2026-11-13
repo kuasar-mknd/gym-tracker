@@ -72,7 +72,7 @@ final class ProjectionDesFiles
     public function derniers(FenetreDeDiagnostic $fenetre, bool $texteBrut): array
     {
         return ExceptionDUnJobEchoue::lire(
-            LecturesBornees::requete($this->echecs($fenetre), ['id', 'uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
+            LecturesBornees::requete($this->echecs($fenetre), ['uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
             ExceptionDUnJobEchoue::OCTETS_PAR_MORCEAU,
         )
             ->orderByDesc('id')
