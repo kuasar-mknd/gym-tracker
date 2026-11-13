@@ -9,7 +9,7 @@ namespace App\Services\Diagnostic\Expurgation;
  * `[secret]`.
  *
  * `Bearer …`, le jeton de diagnostic (`gtdiag_…`), la valeur qui suit un nom
- * de secret (`key`, `token`, `password`… avant `:` ou `=`, quelle que soit
+ * de secret (`key`, `token`, `password`… avant `:`, `=` ou `=>`, quelle que soit
  * sa forme : un secret en base64 à barres obliques n'en a aucune), les JWT,
  * les suites de 40
  * caractères ou plus en base64 : sans `/`, quand elles mêlent minuscules,
@@ -56,7 +56,7 @@ final class MasqueLesSecrets
      * entre guillemets ou non : le nom désigne un secret que sa forme ne
      * désigne pas.
      */
-    private const string MOTIF_D_UN_NOM_DE_SECRET = '/(?<![A-Za-z0-9])[A-Za-z0-9_-]{0,32}(?:key|secret|token|jeton|password|passwd|pwd|signature)["\']?\s{0,4}[:=]\s{0,4}["\']?\K[^\s"\'<>,;&)]{8,4096}/i';
+    private const string MOTIF_D_UN_NOM_DE_SECRET = '/(?<![A-Za-z0-9])[A-Za-z0-9_-]{0,32}(?:key|secret|token|jeton|password|passwd|pwd|signature)\\\\?["\']?\]?\s{0,4}(?:=>|[:=])\s{0,4}\\\\?(?:"\K[^"\n]{8,4096}|\'\K[^\'\n]{8,4096}|\K[^\s"\'<>]{8,4096})/iu';
 
     /**
      * Chaque motif et sa marque, dans l'ordre où ils s'appliquent.
