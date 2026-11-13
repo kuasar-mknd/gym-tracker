@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Fasting\DemarrerUnJeuneAction;
 use App\Actions\Fasting\MettreAJourUnJeuneAction;
+use App\Actions\Fasting\ReprendreUnJeune;
 use App\Models\Fast;
 use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
@@ -119,4 +120,69 @@ it('refuse aussi, en validation, la reprise d’un jeûne quand le verrou du com
 
     expect(fn () => app(MettreAJourUnJeuneAction::class)->execute($user, $termine, ['status' => 'active']))
         ->toThrow(ValidationException::class, DemarrerUnJeuneAction::MESSAGE_VERROU_PRIS);
+});
+
+it('garde la première fin d’un jeûne quand un second appareil rejoue la sienne', function (): void {
+    $user = User::factory()->create();
+    $jeune = Fast::factory()->for($user)->create(['start_time' => now()->subHours(20)]);
+    $premiere = Fast::query()->whereKey($jeune->getKey())->firstOrFail();
+    $rejeu = Fast::query()->whereKey($jeune->getKey())->firstOrFail();
+
+    $finDuPremier = now()->subHours(2)->startOfSecond();
+    $finRejouee = now()->startOfSecond();
+
+    app(MettreAJourUnJeuneAction::class)->execute($user, $premiere, ['end_time' => $finDuPremier, 'status' => 'completed']);
+    app(MettreAJourUnJeuneAction::class)->execute($user, $rejeu, ['end_time' => $finRejouee, 'status' => 'broken']);
+
+    $relu = $jeune->fresh();
+
+    expect($relu?->end_time?->getTimestamp())->toBe($finDuPremier->getTimestamp())
+        ->and($relu?->status)->toBe('completed');
+});
+
+it('refuse une reprise qui arrive avec une fin, sans rien écrire', function (): void {
+    $user = User::factory()->create();
+    $fin = now()->subHours(3)->startOfSecond();
+    $jeune = Fast::factory()->for($user)->create(['status' => 'completed', 'end_time' => $fin, 'start_time' => now()->subHours(20)]);
+
+    expect(fn () => app(MettreAJourUnJeuneAction::class)->execute($user, $jeune, ['status' => 'active', 'end_time' => now()]))
+        ->toThrow(ValidationException::class, ReprendreUnJeune::MESSAGE_AVEC_FIN);
+
+    expect($jeune->fresh()?->status)->toBe('completed')
+        ->and($jeune->fresh()?->end_time?->getTimestamp())->toBe($fin->getTimestamp());
+});
+
+it('ignore la correction de la fin d’un jeûne terminé', function (): void {
+    $user = User::factory()->create();
+    $fin = now()->subHours(3)->startOfSecond();
+    $jeune = Fast::factory()->for($user)->create(['status' => 'completed', 'end_time' => $fin, 'start_time' => now()->subHours(20)]);
+
+    app(MettreAJourUnJeuneAction::class)->execute($user, $jeune, ['end_time' => now()->startOfSecond(), 'type' => '18:6']);
+
+    expect($jeune->fresh()?->end_time?->getTimestamp())->toBe($fin->getTimestamp())
+        ->and($jeune->fresh()?->type)->toBe('18:6');
+});
+
+it('prend la nouvelle fin d’un jeûne repris puis terminé de nouveau', function (): void {
+    $user = User::factory()->create();
+    $jeune = Fast::factory()->for($user)->create(['start_time' => now()->subHours(20)]);
+    $premiereFin = now()->subHours(3)->startOfSecond();
+    $secondeFin = now()->startOfSecond();
+    $action = app(MettreAJourUnJeuneAction::class);
+
+    $action->execute($user, $jeune, ['end_time' => $premiereFin, 'status' => 'completed']);
+    $action->execute($user, $jeune->fresh() ?? $jeune, ['status' => 'active']);
+    $action->execute($user, $jeune->fresh() ?? $jeune, ['end_time' => $secondeFin, 'status' => 'completed']);
+
+    expect($jeune->fresh()?->end_time?->getTimestamp())->toBe($secondeFin->getTimestamp());
+});
+
+it('pose la fin d’un jeûne en cours', function (): void {
+    $user = User::factory()->create();
+    $jeune = Fast::factory()->for($user)->create(['start_time' => now()->subHours(20)]);
+    $fin = now()->startOfSecond();
+
+    app(MettreAJourUnJeuneAction::class)->execute($user, $jeune, ['end_time' => $fin, 'status' => 'completed']);
+
+    expect($jeune->fresh()?->end_time?->getTimestamp())->toBe($fin->getTimestamp());
 });

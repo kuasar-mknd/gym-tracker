@@ -8,6 +8,9 @@ use App\Filament\Resources\Workouts\Pages\ListWorkouts;
 use App\Filament\Resources\Workouts\WorkoutResource;
 use App\Models\User;
 use App\Models\Workout;
+use App\Services\RecommendedValuesService;
+use App\Services\Stats\ClesDeStats;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -269,3 +272,313 @@ it('lit une heure changée avec le décalage enregistré quand il redonne cette 
     'contre-épreuve : début changé avant l’heure répétée, où le décalage enregistré va encore' => [false, ['started_at' => '2026-10-25 01:40:00'], '2026-10-24T23:40:00.000000Z', '2026-10-25T00:50:00.000000Z'],
     'contre-épreuve : fin changée après l’heure répétée, où le décalage enregistré ne va plus' => [false, ['ended_at' => '2026-10-25 03:20:00'], '2026-10-25T00:30:00.000000Z', '2026-10-25T02:20:00.000000Z'],
 ]);
+
+/*
+ * Le panneau écrit les séances sans passer par les actions de l'application, qui
+ * seules renouvelaient les versions de cache des statistiques et des valeurs
+ * proposées : une séance créée, changée ou supprimée au panneau laissait les
+ * chiffres d'avant jusqu'à leur échéance. La suppression, qui efface lignes et
+ * séries en base sans événement de série, ne renouvelait jamais les valeurs
+ * proposées. `Workout::booted()` les renouvelle après la transaction de
+ * l'écrivain. Les clefs se relisent par leurs lecteurs au moment de
+ * l'assertion, jamais depuis une variable remplie avant l'écriture.
+ */
+
+/**
+ * Les deux clefs que lit l'application pour ce compte, à cet instant.
+ *
+ * @return array{string, string}
+ */
+function clesDeCacheDuCompte(User $compte): array
+{
+    return [
+        ClesDeStats::seances($compte, 'sonde'),
+        RecommendedValuesService::cleDeCache($compte->id, 1, 1),
+    ];
+}
+
+it('renouvelle les versions du cache à la création, à la modification et à la suppression d’une séance du panneau', function (string $geste): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create([
+        'user_id' => $compte->getKey(),
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+    $avant = clesDeCacheDuCompte($compte);
+
+    match ($geste) {
+        'création' => Livewire::test(CreateWorkout::class)
+            ->fillForm(['user_id' => $compte->getKey(), 'started_at' => '2026-03-01 10:00:00'])
+            ->call('create')
+            ->assertHasNoFormErrors(),
+        'page de modification' => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+            ->fillForm(['ended_at' => '2026-02-10 09:15:00'])
+            ->call('save')
+            ->assertHasNoFormErrors(),
+        'action de la table' => Livewire::test(ListWorkouts::class)
+            ->callAction(TestAction::make('edit')->table($seance), ['started_at' => '2026-02-09 07:30:00'])
+            ->assertHasNoFormErrors(),
+        'suppression' => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+            ->callAction(DeleteAction::class),
+        'suppression groupée' => Livewire::test(ListWorkouts::class)
+            ->callTableBulkAction('delete', [$seance]),
+        default => throw new LogicException("Geste inconnu : {$geste}"),
+    };
+
+    $apres = clesDeCacheDuCompte($compte);
+
+    expect($apres[0])->not->toBe($avant[0])
+        ->and($apres[1])->not->toBe($avant[1]);
+})->with(['création', 'page de modification', 'action de la table', 'suppression', 'suppression groupée']);
+
+it('garde les versions du cache quand l’enregistrement ne change ni les dates, ni le nom', function (): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->getKey()]);
+    $avant = clesDeCacheDuCompte($compte);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->fillForm(['notes' => 'Une note de plus.'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect(clesDeCacheDuCompte($compte))->toBe($avant);
+});
+
+/*
+ * La fin d'une séance ne précède pas son début, et ne reste pas vide sous une
+ * autre séance en cours du compte : le démarrage refuse déjà d'en ouvrir une
+ * seconde, et le reste de l'application lit « la séance en cours » au
+ * singulier. Rouvrir une séance (vider sa fin) reste permis quand rien d'autre
+ * n'est en cours.
+ */
+dataset('enregistrements refusés d’une séance du panneau', [
+    'la page de modification' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->fillForm($donnees)
+        ->call('save')],
+    'l’action de modification de la table' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), $donnees)],
+]);
+
+it('refuse une fin qui précède le début', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-02-10 07:00:00'])->assertHasFormErrors(['ended_at']);
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-02-10 08:45:00');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('accepte une fin égale au début', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-02-10 07:30:00'])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-02-10 07:30:00');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('refuse de vider la fin d’une séance quand le compte a déjà une autre séance en cours', function (Closure $enregistrer): void {
+    $compte = User::factory()->create();
+    Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+    $terminee = Workout::factory()->create([
+        'user_id' => $compte->getKey(),
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    $enregistrer($terminee, ['ended_at' => null])->assertHasFormErrors(['ended_at']);
+
+    expect($terminee->fresh()?->ended_at)->not->toBeNull();
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('laisse rouvrir une séance quand le compte n’en a aucune autre en cours', function (Closure $enregistrer): void {
+    $compte = User::factory()->create();
+    $terminee = Workout::factory()->create([
+        'user_id' => $compte->getKey(),
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+    Workout::factory()->create(['user_id' => User::factory()->create()->getKey(), 'ended_at' => null]);
+
+    $enregistrer($terminee, ['ended_at' => null])->assertHasNoFormErrors();
+
+    expect($terminee->fresh()?->ended_at)->toBeNull();
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('laisse une séance déjà en cours le rester, même quand le compte en a une autre', function (Closure $enregistrer): void {
+    $compte = User::factory()->create();
+    Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+    $enCours = Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+
+    $enregistrer($enCours, ['name' => 'Toujours en cours'])->assertHasNoFormErrors();
+
+    expect($enCours->fresh()?->name)->toBe('Toujours en cours');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('refuse de créer une séance sans fin quand le compte en a déjà une en cours', function (): void {
+    $compte = User::factory()->create();
+    Workout::factory()->create(['user_id' => $compte->getKey(), 'ended_at' => null]);
+
+    Livewire::test(CreateWorkout::class)
+        ->fillForm(['user_id' => $compte->getKey(), 'name' => 'Seconde séance', 'started_at' => '2026-03-01 10:00:00'])
+        ->call('create')
+        ->assertHasFormErrors(['ended_at']);
+
+    expect(Workout::query()->where('name', 'Seconde séance')->exists())->toBeFalse();
+});
+
+/*
+ * La fin se compare au début en instants, décalage compris : une séance de
+ * 02:50 CEST à 02:10 CET (vingt minutes) a une fin murale avant son début, et
+ * un simple renommage ne doit pas être refusé.
+ */
+it('enregistre une séance finie dans l’heure répétée, dont l’heure murale de fin précède celle du début', function (Closure $enregistrer): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-10-25T00:50:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T01:10:00Z')->setTimezone($fuseau),
+    ]);
+
+    $enregistrer($seance, ['notes' => 'Une note.'])->assertHasNoFormErrors();
+
+    $seance->refresh();
+
+    expect($seance->notes)->toBe('Une note.')
+        ->and($seance->started_at->toJSON())->toBe('2026-10-25T00:50:00.000000Z')
+        ->and($seance->ended_at?->toJSON())->toBe('2026-10-25T01:10:00.000000Z');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('refuse par une erreur de validation, et non par une erreur 500, une date illisible', function (string $champ): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set("data.{$champ}", 'pas une date')
+        ->call('save')
+        ->assertHasFormErrors([$champ]);
+
+    Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), [$champ => 'pas une date'])
+        ->assertHasFormErrors([$champ]);
+})->with(['started_at', 'ended_at']);
+
+it('dit que la fin n’existe pas quand Laravel la laisse passer, et se tait sur la fin quand c’est le début qui n’existe pas', function (): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.ended_at', '99999-01-01 00:00:00')
+        ->call('save')
+        ->assertHasFormErrors(['ended_at' => 'Cette date n’existe pas.']);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.ended_at', '2026-02-30 08:45:00')
+        ->call('save')
+        ->assertHasFormErrors(['ended_at']);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.started_at', '99999-01-01 00:00:00')
+        ->call('save')
+        ->assertHasFormErrors(['started_at' => 'Cette date n’existe pas.']);
+
+    $fin = Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.started_at', '2026-02-30 07:30:00')
+        ->call('save')
+        ->assertHasFormErrors(['started_at']);
+
+    expect($fin->errors()->get('data.ended_at'))->toBe([]);
+});
+
+dataset('saisies brutes d’une séance du panneau', [
+    'la page de modification' => [fn (Workout $seance, array $donnees): mixed => tap(
+        Livewire::test(EditWorkout::class, ['record' => $seance->getKey()]),
+        fn ($page) => collect($donnees)->each(fn (mixed $valeur, string|int $champ) => $page->set("data.{$champ}", $valeur)),
+    )->call('save')],
+    'l’action de modification de la table' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), $donnees)],
+]);
+
+it('accepte les heures que le navigateur envoie, avec ou sans « T » et avec ou sans secondes', function (Closure $enregistrer, string $saisie, string $attendue): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-03-02 18:00:00'),
+        'ended_at' => Carbon::parse('2026-03-02 18:30:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => $saisie])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe($attendue);
+})->with('saisies brutes d’une séance du panneau')->with([
+    'T sans secondes' => ['2026-03-02T19:15', '2026-03-02 19:15:00'],
+    'T avec secondes' => ['2026-03-02T19:15:30', '2026-03-02 19:15:30'],
+    'T et secondes nulles' => ['2026-03-02T19:15:00', '2026-03-02 19:15:00'],
+    'espace sans secondes' => ['2026-03-02 19:15', '2026-03-02 19:15:00'],
+]);
+
+it('crée une séance dont le navigateur envoie les heures avec un « T »', function (): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateWorkout::class)
+        ->set('data.user_id', $owner->getKey())
+        ->set('data.started_at', '2026-03-02T18:00')
+        ->set('data.ended_at', '2026-03-02T19:15:30')
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $seance = Workout::query()->where('user_id', $owner->getKey())->sole();
+
+    expect($seance->started_at->format('Y-m-d H:i:s'))->toBe('2026-03-02 18:00:00')
+        ->and($seance->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-03-02 19:15:30');
+});
+
+it('garde l’occurrence d’un début que le navigateur renvoie avec un « T »', function (Closure $enregistrer): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-10-25T01:20:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T01:50:00Z')->setTimezone($fuseau),
+    ]);
+
+    $enregistrer($seance, ['started_at' => '2026-10-25T02:35'])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->started_at->toJSON())->toBe('2026-10-25T01:35:00.000000Z');
+})->with('saisies brutes d’une séance du panneau');
+
+it('lit un début qui tombe dans le trou du printemps comme l’enregistrement le lit, et le compare à la fin', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-03-29 00:30:00'),
+        'ended_at' => Carbon::parse('2026-03-29 00:45:00'),
+    ]);
+
+    $enregistrer($seance, ['started_at' => '2026-03-29 02:30:00', 'ended_at' => '2026-03-29 01:00:00'])
+        ->assertHasFormErrors(['ended_at']);
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-03-29 00:45:00');
+})->with('saisies brutes d’une séance du panneau');
+
+it('accepte une fin dans le trou du printemps comme un début, enregistrée à 03:30', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-03-29 00:30:00'),
+        'ended_at' => Carbon::parse('2026-03-29 00:45:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-03-29 02:30:00'])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-03-29 03:30:00');
+})->with('saisies brutes d’une séance du panneau');
+
+it('refuse toujours une fin qui précède le début dans l’heure répétée', function (Closure $enregistrer): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-10-25T01:10:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T01:30:00Z')->setTimezone($fuseau),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-10-25 02:05:00'])->assertHasFormErrors(['ended_at']);
+})->with('enregistrements refusés d’une séance du panneau');

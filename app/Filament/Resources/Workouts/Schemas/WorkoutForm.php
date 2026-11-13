@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Workouts\Schemas;
 
-use App\Models\Casts\InstantAvecSonDecalage;
 use App\Models\Workout;
+use App\Rules\AucuneAutreSeanceEnCours;
 use App\Rules\DateQueSaColonneTient;
-use Carbon\CarbonInterface;
+use App\Rules\FinNePrecedePasLeDebut;
+use App\Rules\HeureQuiExiste;
+use App\Support\HeureDuChampDeSeance;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Operation;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Str;
+use Livewire\Component as Livewire;
 
 class WorkoutForm
 {
@@ -70,48 +77,20 @@ class WorkoutForm
                     ->maxLength(255),
                 DateTimePicker::make('started_at')->label('Début')
                     ->required()
+                    ->rule(new HeureQuiExiste())
                     ->minDate(DateQueSaColonneTient::horodatage()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant())
-                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => self::avecLeDecalageEnregistre($state, $record?->started_at)),
+                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => HeureDuChampDeSeance::avecLeDecalage($state, $record?->started_at)),
                 DateTimePicker::make('ended_at')->label('Fin')
                     ->minDate(DateQueSaColonneTient::date()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::date()->dernierInstant())
-                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => self::avecLeDecalageEnregistre($state, $record?->ended_at)),
+                    ->rule(new HeureQuiExiste())
+                    ->rule(fn (Component $component, Livewire $livewire, ?Workout $record): ValidationRule => new FinNePrecedePasLeDebut(fn (): mixed => data_get($livewire, Str::beforeLast((string) $component->getStatePath(), '.').'.started_at'), $record))
+                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(fn (): mixed => data_get($record, 'user_id', $get->integer('user_id', true)), $record))
+                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => HeureDuChampDeSeance::avecLeDecalage($state, $record?->ended_at)),
                 Textarea::make('notes')->label('Notes')
                     ->maxLength(1000)
                     ->columnSpanFull(),
             ]);
-    }
-
-    /**
-     * L'heure du champ, telle que Filament la rend (l'heure murale de
-     * l'application, `Y-m-d H:i:s`), suivie du décalage de l'instant
-     * enregistré quand ce décalage redonne cette heure dans le fuseau de
-     * l'application, c'est-à-dire quand le cast le retiendrait
-     * (`InstantAvecSonDecalage::lire()`). Une autre heure, ou une séance sans
-     * cet instant, part telle quelle.
-     *
-     * Une heure inchangée garde ainsi son occurrence. Une heure changée garde
-     * celle de l'instant enregistré tant que son décalage va avec elle : une
-     * séance de la première occurrence dont on retouche le début ou la fin
-     * dans l'heure répétée y reste. Lue seule, cette heure passait dans la
-     * seconde occurrence, à côté de l'autre champ resté dans la première :
-     * l'écran montrait le début avant la fin, et la fin s'enregistrait avant
-     * le début. Une heure dont le décalage enregistré ne va plus (passée de
-     * l'été à l'hiver) se lit seule, comme toute heure sans décalage.
-     */
-    private static function avecLeDecalageEnregistre(mixed $heure, ?CarbonInterface $enregistre): mixed
-    {
-        if (! is_string($heure) || ! $enregistre instanceof CarbonInterface) {
-            return $heure;
-        }
-
-        $enregistre = $enregistre->copy()->setTimezone(config()->string('app.timezone'));
-        $decalage = $enregistre->getOffset();
-        $lue = InstantAvecSonDecalage::lire($heure, intdiv($decalage, 60));
-
-        return $lue->getOffset() === $decalage
-            ? $heure.$enregistre->format('P')
-            : $heure;
     }
 }
