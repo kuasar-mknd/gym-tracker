@@ -156,3 +156,20 @@ it('recalcule les scores déjà enregistrés hors de la plage, et eux seuls', fu
 
     expect($hommeDe300->refresh()->score)->toBe(scoreWilksEnregistre(201.9, 500, 'male'));
 });
+
+it('dit hors de la plage un poids de corps strictement au-delà de ses bornes', function (string $genre, float $poids, string $unite, bool $horsPlage): void {
+    expect(CreateWilksScoreAction::poidsDeCorpsHorsDeLaPlage($poids, $genre, $unite))->toBe($horsPlage);
+})->with([
+    'homme à la borne basse' => ['male', 40.0, 'kg', false],
+    'homme juste sous la borne basse' => ['male', 39.99, 'kg', true],
+    'homme à la borne haute' => ['male', 201.9, 'kg', false],
+    'homme juste au-dessus de la borne haute' => ['male', 201.91, 'kg', true],
+    'femme à la borne basse' => ['female', 26.51, 'kg', false],
+    'femme juste sous la borne basse' => ['female', 26.5, 'kg', true],
+    'femme à la borne haute' => ['female', 154.53, 'kg', false],
+    'femme juste au-dessus de la borne haute' => ['female', 154.54, 'kg', true],
+    'autre genre suit la plage féminine' => ['autre', 26.5, 'kg', true],
+    'en livres, juste au-dessus de la borne basse' => ['male', 88.19, 'lbs', false],
+    'en livres, sous la borne basse' => ['male', 88.0, 'lbs', true],
+    'en livres, au-dessus de la borne haute' => ['male', 446.0, 'lbs', true],
+]);
