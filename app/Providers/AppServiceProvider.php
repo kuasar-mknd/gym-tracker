@@ -135,6 +135,7 @@ final class AppServiceProvider extends ServiceProvider
         });
 
         $this->registerWebPushFailureLog();
+        $this->registerWebPushClient();
     }
 
     /**
@@ -221,6 +222,35 @@ final class AppServiceProvider extends ServiceProvider
     {
         ResetPassword::createUrlUsing(LiensDesCourriels::lienDeReinitialisation(...));
         VerifyEmail::createUrlUsing(LiensDesCourriels::lienDeVerification(...));
+    }
+
+    private function registerWebPushClient(): void
+    {
+        $this->app->when(\NotificationChannels\WebPush\WebPushChannel::class)
+            ->needs(\Minishlink\WebPush\WebPush::class)
+            ->give(function (Application $app): \Minishlink\WebPush\WebPush {
+                $fournisseur = $app->getProvider(\NotificationChannels\WebPush\WebPushServiceProvider::class);
+
+                /** @var array<string, mixed> $authentification */
+                $authentification = Closure::bind(
+                    fn (): array => $this->webPushAuth(),
+                    $fournisseur,
+                    \NotificationChannels\WebPush\WebPushServiceProvider::class,
+                )();
+
+                $client = new \GuzzleHttp\Client([
+                    'timeout' => 10,
+                    'connect_timeout' => 5,
+                    'allow_redirects' => false,
+                ]);
+
+                /** @var bool|int $remplissage */
+                $remplissage = config('webpush.automatic_padding');
+
+                return new \Minishlink\WebPush\WebPush($authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
+                    ->setReuseVAPIDHeaders(true)
+                    ->setAutomaticPadding($remplissage);
+            });
     }
 
     /**

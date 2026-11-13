@@ -219,6 +219,8 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | pour les notifications | vides : aucune notification | Clés VAPID, générées une fois par `npx web-push generate-vapid-keys`. Sans la clé publique, la page Profil affiche « Le service de notifications n'est pas encore configuré sur le serveur. » ; la clé privée signe chaque envoi du worker. En changer invalide tous les abonnements existants. |
 | `VAPID_SUBJECT` | non | `APP_URL` | Identité de l'expéditeur auprès du service push : une adresse `mailto:` ou une URL. |
 
+L'adresse d'un abonnement doit désigner `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `push.apple.com` ou `notify.windows.com` (ou un de leurs sous-domaines), à l'enregistrement comme à l'envoi ; un abonnement stocké chez un autre hôte est ignoré. Le client de l'envoi attend 10 s au plus, 5 s pour se connecter, et ne suit aucune redirection. Un nouveau service push se déclare dans `PublicPushEndpoint::HOTES_ADMIS`.
+
 #### Sauvegardes
 
 | Variable | Obligatoire en production | Défaut | Rôle |

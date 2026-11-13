@@ -97,7 +97,7 @@ describe('la fin de séance', function (): void {
 
     it('ne propose rien au compte dont le serveur tient déjà un abonnement', function (): void {
         $utilisateur = User::factory()->create();
-        $utilisateur->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton');
+        $utilisateur->updatePushSubscription('https://fcm.googleapis.com/fcm/send/telephone', 'cle', 'jeton');
 
         $this->actingAs($utilisateur)
             ->patch(route('workouts.update', seanceEnCoursPourLInvitation($utilisateur)), ['is_finished' => true])
@@ -121,7 +121,7 @@ describe('la fin de séance', function (): void {
     });
 
     it('ne compte pas l’abonnement d’un autre compte', function (): void {
-        User::factory()->create()->updatePushSubscription('https://push.example.com/autre', 'cle', 'jeton');
+        User::factory()->create()->updatePushSubscription('https://fcm.googleapis.com/fcm/send/autre', 'cle', 'jeton');
         $utilisateur = User::factory()->create();
 
         $this->actingAs($utilisateur)
@@ -158,14 +158,14 @@ describe('la fin de séance par l’API', function (): void {
         expect($parLApi->json('meta'))->toBe(['proposer_les_notifications' => $attendu]);
     })->with([
         'aucun abonnement' => [fn (User $utilisateur): null => null, true],
-        'un abonnement tenu' => [fn (User $utilisateur): PushSubscription => $utilisateur->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton'), false],
+        'un abonnement tenu' => [fn (User $utilisateur): PushSubscription => $utilisateur->updatePushSubscription('https://fcm.googleapis.com/fcm/send/telephone', 'cle', 'jeton'), false],
         'records coupés' => [fn (User $utilisateur) => NotificationPreference::factory()->create([
             'user_id' => $utilisateur->id,
             'type' => 'personal_record',
             'is_enabled' => false,
             'is_push_enabled' => false,
         ]), false],
-        'l’abonnement d’un autre compte' => [fn (User $utilisateur) => User::factory()->create()->updatePushSubscription('https://push.example.com/autre', 'cle', 'jeton'), true],
+        'l’abonnement d’un autre compte' => [fn (User $utilisateur) => User::factory()->create()->updatePushSubscription('https://fcm.googleapis.com/fcm/send/autre', 'cle', 'jeton'), true],
     ]);
 });
 

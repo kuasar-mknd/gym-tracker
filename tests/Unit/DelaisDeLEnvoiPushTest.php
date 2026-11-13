@@ -2,16 +2,61 @@
 
 declare(strict_types=1);
 
+use GuzzleHttp\Client;
+use Minishlink\WebPush\VAPID;
+use Minishlink\WebPush\WebPush;
+use NotificationChannels\WebPush\WebPushChannel;
+
 uses(Tests\TestCase::class);
 
-/*
- * Un point d'arrivée de notification qui ne répond pas ne doit pas garder un
- * travailleur de la file partagée : le client HTTP a des délais explicites,
- * 10 s au total (le paquet laissait 30 s) et 5 s pour se connecter.
+/**
+ * Le WebPush que le canal reçoit du conteneur, et non la configuration : sous
+ * Laravel 13, le paquet n'en transmettait pas les délais au client.
+ *
+ * @return array{0: WebPush, 1: Client}
  */
-it('borne la durée d’un envoi push par des délais explicites', function (): void {
-    $options = config()->array('webpush.client_options');
+function webPushDuCanal(): array
+{
+    $canal = app(WebPushChannel::class);
 
-    expect($options['timeout'] ?? null)->toBeInt()->toBeGreaterThan(0)->toBeLessThanOrEqual(10)
-        ->and($options['connect_timeout'] ?? null)->toBeInt()->toBeGreaterThan(0)->toBeLessThanOrEqual(5);
+    /** @var WebPush $webPush */
+    $webPush = new ReflectionProperty($canal, 'webPush')->getValue($canal);
+    /** @var Client $client */
+    $client = new ReflectionProperty($webPush, 'client')->getValue($webPush);
+
+    expect($webPush)->toBeInstanceOf(WebPush::class)
+        ->and($client)->toBeInstanceOf(Client::class);
+
+    return [$webPush, $client];
+}
+
+it('borne la durée d’un envoi push par des délais que le client porte vraiment', function (): void {
+    [, $client] = webPushDuCanal();
+
+    expect($client->getConfig('timeout'))->toBe(10)
+        ->and($client->getConfig('connect_timeout'))->toBe(5);
+});
+
+it('ne suit aucune redirection d’un point d’accès push', function (): void {
+    [, $client] = webPushDuCanal();
+
+    expect($client->getConfig('allow_redirects'))->toBeFalse();
+});
+
+it('garde l’authentification VAPID de la configuration', function (): void {
+    $cles = VAPID::createVapidKeys();
+
+    config([
+        'webpush.vapid.public_key' => $cles['publicKey'],
+        'webpush.vapid.private_key' => $cles['privateKey'],
+        'webpush.vapid.subject' => 'mailto:exploitant@example.org',
+    ]);
+
+    [$webPush] = webPushDuCanal();
+
+    /** @var array{VAPID: array{subject: string, publicKey: string}} $authentification */
+    $authentification = new ReflectionProperty($webPush, 'auth')->getValue($webPush);
+
+    expect($authentification['VAPID']['subject'])->toBe('mailto:exploitant@example.org')
+        ->and(strlen($authentification['VAPID']['publicKey']))->toBe(65);
 });

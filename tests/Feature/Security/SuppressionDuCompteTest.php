@@ -83,7 +83,7 @@ function compteSupprimeSemerSesTraces(Model $proprietaire): void
     DB::table('push_subscriptions')->insert([
         'subscribable_type' => $type,
         'subscribable_id' => $identifiant,
-        'endpoint' => 'https://push.example.org/'.Str::uuid(),
+        'endpoint' => 'https://fcm.googleapis.com/fcm/send/'.Str::uuid(),
         'public_key' => 'cle-publique',
         'auth_token' => 'jeton-d-authentification',
         'created_at' => $maintenant,
