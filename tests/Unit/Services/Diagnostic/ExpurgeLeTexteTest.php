@@ -401,6 +401,113 @@ it('décode les entités HTML, jusqu’à trois fois, avant de masquer', functio
     'une apostrophe en entité' => ['l&#39;haltère', 'l\'haltère'],
 ]);
 
+/*
+ * Les identifiants d'une URL vont jusqu'au dernier `@` de leur mot, quel que
+ * soit ce que le mot de passe contient (`/`, `?`, `#`, `@`), brut ou écrit en
+ * `%xx`, et même quand il porte un blanc écrit autrement qu'en clair (`%20`,
+ * `%C2%A0`, `&#32;`, `&nbsp;`…). Ne sont pas couverts : un blanc écrit en clair
+ * (il finit le mot), un deux-points encodé (`%3A`) entre le compte et le mot
+ * de passe, un mot de passe de plus de 256 caractères.
+ */
+it('masque les identifiants d’une URL dont le mot de passe porte un caractère de chemin', function (string $motDePasse): void {
+    $message = sprintf('connexion à %s://%s:%s@%s', 'amqp', 'compte', $motDePasse, 'broker:5672/0');
+
+    expect(expurgeLeTexte($message)->texte)->toBe('connexion à amqp://[identifiants]@broker:5672/0');
+})->with([
+    'une barre oblique' => ['pa/ssword'],
+    'un point d’interrogation' => ['pa?ssword'],
+    'un dièse' => ['pa#ssword'],
+    'une barre oblique et un point d’interrogation encodés' => ['pa%2Fss%3Fw'],
+    'un dièse encodé' => ['pa%23ssword'],
+    'un blanc encodé' => ['pa%20ssword'],
+    'un blanc encodé deux fois' => ['pa%2520ssword'],
+    'un espace insécable encodé' => ['pa%C2%A0ssword'],
+    'un espace cadratin encodé' => ['pa%E2%80%83ssword'],
+    'un blanc en entité décimale' => ['pa&#32;ssword'],
+    'un blanc en entité décimale sans point-virgule' => ['pa&#32ssword'],
+    'une tabulation en entité' => ['pa&#9;ssword'],
+    'un blanc en entité hexadécimale' => ['pa&#x20;ssword'],
+    'un espace insécable en entité nommée' => ['pa&nbsp;ssword'],
+    'une tabulation encodée' => ['pa%09ssword'],
+    'un arobase' => ['pa@ssword'],
+]);
+
+it('arrête les identifiants d’une URL au blanc, à la guillemet et à la fin de ligne', function (): void {
+    $url = sprintf('%s://%s:%s@%s', 'amqp', 'compte', 'secret', 'broker/0');
+
+    expect(expurgeLeTexte($url."\nécrire à jean@example.org")->texte)->toBe("amqp://[identifiants]@broker/0\nécrire à [courriel]")
+        ->and(expurgeLeTexte('"'.$url.'" puis jean@example.org')->texte)->toBe('"amqp://[identifiants]@broker/0" puis [courriel]');
+});
+
+/*
+ * Un octet décodé qui ne forme pas d'UTF-8 valide est remplacé : le reste du
+ * texte se lit, et le champ n'est pas `[illisible]`.
+ */
+it('remplace un octet décodé invalide sans rendre le champ illisible', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'un octet isolé' => ['texte %FF fin', 'texte ? fin'],
+    'un é en Latin-1 dans une requête' => ['GET /recherche?q=%E9t%E9 404', 'GET /recherche?[requête] 404'],
+    'un é en Latin-1 dans un chemin' => ['chemin /tmp/caf%E9.txt', 'chemin [chemin]?[requête]'],
+    'un octet isolé décodé au deuxième passage' => ['texte %25FF fin', 'texte ? fin'],
+    'un octet isolé dans des identifiants d’URL' => [sprintf('%s://%s:%s@%s fin', 'amqp', 'compte', 'pa%FFss', 'broker/0'), 'amqp://[identifiants]@broker/0 fin'],
+]);
+
+it('remplace un début de caractère que la borne de 8 Kio coupe', function (): void {
+    $texte = expurgeLeTexte(str_repeat('a', 8_183).'%C3%A9%C3', 20_000)->texte;
+
+    expect($texte)->toBe(str_repeat('a', 8_183).'é?');
+});
+
+/*
+ * Deux ambiguïtés acceptées : un `@` dans le chemin d'une URL à port se lit
+ * comme la fin d'identifiants, et un nom de secret emporte ce qui suit sa
+ * valeur jusqu'au blanc.
+ */
+it('accepte de trop masquer quand la forme est ambiguë', function (): void {
+    expect(expurgeLeTexte('https://example.org:8443/a@b')->texte)->toBe('https://[identifiants]@b')
+        ->and(expurgeLeTexte('x password=abcdefgh&user=jean fin')->texte)->toBe('x password=[secret] fin');
+});
+
+/*
+ * Le masque d'un nom de secret lit des caractères, pas des octets : une
+ * valeur multioctet ne se coupe jamais au milieu d'un caractère.
+ */
+it('masque une valeur multioctet sans couper un caractère', function (): void {
+    $texte = expurgeLeTexte('Erreur key=a'.str_repeat('é', 3_000));
+
+    expect($texte->texte)->toBe('Erreur key=[secret]');
+});
+
+it('masque la valeur d’un nom de secret quelle que soit la mise en forme du texte', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'du JSON échappé' => ['{\"password\":\"abcdefgh12\"}', '{\"password\":\"[secret]"}'],
+    'du JSON' => ['{"password":"abcdefgh12","x":1}', '{"password":"[secret]","x":1}'],
+    'un print_r' => ['[password] => abcdefgh12', '[password] => [secret]'],
+    'un var_export' => ["'password' => 'abcdefgh12',", "'password' => '[secret]',"],
+    'une valeur entre guillemets avec des blancs' => ['password="un mot de passe long" fin', 'password="[secret]" fin'],
+    'une valeur entre apostrophes avec des blancs' => ["pwd = 'un mot de passe' fin", "pwd = '[secret]' fin"],
+    'une valeur qui porte une virgule' => ['password=abcdefgh,TAIL fin', 'password=[secret] fin'],
+    'une valeur qui porte un point-virgule et une parenthèse' => ['(token=abcdefgh;TAIL) fin', '(token=[secret] fin'],
+    'sept caractères, comme prévu' => ['pwd=hunter2', 'pwd=hunter2'],
+    'un paramètre court' => ['password = ?', 'password = ?'],
+    'une clé de contrainte' => ["for key 'users.email_unique'", "for key 'users.email_unique'"],
+    'un nom qui se termine par key, accepté' => ['monkey=bananasplit', 'monkey=[secret]'],
+]);
+
+/*
+ * Une entité numérique sans point-virgule se décode comme le fait un
+ * navigateur.
+ */
+it('décode une entité numérique sans point-virgule avant de masquer', function (string $message): void {
+    expect(expurgeLeTexte($message)->texte)->toBe('[courriel]');
+})->with([
+    'décimale' => ['jean&#64example.org'],
+    'hexadécimale' => ['jean&#x40mail.example.org'],
+    'décimale suivie d’un mot' => ['jean&#64mail.example.org'],
+]);
+
 it('ramène un chemin du dépôt à sa racine et marque les autres chemins absolus', function (): void {
     $message = 'Dans '.base_path('app/Models/User.php').':12, lu /etc/ssl/private/cle.pem et (/var/lib/donnees/a.db)';
 
@@ -475,6 +582,16 @@ it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $ad
     'des noms de secret' => [str_repeat('key=', 2_048)],
     'des noms de secret préfixés' => [str_repeat('a_key:', 1_366)],
     'des noms de secret sans valeur' => [str_repeat('token ', 1_366)],
+    'des identifiants d’URL à mots de passe' => [str_repeat('a://b:', 1_366)],
+    'des identifiants d’URL sans arobase' => ['a://b:'.str_repeat('c/', 4_094)],
+    'des identifiants d’URL encodés' => [str_repeat('a://b:%20', 911)],
+    'des noms de secret entre guillemets' => [str_repeat('password="', 820)],
+    'des noms de secret entre apostrophes sans fin' => ["password => '".str_repeat('a', 8_200)],
+    'des noms de secret échappés' => [str_repeat('key\\":\\"', 1_024)],
+    'des entités sans point-virgule' => [str_repeat('&#64', 2_048)],
+    'des identifiants d’URL à blancs encodés en UTF-8' => [str_repeat('a://b:%C2%A0', 700)],
+    'des identifiants d’URL à blancs en entité' => [str_repeat('a://b:&#32;', 746)],
+    'des octets invalides décodés' => [str_repeat('%FF%E9', 1_366)],
     'des entités' => [str_repeat('&amp;', 1_639)],
     'des entités d’arobase' => [str_repeat('&#64;', 1_639)],
     'des barres obliques inverses' => [str_repeat('\\', 8_192)],
