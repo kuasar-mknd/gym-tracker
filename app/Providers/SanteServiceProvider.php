@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Support\Sante\AccesDeDiagnosticCheck;
 use App\Support\Sante\AnnonceDeVersion;
 use App\Support\Sante\DossierDesSauvegardesCheck;
+use App\Support\Sante\ProxysDeConfianceCheck;
 use App\Support\Sante\ReglagesDeLaBaseCheck;
 use App\Support\Sante\ReglagesDeRedisCheck;
 use App\Support\Sante\TachesPlanifieesCheck;
@@ -60,6 +61,7 @@ final class SanteServiceProvider extends ServiceProvider
             ScheduleCheck::new()->label('Planificateur')->heartbeatMaxAgeInMinutes(2),
             TachesPlanifieesCheck::new(),
             AccesDeDiagnosticCheck::new(),
+            ProxysDeConfianceCheck::new(),
             HorizonCheck::new()->label('Travailleurs Horizon'),
             VersionsDesConteneursCheck::new(),
             VersionsDesServicesCheck::new(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\WorkoutTemplate;
+use App\Services\ResolveurDns;
 use Illuminate\Support\Carbon;
 
 /*
@@ -152,7 +153,24 @@ it('nomme en français l’exercice refusé d’un modèle de séance, à la cr�
  * affiche tel quel ; un hôte non résolu, le cas d'une panne DNS, touche un
  * utilisateur légitime (#1975).
  */
-it('nomme en français l’adresse d’un abonnement push refusée', function (string $adresse, string $message): void {
+it('nomme en français l’adresse d’un abonnement push refusée', function (string $adresse, string $message, ?array $adresses = null): void {
+    /** @var list<string>|null $adresses */
+    if ($adresses !== null) {
+        app()->bind(ResolveurDns::class, fn (): ResolveurDns => new class($adresses) extends ResolveurDns
+        {
+            /** @param list<string> $adresses */
+            public function __construct(private readonly array $adresses)
+            {
+            }
+
+            #[\Override]
+            public function adressesDe(string $host): array
+            {
+                return $this->adresses;
+            }
+        });
+    }
+
     $reponse = $this->actingAs(User::factory()->create())
         ->postJson(route('push-subscriptions.update'), [
             'endpoint' => $adresse,
@@ -166,9 +184,10 @@ it('nomme en français l’adresse d’un abonnement push refusée', function (s
     expect($rendu)->toBe($message);
     expect($rendu)->not->toContain('endpoint');
 })->with([
-    'en clair' => ['http://push.example.org/abc', "Le champ adresse de l'abonnement doit être une URL https."],
-    'hôte non résolu' => ['https://rien-du-tout.invalid/abc', "Le champ adresse de l'abonnement doit désigner un hôte joignable et public."],
-    'hôte privé' => ['https://10.0.0.5/abc', "Le champ adresse de l'abonnement doit désigner un hôte public."],
+    'en clair' => ['http://fcm.googleapis.com/abc', "Le champ adresse de l'abonnement doit être une URL https."],
+    'hôte non résolu' => ['https://rien-du-tout.push.apple.com/abc', "Le champ adresse de l'abonnement doit désigner un hôte joignable et public.", []],
+    'hôte privé' => ['https://interne.push.apple.com/abc', "Le champ adresse de l'abonnement doit désigner un hôte public.", ['10.0.0.5']],
+    'hôte d’un autre service' => ['https://exemple.org/abc', "Le champ adresse de l'abonnement doit désigner le service de notifications d’un navigateur."],
 ]);
 
 it('ne laisse dans aucun de ces messages ni nom de colonne ni « today »', function (): void {

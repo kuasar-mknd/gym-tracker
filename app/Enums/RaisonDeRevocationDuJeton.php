@@ -14,5 +14,6 @@ enum RaisonDeRevocationDuJeton: string
     case Interrupteur = 'interrupteur';
     case MotDePasseChange = 'mot-de-passe-change';
     case DoubleAuthentificationRetiree = 'double-authentification-retiree';
+    case DoubleAuthentificationChangee = 'double-authentification-changee';
     case AdministrateurSupprime = 'administrateur-supprime';
 }

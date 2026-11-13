@@ -27,6 +27,36 @@ use Illuminate\Contracts\Validation\ValidationRule;
 class PublicPushEndpoint implements ValidationRule
 {
     /**
+     * Les services push des navigateurs : un hôte est admis s'il est l'un d'eux
+     * ou l'un de leurs sous-domaines.
+     *
+     * @var list<string>
+     */
+    public const array HOTES_ADMIS = [
+        'fcm.googleapis.com',
+        'updates.push.services.mozilla.com',
+        'push.apple.com',
+        'notify.windows.com',
+    ];
+
+    /**
+     * Comparaison de chaînes sur l'hôte, sans DNS : l'envoi la refait sur les
+     * abonnements déjà stockés.
+     */
+    public static function accepteLHoteDe(string $url): bool
+    {
+        $hote = parse_url($url, PHP_URL_HOST);
+
+        if (! is_string($hote)) {
+            return false;
+        }
+
+        $hote = strtolower(rtrim($hote, '.'));
+
+        return array_any(self::HOTES_ADMIS, fn (string $admis): bool => $hote === $admis || str_ends_with($hote, '.'.$admis));
+    }
+
+    /**
      * @param  Closure(string, string|null=): \Illuminate\Translation\PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
@@ -41,6 +71,12 @@ class PublicPushEndpoint implements ValidationRule
 
         if ($parts === false || ($parts['scheme'] ?? null) !== 'https' || ! isset($parts['host'])) {
             $fail('Le champ :attribute doit être une URL https.');
+
+            return;
+        }
+
+        if (! self::accepteLHoteDe($value)) {
+            $fail('Le champ :attribute doit désigner le service de notifications d’un navigateur.');
 
             return;
         }

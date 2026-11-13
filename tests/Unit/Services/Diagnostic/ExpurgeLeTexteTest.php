@@ -323,6 +323,84 @@ it('remplace par [secret] une longue suite hexadécimale quel que soit son voisi
     'un préfixe 0x collé à un mot' => ['cle cache0xc0ffee5ca1ab1e0ddba11deadbeefcafe0123456', 'cle cache0xc0ffee5ca1ab1e0ddba11deadbeefcafe0123456'],
 ]);
 
+/*
+ * Un secret en base64 est masqué qu'un deux-points ou un signe égal le
+ * précède ; un chemin ou une valeur sans forme de secret reste.
+ */
+it('masque un secret en base64 derrière un signe égal comme derrière un deux-points', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'après un deux-points' => ['cle: Zm9vYmFyYmF6UXV4UXV1eFRlc3RTZWNyZXQxMjM0NTY3ODkw', 'cle: [secret]'],
+    'après un signe égal' => ['CLE=Zm9vYmFyYmF6UXV4UXV1eFRlc3RTZWNyZXQxMjM0NTY3ODkw', 'CLE=[secret]'],
+    'après un signe égal et des barres obliques' => ['CLE=dG9w/c2VjcmV0/YWJjZGVmZ2hpams+bG1ub3BxcnN0dXZ3eHl6', 'CLE=[secret]'],
+    'un chemin après un signe égal' => ['chemin=app/Http/Controllers/Api/V1/WorkoutsController.php', 'chemin=app/Http/Controllers/Api/V1/WorkoutsController.php'],
+    'un nom de migration après un signe égal' => ['fichier=2026_09_06_115255_create_filament_exceptions_table', 'fichier=2026_09_06_115255_create_filament_exceptions_table'],
+]);
+
+/*
+ * Les identifiants d'une URL se taisent même quand l'hôte n'a pas de point :
+ * le motif des courriels et celui des hôtes ne les voient pas.
+ */
+it('masque les identifiants d’une URL dont l’hôte n’a pas de point', function (string $identifiants, string $suite, string $attendu): void {
+    expect(expurgeLeTexte(sprintf('connexion à %s://%s@%s', 'amqp', $identifiants, $suite))->texte)->toBe(sprintf('connexion à amqp://%s', $attendu));
+})->with([
+    'un mot de passe seul' => [':'.'motdepasse', 'db/app', '[identifiants]@db/app'],
+    'un compte et un mot de passe' => ['sail:'.'motdepasse', 'db/app', '[identifiants]@db/app'],
+    'un mot de passe qui porte un arobase' => ['sail:p'.'@ss', 'db/app', '[identifiants]@db/app'],
+    'un hôte et un port' => ['sail:'.'motdepasse', 'broker:5672/0', '[identifiants]@broker:5672/0'],
+]);
+
+it('ne laisse pas les identifiants d’une URL déborder sur le texte qui suit', function (): void {
+    $message = 'page '.'https'.'://example.org:8443 puis jean@example.org';
+
+    expect(expurgeLeTexte($message)->texte)->toBe('page https://[hôte] puis [courriel]');
+});
+
+/*
+ * Un secret en base64 qui porte `/` sans `+` ni `=` ressemble à un chemin :
+ * seul le nom qui le précède le désigne.
+ */
+it('masque la valeur qui suit un nom de secret', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'une clé d’accès, au signe égal' => [
+        'AWS_SECRET_ACCESS_KEY='.implode('/', ['wJalrXUtnFEMI', 'K7MDENG', 'bPxRfiCYEXAMPLEKEY']),
+        'AWS_SECRET_ACCESS_KEY=[secret]',
+    ],
+    'une clé de JSON' => ['{"api_key":"'.implode('/', ['abcd1234', 'efgh5678', 'ijkl']).'","x":1}', '{"api_key":"[secret]","x":1}'],
+    'un jeton avec deux-points et blancs' => ['token :  '.implode('/', ['abcd1234', 'efgh5678']), 'token :  [secret]'],
+    'une signature, un mot de passe' => ['signature=abcdefgh12345678 password=hunter2hunter2', 'signature=[secret] password=[secret]'],
+    'un paramètre court' => ['password = ?', 'password = ?'],
+    'une valeur de huit caractères' => ['password=abcdefgh', 'password=[secret]'],
+    'une valeur de sept caractères' => ['password=abcdefg', 'password=abcdefg'],
+    'une valeur entre apostrophes' => ["pwd: 'abcdefgh' fin", "pwd: '[secret]' fin"],
+    'un nom précédé de lettres' => ['MY_APP-api-key=abcdefgh12', 'MY_APP-api-key=[secret]'],
+    'une valeur trop courte' => ['password=abc', 'password=abc'],
+    'une clé de contrainte SQL' => ["for key 'users.email_unique'", "for key 'users.email_unique'"],
+    'un mot qui finit par key sans séparateur' => ['monkey business: app/Models/User', 'monkey business: app/Models/User'],
+]);
+
+/*
+ * Un courriel écrit avec une entité HTML (`&#64;`) ou une barre oblique
+ * inverse devant l'arobase (`\@`) se reconnaît après décodage ; un caractère
+ * invisible écrit en entité part avec les autres.
+ */
+it('décode les entités HTML, jusqu’à trois fois, avant de masquer', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'un arobase en entité décimale' => ['jean&#64;example.org', '[courriel]'],
+    'un arobase en entité hexadécimale' => ['jean&#x40;example.org', '[courriel]'],
+    'un arobase en entité nommée' => ['jean&commat;example.org', '[courriel]'],
+    'une entité écrite deux fois' => ['jean&amp;#64;example.org', '[courriel]'],
+    'une entité écrite trois fois' => ['jean&amp;amp;#64;example.org', '[courriel]'],
+    'une entité sous un pourcentage' => ['jean&#37;40example.org', '[courriel]'],
+    'une entité décodée en pleine chasse' => ['jean&#xFF20;example.org', '[courriel]'],
+    'une barre oblique devant l’arobase' => ['jean\\@example.org', '[courriel]'],
+    'une barre oblique et une entité' => ['jean\\&#64;example.org', '[courriel]'],
+    'un invisible en entité' => ['jean&#8203;@example.org', '[courriel]'],
+    'une apostrophe en entité' => ['l&#39;haltère', 'l\'haltère'],
+]);
+
 it('ramène un chemin du dépôt à sa racine et marque les autres chemins absolus', function (): void {
     $message = 'Dans '.base_path('app/Models/User.php').':12, lu /etc/ssl/private/cle.pem et (/var/lib/donnees/a.db)';
 
@@ -392,6 +470,14 @@ it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $ad
     'des adresses IPv4 écrites en IPv6' => [str_repeat('::ffff:1.2.3.', 631)],
     'de l’hexadécimal entre des tirets' => [str_repeat('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0-', 200)],
     'des courriels enchaînés' => [str_repeat('a.b@c.', 1_366)],
+    'des débuts d’URL' => [str_repeat('a://', 2_048)],
+    'des identifiants d’URL sans fin' => ['a://'.str_repeat('b', 8_188)],
+    'des noms de secret' => [str_repeat('key=', 2_048)],
+    'des noms de secret préfixés' => [str_repeat('a_key:', 1_366)],
+    'des noms de secret sans valeur' => [str_repeat('token ', 1_366)],
+    'des entités' => [str_repeat('&amp;', 1_639)],
+    'des entités d’arobase' => [str_repeat('&#64;', 1_639)],
+    'des barres obliques inverses' => [str_repeat('\\', 8_192)],
     'des ligatures que NFKC allonge' => [str_repeat("\u{FDFA}", 2_731)],
     'des ligatures que NFKC allonge, séparées par des points' => [str_repeat("\u{FDFA}.", 2_048)],
     'des ligatures que NFKC allonge, dans une clé en double' => ['SQLSTATE[23000]: x: 1062 Duplicate entry \''.str_repeat("\u{FDFA}", 2_731)],
