@@ -244,8 +244,8 @@ final class AppServiceProvider extends ServiceProvider
                     'allow_redirects' => false,
                 ]);
 
-                /** @var bool|int $remplissage */
-                $remplissage = config('webpush.automatic_padding');
+                $reglage = config('webpush.automatic_padding');
+                $remplissage = is_numeric($reglage) ? (int) $reglage : (bool) $reglage;
 
                 return new \Minishlink\WebPush\WebPush($authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
                     ->setReuseVAPIDHeaders(true)

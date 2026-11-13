@@ -175,6 +175,19 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Les abonnements dont l'hôte est un service push de navigateur, les
+     * autres déjà stockés étant ignorés à l'envoi.
+     *
+     * @return Collection<array-key, \NotificationChannels\WebPush\PushSubscription>
+     */
+    public function routeNotificationForWebPush(): Collection
+    {
+        return $this->pushSubscriptions
+            ->filter(static fn ($abonnement): bool => PublicPushEndpoint::accepteLHoteDe($abonnement->endpoint))
+            ->values();
+    }
+
+    /**
      * Faut-il proposer les notifications à la fin d'une séance (#1848) ?
      *
      * Rien ne les proposait hors du profil. La fin d'une séance est le moment
@@ -189,19 +202,6 @@ final class User extends Authenticatable implements MustVerifyEmail
      * pour la fin par la page (donnée flash) et pour la fin par l'API
      * (`meta.proposer_les_notifications`, #2049).
      */
-    /**
-     * Les abonnements dont l'hôte est un service push de navigateur, les
-     * autres déjà stockés étant ignorés à l'envoi.
-     *
-     * @return Collection<array-key, \NotificationChannels\WebPush\PushSubscription>
-     */
-    public function routeNotificationForWebPush(): Collection
-    {
-        return $this->pushSubscriptions
-            ->filter(static fn ($abonnement): bool => PublicPushEndpoint::accepteLHoteDe($abonnement->endpoint))
-            ->values();
-    }
-
     public function doitRecevoirLInvitationAuxNotifications(): bool
     {
         return ! $this->pushSubscriptions()->exists()
