@@ -430,3 +430,34 @@ it('refuse de créer une séance sans fin quand le compte en a déjà une en cou
 
     expect(Workout::query()->where('name', 'Seconde séance')->exists())->toBeFalse();
 });
+
+/*
+ * La fin se compare au début en instants, décalage compris : une séance de
+ * 02:50 CEST à 02:10 CET (vingt minutes) a une fin murale avant son début, et
+ * un simple renommage ne doit pas être refusé.
+ */
+it('enregistre une séance finie dans l’heure répétée, dont l’heure murale de fin précède celle du début', function (Closure $enregistrer): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-10-25T00:50:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T01:10:00Z')->setTimezone($fuseau),
+    ]);
+
+    $enregistrer($seance, ['notes' => 'Une note.'])->assertHasNoFormErrors();
+
+    $seance->refresh();
+
+    expect($seance->notes)->toBe('Une note.')
+        ->and($seance->started_at->toJSON())->toBe('2026-10-25T00:50:00.000000Z')
+        ->and($seance->ended_at?->toJSON())->toBe('2026-10-25T01:10:00.000000Z');
+})->with('enregistrements refusés d’une séance du panneau');
+
+it('refuse toujours une fin qui précède le début dans l’heure répétée', function (Closure $enregistrer): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-10-25T01:10:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T01:30:00Z')->setTimezone($fuseau),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-10-25 02:05:00'])->assertHasFormErrors(['ended_at']);
+})->with('enregistrements refusés d’une séance du panneau');

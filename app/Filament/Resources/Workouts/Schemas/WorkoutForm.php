@@ -9,6 +9,7 @@ use App\Models\Workout;
 use App\Rules\AucuneAutreSeanceEnCours;
 use App\Rules\DateQueSaColonneTient;
 use Carbon\CarbonInterface;
+use Closure;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -79,7 +80,14 @@ class WorkoutForm
                 DateTimePicker::make('ended_at')->label('Fin')
                     ->minDate(DateQueSaColonneTient::date()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::date()->dernierInstant())
-                    ->afterOrEqual('started_at')
+                    ->rule(fn (Get $get, ?Workout $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get, $record): void {
+                        $debut = self::instantDuChamp($get('started_at'), $record?->started_at);
+                        $fin = self::instantDuChamp($value, $record?->ended_at);
+
+                        if ($debut instanceof CarbonInterface && $fin instanceof CarbonInterface && $fin->lessThan($debut)) {
+                            $fail('La fin doit être postérieure ou égale au début.');
+                        }
+                    })
                     ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(
                         $record instanceof Workout ? $record->user_id : $get('user_id'),
                         $record?->id,
@@ -109,6 +117,30 @@ class WorkoutForm
      * le début. Une heure dont le décalage enregistré ne va plus (passée de
      * l'été à l'hiver) se lit seule, comme toute heure sans décalage.
      */
+    /**
+     * L'instant qu'une heure du champ désignerait une fois enregistrée : celle
+     * de `avecLeDecalageEnregistre()`, lue comme le cast la lit
+     * (`InstantAvecSonDecalage::lire()`). Nul quand l'heure n'en est pas une,
+     * que d'autres règles refusent.
+     */
+    private static function instantDuChamp(mixed $heure, ?CarbonInterface $enregistre): ?CarbonInterface
+    {
+        if (! is_string($heure) || $heure === '') {
+            return null;
+        }
+
+        $decalage = $enregistre instanceof CarbonInterface
+            && self::avecLeDecalageEnregistre($heure, $enregistre) !== $heure
+            ? intdiv($enregistre->copy()->setTimezone(config()->string('app.timezone'))->getOffset(), 60)
+            : null;
+
+        try {
+            return InstantAvecSonDecalage::lire($heure, $decalage);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private static function avecLeDecalageEnregistre(mixed $heure, ?CarbonInterface $enregistre): mixed
     {
         if (! is_string($heure) || ! $enregistre instanceof CarbonInterface) {

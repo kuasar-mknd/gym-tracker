@@ -131,7 +131,7 @@ it('garde la première fin d’un jeûne quand un second appareil rejoue la sien
     $finRejouee = now()->startOfSecond();
 
     app(MettreAJourUnJeuneAction::class)->execute($user, $premiere, ['end_time' => $finDuPremier, 'status' => 'completed']);
-    app(MettreAJourUnJeuneAction::class)->execute($user, $rejeu, ['end_time' => $finRejouee, 'status' => 'completed']);
+    app(MettreAJourUnJeuneAction::class)->execute($user, $rejeu, ['end_time' => $finRejouee, 'status' => 'broken']);
 
     $relu = $jeune->fresh();
 

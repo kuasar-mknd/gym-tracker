@@ -15,7 +15,9 @@ final class MettreAJourUnJeuneAction
      * l'autre jeûne en cours du compte se cherche sous le même verrou que
      * `DemarrerUnJeuneAction`. Poser une fin s'écrit sous ce verrou aussi : le
      * jeûne est relu, et la fin d'un jeûne qui n'est plus `active` ne bouge
-     * pas : une fin rejouée par un second appareil ne la déplace pas. Un jeûne
+     * pas, ni son statut : une fin rejouée par un second appareil ne les
+     * déplace pas, et corriger la fin d'un jeûne terminé est ignoré
+     * (réponse 200, rien ne change ; la page n'offre pas ce geste). Un jeûne
      * repris puis terminé de nouveau prend sa nouvelle fin. Toute autre mise à
      * jour s'écrit sans verrou.
      *
@@ -39,7 +41,7 @@ final class MettreAJourUnJeuneAction
                 $fast->refresh();
 
                 if ($fast->status !== 'active' && $fast->end_time !== null) {
-                    unset($donnees['end_time']);
+                    unset($donnees['end_time'], $donnees['status']);
                 }
             }
 
