@@ -13,6 +13,7 @@ use App\Models\Traits\OublieLaPreuveDeSaLiaison;
 use App\Models\Traits\SurveilleSonAdresse;
 use App\Notifications\LienDOuvertureDuCompte;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
+use App\Rules\PublicPushEndpoint;
 use App\Support\AdresseCanonique;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
@@ -171,6 +172,19 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->where('type', $type)
             ->where('is_enabled', true)
             ->exists();
+    }
+
+    /**
+     * Les abonnements dont l'hôte est un service push de navigateur, les
+     * autres déjà stockés étant ignorés à l'envoi.
+     *
+     * @return Collection<array-key, \NotificationChannels\WebPush\PushSubscription>
+     */
+    public function routeNotificationForWebPush(): Collection
+    {
+        return $this->pushSubscriptions
+            ->filter(static fn ($abonnement): bool => PublicPushEndpoint::accepteLHoteDe($abonnement->endpoint))
+            ->values();
     }
 
     /**
