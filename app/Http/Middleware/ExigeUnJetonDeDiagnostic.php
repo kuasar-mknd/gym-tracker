@@ -32,8 +32,8 @@ use Throwable;
  * factice quand l'identifiant est inconnu (ces trois lectures se font avant
  * l'interrupteur, pour qu'une requête bien formée coûte la même lecture
  * qu'il soit coupé ou non) ; l'interrupteur `DIAGNOSTIC_ENABLED` ; HTTPS en
- * production ; ni révoqué ni expiré ; un créateur qui existe et garde la
- * capacité ; la route déclarée dans `PORTEES` ; les deux limiteurs du jeton ;
+ * production ; ni révoqué ni expiré ; un créateur qui existe, garde la
+ * capacité et garde sa double authentification ; la route déclarée dans `PORTEES` ; les deux limiteurs du jeton ;
  * enfin la portée, que la route déclare dans `PORTEES` et qui se lit par son
  * nom : un 403 compte donc comme un appel.
  *
@@ -122,7 +122,10 @@ class ExigeUnJetonDeDiagnostic
         $createurAutorise = $this->lire($request, static function () use ($jeton): bool {
             $createur = $jeton->createur;
 
-            return $createur instanceof Admin && $createur->estSuperAdministrateur() && $createur->can('view-diagnostic');
+            return $createur instanceof Admin
+                && $createur->estSuperAdministrateur()
+                && $createur->can('view-diagnostic')
+                && filled($createur->getAppAuthenticationSecret());
         });
 
         if (! $createurAutorise) {

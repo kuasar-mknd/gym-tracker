@@ -73,6 +73,7 @@ function alertesDeDiagnosticCreerUnJeton(string $nom = 'Agent'): array
 {
     $admin = FilamentAdminPanel::admin(['view-diagnostic']);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
+    $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
     $secret = new Google2FA()->generateSecretKey();
     $admin->forceFill(['app_authentication_secret' => $secret])->save();
 
@@ -528,5 +529,6 @@ it('garde le singulier pour un seul jeton révoqué, et chaque raison a son libe
     [RaisonDeRevocationDuJeton::Interrupteur, 'accès de diagnostic fermé'],
     [RaisonDeRevocationDuJeton::MotDePasseChange, 'mot de passe changé'],
     [RaisonDeRevocationDuJeton::DoubleAuthentificationRetiree, 'double authentification retirée'],
+    [RaisonDeRevocationDuJeton::DoubleAuthentificationChangee, 'double authentification changée'],
     [RaisonDeRevocationDuJeton::AdministrateurSupprime, 'administrateur supprimé'],
 ]);

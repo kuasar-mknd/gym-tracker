@@ -81,6 +81,7 @@ function accesDeDiagnosticUnJeton(array $portees = ['sante', 'exceptions'], arra
 {
     $admin = FilamentAdminPanel::admin(['view-diagnostic']);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
+    $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
     $identifiant = Str::lower(Str::random(JetonDeDiagnostic::LONGUEUR_DE_L_IDENTIFIANT));
     $secret = Str::random(JetonDeDiagnostic::LONGUEUR_DU_SECRET);
 
@@ -198,6 +199,18 @@ function accesDeDiagnosticSituation(string $cause): array
 
             return [$uri, accesDeDiagnosticBearer($cree['en_clair'])];
         })(),
+        'dont le créateur a perdu sa double authentification' => (function () use ($uri, $valide): array {
+            $cree = $valide();
+            DB::table('admins')->where('id', $cree['admin']->id)->update(['app_authentication_secret' => null]);
+
+            return [$uri, accesDeDiagnosticBearer($cree['en_clair'])];
+        })(),
+        'dont le créateur a un secret illisible' => (function () use ($uri, $valide): array {
+            $cree = $valide();
+            DB::table('admins')->where('id', $cree['admin']->id)->update(['app_authentication_secret' => 'pas-un-secret-chiffre']);
+
+            return [$uri, accesDeDiagnosticBearer($cree['en_clair'])];
+        })(),
         'présenté dans l’adresse' => (function () use ($valide): array {
             $enClair = $valide()['en_clair'];
 
@@ -219,7 +232,7 @@ dataset('refus avant le jeton', [
     'avec un autre schéma', 'avec le mot en minuscules', 'suivi d’une espace', 'suivi d’un saut de ligne',
     'au préfixe changé', 'au secret trop court', 'au secret trop long', 'à l’identifiant en majuscules', 'inconnu',
     'au secret faux', 'expiré', 'révoqué', 'dont le créateur est supprimé', 'dont le créateur a perdu la capacité',
-    'présenté dans l’adresse', 'dont la route ne déclare aucune portée',
+    'dont le créateur a perdu sa double authentification', 'dont le créateur a un secret illisible', 'présenté dans l’adresse', 'dont la route ne déclare aucune portée',
 ]);
 
 it('répond à chaque refus d’avant le jeton comme à un chemin inconnu, en JSON comme en HTML', function (string $cause, bool $json): void {
