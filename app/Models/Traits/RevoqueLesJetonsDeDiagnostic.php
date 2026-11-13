@@ -10,8 +10,8 @@ use App\Models\Admin;
 
 /**
  * Ce qui, chez un administrateur, révoque les jetons de diagnostic qu'il a
- * créés (#2032) : un mot de passe changé, la double authentification retirée,
- * l'administrateur supprimé.
+ * créés (#2032) : un mot de passe changé, la double authentification retirée
+ * ou remplacée, l'administrateur supprimé.
  *
  * Dans l'évènement du modèle plutôt que dans chaque écran : chaque chemin,
  * présent ou futur (panneau, commande, console), change un mot de passe ou
@@ -28,8 +28,8 @@ trait RevoqueLesJetonsDeDiagnostic
                 self::revoquerSesJetons($admin, RaisonDeRevocationDuJeton::MotDePasseChange);
             }
 
-            if ($admin->wasChanged('app_authentication_secret') && ! self::aUnSecret($admin->getAppAuthenticationSecret())) {
-                self::revoquerSesJetons($admin, RaisonDeRevocationDuJeton::DoubleAuthentificationRetiree);
+            if ($admin->wasChanged('app_authentication_secret')) {
+                self::revoquerSurChangementDuSecret($admin);
             }
         });
 
@@ -43,7 +43,20 @@ trait RevoqueLesJetonsDeDiagnostic
         resolve(RevoqueLesJetonsDeDiagnosticAction::class)->execute($raison, null, null, $admin->id);
     }
 
-    private static function aUnSecret(?string $secret): bool
+    private static function revoquerSurChangementDuSecret(Admin $admin): void
+    {
+        if (! self::aUnSecret($admin->getAppAuthenticationSecret())) {
+            self::revoquerSesJetons($admin, RaisonDeRevocationDuJeton::DoubleAuthentificationRetiree);
+
+            return;
+        }
+
+        if (self::aUnSecret($admin->getPrevious()['app_authentication_secret'] ?? null)) {
+            self::revoquerSesJetons($admin, RaisonDeRevocationDuJeton::DoubleAuthentificationChangee);
+        }
+    }
+
+    private static function aUnSecret(mixed $secret): bool
     {
         return is_string($secret) && $secret !== '';
     }

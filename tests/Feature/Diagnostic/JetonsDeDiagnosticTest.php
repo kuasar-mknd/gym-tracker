@@ -241,6 +241,28 @@ it('révoque les jetons d’un administrateur dont la double authentification es
     expect($jeton->refresh()->raison_de_revocation)->toBe('double-authentification-retiree');
 });
 
+it('révoque les jetons d’un administrateur dont la double authentification est remplacée, sans passer par le vide', function (): void {
+    $admin = Admin::factory()->create();
+    $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
+    $sien = JetonDeDiagnostic::factory()->for($admin, 'createur')->create();
+    $autre = JetonDeDiagnostic::factory()->create();
+
+    $admin->forceFill(['app_authentication_secret' => 'AUTRESECRETDETEST'])->save();
+
+    expect($sien->refresh()->raison_de_revocation)->toBe('double-authentification-changee')
+        ->and($autre->refresh()->revoque_le)->toBeNull();
+});
+
+it('ne révoque rien quand la double authentification s’active ou se réenregistre à l’identique', function (): void {
+    $admin = Admin::factory()->create();
+    $jeton = JetonDeDiagnostic::factory()->for($admin, 'createur')->create();
+
+    $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
+    $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
+
+    expect($jeton->refresh()->revoque_le)->toBeNull();
+});
+
 it('révoque à la suppression de l’administrateur et garde la ligne du jeton', function (): void {
     $admin = Admin::factory()->create();
     $jeton = JetonDeDiagnostic::factory()->for($admin, 'createur')->create();
