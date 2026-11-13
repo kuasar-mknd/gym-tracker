@@ -73,6 +73,12 @@ class GoalResource extends Resource
         $objectif->user_id = (int) $identifiant;
         $objectif->fill($attributs);
 
+        // La période ne sert qu'à la fréquence : un objectif qui change de type
+        // ne garde pas la sienne, comme à `GoalStoreRequest`.
+        if ($objectif->type !== \App\Enums\GoalType::Frequency) {
+            $objectif->period = \App\Enums\GoalPeriod::Total;
+        }
+
         DB::transaction(static function () use ($objectif): void {
             $objectif->save();
 
