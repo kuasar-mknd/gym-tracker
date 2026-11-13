@@ -11,10 +11,11 @@ use Spatie\Health\Checks\Result;
  * La liste des pairs dont l'application croit `X-Forwarded-*` : la liste
  * résolue de `config('trustedproxy.proxies')`, défaut compris, et non la
  * variable `TRUSTED_PROXIES`. Orange en production dès qu'une entrée couvre
- * plus qu'un /24 (IPv4) ou un /64 (IPv6), `*` compris : un pair de ces plages
+ * plus qu'un /24 (IPv4) ou un /64 (IPv6) : un pair de ces plages
  * peut alors annoncer n'importe quelle adresse cliente ; une entrée qui n'est ni
- * une adresse ni un sous-réseau (`PRIVATE_SUBNETS`, une faute de frappe) est
- * tenue pour large. Le message ne dit que des nombres. Vert sinon. Hors
+ * une adresse ni un sous-réseau (`PRIVATE_SUBNETS`, `REMOTE_ADDR`, une faute
+ * de frappe) est tenue pour large, et `*` ne fait confiance à aucun pair dans
+ * cette liste. Le message ne dit que des nombres. Vert sinon. Hors
  * production, le contrôle ne juge rien.
  */
 final class ProxysDeConfianceCheck extends Check
@@ -45,16 +46,29 @@ final class ProxysDeConfianceCheck extends Check
         }
 
         $proxys = $this->proxys();
-        $larges = array_values(array_filter($proxys, $this->estTropLarge(...)));
+        $inertes = array_values(array_filter($proxys, $this->nExempteAucunPair(...)));
+        $larges = array_values(array_filter($proxys, fn (string $proxy): bool => ! $this->nExempteAucunPair($proxy) && $this->estTropLarge($proxy)));
         $resume = count($proxys).' entrée(s)';
-        $result = Result::make()->meta(['entrees' => count($proxys), 'larges' => count($larges)])->shortSummary($resume);
+        $result = Result::make()
+            ->meta(['entrees' => count($proxys), 'larges' => count($larges), 'inertes' => count($inertes)])
+            ->shortSummary($resume);
 
-        if ($larges === []) {
+        $constats = [];
+
+        if ($larges !== []) {
+            $constats[] = count($larges).' trop large(s) ou invalide(s)';
+        }
+
+        if ($inertes !== []) {
+            $constats[] = count($inertes).' qui ne fait confiance à aucun pair (le schéma HTTPS ne serait plus détecté)';
+        }
+
+        if ($constats === []) {
             return $result->ok($resume);
         }
 
         return $result->warning(
-            $resume.' dont '.count($larges).' trop large(s). '
+            $resume.' dont '.implode(' et ', $constats).'. '
             .'Régler TRUSTED_PROXIES sur l\'adresse précise sous laquelle le proxy inverse joint l\'application.',
         );
     }
@@ -77,20 +91,27 @@ final class ProxysDeConfianceCheck extends Check
     }
 
     /**
-     * Ce qui n'est pas une adresse, ou un sous-réseau au plus aussi large
-     * que la limite, est tenu pour large : `*`, `PRIVATE_SUBNETS`, une
-     * faute de frappe.
+     * `*` et `**` n'ont de sens que comme valeur seule : dans la liste que
+     * `config/trustedproxy.php` rend toujours, ils ne correspondent à aucune
+     * adresse et la confiance tombe à zéro.
+     */
+    private function nExempteAucunPair(string $proxy): bool
+    {
+        return str_starts_with($proxy, '*');
+    }
+
+    /**
+     * Ce qui n'est pas une adresse, ou un sous-réseau plus large que la
+     * limite, est tenu pour large : `PRIVATE_SUBNETS`, une faute de frappe,
+     * `REMOTE_ADDR` (remplacé par l'adresse du pair qui se connecte, donc
+     * tout client). Une plage IPv4 mappée en IPv6 se juge sur son IPv4.
      */
     private function estTropLarge(string $proxy): bool
     {
-        if ($proxy === 'REMOTE_ADDR') {
-            return false;
-        }
-
         $morceaux = explode('/', $proxy, 2);
-        $ipv6 = filter_var($morceaux[0], FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
+        $octets = filter_var($morceaux[0], FILTER_VALIDATE_IP) === false ? false : inet_pton($morceaux[0]);
 
-        if (! $ipv6 && filter_var($morceaux[0], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+        if ($octets === false) {
             return true;
         }
 
@@ -100,6 +121,23 @@ final class ProxysDeConfianceCheck extends Check
             return false;
         }
 
-        return ! ctype_digit($prefixe) || (int) $prefixe < ($ipv6 ? self::PLUS_LARGE_IPV6 : self::PLUS_LARGE_IPV4);
+        if (! ctype_digit($prefixe)) {
+            return true;
+        }
+
+        return (int) $prefixe < $this->limiteDeLAdresse($octets);
+    }
+
+    /**
+     * Le préfixe minimal toléré, exprimé dans la famille de l'adresse : un
+     * /24 d'IPv4, un /64 d'IPv6, et 96 de plus pour une IPv4 mappée.
+     */
+    private function limiteDeLAdresse(string $octets): int
+    {
+        return match (true) {
+            strlen($octets) === 4 => self::PLUS_LARGE_IPV4,
+            str_starts_with($octets, str_repeat("\0", 10)."\xff\xff") => 96 + self::PLUS_LARGE_IPV4,
+            default => self::PLUS_LARGE_IPV6,
+        };
     }
 }

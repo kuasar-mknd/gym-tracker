@@ -40,7 +40,8 @@ it('reste verte en production avec des adresses précises', function (array $pro
     'un /32' => [['10.0.0.7/32']],
     'une adresse IPv6' => [['fd00::5']],
     'un /64' => [['fd00:1::/64']],
-    'le pair direct' => [['REMOTE_ADDR']],
+    'une IPv4 mappée précise' => [['::ffff:10.0.0.7']],
+    'un /120 mappé' => [['::ffff:10.0.0.0/120']],
     'plusieurs' => [['127.0.0.1', '172.18.0.5', '192.168.1.0/24']],
 ]);
 
@@ -51,6 +52,10 @@ it('passe à l’orange dès qu’une entrée dépasse un /24 ou un /64, ou fait
     'un /8' => [['172.18.5.5', '10.0.0.0/8']],
     'un /63' => [['fd00:1::/63']],
     'un /48' => [['fd00::/48']],
+    'le pair qui se connecte' => [['REMOTE_ADDR']],
+    'une IPv4 mappée, tout IPv4' => [['::ffff:0:0/96']],
+    'un /104 mappé, un /8' => [['::ffff:10.0.0.0/104']],
+    'un /119 mappé, un /23' => [['::ffff:10.0.0.0/119']],
     'tout' => [['*']],
     'tout, à deux étoiles' => [['**']],
     'les plages privées par mot-clé' => [['PRIVATE_SUBNETS']],
@@ -69,6 +74,16 @@ it('ne dit que des nombres dans son message, jamais une adresse configurée', fu
         ->and($resultat->getNotificationMessage())->not->toContain('10.0.0.0')
         ->and($resultat->getNotificationMessage())->not->toContain('172.18.0.5')
         ->and($resultat->getShortSummary())->toBe('2 entrée(s)');
+});
+
+it('dit qu’un joker ne fait confiance à personne, et non qu’il est trop large', function (): void {
+    app()->detectEnvironment(fn (): string => 'production');
+    Config::set('trustedproxy.proxies', ['*']);
+
+    $message = ProxysDeConfianceCheck::new()->run()->getNotificationMessage();
+
+    expect($message)->toContain('aucun pair')
+        ->and($message)->not->toContain('trop large');
 });
 
 it('ne juge rien hors production', function (): void {
