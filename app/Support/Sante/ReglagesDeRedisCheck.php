@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Sante;
 
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Spatie\Health\Checks\Check;
@@ -12,10 +13,11 @@ use Throwable;
 
 /**
  * La mémoire, les évictions, les refus d'écriture et la persistance de
- * Redis, relus dans `INFO` en production (#2151). Une seule instance porte la
- * file, les sessions, les verrous, les limiteurs et le cache, sous
- * `allkeys-lru` : un cache plein évince d'abord ce que personne n'a relu
- * depuis longtemps, sessions et verrous compris, et rien ne le disait.
+ * Redis, relus dans `INFO` en production (#2151). La production en lance
+ * deux : l'instance des données (file, sessions, verrous, limiteurs, en
+ * `noeviction`) et celle du cache (`allkeys-lru`). Une pile qui n'a pas
+ * encore la bascule n'en a qu'une, qui porte tout sous `allkeys-lru` : un
+ * cache plein y évince sessions et verrous, et rien ne le disait.
  *
  * Rouge quand l'instance des données évince une clé, refuse une écriture
  * faute de mémoire, dépasse 75 % de son plafond, ne persiste plus, ne répond
@@ -110,7 +112,7 @@ final class ReglagesDeRedisCheck extends Check
             $passage[$role] = $jugements[$role]['compteurs'] ?? $passage[$role] ?? null;
         }
 
-        Cache::forever(self::CLE_DU_PASSAGE_PRECEDENT, array_filter($passage, fn (?array $instance): bool => $instance !== null));
+        $this->magasin()->forever(self::CLE_DU_PASSAGE_PRECEDENT, array_filter($passage, fn (?array $instance): bool => $instance !== null));
 
         return $this->resultat($jugements, $cacheAPart);
     }
@@ -207,7 +209,7 @@ final class ReglagesDeRedisCheck extends Check
         }
 
         $message = sprintf(
-            'L\'instance des données a évincé des clés (%s %s) : file, sessions et verrous y vivent avec le cache, et partent avec lui. %s',
+            'L\'instance des données a évincé des clés (%s %s) : file, sessions et verrous y vivent, et partent avec elles. %s',
             $this->compte($ecart['nombre'], 'clé évincée', 'clés évincées'),
             $ecart['depuis'],
             self::RELEVER_LE_PLAFOND,
@@ -565,6 +567,17 @@ final class ReglagesDeRedisCheck extends Check
     }
 
     /**
+     * Le magasin des compteurs : le durable quand il est posé, pour qu'un
+     * cache à part qui repart vide ne les efface pas.
+     */
+    private function magasin(): Repository
+    {
+        $nom = config('cache.limiter');
+
+        return Cache::store(is_string($nom) && $nom !== '' ? $nom : null);
+    }
+
+    /**
      * Les compteurs du passage précédent, relus du cache sans rien croire
      * de leur forme.
      *
@@ -572,7 +585,7 @@ final class ReglagesDeRedisCheck extends Check
      */
     private function passagePrecedent(): array
     {
-        $lu = Cache::get(self::CLE_DU_PASSAGE_PRECEDENT);
+        $lu = $this->magasin()->get(self::CLE_DU_PASSAGE_PRECEDENT);
         $passage = [];
 
         foreach (is_array($lu) ? $lu : [] as $role => $instance) {

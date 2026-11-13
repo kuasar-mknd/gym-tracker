@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Redis;
@@ -13,9 +14,9 @@ use Illuminate\Support\Facades\Redis;
  * La commande vide la base de la connexion `cache` (FLUSHDB) : sessions
  * (connexion de session nulle, donc `default`), file (`default`) et verrous
  * (`lock_connection` à `default`, `config/cache.php`) vivent sur la base 0 et
- * doivent survivre. Les limiteurs et les battements de santé vivent encore
- * dans le magasin du cache, sur la base 1 : le magasin `redis-durable` d'un
- * autre lot de #2151 les en sortira. Sur `array`, rien de tout cela ne se
+ * doivent survivre. Les limiteurs et les battements de santé vivent dans le
+ * magasin du cache tant que `CACHE_DURABLE_STORE` n'est pas posée ; posée, le
+ * magasin `redis-durable` les range sur la connexion des données. Sur `array`, rien de tout cela ne se
  * voyait : chaque magasin y a sa mémoire.
  */
 
@@ -108,3 +109,22 @@ it('compte un limiteur réel jusqu’à sa limite, avec l’échéance que tient
 
     expect(RateLimiter::attempt('redis-reel:limiteur', 3, static fn (): bool => true, 60))->toBeTrue();
 });
+
+it('range les limiteurs sur la connexion des données quand le magasin durable est posé', function (?string $durable, string $attendue, string $absente): void {
+    config()->set('cache.limiter', $durable);
+    app()->forgetInstance(\Illuminate\Cache\RateLimiter::class);
+    Facade::clearResolvedInstance(\Illuminate\Cache\RateLimiter::class);
+
+    RateLimiter::hit('redis-reel:limiteur-durable', 60);
+
+    $cles = static fn (string $connexion): array => array_values(array_filter(
+        (array) Redis::connection($connexion)->command('keys', ['*']),
+        static fn (mixed $cle): bool => is_string($cle) && str_contains($cle, 'redis-reel:limiteur-durable'),
+    ));
+
+    expect($cles($attendue))->toHaveCount(2)
+        ->and($cles($absente))->toBe([]);
+})->with([
+    'magasin durable posé' => ['redis-durable', 'default', 'cache'],
+    'magasin durable absent : le cache, comme Sail et la CI' => [null, 'cache', 'default'],
+]);
