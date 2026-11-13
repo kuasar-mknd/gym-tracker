@@ -14,10 +14,24 @@ use Illuminate\Support\Facades\Cache;
  */
 final class MagasinDurable
 {
-    public static function depot(): Repository
+    /**
+     * Le nom du magasin : `cache.limiter`, sinon le défaut.
+     */
+    public static function nom(): ?string
     {
         $nom = config('cache.limiter');
 
-        return Cache::store(is_string($nom) && $nom !== '' ? $nom : null);
+        if (is_string($nom) && $nom !== '') {
+            return $nom;
+        }
+
+        $defaut = config('cache.default');
+
+        return is_string($defaut) ? $defaut : null;
+    }
+
+    public static function depot(): Repository
+    {
+        return Cache::store(self::nom());
     }
 }

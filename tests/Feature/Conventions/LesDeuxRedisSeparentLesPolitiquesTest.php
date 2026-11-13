@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Providers\SanteServiceProvider;
+use App\Support\JournalDuDiagnostic;
 use App\Support\MagasinDurable;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Health\Checks\Check;
@@ -153,6 +154,20 @@ it('range ce qui doit survivre au cache sur le magasin que nomme cache.limiter',
 
     expect(MagasinDurable::depot()->get('durable:essai'))->toBeNull();
 });
+
+it('juge l’écriture en SQL du diagnostic sur le magasin durable, pas sur le défaut', function (string $defaut, ?string $durable, bool $attendu): void {
+    config()->set('cache.stores.sql-essai', ['driver' => 'database']);
+    config()->set('cache.default', $defaut);
+    config()->set('cache.limiter', $durable);
+
+    expect(JournalDuDiagnostic::lEcritureSeraitEnSql())->toBe($attendu)
+        ->and(MagasinDurable::nom())->toBe($durable ?? $defaut);
+})->with([
+    'défaut en mémoire, durable en SQL' => ['array', 'sql-essai', true],
+    'défaut en SQL, durable en mémoire' => ['sql-essai', 'array', false],
+    'sans durable, le défaut en SQL' => ['sql-essai', null, true],
+    'sans durable, le défaut en mémoire' => ['array', null, false],
+]);
 
 it('ne laisse ni les alertes, ni le journal de diagnostic, ni les compteurs et écarts de santé dans le cache évinçable', function (string $fichier): void {
     expect(file_get_contents(base_path($fichier)))->not->toContain('Cache::');

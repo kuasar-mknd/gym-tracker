@@ -111,22 +111,22 @@ final class JournalDuDiagnostic
     }
 
     /**
-     * Sur un cache `database` (ou une bascule qui le nomme), chaque compteur
+     * Sur un magasin durable `database` (ou une bascule qui le nomme), chaque compteur
      * serait une écriture SQL par requête non authentifiée : le
      * refus n'est alors ni compté ni journalisé. Un cache en mémoire ne
      * remplace pas Redis, Octane le vide à chaque requête.
      */
     public static function lEcritureSeraitEnSql(): bool
     {
-        return array_any(self::nomsDesMagasinsDuDefaut(), self::estEnSql(...));
+        return array_any(self::nomsDesMagasinsDuMagasinDurable(), self::estEnSql(...));
     }
 
     /**
      * @return list<string>
      */
-    private static function nomsDesMagasinsDuDefaut(): array
+    private static function nomsDesMagasinsDuMagasinDurable(): array
     {
-        $defaut = config('cache.default');
+        $defaut = MagasinDurable::nom();
 
         if (! is_string($defaut)) {
             return [];

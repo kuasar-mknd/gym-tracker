@@ -20,9 +20,9 @@ use Illuminate\Support\Facades\Notification;
  * révocation ; `premierUsage()`, `jetonInvalidePresente()` et
  * `debitDepasse()` sont ce que la garde HTTP appellera, avec la ligne du
  * jeton connu : jamais le texte présenté, qui ne borne aucune clef. Aucune ne
- * lit ni n'écrit en base : un refus n'écrit rien. Elles écrivent dans le cache
- * par défaut ; `jetonInvalidePresente()` y borne son travail à une fois par
- * minute et par jeton quand ce cache est `database`, tant que l'envoi
+ * lit ni n'écrit en base : un refus n'écrit rien. Elles écrivent dans le magasin durable
+ * (`cache.limiter`, le défaut s'il est vide) ; `jetonInvalidePresente()` y borne son travail à une fois par
+ * minute et par jeton quand ce magasin est `database`, tant que l'envoi
  * aboutit : sans adresse valide, ou si la mise en file échoue, la marque de
  * la minute n'est pas posée et la présentation suivante réessaie.
  *

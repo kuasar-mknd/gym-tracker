@@ -30,7 +30,6 @@ use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Testing\Fakes\NotificationFake;
-use Mockery;
 use PragmaRX\Google2FA\Google2FA;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\Mailer\SentMessage;
@@ -261,7 +260,8 @@ it('ne fait jamais échouer la requête valide quand le cache tombe', function (
     $jeton = JetonDeDiagnostic::factory()->revoque()->create();
     $injoignable = Mockery::mock(Repository::class);
     $injoignable->shouldReceive('add', 'increment', 'put', 'forget')->andThrow(new RuntimeException('cache injoignable'));
-    Cache::shouldReceive('store')->andReturn($injoignable);
+    config()->set('cache.limiter', 'durable-essai');
+    Cache::shouldReceive('store')->with('durable-essai')->andReturn($injoignable);
 
     $methode === 'jetonInvalidePresente' ? resolve(AlertesDeDiagnostic::class)->jetonInvalidePresente($jeton, now()) : resolve(AlertesDeDiagnostic::class)->{$methode}($jeton);
 
