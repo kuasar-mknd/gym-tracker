@@ -324,6 +324,23 @@ describe('Goals/Index', () => {
         wrapper.unmount()
     })
 
+    /** The period travels with the goal: total unless the user picked a weekly one. */
+    it('envoie la période : au total par défaut, par semaine une fois choisie', async () => {
+        const wrapper = await mountGoals([])
+
+        await toggle(wrapper).trigger('click')
+        expect(wrapper.findComponent(GoalForm).props('form').period).toBe('total')
+
+        wrapper.findComponent(GoalForm).props('form').period = 'week'
+        wrapper.findComponent(GoalForm).vm.$emit('submit')
+        await flushPromises()
+
+        expect(posts()).toHaveLength(1)
+        expect(wrapper.vm.form.period).toBe('week')
+
+        wrapper.unmount()
+    })
+
     /** Cancelling from inside the form is the same escape hatch as the header toggle. */
     it('referme le formulaire quand celui-ci demande à être annulé', async () => {
         const wrapper = await mountGoals([])

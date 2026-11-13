@@ -27,6 +27,7 @@ const form = useForm({
     target_value: props.goal.target_value,
     exercise_id: props.goal.exercise_id,
     measurement_type: props.goal.measurement_type,
+    period: props.goal.period,
     deadline: props.goal.deadline,
     start_value: props.goal.start_value,
 })

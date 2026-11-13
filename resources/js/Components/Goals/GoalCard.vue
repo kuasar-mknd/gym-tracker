@@ -17,6 +17,12 @@ const emit = defineEmits(['delete'])
 const progress = computed(() => props.goal.progress_pct || 0)
 const isCompleted = computed(() => !!props.goal.completed_at)
 
+/**
+ * Un objectif « par semaine » repart de zéro chaque lundi : sa cible se lit
+ * « 3 séances par semaine », et son badge dit la semaine, pas la fin.
+ */
+const parSemaine = computed(() => props.goal.type === 'frequency' && props.goal.period === 'week')
+
 const typeIcon = computed(() => {
     switch (props.goal.type) {
         case 'weight':
@@ -37,7 +43,7 @@ const typeLabel = computed(() => {
         case 'weight':
             return 'Poids (Max)'
         case 'frequency':
-            return 'Fréquence'
+            return parSemaine.value ? 'Fréquence · semaine' : 'Fréquence'
         case 'volume':
             return 'Volume'
         case 'measurement':
@@ -52,6 +58,7 @@ const typeLabel = computed(() => {
  * est un nom, qui s'accorde : « 1 séance », « 5 séances » (#1980).
  */
 const uniteDe = (valeur) => (props.goal.type === 'frequency' ? accord(valeur, 'séance', 'séances') : props.goal.unit)
+const uniteDeLaCible = (valeur) => uniteDe(valeur) + (parSemaine.value ? ' par semaine' : '')
 
 const formattedDeadline = computed(() => dateCourte(parseCalendarDate(props.goal.deadline)))
 
@@ -78,7 +85,7 @@ const statusColor = computed(() => {
             v-if="isCompleted"
             class="bg-accent-state text-text-on-accent text-2xs absolute -top-2 -right-2 z-10 rotate-12 px-3 py-1.5 font-bold shadow-lg"
         >
-            COMPLÉTÉ
+            {{ parSemaine ? 'SEMAINE FAITE' : 'COMPLÉTÉ' }}
         </div>
 
         <div class="relative z-10 mb-4 flex items-start justify-between">
@@ -108,7 +115,7 @@ const statusColor = computed(() => {
             <div class="space-y-1.5">
                 <div class="text-text-muted text-2xs flex justify-between font-bold tracking-widest uppercase">
                     <span>{{ nombre(goal.start_value) }} {{ uniteDe(goal.start_value) }}</span>
-                    <span>{{ nombre(goal.target_value) }} {{ uniteDe(goal.target_value) }}</span>
+                    <span>{{ nombre(goal.target_value) }} {{ uniteDeLaCible(goal.target_value) }}</span>
                 </div>
                 <div
                     class="border-surface-card/20 bg-surface-card/10 h-2 w-full overflow-hidden rounded-full border shadow-inner backdrop-blur-md"
@@ -156,7 +163,7 @@ const statusColor = computed(() => {
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ nombre(goal.target_value) }}
                         <span class="text-text-muted text-2xs font-bold not-italic">{{
-                            uniteDe(goal.target_value)
+                            uniteDeLaCible(goal.target_value)
                         }}</span>
                     </p>
                 </div>
