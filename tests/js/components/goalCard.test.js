@@ -171,6 +171,51 @@ describe('GoalCard — figures', () => {
         expect(statTile(wrapper, 'Cible')).toBe('Cible 5 séances')
     })
 
+    it('dit « par semaine » sur la cible d’un objectif hebdomadaire, et la semaine faite à la fin', () => {
+        const enCours = mountCard({
+            type: 'frequency',
+            period: 'week',
+            unit: 'séances',
+            start_value: 0,
+            current_value: 1,
+            target_value: 3,
+        })
+
+        expect(barLegend(enCours)).toEqual(['0 séance', '3 séances par semaine'])
+        expect(statTile(enCours, 'Actuel')).toBe('Actuel 1 séance')
+        expect(statTile(enCours, 'Cible')).toBe('Cible 3 séances par semaine')
+        expect(enCours.text()).toContain('Fréquence · semaine')
+        expect(enCours.text()).not.toContain('COMPLÉTÉ')
+
+        const faite = mountCard({
+            type: 'frequency',
+            period: 'week',
+            unit: 'séances',
+            current_value: 3,
+            target_value: 3,
+            progress_pct: 100,
+            completed_at: '2026-11-11T10:00:00Z',
+        })
+
+        expect(faite.text()).toContain('SEMAINE FAITE')
+        expect(faite.text()).not.toContain('COMPLÉTÉ')
+    })
+
+    it('laisse un objectif de fréquence au total comme il était', () => {
+        const wrapper = mountCard({
+            type: 'frequency',
+            period: 'total',
+            unit: 'séances',
+            start_value: 0,
+            current_value: 4,
+            target_value: 10,
+            completed_at: '2026-11-11T10:00:00Z',
+        })
+
+        expect(statTile(wrapper, 'Cible')).toBe('Cible 10 séances')
+        expect(wrapper.text()).toContain('COMPLÉTÉ')
+    })
+
     /*
      * La colonne est castée `date:Y-m-d` : lue comme un instant, l'échéance
      * tombe la veille partout à l'ouest d'UTC. La suite tourne en UTC sur la

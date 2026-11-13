@@ -644,6 +644,73 @@ describe('GoalForm', () => {
         wrapper.unmount()
     })
 
+    describe('objectif de fréquence par semaine', () => {
+        it('propose la période, au total ou par semaine, sur un objectif de fréquence seulement', () => {
+            const frequence = mountGoalForm(goalForm({ type: 'frequency', period: 'total' }))
+            const options = [...fieldNamed(frequence, 'Période').element.options]
+                .filter((option) => !option.disabled)
+                .map((option) => [option.value, option.text])
+
+            expect(options).toEqual([
+                ['total', 'Au total'],
+                ['week', 'Par semaine (du lundi au dimanche)'],
+            ])
+            frequence.unmount()
+
+            const charge = mountGoalForm(goalForm({ type: 'weight', period: 'total' }))
+            expect(fieldLabels(charge)).not.toContain('Période')
+            charge.unmount()
+        })
+
+        it('ne demande pas de départ, et parle de séances par semaine', () => {
+            const wrapper = mountGoalForm(goalForm({ type: 'frequency', period: 'week' }))
+
+            expect(fieldLabels(wrapper)).toContain('Séances par semaine')
+            expect(fieldLabels(wrapper)).not.toContain('Valeur Cible')
+            expect(fieldLabels(wrapper)).not.toContain('Valeur de Départ (Optionnel)')
+            expect(fieldNamed(wrapper, 'Séances par semaine').attributes('min')).toBe('1')
+            expect(fieldNamed(wrapper, 'Séances par semaine').attributes('max')).toBe('14')
+
+            wrapper.unmount()
+        })
+
+        it('garde le départ et la cible décimale d’un objectif au total', () => {
+            const wrapper = mountGoalForm(goalForm({ type: 'frequency', period: 'total' }))
+
+            expect(fieldLabels(wrapper)).toContain('Valeur Cible')
+            expect(fieldLabels(wrapper)).toContain('Valeur de Départ (Optionnel)')
+
+            wrapper.unmount()
+        })
+
+        it('intitule l’objectif d’après la période, et le suit quand elle change', async () => {
+            const form = goalForm({ target_value: 3, period: 'week' })
+            const wrapper = mountGoalForm(form, { autoTitle: true })
+
+            form.type = 'frequency'
+            await wrapper.vm.$nextTick()
+            expect(form.title).toBe('Faire 3 séances par semaine')
+
+            form.period = 'total'
+            await wrapper.vm.$nextTick()
+            expect(form.title).toBe('Atteindre 3 séances au total')
+
+            wrapper.unmount()
+        })
+
+        it('accorde le titre d’une séance par semaine', async () => {
+            const form = goalForm({ target_value: 1, period: 'week' })
+            const wrapper = mountGoalForm(form, { autoTitle: true })
+
+            form.type = 'frequency'
+            await wrapper.vm.$nextTick()
+
+            expect(form.title).toBe('Faire 1 séance par semaine')
+
+            wrapper.unmount()
+        })
+    })
+
     it('leaves a question mark where the target has not been typed yet', async () => {
         // The title is written as soon as the kind of goal is chosen, which is
         // usually before the number is; `0` is a target nobody sets, so an empty

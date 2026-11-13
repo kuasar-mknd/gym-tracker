@@ -567,6 +567,12 @@ describe('Goals/Edit', () => {
         })
     })
 
+    it('reprend la période de l’objectif existant', () => {
+        const wrapper = mountEdit({ period: 'week' })
+
+        expect(wrapper.findComponent({ name: 'GoalForm' }).props('form')).toMatchObject({ period: 'week' })
+    })
+
     it('passe au formulaire les listes dans lesquelles il fait choisir', () => {
         const form = mountEdit().findComponent({ name: 'GoalForm' })
 
