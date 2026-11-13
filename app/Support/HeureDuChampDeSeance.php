@@ -7,6 +7,7 @@ namespace App\Support;
 use App\Models\Casts\InstantAvecSonDecalage;
 use Carbon\CarbonInterface;
 use DateTimeImmutable;
+use DateTimeZone;
 
 /**
  * Une heure du formulaire d'une séance au panneau, lue comme le cast
@@ -19,16 +20,17 @@ final class HeureDuChampDeSeance
      * heure lue par `InstantAvecSonDecalage::lire()` avec le décalage de
      * l'instant enregistré, que `lire()` ne retient que s'il redonne cette
      * heure dans le fuseau de l'application. Nul quand l'heure n'existe pas
-     * (`2026-02-30`, une année à cinq chiffres, un texte).
+     * (`2026-02-30`, une année à cinq chiffres, un texte). Une heure du trou du
+     * printemps existe : `lire()` la lit comme l'enregistrement, à 03:30 pour
+     * 02:30, début comme fin.
      */
     public static function instant(mixed $heure, ?CarbonInterface $enregistre): ?CarbonInterface
     {
-        $format = InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE;
-        $lue = is_string($heure) ? DateTimeImmutable::createFromFormat($format, $heure) : false;
+        $murale = self::murale($heure);
 
-        return $lue !== false && $lue->format($format) === $heure
-            ? InstantAvecSonDecalage::lire($heure, $enregistre?->copy()->setTimezone(config()->string('app.timezone'))->utcOffset())
-            : null;
+        return $murale === null
+            ? null
+            : InstantAvecSonDecalage::lire($murale, $enregistre?->copy()->setTimezone(config()->string('app.timezone'))->utcOffset());
     }
 
     /**
@@ -43,5 +45,24 @@ final class HeureDuChampDeSeance
     public static function avecLeDecalage(mixed $heure, ?CarbonInterface $enregistre): mixed
     {
         return self::instant($heure, $enregistre)?->format(InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE.'P') ?? $heure;
+    }
+
+    /**
+     * L'heure sous la forme `Y-m-d H:i:s`, ou nul quand elle n'existe pas. Le
+     * champ natif du navigateur envoie `2026-03-02T19:15`, avec ou sans
+     * secondes ; Filament rend `2026-03-02 19:15:00`. L'existence se juge en
+     * UTC, qui n'a pas de trou : celui du printemps ne la rend pas inexistante.
+     */
+    private static function murale(mixed $heure): ?string
+    {
+        $format = InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE;
+        $texte = (string) preg_replace(
+            '/^(\d{4}-\d\d-\d\d \d\d:\d\d)$/',
+            '$1:00',
+            (string) preg_replace('/^(\d{4}-\d\d-\d\d)T/', '$1 ', is_string($heure) ? $heure : ''),
+        );
+        $lue = DateTimeImmutable::createFromFormat($format, $texte, new DateTimeZone('UTC'));
+
+        return $lue !== false && $lue->format($format) === $texte ? $texte : null;
     }
 }

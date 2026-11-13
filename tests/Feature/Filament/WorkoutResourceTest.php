@@ -484,6 +484,11 @@ it('dit que la fin n’existe pas quand Laravel la laisse passer, et se tait sur
         ->call('save')
         ->assertHasFormErrors(['ended_at']);
 
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set('data.started_at', '99999-01-01 00:00:00')
+        ->call('save')
+        ->assertHasFormErrors(['started_at' => 'Cette date n’existe pas.']);
+
     $fin = Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
         ->set('data.started_at', '2026-02-30 07:30:00')
         ->call('save')
@@ -491,6 +496,82 @@ it('dit que la fin n’existe pas quand Laravel la laisse passer, et se tait sur
 
     expect($fin->errors()->get('data.ended_at'))->toBe([]);
 });
+
+dataset('saisies brutes d’une séance du panneau', [
+    'la page de modification' => [fn (Workout $seance, array $donnees): mixed => tap(
+        Livewire::test(EditWorkout::class, ['record' => $seance->getKey()]),
+        fn ($page) => collect($donnees)->each(fn (mixed $valeur, string|int $champ) => $page->set("data.{$champ}", $valeur)),
+    )->call('save')],
+    'l’action de modification de la table' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), $donnees)],
+]);
+
+it('accepte les heures que le navigateur envoie, avec ou sans « T » et avec ou sans secondes', function (Closure $enregistrer, string $saisie, string $attendue): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-03-02 18:00:00'),
+        'ended_at' => Carbon::parse('2026-03-02 18:30:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => $saisie])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe($attendue);
+})->with('saisies brutes d’une séance du panneau')->with([
+    'T sans secondes' => ['2026-03-02T19:15', '2026-03-02 19:15:00'],
+    'T avec secondes' => ['2026-03-02T19:15:30', '2026-03-02 19:15:30'],
+    'T et secondes nulles' => ['2026-03-02T19:15:00', '2026-03-02 19:15:00'],
+    'espace sans secondes' => ['2026-03-02 19:15', '2026-03-02 19:15:00'],
+]);
+
+it('crée une séance dont le navigateur envoie les heures avec un « T »', function (): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateWorkout::class)
+        ->set('data.user_id', $owner->getKey())
+        ->set('data.started_at', '2026-03-02T18:00')
+        ->set('data.ended_at', '2026-03-02T19:15:30')
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $seance = Workout::query()->where('user_id', $owner->getKey())->sole();
+
+    expect($seance->started_at->format('Y-m-d H:i:s'))->toBe('2026-03-02 18:00:00')
+        ->and($seance->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-03-02 19:15:30');
+});
+
+it('garde l’occurrence d’un début que le navigateur renvoie avec un « T »', function (Closure $enregistrer): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-10-25T01:20:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T01:50:00Z')->setTimezone($fuseau),
+    ]);
+
+    $enregistrer($seance, ['started_at' => '2026-10-25T02:35'])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->started_at->toJSON())->toBe('2026-10-25T01:35:00.000000Z');
+})->with('saisies brutes d’une séance du panneau');
+
+it('lit un début qui tombe dans le trou du printemps comme l’enregistrement le lit, et le compare à la fin', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-03-29 00:30:00'),
+        'ended_at' => Carbon::parse('2026-03-29 00:45:00'),
+    ]);
+
+    $enregistrer($seance, ['started_at' => '2026-03-29 02:30:00', 'ended_at' => '2026-03-29 01:00:00'])
+        ->assertHasFormErrors(['ended_at']);
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-03-29 00:45:00');
+})->with('saisies brutes d’une séance du panneau');
+
+it('accepte une fin dans le trou du printemps comme un début, enregistrée à 03:30', function (Closure $enregistrer): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-03-29 00:30:00'),
+        'ended_at' => Carbon::parse('2026-03-29 00:45:00'),
+    ]);
+
+    $enregistrer($seance, ['ended_at' => '2026-03-29 02:30:00'])->assertHasNoFormErrors();
+
+    expect($seance->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-03-29 03:30:00');
+})->with('saisies brutes d’une séance du panneau');
 
 it('refuse toujours une fin qui précède le début dans l’heure répétée', function (Closure $enregistrer): void {
     $fuseau = config()->string('app.timezone');

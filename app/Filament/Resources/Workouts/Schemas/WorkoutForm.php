@@ -8,6 +8,7 @@ use App\Models\Workout;
 use App\Rules\AucuneAutreSeanceEnCours;
 use App\Rules\DateQueSaColonneTient;
 use App\Rules\FinNePrecedePasLeDebut;
+use App\Rules\HeureQuiExiste;
 use App\Support\HeureDuChampDeSeance;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -76,12 +77,14 @@ class WorkoutForm
                     ->maxLength(255),
                 DateTimePicker::make('started_at')->label('Début')
                     ->required()
+                    ->rule(new HeureQuiExiste())
                     ->minDate(DateQueSaColonneTient::horodatage()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant())
                     ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => HeureDuChampDeSeance::avecLeDecalage($state, $record?->started_at)),
                 DateTimePicker::make('ended_at')->label('Fin')
                     ->minDate(DateQueSaColonneTient::date()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::date()->dernierInstant())
+                    ->rule(new HeureQuiExiste())
                     ->rule(fn (Component $component, Livewire $livewire, ?Workout $record): ValidationRule => new FinNePrecedePasLeDebut(fn (): mixed => data_get($livewire, Str::beforeLast((string) $component->getStatePath(), '.').'.started_at'), $record))
                     ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(fn (): mixed => data_get($record, 'user_id', $get->integer('user_id', true)), $record))
                     ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => HeureDuChampDeSeance::avecLeDecalage($state, $record?->ended_at)),
