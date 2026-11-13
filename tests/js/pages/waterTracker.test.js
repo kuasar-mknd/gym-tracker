@@ -154,6 +154,19 @@ describe('les retouches de lecture', () => {
         expect(boutonDeLaQuantiteSaisie(wrapper).attributes('data-loading')).toBe('true')
     })
 
+    it('désactive le « + » pendant l’envoi d’une tuile, même avec une quantité saisie', async () => {
+        const wrapper = mountPage()
+
+        wrapper.vm.customAmount = '330'
+        await wrapper.vm.$nextTick()
+        expect(boutonDeLaQuantiteSaisie(wrapper).attributes('disabled')).toBeUndefined()
+
+        form.processing = true
+        await wrapper.vm.$nextTick()
+
+        expect(boutonDeLaQuantiteSaisie(wrapper).attributes('disabled')).toBeDefined()
+    })
+
     it('propose une invite que le suffixe « ML » ne coupe pas', () => {
         const wrapper = mountPage()
 

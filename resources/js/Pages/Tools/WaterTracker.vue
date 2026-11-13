@@ -117,7 +117,7 @@
                         </GlassInput>
                         <GlassButton
                             @click="addWater(customAmount, true)"
-                            :disabled="!customAmount"
+                            :disabled="!customAmount || form.processing"
                             :loading="form.processing && saisiePersonnaliseeEnvoyee"
                             aria-label="Ajouter la quantité saisie"
                             class="h-12 !px-4"
