@@ -106,7 +106,7 @@ describe('BodyMetricsGrid', () => {
 
     it('ne dit pas « 0 % » quand le mois précédent est vide : rien à comparer', async () => {
         const wrapper = await mountGrid({
-            monthlyComparison: { current_volume: 1000, previous_volume: 0, percentage: 0 },
+            monthlyComparison: { current_volume: 1000, previous_volume: 0, percentage: null },
         })
 
         expect(trendBadge(wrapper).exists()).toBe(false)

@@ -18,10 +18,8 @@ const props = defineProps({
     deferredData: Object,
 })
 
-/** Sans volume le mois précédent, il n'y a rien à comparer : la pastille ne dirait que « 0 % ». */
-const comparaisonPossible = computed(() => (props.monthlyComparison?.previous_volume ?? 0) > 0)
-
-const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? 0)
+/** Le serveur envoie `null` quand le mois précédent est vide : il n'y a rien à comparer. */
+const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? null)
 </script>
 
 <template>
@@ -79,7 +77,7 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? 0)
                         </p>
                     </div>
                     <div
-                        v-if="comparaisonPossible"
+                        v-if="variationDuMois !== null"
                         :class="[
                             'flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold whitespace-nowrap',
                             variationDuMois > 0
