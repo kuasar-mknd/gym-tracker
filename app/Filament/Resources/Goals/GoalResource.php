@@ -79,6 +79,13 @@ class GoalResource extends Resource
             $objectif->period = \App\Enums\GoalPeriod::Total;
         }
 
+        // Le départ d'un objectif par semaine est zéro, comme à
+        // `GoalStoreRequest` : son champ masqué n'est pas envoyé, et le départ
+        // d'un objectif passé « au total » à « par semaine » resterait.
+        if ($objectif->estHebdomadaire()) {
+            $objectif->start_value = 0.0;
+        }
+
         DB::transaction(static function () use ($objectif): void {
             $objectif->save();
 

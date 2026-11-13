@@ -8,8 +8,8 @@ use App\Enums\GoalPeriod;
 use App\Enums\GoalType;
 use App\Http\Controllers\GoalController;
 use App\Models\Exercise;
-use App\Models\Goal;
 use App\Rules\CibleAuMoinsEgaleAuDepart;
+use App\Rules\CibleEnSeancesParSemaine;
 use App\Rules\DateQueSaColonneTient;
 use App\Services\Diagnostic\ValeurLue;
 use Filament\Forms\Components\DatePicker;
@@ -106,12 +106,13 @@ class GoalForm
                 ->live()
                 ->helperText('« Par semaine » compte les séances faites du lundi au dimanche ; la valeur de départ ne sert pas.'),
             TextInput::make('target_value')->label('Valeur cible')->required()->numeric()
-                ->integer(fn (Get $get): bool => self::estHebdomadaire($get))
-                ->minValue(fn (Get $get): ?int => self::estHebdomadaire($get) ? 1 : null)
-                ->maxValue(fn (Get $get): ?int => self::estHebdomadaire($get) ? Goal::SEANCES_PAR_SEMAINE_MAX : null)
                 ->rule(
                     fn (Get $get): CibleAuMoinsEgaleAuDepart => new CibleAuMoinsEgaleAuDepart($get('start_value')),
-                    fn (Get $get): bool => $get('type') !== GoalType::Measurement->value,
+                    fn (Get $get): bool => $get('type') !== GoalType::Measurement->value && ! self::estHebdomadaire($get),
+                )
+                ->rule(
+                    new CibleEnSeancesParSemaine(),
+                    fn (Get $get): bool => self::estHebdomadaire($get),
                 ),
             TextInput::make('current_value')->label('Valeur actuelle')->numeric()->disabled()->hiddenOn(Operation::Create)
                 ->helperText(self::AVANCEMENT_CALCULE),
@@ -133,9 +134,9 @@ class GoalForm
     }
 
     /**
-     * Un objectif de fréquence « par semaine » : sa cible est un entier de 1 à
-     * `Goal::SEANCES_PAR_SEMAINE_MAX`, comme l'exige `GoalStoreRequest`, et son
-     * départ ne se tape pas.
+     * Un objectif de fréquence « par semaine » : sa cible se juge par
+     * `CibleEnSeancesParSemaine`, comme à `GoalStoreRequest`, et son départ ne se
+     * tape pas ni ne se compare à la cible (il se lit zéro).
      */
     private static function estHebdomadaire(Get $get): bool
     {

@@ -98,8 +98,31 @@ it('ramène à « au total » la période d’un objectif qui quitte la fréquen
     expect($objectif->refresh()->period)->toBe(GoalPeriod::Total);
 });
 
-it('montre la période au tableau', function (): void {
-    $objectif = Goal::factory()->create(['type' => 'frequency', 'period' => 'week', 'target_value' => 3, 'start_value' => 0]);
+it('passe au panneau un objectif « au total » à départ de 20 en « par semaine », et remet son départ à zéro', function (): void {
+    $objectif = Goal::factory()->create([
+        'type' => 'frequency',
+        'period' => 'total',
+        'target_value' => 50,
+        'start_value' => 20,
+    ]);
 
-    Livewire::test(ListGoals::class)->assertTableColumnStateSet('period', GoalPeriod::Week, $objectif);
+    Livewire::test(EditGoal::class, ['record' => $objectif->getKey()])
+        ->fillForm(['period' => 'week', 'target_value' => 3])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->period)->toBe(GoalPeriod::Week)
+        ->and($objectif->target_value)->toBe(3.0)
+        ->and($objectif->start_value)->toBe(0.0);
+});
+
+it('montre la période au tableau, pour une fréquence seulement', function (): void {
+    $objectif = Goal::factory()->create(['type' => 'frequency', 'period' => 'week', 'target_value' => 3, 'start_value' => 0]);
+    $charge = Goal::factory()->create(['type' => 'weight']);
+
+    Livewire::test(ListGoals::class)
+        ->assertTableColumnStateSet('period', GoalPeriod::Week, $objectif)
+        ->assertTableColumnStateSet('period', null, $charge);
 });

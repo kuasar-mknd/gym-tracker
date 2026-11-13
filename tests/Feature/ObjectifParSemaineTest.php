@@ -12,6 +12,7 @@ use App\Models\WorkoutLine;
 use App\Services\GoalService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\HorlogeQuiPasseMinuit;
 
@@ -356,21 +357,30 @@ describe('la création et la modification', function (): void {
     });
 });
 
-describe('le renouvellement du lundi', function (): void {
+describe('le renouvellement quotidien', function (): void {
     it('relance le recalcul des seuls comptes qui gardent la semaine passée', function (): void {
         Queue::fake();
+        Carbon::setTestNow(Carbon::parse('2026-11-11 12:00:00'));
+        $avant = Carbon::parse('2026-11-08 10:00:00');
         $garde = User::factory()->create();
         $avance = User::factory()->create();
         $atteint = User::factory()->create();
         $vide = User::factory()->create();
         $total = User::factory()->create();
+        $recalcule = User::factory()->create();
+        $autreCasse = User::factory()->create();
 
-        Goal::factory()->create(['user_id' => $garde->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 2]);
-        Goal::factory()->create(['user_id' => $avance->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 1]);
-        Goal::factory()->create(['user_id' => $avance->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 4]);
-        Goal::factory()->completed()->create(['user_id' => $atteint->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 0, 'target_value' => 0]);
-        Goal::factory()->create(['user_id' => $vide->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 0, 'completed_at' => null]);
-        Goal::factory()->create(['user_id' => $total->id, 'type' => 'frequency', 'period' => 'total', 'current_value' => 7]);
+        Goal::factory()->create(['user_id' => $garde->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 2, 'updated_at' => $avant]);
+        Goal::factory()->create(['user_id' => $avance->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 1, 'updated_at' => $avant]);
+        Goal::factory()->create(['user_id' => $avance->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 4, 'updated_at' => $avant]);
+        Goal::factory()->completed()->create(['user_id' => $atteint->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 0, 'target_value' => 0, 'updated_at' => $avant]);
+        Goal::factory()->create(['user_id' => $vide->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 0, 'completed_at' => null, 'updated_at' => $avant]);
+        Goal::factory()->create(['user_id' => $total->id, 'type' => 'frequency', 'period' => 'total', 'current_value' => 7, 'updated_at' => $avant]);
+        // Déjà recalculé depuis le lundi : rien à rouvrir.
+        Goal::factory()->create(['user_id' => $recalcule->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 2, 'updated_at' => Carbon::parse('2026-11-10 08:00:00')]);
+        // Une période écrite autrement que le cast ne la lit pas n'est pas « week ».
+        $casse = Goal::factory()->create(['user_id' => $autreCasse->id, 'type' => 'frequency', 'period' => 'week', 'current_value' => 2, 'updated_at' => $avant]);
+        DB::table('goals')->where('id', $casse->id)->update(['period' => 'WEEK ']);
 
         expect(Artisan::call('objectifs:renouveler-la-semaine'))->toBe(0);
 
@@ -380,10 +390,10 @@ describe('le renouvellement du lundi', function (): void {
         Queue::assertPushed(SyncUserGoals::class, fn (SyncUserGoals $job): bool => $job->user->is($atteint));
     });
 
-    it('est planifiée le lundi à 00:20', function (): void {
+    it('est planifiée chaque jour à 00:20, pour rattraper un lundi manqué', function (): void {
         $evenement = collect(app(Illuminate\Console\Scheduling\Schedule::class)->events())
             ->first(fn ($event): bool => str_contains((string) $event->command, 'objectifs:renouveler-la-semaine'));
 
-        expect($evenement?->expression)->toBe('20 0 * * 1');
+        expect($evenement?->expression)->toBe('20 0 * * *');
     });
 });

@@ -36,12 +36,14 @@ Artisan::command('inspire', function (): void {
 /*
  * Un objectif « par semaine » repart de zéro le lundi à minuit, heure de
  * l'application, mais le recalcul des objectifs ne part que d'une activité :
- * le lundi à 00:20, la passe relance celui des comptes qui gardent encore la
- * semaine passée. Loin de l'heure que les changements d'heure sautent ou
- * répètent, et avant le contrôle de cohérence de 04:30.
+ * chaque jour à 00:20, la passe relance celui des comptes qui gardent encore la
+ * semaine passée. Quotidienne et sans effet quand rien n'est à rouvrir : un
+ * passage du lundi manqué se rattrape le lendemain. Loin de l'heure que les
+ * changements d'heure sautent ou répètent, et avant le contrôle de cohérence
+ * de 04:30.
  */
 \Illuminate\Support\Facades\Schedule::command('objectifs:renouveler-la-semaine')
-    ->weeklyOn(1, '00:20');
+    ->dailyAt('00:20');
 
 /*
  * Un drapeau sans valeur s'écrit en liste, jamais `'--force' => true` : le
