@@ -285,6 +285,19 @@ class Workout extends Model
     }
 
     /**
+     * Recopie le début de cette séance sur les records que ses séries tiennent :
+     * un record est daté du début de la séance qui le porte, par la
+     * synchronisation comme par la reconstruction (`PersonalRecordService`).
+     * Une seule instruction, par l'index de `personal_records.workout_id`.
+     */
+    public function recopierLeDebutSurSesRecords(): int
+    {
+        return PersonalRecord::query()
+            ->where('workout_id', $this->getKey())
+            ->update(['achieved_at' => $this->debutALHeureMurale()]);
+    }
+
+    /**
      * Le début de cette séance à l'heure murale que la base tient
      * (`Y-m-d H:i:s`), la valeur que `workout_lines.workout_started_at` recopie.
      *
@@ -378,6 +391,7 @@ class Workout extends Model
             }
 
             $workout->recopierLeDebutSurSesLignes();
+            $workout->recopierLeDebutSurSesRecords();
         });
 
         /*

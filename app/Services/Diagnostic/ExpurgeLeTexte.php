@@ -20,7 +20,7 @@ use App\Services\Diagnostic\Expurgation\TexteIllisible;
  * Dans l'ordre :
  *
  * 1. l'entrée est coupée à 8 Kio, avant tout motif ;
- * 2. normalisée en NFKC, ses `%xx` décodés (`NormaliseLeTexte`), puis
+ * 2. normalisée en NFKC, ses `%xx` et ses entités HTML décodés (`NormaliseLeTexte`), puis
  *    recoupée à 8 Kio : NFKC allonge certains caractères, U+FDFA de trois
  *    octets à trente-trois, et les motifs liraient sinon près de onze fois
  *    la borne ;

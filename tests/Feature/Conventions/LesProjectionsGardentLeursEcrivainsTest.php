@@ -218,11 +218,16 @@ function projectionsLInventaire(): array
                 'le retrait des types que l’application ne tient plus, avant la reconstruction' => [
                     'app/Services/PersonalRecordService.php' => ['retirerLesTypesNonSuivis'],
                 ],
+                'la date du record, quand la séance qui le porte change de début' => [
+                    'app/Models/Workout.php' => ['recopierLeDebutSurSesRecords'],
+                ],
             ],
             dette: 'Un record monte par comparaison à la valeur stockée, et se reconstruit depuis les séries quand celle '
                 .'qui le portait change ou disparaît. La base en détache aussi elle-même (`ON DELETE SET NULL`). '
                 .'Une ligne d’un type que le modèle ne relit pas se retire en base, sous le verrou de l’exercice, '
-                .'avant la reconstruction, qui la relirait par le modèle (#1811).',
+                .'avant la reconstruction, qui la relirait par le modèle (#1811). '
+                .'La date d’un record est le début de la séance de sa série, écrite de la même façon par la montée '
+                .'et par la reconstruction ; la séance qui change de début la recopie sur ses records.',
         ),
         'les succès débloqués' => projectionsDecrire(
             genre: 'lignes',

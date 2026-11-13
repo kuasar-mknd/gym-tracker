@@ -90,6 +90,20 @@ it('rend exactement les deux records les plus recents, du plus recent au plus an
         ->and($records->first()->relationLoaded('exercise'))->toBeTrue();
 });
 
+it('departage par le plus recent les records d\'une meme seance, qui partagent leur date', function (): void {
+    $user = scenePourTableauDeBord();
+    $date = Carbon::parse('2026-06-10 10:00:00');
+
+    $premier = PersonalRecord::factory()->create(['user_id' => $user->id, 'achieved_at' => $date]);
+    $deuxieme = PersonalRecord::factory()->create(['user_id' => $user->id, 'achieved_at' => $date]);
+    $troisieme = PersonalRecord::factory()->create(['user_id' => $user->id, 'achieved_at' => $date]);
+
+    $records = app(FetchDashboardDataAction::class)->chiffresImmediats($user)['recentPRs']();
+
+    expect($records->pluck('id')->all())->toBe([$troisieme->id, $deuxieme->id])
+        ->and($records->pluck('id')->all())->not->toContain($premier->id);
+});
+
 it('rend exactement les deux objectifs actifs les plus recents, unite comprise', function (): void {
     Queue::fake();
     $user = scenePourTableauDeBord();
