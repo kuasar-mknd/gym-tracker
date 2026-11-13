@@ -80,6 +80,15 @@ return [
             'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
         ],
 
+        /**
+         * Sur l'instance des données : le vider emporte file, sessions et verrous.
+         */
+        'redis-durable' => [
+            'driver' => 'redis',
+            'connection' => 'default',
+            'lock_connection' => 'default',
+        ],
+
         'dynamodb' => [
             'driver' => 'dynamodb',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -102,6 +111,20 @@ return [
         ],
 
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Durable Store
+    |--------------------------------------------------------------------------
+    |
+    | Le magasin des limiteurs de tentatives, et des battements de santé
+    | (SanteServiceProvider). Vide, il suit le magasin par défaut ; en
+    | production, `redis-durable` les range sur l'instance des données, la
+    | seule qui n'évince rien (#2151).
+    |
+    */
+
+    'limiter' => env('CACHE_DURABLE_STORE'),
 
     /*
     |--------------------------------------------------------------------------
@@ -167,6 +190,7 @@ return [
 
         App\Enums\EvenementDAlerteDeDiagnostic::class,
         App\Enums\ExerciseCategory::class,
+        App\Enums\GoalPeriod::class,
         App\Enums\GoalType::class,
         App\Enums\MotifDeLaTentative::class,
         App\Enums\PersonalRecordType::class,

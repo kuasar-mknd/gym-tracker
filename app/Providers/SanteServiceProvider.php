@@ -49,6 +49,16 @@ final class SanteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $archives = DossierDesSauvegardesCheck::dossierDesArchives();
+        $file = QueueCheck::new();
+        $planificateur = ScheduleCheck::new();
+        $durable = config('cache.limiter');
+
+        // Le cache à part peut repartir vide entre le passage de `health:check`
+        // et le battement : sur son instance, une fausse alerte (#2151).
+        if (is_string($durable) && $durable !== '') {
+            $file->useCacheStore($durable);
+            $planificateur->useCacheStore($durable);
+        }
 
         Health::checks([
             DatabaseCheck::new()->label('Connexion à la base'),
@@ -57,8 +67,8 @@ final class SanteServiceProvider extends ServiceProvider
             ReglagesDeRedisCheck::new(),
             CacheCheck::new()->label("Cache de l'application"),
             // Le battement passe par la file « default », celle qu'Horizon sert.
-            QueueCheck::new()->label("File d'attente")->onQueue('default')->failWhenHealthJobTakesLongerThanMinutes(5),
-            ScheduleCheck::new()->label('Planificateur')->heartbeatMaxAgeInMinutes(2),
+            $file->label("File d'attente")->onQueue('default')->failWhenHealthJobTakesLongerThanMinutes(5),
+            $planificateur->label('Planificateur')->heartbeatMaxAgeInMinutes(2),
             TachesPlanifieesCheck::new(),
             AccesDeDiagnosticCheck::new(),
             ProxysDeConfianceCheck::new(),

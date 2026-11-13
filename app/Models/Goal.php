@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\GoalPeriod;
 use App\Enums\GoalType;
 use App\Jobs\SyncUserGoals;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $start_value
  * @property int|null $exercise_id
  * @property string|null $measurement_type
+ * @property GoalPeriod $period
  * @property \Illuminate\Support\Carbon|null $deadline
  * @property \Illuminate\Support\Carbon|null $completed_at
  * @property float $progress_pct
@@ -39,6 +41,23 @@ class Goal extends Model
      */
     public const int VALEUR_MAX = 1_000_000;
 
+    /**
+     * La cible la plus haute d'un objectif « par semaine » : deux séances par
+     * jour. Au-delà, ce n'est plus une régularité qu'on se fixe.
+     */
+    public const int SEANCES_PAR_SEMAINE_MAX = 14;
+
+    /**
+     * La période d'un objectif construit sans elle : toutes les séances, comme
+     * avant que l'objectif de fréquence en ait une.
+     *
+     * @var array<string, mixed>
+     */
+    #[\Override]
+    protected $attributes = [
+        'period' => 'total',
+    ];
+
     #[\Override]
     protected $fillable = [
         'title',
@@ -49,6 +68,7 @@ class Goal extends Model
         'progress_pct',
         'exercise_id',
         'measurement_type',
+        'period',
         'deadline',
         'completed_at',
     ];
@@ -67,6 +87,16 @@ class Goal extends Model
     public function exercise(): BelongsTo
     {
         return $this->belongsTo(Exercise::class);
+    }
+
+    /**
+     * Un objectif de fréquence qui compte les séances de la semaine du
+     * calendrier. La période ne sert à aucun autre type : un objectif de charge
+     * qui la porterait ne serait pas hebdomadaire.
+     */
+    public function estHebdomadaire(): bool
+    {
+        return $this->type === GoalType::Frequency && $this->period === GoalPeriod::Week;
     }
 
     public function getUnitAttribute(): string
@@ -111,6 +141,7 @@ class Goal extends Model
     {
         return [
             'type' => GoalType::class,
+            'period' => GoalPeriod::class,
             'target_value' => 'double',
             'current_value' => 'double',
             'start_value' => 'double',

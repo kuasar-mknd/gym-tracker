@@ -73,6 +73,19 @@ class GoalResource extends Resource
         $objectif->user_id = (int) $identifiant;
         $objectif->fill($attributs);
 
+        // La période ne sert qu'à la fréquence : un objectif qui change de type
+        // ne garde pas la sienne, comme à `GoalStoreRequest`.
+        if ($objectif->type !== \App\Enums\GoalType::Frequency) {
+            $objectif->period = \App\Enums\GoalPeriod::Total;
+        }
+
+        // Le départ d'un objectif par semaine est zéro, comme à
+        // `GoalStoreRequest` : son champ masqué n'est pas envoyé, et le départ
+        // d'un objectif passé « au total » à « par semaine » resterait.
+        if ($objectif->estHebdomadaire()) {
+            $objectif->start_value = 0.0;
+        }
+
         DB::transaction(static function () use ($objectif): void {
             $objectif->save();
 

@@ -51,6 +51,9 @@ class GoalsTable
             TextColumn::make('title')->label('Titre')->searchable(),
             TextColumn::make('type')->label('Type')->badge()
                 ->formatStateUsing(fn (GoalType $state): string => GoalForm::TYPES[$state->value] ?? $state->value),
+            TextColumn::make('period')->label('Période')->badge()
+                ->state(fn (\App\Models\Goal $record): ?\App\Enums\GoalPeriod => $record->type === GoalType::Frequency ? $record->period : null)
+                ->formatStateUsing(fn (\App\Enums\GoalPeriod $state): string => GoalForm::PERIODES[$state->value] ?? $state->value),
             TextColumn::make('target_value')->label('Valeur cible')->numeric()->sortable(),
             TextColumn::make('current_value')->label('Valeur actuelle')->numeric()->sortable(),
             TextColumn::make('start_value')->label('Valeur de départ')->numeric()->sortable(),

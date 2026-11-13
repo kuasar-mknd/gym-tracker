@@ -34,6 +34,18 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('04:30');
 
 /*
+ * Un objectif « par semaine » repart de zéro le lundi à minuit, heure de
+ * l'application, mais le recalcul des objectifs ne part que d'une activité :
+ * chaque jour à 00:20, la passe relance celui des comptes qui gardent encore la
+ * semaine passée. Quotidienne et sans effet quand rien n'est à rouvrir : un
+ * passage du lundi manqué se rattrape le lendemain. Loin de l'heure que les
+ * changements d'heure sautent ou répètent, et avant le contrôle de cohérence
+ * de 04:30.
+ */
+\Illuminate\Support\Facades\Schedule::command('objectifs:renouveler-la-semaine')
+    ->dailyAt('00:20');
+
+/*
  * Un drapeau sans valeur s'écrit en liste, jamais `'--force' => true` : le
  * planificateur compile le tableau en ligne de commande, `true` y devient
  * `'1'`, et la console refuse `--force='1'` avant de rien lancer (« option

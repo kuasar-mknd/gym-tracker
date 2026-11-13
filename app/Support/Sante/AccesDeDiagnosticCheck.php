@@ -6,8 +6,8 @@ namespace App\Support\Sante;
 
 use App\Models\JetonDeDiagnostic;
 use App\Support\AlertesDeDiagnostic;
+use App\Support\MagasinDurable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
 
@@ -86,7 +86,7 @@ final class AccesDeDiagnosticCheck extends Check
 
     private function unJetonMortAEtePresenteDepuisVingtQuatreHeures(Carbon $maintenant): bool
     {
-        $presente = Cache::get(AlertesDeDiagnostic::CLE_DE_LA_DERNIERE_PRESENTATION);
+        $presente = MagasinDurable::depot()->get(AlertesDeDiagnostic::CLE_DE_LA_DERNIERE_PRESENTATION);
 
         return is_string($presente) && Carbon::parse($presente)->gt($maintenant->copy()->subDay());
     }

@@ -120,6 +120,7 @@ class GoalController extends Controller
                 // ramène à null.
                 'exercise_id' => $goal->exercise_id ?? '',
                 'measurement_type' => $goal->measurement_type ?? '',
+                'period' => $goal->period->value,
                 'deadline' => $goal->deadline?->format('Y-m-d') ?? '',
             ],
             'exercises' => Exercise::enCachePourUtilisateur($this->user()->id),
