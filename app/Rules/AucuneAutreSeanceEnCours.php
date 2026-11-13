@@ -17,24 +17,21 @@ use Illuminate\Translation\PotentiallyTranslatedString;
  * cours, et le reste de l'application lit « la séance en cours » au singulier.
  * Le panneau, qui vide la fin d'une séance terminée ou en crée une sans fin, en
  * fabriquait une seconde. Rouvrir reste permis quand rien d'autre n'est en
- * cours.
+ * cours, et une séance déjà en cours reste modifiable. Le compte est celui de
+ * la séance, ou celui que `$compteSaisi` rend à la création.
  *
  * Implicite : c'est une fin vide que la règle juge, et Laravel ne passe pas les
- * règles ordinaires sur une valeur vide.
+ * règles ordinaires sur une valeur vide. La vérification précède l'écriture
+ * sans prendre le verrou du compte de `DemarrerUneSeanceAction` : elle réduit
+ * la fenêtre, elle ne la ferme pas.
  */
 final class AucuneAutreSeanceEnCours implements ValidationRule
 {
     /** @phpstan-ignore shipmonk.deadProperty.neverRead (lue par Laravel) */
     public bool $implicit = true;
 
-    /**
-     * @param  bool  $deJaEnCours  La séance l'est déjà : la laisser sans fin n'en ouvre aucune.
-     */
-    public function __construct(
-        private readonly mixed $idDuCompte,
-        private readonly ?int $idDeLaSeance,
-        private readonly bool $deJaEnCours = false,
-    ) {
+    public function __construct(private readonly Closure $compteSaisi, private readonly ?Workout $seance)
+    {
     }
 
     /**
@@ -42,21 +39,20 @@ final class AucuneAutreSeanceEnCours implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if ($value !== null && $value !== '') {
+        $compte = $this->seance instanceof Workout ? $this->seance->user_id : ($this->compteSaisi)();
+        $dejaEnCours = $this->seance instanceof Workout && $this->seance->ended_at === null;
+
+        if (filled($value) || $dejaEnCours) {
             return;
         }
 
-        if ($this->deJaEnCours || ! is_numeric($this->idDuCompte)) {
-            return;
-        }
-
-        $autreEnCours = Workout::query()
-            ->where('user_id', (int) $this->idDuCompte)
+        $autre = Workout::query()
+            ->where('user_id', is_numeric($compte) ? (int) $compte : 0)
             ->whereNull('ended_at')
-            ->when($this->idDeLaSeance !== null, fn ($requete) => $requete->whereKeyNot($this->idDeLaSeance))
+            ->when($this->seance, fn ($requete, Workout $seance) => $requete->whereKeyNot($seance->id))
             ->exists();
 
-        if ($autreEnCours) {
+        if ($autre) {
             $fail('Ce compte a déjà une séance en cours : termine-la avant d’en laisser une autre sans fin.');
         }
     }

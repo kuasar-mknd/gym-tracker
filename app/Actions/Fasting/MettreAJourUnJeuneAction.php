@@ -10,25 +10,24 @@ use Illuminate\Validation\ValidationException;
 
 final class MettreAJourUnJeuneAction
 {
+    public const string MESSAGE_REPRISE_AVEC_FIN = 'Reprendre un jeûne ne se fait pas avec une fin.';
+
     /**
      * Passer à `active` un jeûne qui ne l'est pas vaut démarrer un jeûne :
      * l'autre jeûne en cours du compte se cherche sous le même verrou que
-     * `DemarrerUnJeuneAction`. Poser une fin s'écrit sous ce verrou aussi : le
-     * jeûne est relu, et la fin d'un jeûne qui n'est plus `active` ne bouge
-     * pas, ni son statut : une fin rejouée par un second appareil ne les
-     * déplace pas, et corriger la fin d'un jeûne terminé est ignoré
-     * (réponse 200, rien ne change ; la page n'offre pas ce geste). Un jeûne
-     * repris puis terminé de nouveau prend sa nouvelle fin. Toute autre mise à
-     * jour s'écrit sans verrou.
+     * `DemarrerUnJeuneAction`. Poser une fin s'écrit sous ce verrou aussi
+     * (`FinDUnJeune`). Toute autre mise à jour s'écrit sans verrou.
      *
      * @param  array<string, mixed>  $donnees
      *
-     * @throws ValidationException Si le compte a déjà un autre jeûne en cours, ou si le verrou reste pris plus de `DemarrerUnJeuneAction::ATTENTE_DU_VERROU` secondes.
+     * @throws ValidationException Si le compte a déjà un autre jeûne en cours, si la reprise arrive avec une fin, ou si le verrou reste pris plus de `DemarrerUnJeuneAction::ATTENTE_DU_VERROU` secondes.
      */
     public function execute(User $user, Fast $fast, array $donnees): Fast
     {
         $reprend = ($donnees['status'] ?? null) === 'active' && $fast->status !== 'active';
-        $pose = ($donnees['end_time'] ?? null) !== null;
+        $pose = isset($donnees['end_time']);
+
+        throw_if($reprend && $pose, ValidationException::withMessages(['end_time' => self::MESSAGE_REPRISE_AVEC_FIN]));
 
         if (! $reprend && ! $pose) {
             $fast->update($donnees);
@@ -36,29 +35,29 @@ final class MettreAJourUnJeuneAction
             return $fast;
         }
 
-        DemarrerUnJeuneAction::sousLeVerrou($user, function () use ($user, $fast, $donnees, $reprend, $pose): void {
-            if ($pose) {
-                $fast->refresh();
-
-                if ($fast->status !== 'active' && $fast->end_time !== null) {
-                    unset($donnees['end_time'], $donnees['status']);
-                }
-            }
-
-            if ($reprend) {
-                $autreEnCours = $user->fasts()
-                    ->where('status', 'active')
-                    ->whereKeyNot($fast->getKey())
-                    ->exists();
-
-                if ($autreEnCours) {
-                    throw ValidationException::withMessages(['base' => DemarrerUnJeuneAction::MESSAGE]);
-                }
-            }
-
-            $fast->update($donnees);
-        });
+        DemarrerUnJeuneAction::sousLeVerrou($user, fn () => $pose
+            ? FinDUnJeune::poser($fast, $donnees)
+            : $this->reprendre($user, $fast, $donnees));
 
         return $fast;
+    }
+
+    /**
+     * @param  array<string, mixed>  $donnees
+     *
+     * @throws ValidationException
+     */
+    private function reprendre(User $user, Fast $fast, array $donnees): void
+    {
+        $autreEnCours = $user->fasts()
+            ->where('status', 'active')
+            ->whereKeyNot($fast->getKey())
+            ->exists();
+
+        if ($autreEnCours) {
+            throw ValidationException::withMessages(['base' => DemarrerUnJeuneAction::MESSAGE]);
+        }
+
+        $fast->update($donnees);
     }
 }

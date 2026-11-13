@@ -452,6 +452,22 @@ it('enregistre une séance finie dans l’heure répétée, dont l’heure mural
         ->and($seance->ended_at?->toJSON())->toBe('2026-10-25T01:10:00.000000Z');
 })->with('enregistrements refusés d’une séance du panneau');
 
+it('refuse par une erreur de validation, et non par une erreur 500, une date illisible', function (string $champ): void {
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->set("data.{$champ}", 'pas une date')
+        ->call('save')
+        ->assertHasFormErrors([$champ]);
+
+    Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), [$champ => 'pas une date'])
+        ->assertHasFormErrors([$champ]);
+})->with(['started_at', 'ended_at']);
+
 it('refuse toujours une fin qui précède le début dans l’heure répétée', function (Closure $enregistrer): void {
     $fuseau = config()->string('app.timezone');
     $seance = Workout::factory()->create([

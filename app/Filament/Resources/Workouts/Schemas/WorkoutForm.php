@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Workouts\Schemas;
 
-use App\Models\Casts\InstantAvecSonDecalage;
 use App\Models\Workout;
 use App\Rules\AucuneAutreSeanceEnCours;
 use App\Rules\DateQueSaColonneTient;
-use Carbon\CarbonInterface;
-use Closure;
+use App\Rules\FinNePrecedePasLeDebut;
+use App\Support\HeureDuChampDeSeance;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -76,83 +75,16 @@ class WorkoutForm
                     ->required()
                     ->minDate(DateQueSaColonneTient::horodatage()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant())
-                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => self::avecLeDecalageEnregistre($state, $record?->started_at)),
+                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => HeureDuChampDeSeance::avecLeDecalage($state, $record?->started_at)),
                 DateTimePicker::make('ended_at')->label('Fin')
                     ->minDate(DateQueSaColonneTient::date()->premierInstant())
                     ->maxDate(DateQueSaColonneTient::date()->dernierInstant())
-                    ->rule(fn (Get $get, ?Workout $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get, $record): void {
-                        $debut = self::instantDuChamp($get('started_at'), $record?->started_at);
-                        $fin = self::instantDuChamp($value, $record?->ended_at);
-
-                        if ($debut instanceof CarbonInterface && $fin instanceof CarbonInterface && $fin->lessThan($debut)) {
-                            $fail('La fin doit être postérieure ou égale au début.');
-                        }
-                    })
-                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(
-                        $record instanceof Workout ? $record->user_id : $get('user_id'),
-                        $record?->id,
-                        $record instanceof Workout && $record->ended_at === null,
-                    ))
-                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => self::avecLeDecalageEnregistre($state, $record?->ended_at)),
+                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new FinNePrecedePasLeDebut(fn (): mixed => $get('started_at'), $record))
+                    ->rule(fn (Get $get, ?Workout $record): ValidationRule => new AucuneAutreSeanceEnCours(fn (): mixed => $get('user_id'), $record))
+                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => HeureDuChampDeSeance::avecLeDecalage($state, $record?->ended_at)),
                 Textarea::make('notes')->label('Notes')
                     ->maxLength(1000)
                     ->columnSpanFull(),
             ]);
-    }
-
-    /**
-     * L'heure du champ, telle que Filament la rend (l'heure murale de
-     * l'application, `Y-m-d H:i:s`), suivie du décalage de l'instant
-     * enregistré quand ce décalage redonne cette heure dans le fuseau de
-     * l'application, c'est-à-dire quand le cast le retiendrait
-     * (`InstantAvecSonDecalage::lire()`). Une autre heure, ou une séance sans
-     * cet instant, part telle quelle.
-     *
-     * Une heure inchangée garde ainsi son occurrence. Une heure changée garde
-     * celle de l'instant enregistré tant que son décalage va avec elle : une
-     * séance de la première occurrence dont on retouche le début ou la fin
-     * dans l'heure répétée y reste. Lue seule, cette heure passait dans la
-     * seconde occurrence, à côté de l'autre champ resté dans la première :
-     * l'écran montrait le début avant la fin, et la fin s'enregistrait avant
-     * le début. Une heure dont le décalage enregistré ne va plus (passée de
-     * l'été à l'hiver) se lit seule, comme toute heure sans décalage.
-     */
-    /**
-     * L'instant qu'une heure du champ désignerait une fois enregistrée : celle
-     * de `avecLeDecalageEnregistre()`, lue comme le cast la lit
-     * (`InstantAvecSonDecalage::lire()`). Nul quand l'heure n'en est pas une,
-     * que d'autres règles refusent.
-     */
-    private static function instantDuChamp(mixed $heure, ?CarbonInterface $enregistre): ?CarbonInterface
-    {
-        if (! is_string($heure) || $heure === '') {
-            return null;
-        }
-
-        $decalage = $enregistre instanceof CarbonInterface
-            && self::avecLeDecalageEnregistre($heure, $enregistre) !== $heure
-            ? intdiv($enregistre->copy()->setTimezone(config()->string('app.timezone'))->getOffset(), 60)
-            : null;
-
-        try {
-            return InstantAvecSonDecalage::lire($heure, $decalage);
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    private static function avecLeDecalageEnregistre(mixed $heure, ?CarbonInterface $enregistre): mixed
-    {
-        if (! is_string($heure) || ! $enregistre instanceof CarbonInterface) {
-            return $heure;
-        }
-
-        $enregistre = $enregistre->copy()->setTimezone(config()->string('app.timezone'));
-        $decalage = $enregistre->getOffset();
-        $lue = InstantAvecSonDecalage::lire($heure, intdiv($decalage, 60));
-
-        return $lue->getOffset() === $decalage
-            ? $heure.$enregistre->format('P')
-            : $heure;
     }
 }
