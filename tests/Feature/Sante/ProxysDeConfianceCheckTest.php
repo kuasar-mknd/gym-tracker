@@ -42,6 +42,7 @@ it('reste verte en production avec des adresses précises', function (array $pro
     'un /64' => [['fd00:1::/64']],
     'une IPv4 mappée précise' => [['::ffff:10.0.0.7']],
     'un /120 mappé' => [['::ffff:10.0.0.0/120']],
+    'un /96 bas, hors du mappé' => [['::/96']],
     'plusieurs' => [['127.0.0.1', '172.18.0.5', '192.168.1.0/24']],
 ]);
 
@@ -56,6 +57,12 @@ it('passe à l’orange dès qu’une entrée dépasse un /24 ou un /64, ou fait
     'une IPv4 mappée, tout IPv4' => [['::ffff:0:0/96']],
     'un /104 mappé, un /8' => [['::ffff:10.0.0.0/104']],
     'un /119 mappé, un /23' => [['::ffff:10.0.0.0/119']],
+    'un /64 bas, qui couvre le mappé' => [['::/64']],
+    'un /80 bas, qui couvre le mappé' => [['::/80']],
+    'un /96 mappé' => [['::ffff:0:0/96']],
+    'un /33 d’IPv4' => [['10.0.0.0/33']],
+    'un /129 d’IPv6' => [['fd00::/129']],
+    'un /129 mappé' => [['::ffff:10.0.0.0/129']],
     'tout' => [['*']],
     'tout, à deux étoiles' => [['**']],
     'les plages privées par mot-clé' => [['PRIVATE_SUBNETS']],
@@ -85,6 +92,22 @@ it('dit qu’un joker ne fait confiance à personne, et non qu’il est trop lar
     expect($message)->toContain('aucun pair')
         ->and($message)->not->toContain('trop large');
 });
+
+it('ne dit la perte de HTTPS que si le joker est la seule entrée utilisable', function (array $proxys, bool $perdue): void {
+    app()->detectEnvironment(fn (): string => 'production');
+    Config::set('trustedproxy.proxies', $proxys);
+
+    $resultat = ProxysDeConfianceCheck::new()->run();
+    $message = $resultat->getNotificationMessage();
+
+    expect($resultat->status->value)->toBe('warning')
+        ->and(str_contains($message, 'HTTPS'))->toBe($perdue);
+})->with([
+    'le joker seul' => [['*'], true],
+    'le joker et une entrée invalide' => [['*', 'PRIVATE_SUBNETS'], true],
+    'le joker et une adresse' => [['*', '10.0.0.5'], false],
+    'les deux jokers et un sous-réseau' => [['*', '**', '172.18.0.0/24'], false],
+]);
 
 it('ne juge rien hors production', function (): void {
     Config::set('trustedproxy.proxies', ['10.0.0.0/8', '*']);
