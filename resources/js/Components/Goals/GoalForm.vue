@@ -57,7 +57,7 @@ const echeanceMinimale = computed(() =>
  */
 const periodOptions = [
     { value: 'total', label: 'Au total' },
-    { value: 'week', label: 'Par semaine (du lundi au dimanche)' },
+    { value: 'week', label: 'Par semaine' },
 ]
 
 const estHebdomadaire = computed(() => props.form.type === 'frequency' && props.form.period === 'week')
@@ -114,9 +114,16 @@ watch(
                 props.form.title = `Atteindre ${props.form.target_value || '?'} ${unit} de ${measurement.label}`
             }
         } else if (props.form.type === 'frequency') {
+            if (props.form.period === 'week') {
+                props.form.title = props.form.target_value
+                    ? `Faire ${compte(props.form.target_value, 'séance', 'séances')} par semaine`
+                    : ''
+
+                return
+            }
+
             const seances = props.form.target_value ? compte(props.form.target_value, 'séance', 'séances') : '? séances'
-            props.form.title =
-                props.form.period === 'week' ? `Faire ${seances} par semaine` : `Atteindre ${seances} au total`
+            props.form.title = `Atteindre ${seances} au total`
         }
     },
 )
@@ -140,6 +147,9 @@ watch(
                     :options="periodOptions"
                     :error="form.errors.period"
                 />
+                <p v-if="estHebdomadaire" class="text-text-muted -mt-2 text-xs">
+                    Du lundi au dimanche, remis à zéro chaque lundi.
+                </p>
 
                 <GlassSelect
                     v-if="form.type === 'weight' || form.type === 'volume'"

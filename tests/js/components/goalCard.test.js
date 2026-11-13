@@ -201,6 +201,22 @@ describe('GoalCard — figures', () => {
         expect(faite.text()).not.toContain('COMPLÉTÉ')
     })
 
+    it('garde le pourcentage sur une ligne et passe l’unité hebdomadaire à la ligne serrée', () => {
+        const wrapper = mountCard({
+            title: 'Un titre très long qui prend toute la place de la carte',
+            type: 'frequency',
+            period: 'week',
+            unit: 'séances',
+            target_value: 3,
+        })
+
+        const pourcentage = wrapper.get('.text-right')
+        expect(pourcentage.classes()).toEqual(expect.arrayContaining(['whitespace-nowrap', 'shrink-0']))
+
+        const unite = wrapper.findAll('.grid > div')[1].get('span')
+        expect(unite.classes()).toEqual(expect.arrayContaining(['block', 'leading-tight']))
+    })
+
     it('laisse un objectif de fréquence au total comme il était', () => {
         const wrapper = mountCard({
             type: 'frequency',

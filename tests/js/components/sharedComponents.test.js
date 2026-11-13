@@ -653,7 +653,7 @@ describe('GoalForm', () => {
 
             expect(options).toEqual([
                 ['total', 'Au total'],
-                ['week', 'Par semaine (du lundi au dimanche)'],
+                ['week', 'Par semaine'],
             ])
             frequence.unmount()
 
@@ -709,6 +709,32 @@ describe('GoalForm', () => {
 
             wrapper.unmount()
         })
+    })
+
+    it('n’intitule pas un objectif par semaine tant que la cible n’est pas saisie', async () => {
+        const form = goalForm({ period: 'week' })
+        const wrapper = mountGoalForm(form, { autoTitle: true })
+
+        form.type = 'frequency'
+        await wrapper.vm.$nextTick()
+        expect(form.title).toBe('')
+
+        form.target_value = '3'
+        await wrapper.vm.$nextTick()
+        expect(form.title).toBe('Faire 3 séances par semaine')
+
+        wrapper.unmount()
+    })
+
+    it('explique la semaine sous la période plutôt que dans le libellé de l’option', () => {
+        const wrapper = mountGoalForm(goalForm({ type: 'frequency', period: 'week' }))
+        expect(wrapper.text()).toContain('Du lundi au dimanche')
+
+        const total = mountGoalForm(goalForm({ type: 'frequency', period: 'total' }))
+        expect(total.text()).not.toContain('Du lundi au dimanche')
+
+        wrapper.unmount()
+        total.unmount()
     })
 
     it('leaves a question mark where the target has not been typed yet', async () => {
