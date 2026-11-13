@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions\Workouts;
 
 use App\Models\Workout;
-use App\Services\Stats\StatsCacheManager;
 use Carbon\CarbonInterface;
 
 /**
@@ -36,10 +35,6 @@ use Carbon\CarbonInterface;
  */
 final readonly class TerminerLaSeanceAction
 {
-    public function __construct(private StatsCacheManager $statsCache)
-    {
-    }
-
     /**
      * L'horloge se lit une fois, en tête, avant l'attente du verrou
      * (`.ai/rules/horloge.md`).
@@ -70,8 +65,6 @@ final readonly class TerminerLaSeanceAction
         // Les évènements de la séance oublient la séance en cours du cache, et
         // envoient les travaux des succès et des objectifs.
         $seance->save();
-
-        $this->statsCache->clearWorkoutRelatedStats($seance->user);
 
         return $seance;
     }

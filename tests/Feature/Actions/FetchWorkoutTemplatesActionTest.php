@@ -129,3 +129,21 @@ it('ne rend que les cent modèles les plus récents', function (): void {
 
     expect($noms)->toBe(array_map(fn (int $rang): string => 'Modèle '.$rang, range(0, 99)));
 });
+
+it('ne rend les lancements que des cent modèles les plus récents', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
+    $user = User::factory()->create();
+
+    WorkoutTemplate::insert(array_map(fn (int $rang): array => [
+        'user_id' => $user->id,
+        'name' => 'Modèle '.$rang,
+        'created_at' => now()->subMinutes($rang),
+        'updated_at' => now()->subMinutes($rang),
+    ], range(0, 100)));
+
+    $noms = array_column(app(FetchWorkoutTemplatesAction::class)->lancements($user), 'name');
+
+    expect($noms)->toHaveCount(100)
+        ->and($noms)->toContain('Modèle 0', 'Modèle 99')
+        ->and($noms)->not->toContain('Modèle 100');
+});

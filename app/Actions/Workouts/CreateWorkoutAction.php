@@ -6,15 +6,10 @@ namespace App\Actions\Workouts;
 
 use App\Models\User;
 use App\Models\Workout;
-use App\Services\Stats\StatsCacheManager;
 use Carbon\CarbonInterface;
 
 class CreateWorkoutAction
 {
-    public function __construct(protected StatsCacheManager $statsCache)
-    {
-    }
-
     /**
      * Le nom par défaut est la date, et rien d'autre.
      *
@@ -43,8 +38,6 @@ class CreateWorkoutAction
         $workout->user_id = $user->id;
         $workout->idempotency_key = $cle;
         $workout->save();
-
-        $this->statsCache->clearWorkoutRelatedStats($user);
 
         return $workout;
     }

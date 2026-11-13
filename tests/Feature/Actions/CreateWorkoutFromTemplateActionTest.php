@@ -325,3 +325,16 @@ it('pose sur la séance, ses lignes et ses séries les clés du lancement', func
             ['modele-serie:1:0'],
         ]);
 });
+
+it('ramène des répétitions lues en texte à un entier', function (): void {
+    $serie = new WorkoutTemplateSet(['reps' => '8', 'weight' => '42.50', 'is_warmup' => false]);
+    $ligne = new WorkoutTemplateLine(['exercise_id' => 7, 'order' => 0]);
+    $ligne->setRelation('workoutTemplateSets', collect([$serie]));
+    $modele = new WorkoutTemplate();
+    $modele->setRelation('workoutTemplateLines', collect([$ligne]));
+
+    $lancement = CreateWorkoutFromTemplateAction::lignesDuLancement($modele);
+
+    expect($lancement[0]['series'][0]['reps'])->toBe(8)
+        ->and($lancement[0]['series'][0]['weight'])->toBe(42.5);
+});

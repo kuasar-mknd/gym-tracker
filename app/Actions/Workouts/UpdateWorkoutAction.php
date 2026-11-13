@@ -5,16 +5,11 @@ declare(strict_types=1);
 namespace App\Actions\Workouts;
 
 use App\Models\Workout;
-use App\Services\Stats\StatsCacheManager;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Arr;
 
 final class UpdateWorkoutAction
 {
-    public function __construct(protected StatsCacheManager $statsCache)
-    {
-    }
-
     /**
      * Update the given workout with new data.
      *
@@ -63,26 +58,14 @@ final class UpdateWorkoutAction
 
         $workout->fill($attributs);
 
-        // Check what changed to determine cache invalidation strategy
-        $needsFullClear = $workout->isDirty(['started_at', 'ended_at']);
-        $needsMetaClear = $workout->isDirty(['name']);
-
         // Maintenant, sans passer le début, borné au plus tôt à lui : une fin
         // d'avant le début donnerait une durée négative (#2049). Une séance
         // déjà close garde sa première fin.
         if ($terminer) {
             $workout->ended_at ??= $workout->finBornee(null, $maintenant);
-            $needsFullClear = true;
         }
 
         $workout->save();
-
-        if ($needsFullClear) {
-            // started_at/ended_at change affects volume, duration and meta (histories)
-            $this->statsCache->clearWorkoutRelatedStats($workout->user);
-        } elseif ($needsMetaClear) {
-            $this->statsCache->clearWorkoutMetadataStats($workout->user);
-        }
 
         return $workout;
     }

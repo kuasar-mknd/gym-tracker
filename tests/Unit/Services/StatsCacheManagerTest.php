@@ -33,14 +33,12 @@ class StatsCacheManagerTest extends TestCase
         $manager = app(StatsCacheManager::class);
         $depart = ClesDeStats::seances($user, 'weekly_volume');
 
-        $manager->clearWorkoutMetadataStats($user);
-        $apresMetadonnees = ClesDeStats::seances($user, 'weekly_volume');
         $manager->clearVolumeStats($user);
         $apresVolume = ClesDeStats::seances($user, 'weekly_volume');
         $manager->clearWorkoutRelatedStats($user);
         $apresTout = ClesDeStats::seances($user, 'weekly_volume');
 
-        $this->assertCount(4, array_unique([$depart, $apresMetadonnees, $apresVolume, $apresTout]));
+        $this->assertCount(3, array_unique([$depart, $apresVolume, $apresTout]));
     }
 
     public function test_clearing_body_stats_changes_body_keys_and_leaves_workout_keys_alone(): void

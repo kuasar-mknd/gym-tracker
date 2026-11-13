@@ -186,3 +186,16 @@ it('pose la fin d’un jeûne en cours', function (): void {
 
     expect($jeune->fresh()?->end_time?->getTimestamp())->toBe($fin->getTimestamp());
 });
+
+it('écrit une correction sans fin ni reprise sans attendre le verrou du compte', function (): void {
+    $user = User::factory()->create();
+    $fin = now()->subHours(3)->startOfSecond();
+    $jeune = Fast::factory()->for($user)->create(['status' => 'completed', 'end_time' => $fin, 'start_time' => now()->subHours(20)]);
+    Cache::lock("jeunes-du-compte:{$user->id}", 60, 'un-autre-processus')->get();
+    Sleep::fake(syncWithCarbon: true);
+
+    app(MettreAJourUnJeuneAction::class)->execute($user, $jeune, ['status' => 'broken', 'type' => '18:6']);
+
+    expect($jeune->fresh()?->status)->toBe('broken')
+        ->and($jeune->fresh()?->type)->toBe('18:6');
+});

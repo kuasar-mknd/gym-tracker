@@ -211,7 +211,9 @@ it('tire le mot de passe jetable sur seize caracteres', function (): void {
         return str_repeat('a', $longueur);
     });
 
-    resoudre(utilisateurSocial());
+    $cree = resoudre(utilisateurSocial());
+
+    expect(Illuminate\Support\Facades\Hash::check(str_repeat('a', 16), (string) $cree->password))->toBeTrue();
 
     /*
      * `toContain` et non l'egalite : la creation du compte fait resoudre la

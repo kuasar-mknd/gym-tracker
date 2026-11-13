@@ -194,3 +194,20 @@ it('horodate à l’instant de la modification les exercices réécrits du modè
             ->and($ligne->updated_at?->toDateTimeString())->toBe('2026-06-15 12:00:00');
     }
 });
+
+it('rend le modèle avec ses lignes, leurs séries et leurs exercices chargés', function (): void {
+    $template = WorkoutTemplate::factory()->create(['user_id' => User::factory()->create()->id]);
+    $exercice = Exercise::factory()->create();
+
+    $modele = app(UpdateWorkoutTemplateAction::class)->execute($template, [
+        'name' => 'Haut du corps',
+        'exercises' => [['id' => $exercice->id, 'sets' => [['reps' => 8, 'weight' => 40.0, 'is_warmup' => false]]]],
+    ]);
+
+    $ligne = $modele->workoutTemplateLines->sole();
+
+    expect($ligne->relationLoaded('workoutTemplateSets'))->toBeTrue()
+        ->and($ligne->relationLoaded('exercise'))->toBeTrue()
+        ->and($ligne->workoutTemplateSets)->toHaveCount(1)
+        ->and($ligne->exercise->is($exercice))->toBeTrue();
+});

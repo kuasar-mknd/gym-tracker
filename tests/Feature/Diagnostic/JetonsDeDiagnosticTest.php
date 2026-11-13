@@ -371,3 +371,69 @@ it('purge les jetons de diagnostic par la tâche planifiée', function (): void 
 
     expect($planifiees)->toHaveCount(1);
 });
+
+it('refuse un secret de double authentification vide', function (): void {
+    [$admin] = jetonsDeDiagnosticSuperAdministrateur(avecLaDoubleAuthentification: false);
+    $admin->forceFill(['app_authentication_secret' => ''])->save();
+
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin->refresh(), '', code: '123456'))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::DOUBLE_AUTHENTIFICATION_ABSENTE));
+});
+
+it('écrit le message du refus en entier', function (): void {
+    expect(new CreationDeJetonRefusee(CreationDeJetonRefusee::CODE_REFUSE)->getMessage())
+        ->toBe('Création du jeton de diagnostic refusée : code-refuse');
+});
+
+it('relit le plafond de jetons actifs sous le verrou', function (): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+    $dejaPose = false;
+
+    DB::listen(function ($requete) use (&$dejaPose): void {
+        if ($dejaPose || ! str_contains($requete->sql, 'jetons_de_diagnostic') || ! str_contains($requete->sql, 'count(*)')) {
+            return;
+        }
+
+        $dejaPose = true;
+        JetonDeDiagnostic::factory()->count(2)->create();
+    });
+
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::JETONS_ACTIFS_AU_MAXIMUM))
+        ->and(JetonDeDiagnostic::query()->count())->toBe(2);
+});
+
+it('crée un jeton quand un seul autre est actif sous le verrou', function (): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+    JetonDeDiagnostic::factory()->create();
+
+    expect(jetonsDeDiagnosticCreer($admin, $secretTotp)['jeton']->exists)->toBeTrue()
+        ->and(JetonDeDiagnostic::query()->count())->toBe(2);
+});
+
+it('range le nom rogné à quatre-vingts caractères, sans points de suspension', function (string $saisi, string $attendu): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+
+    $jeton = resolve(CreeUnJetonDeDiagnosticAction::class)
+        ->execute($admin, $saisi, [PorteeDeDiagnostic::Sante], 7, new Google2FA()->getCurrentOtp($secretTotp))['jeton'];
+
+    expect(DB::table('jetons_de_diagnostic')->where('id', $jeton->id)->value('nom'))->toBe($attendu);
+})->with([
+    'blancs retirés' => [' '.str_repeat('a', 80).' ', str_repeat('a', 80)],
+    'au-delà de quatre-vingts' => [str_repeat('a', 100), str_repeat('a', 80)],
+    'quatre-vingts exactement' => [str_repeat('b', 80), str_repeat('b', 80)],
+]);
+
+it('compte les essais de code sous la clé de l’administrateur, pour une minute', function (): void {
+    Carbon\Carbon::setTestNow('2026-11-13 10:00:00');
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+    $cle = 'diagnostic:creation:'.$admin->id;
+    RateLimiter::clear($cle);
+
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::CODE_REFUSE))
+        ->and(RateLimiter::attempts($cle))->toBe(1)
+        ->and(RateLimiter::availableIn($cle))->toBe(60);
+
+    Carbon\Carbon::setTestNow();
+});

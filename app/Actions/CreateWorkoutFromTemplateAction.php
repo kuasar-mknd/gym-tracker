@@ -9,16 +9,11 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
-use App\Services\Stats\StatsCacheManager;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 final readonly class CreateWorkoutFromTemplateAction
 {
-    public function __construct(private StatsCacheManager $statsCache)
-    {
-    }
-
     /**
      * Ouvre une séance depuis un modèle : ses exercices et leurs séries,
      * dans l'ordre du modèle.
@@ -35,11 +30,6 @@ final readonly class CreateWorkoutFromTemplateAction
      * (`WorkoutTemplate::cleDUneLigneLancee()`, `cleDUneSerieLancee()`) : un
      * lancement parti sans réponse, que la file rejoue écriture par écriture,
      * retrouve alors chacune au lieu de la doubler.
-     *
-     * Le cache des statistiques se vide après la transaction, comme à la
-     * création d'une séance vide : la nouvelle séance compte dans la
-     * fréquence et l'historique, que le lancement d'un modèle laissait
-     * périmés jusqu'à l'expiration.
      */
     public function execute(User $user, WorkoutTemplate $template, ?CarbonInterface $debut = null, ?string $cle = null): Workout
     {
@@ -48,7 +38,7 @@ final readonly class CreateWorkoutFromTemplateAction
         // Optimize: Eager load relationships to prevent N+1 queries during iteration
         $template->load(['workoutTemplateLines.workoutTemplateSets']);
 
-        $workout = DB::transaction(function () use ($user, $template, $debut, $cle): Workout {
+        return DB::transaction(function () use ($user, $template, $debut, $cle): Workout {
             $workout = new Workout([
                 'name' => $template->name,
                 'started_at' => $debut,
@@ -61,10 +51,6 @@ final readonly class CreateWorkoutFromTemplateAction
 
             return $workout;
         });
-
-        $this->statsCache->clearWorkoutRelatedStats($user);
-
-        return $workout;
     }
 
     /**

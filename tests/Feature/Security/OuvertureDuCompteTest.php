@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Auth\ConnecterLeCompte;
 use App\Actions\ResolveSocialUserAction;
+use App\Models\Admin;
 use App\Models\User;
 use App\Notifications\LienDOuvertureDuCompte;
 use App\Support\LiensDesCourriels;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Symfony\Component\HttpFoundation\Response;
@@ -419,4 +421,44 @@ it('écrit le lien d’ouverture en français, sur APP_URL, sans rien de l’ins
 
     Notification::assertSentTo($ancien, Illuminate\Auth\Notifications\VerifyEmail::class);
     Notification::assertNotSentTo($ancien, LienDOuvertureDuCompte::class);
+});
+
+it('compte les liens renvoyés sous la clé du compte, pour un quart d’heure', function (): void {
+    Notification::fake();
+    $this->freezeSecond();
+    $compte = ouvertureCompteEnAttente();
+
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
+
+    expect(RateLimiter::attempts('lien-d-ouverture:'.$compte->id))->toBe(1)
+        ->and(RateLimiter::availableIn('lien-d-ouverture:'.$compte->id))->toBe(ConnecterLeCompte::SECONDES_ENTRE_DEUX_LIENS)
+        ->and(ConnecterLeCompte::SECONDES_ENTRE_DEUX_LIENS)->toBe(900);
+});
+
+it('refuse, sans erreur, une marque de lien mal formée', function (mixed $marque): void {
+    Notification::fake();
+    $compte = ouvertureCompteEnAttente();
+    $marque = is_array($marque) ? array_merge(['compte' => $compte->id, 'empreinte' => sha1('inscrit@example.org'), 'expire' => now()->addHour()->getTimestamp()], $marque) : $marque;
+    session([ConnecterLeCompte::MARQUE_DU_LIEN_SUIVI => $marque]);
+
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
+
+    assertGuest();
+    expect($compte->refresh()->estEnAttente())->toBeTrue();
+})->with([
+    'pas un tableau' => ['ouvert'],
+    'empreinte numérique' => [['empreinte' => 12345]],
+    'échéance en texte' => [['expire' => '99999999999']],
+    'échéance décimale' => [['expire' => 99999999999.5]],
+]);
+
+it('laisse passer un compte qui n’est pas un compte d’utilisateur', function (): void {
+    config()->set('auth.defaults.guard', 'admin');
+    Auth::forgetGuards();
+    $admin = Admin::factory()->create(['password' => Hash::make(ouvertureMotDePasse())]);
+
+    $connecte = resolve(ConnecterLeCompte::class)->execute(['email' => $admin->email, 'password' => ouvertureMotDePasse()], false, resolve('session.store'));
+
+    expect($connecte)->toBeTrue();
+    assertAuthenticatedAs($admin, 'admin');
 });
