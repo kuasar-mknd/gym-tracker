@@ -105,7 +105,7 @@ final class PersonalRecordService
         }
 
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
-        $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
+        $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => $set->workoutLine->workout->debutALHeureMurale()])->save();
 
         return $pr;
     }
@@ -144,7 +144,8 @@ final class PersonalRecordService
      */
     private const string CLASSEMENT = <<<'SQL'
         select * from (
-            select sets.id, sets.weight, sets.reps, sets.created_at, workout_lines.workout_id,
+            select sets.id, sets.weight, sets.reps, coalesce(workout_lines.workout_started_at, (select workouts.started_at from workouts where workouts.id = workout_lines.workout_id)) as obtenu,
+                   workout_lines.workout_id,
                    row_number() over (order by sets.weight desc, sets.id asc) as rang_max_weight,
                    row_number() over (order by (case when sets.reps <= 1 then sets.weight else sets.weight * (1 + sets.reps / 30) end) desc, sets.id asc) as rang_max_1rm,
                    row_number() over (order by sets.weight * sets.reps desc, sets.id asc) as rang_max_volume_set
@@ -385,7 +386,7 @@ final class PersonalRecordService
                 'secondary_value' => $secondaire,
                 'workout_id' => $meilleure['seance'],
                 'set_id' => $meilleure['id'],
-                'achieved_at' => $meilleure['obtenu'] ?? now(),
+                'achieved_at' => $meilleure['obtenu'],
             ])->save();
 
             // Donné à une série qui ne le tenait pas, au-dessus de ce qu'il
@@ -429,7 +430,7 @@ final class PersonalRecordService
     /**
      * La serie gagnante de chaque type, par type.
      *
-     * @return array<string, array{id: int, poids: float, repetitions: int, seance: int, obtenu: string|null}>
+     * @return array<string, array{id: int, poids: float, repetitions: int, seance: int, obtenu: string}>
      */
     private function gagnantes(int $idUtilisateur, int $idExercice): array
     {
@@ -447,14 +448,12 @@ final class PersonalRecordService
                     continue;
                 }
 
-                $obtenu = $champs['created_at'] ?? null;
-
                 $par[$type] = [
                     'id' => self::entier($champs['id'] ?? null),
                     'poids' => self::flottant($champs['weight'] ?? null),
                     'repetitions' => self::entier($champs['reps'] ?? null),
                     'seance' => self::entier($champs['workout_id'] ?? null),
-                    'obtenu' => is_string($obtenu) ? $obtenu : null,
+                    'obtenu' => self::texte($champs['obtenu'] ?? null),
                 ];
             }
         }
@@ -465,6 +464,11 @@ final class PersonalRecordService
     private static function entier(mixed $valeur): int
     {
         return is_numeric($valeur) ? (int) $valeur : 0;
+    }
+
+    private static function texte(mixed $valeur): string
+    {
+        return is_scalar($valeur) ? (string) $valeur : '';
     }
 
     private static function flottant(mixed $valeur): float
