@@ -64,7 +64,20 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
         }
 
         return premierEnvoi(set.id)
-            .then(() => {
+            .then(async () => {
+                /*
+                 * Sa création vole : si elle échoue, ce geste a déjà rejoint
+                 * son entrée, et ceux qui le suivent doivent la trouver en
+                 * file au lieu d'attendre derrière lui en mémoire (#2291).
+                 */
+                const fileDeLaSerie = pendingIds.fileDe(set.id)
+
+                while (fileDeLaSerie !== null && SyncService.enVol === fileDeLaSerie) {
+                    if (await SyncService.apresLeVol()) {
+                        return pendingIds.resolve(set.id)
+                    }
+                }
+
                 if (fondreDansLaFile(set, payload)) {
                     markUnsynced(set.id)
 
