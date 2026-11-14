@@ -213,7 +213,7 @@ describe('l’ajout et le retrait d’une série', () => {
             'La série n’a pas pu être ajoutée. Une série compte au plus 999 répétitions.',
         )
 
-        sync.post.mockRejectedValueOnce({ isOffline: false, response: { status: 500, data: {} } })
+        sync.post.mockRejectedValueOnce({ isOffline: false, response: { status: 422, data: {} } })
         series.addSet(1)
         await flushPromises()
 

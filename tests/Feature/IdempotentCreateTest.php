@@ -64,6 +64,34 @@ describe('idempotent creates', function (): void {
             ->and($line->sets()->count())->toBe(1);
     });
 
+    it('rend la série déjà écrite quand la première tentative a échoué en 500 après l’écriture (#2292)', function (): void {
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => Workout::query()->sole()->id,
+            'exercise_id' => Exercise::query()->sole()->id,
+        ]);
+        $payload = ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 8];
+        $headers = ['Idempotency-Key' => 'attempt-set-5xx'];
+
+        Exceptions::fake();
+        $echoue = true;
+        Set::created(function () use (&$echoue): void {
+            if ($echoue) {
+                $echoue = false;
+
+                throw new RuntimeException('Un effet de bord échoue après l’écriture.');
+            }
+        });
+
+        $first = $this->actingAs($this->user)->postJson(route('api.v1.sets.store'), $payload, $headers);
+        $second = $this->actingAs($this->user)->postJson(route('api.v1.sets.store'), $payload, $headers);
+
+        $first->assertServerError();
+        $second->assertSuccessful();
+
+        expect($line->sets()->count())->toBe(1)
+            ->and($second->json('data.id'))->toBe($line->sets()->value('id'));
+    });
+
     it('still creates a distinct row for a genuinely distinct attempt', function (): void {
         $line = WorkoutLine::factory()->create([
             'workout_id' => $this->workout->id,

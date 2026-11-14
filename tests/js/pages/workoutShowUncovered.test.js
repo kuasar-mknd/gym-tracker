@@ -1172,7 +1172,7 @@ describe('Workouts/Show — a create that answers with nothing', () => {
     })
 
     it('takes the exercise back off screen when the server refuses it', async () => {
-        post.mockRejectedValue({ response: { status: 500 } })
+        post.mockRejectedValue({ response: { status: 422 } })
 
         const wrapper = await mountPage(session())
 
