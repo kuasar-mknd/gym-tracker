@@ -91,12 +91,13 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+    await seances.demonterToutes()
+
     if (pageDuCas !== null) {
         clearTimeout(pageDuCas.sync.relance)
         pageDuCas = null
     }
 
-    await seances.demonterToutes()
     retirerLesEcouteursDuService()
     poserLaPage(null)
 })
