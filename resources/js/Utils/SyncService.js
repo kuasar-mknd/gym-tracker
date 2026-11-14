@@ -976,7 +976,16 @@ class SyncService {
          * serveur lent à répondre, un démarrage qui attend le verrou du
          * compte, ne se rejoueraient jamais à temps.
          */
-        const tentative = typeof delaiDeLaTentative === 'number' ? { ...stamped, timeout: delaiDeLaTentative } : stamped
+        /*
+         * Sans délai donné, une écriture directe attend 15 s au plus, comme
+         * celles du vidage (#2293) : une création restée sans réponse
+         * enchaînait derrière elle les séries suivantes de sa ligne. Passé ce
+         * délai elle se lit comme une réponse perdue. Le lancement d'un modèle
+         * (`garderEnFile: false`) n'en reçoit pas : sa transaction peut durer.
+         */
+        const delai =
+            typeof delaiDeLaTentative === 'number' ? delaiDeLaTentative : garderEnFile ? DELAI_DE_REJEU_MS : null
+        const tentative = delai === null || stamped.timeout !== undefined ? stamped : { ...stamped, timeout: delai }
 
         /*
          * Le compte qui fait l'écriture, pris à son départ : une écriture

@@ -18,6 +18,23 @@ final class CreateSetAction
     }
 
     /**
+     * La série que la ligne porte déjà sous la clé de la tentative, rien sans clé.
+     *
+     * Scoped to the line, never searched globally. The key arrives in a
+     * client-controlled header, and a global lookup would hand back another
+     * user's set to anyone who guessed or replayed their key. The caller has
+     * already established that the line belongs to this user.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function serieDejaCreee(WorkoutLine $workoutLine, array $data): ?Set
+    {
+        $key = self::idempotencyKey($data);
+
+        return $key === null ? null : $workoutLine->sets()->where('idempotency_key', $key)->first();
+    }
+
+    /**
      * Create a new set for a workout line.
      *
      * @param  array<string, mixed>  $data
@@ -25,19 +42,10 @@ final class CreateSetAction
     public function execute(User $user, WorkoutLine $workoutLine, array $data): Set
     {
         $key = self::idempotencyKey($data);
+        $existing = $this->serieDejaCreee($workoutLine, $data);
 
-        /**
-         * Scoped to the line, never searched globally. The key arrives in a
-         * client-controlled header, and a global lookup would hand back another
-         * user's set to anyone who guessed or replayed their key. The line here
-         * has already been authorised for this user.
-         */
-        if ($key !== null) {
-            $existing = $workoutLine->sets()->where('idempotency_key', $key)->first();
-
-            if ($existing instanceof Set) {
-                return $existing;
-            }
+        if ($existing instanceof Set) {
+            return $existing;
         }
 
         /**

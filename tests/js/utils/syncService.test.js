@@ -2880,6 +2880,20 @@ describe('SyncService une séance démarrée sans réseau', () => {
         expect(request.mock.calls[1][0]).toMatchObject({ url: '/api/v1/workouts', timeout: DELAI_DE_REJEU_MS })
     })
 
+    it('borne aussi une écriture directe qui ne donne pas son délai, sauf le lancement d’un modèle (#2293)', async () => {
+        const { DELAI_DE_REJEU_MS } = await import('@/Utils/SyncService')
+        const service = await chargé()
+        request.mockResolvedValue({ data: { data: { id: 42 } } })
+
+        await service.patch('/api/v1/sets/3', { reps: 4 })
+        await service.patch('/api/v1/sets/3', { reps: 5 }, { timeout: 8000 })
+        await service.post('/api/v1/workouts', { template_id: 3 }, { garderEnFile: false })
+
+        expect(request.mock.calls[0][0]).toMatchObject({ url: '/api/v1/sets/3', timeout: DELAI_DE_REJEU_MS })
+        expect(request.mock.calls[1][0]).toMatchObject({ timeout: 8000 })
+        expect(request.mock.calls[2][0]).not.toHaveProperty('timeout')
+    })
+
     it('tire la clé d’une création que l’appelant nomme lui-même, sous la forme que la route accepte', async () => {
         const { nouvelleCleDIdempotence } = await import('@/Utils/SyncService')
         const premiere = nouvelleCleDIdempotence()

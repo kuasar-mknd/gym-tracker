@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Workouts\CreateSetAction;
 use App\Actions\Workouts\CreateWorkoutLineAction;
 use App\Http\Requests\Api\WorkoutLineStoreRequest;
 use App\Http\Resources\WorkoutLineResource;
@@ -26,6 +27,20 @@ class WorkoutLineController extends Controller
 
         /** @var \App\Models\Workout $workout */
         $workout = Workout::findOrFail($donneesValidees['workout_id']);
+
+        /*
+         * Le rejeu d'une création déjà faite rend la ligne même si la séance a
+         * été close entre-temps, par un autre appareil (#2293) : seule la
+         * création, qui exige une séance en cours, est refusée. L'appartenance
+         * se vérifie d'abord, la recherche étant bornée à la séance.
+         */
+        $dejaCreee = $workout->user_id === $this->user()->id
+            ? $action->ligneDejaCreeeSous($workout, CreateSetAction::idempotencyKey(['idempotency_key' => $request->header('Idempotency-Key')]))
+            : null;
+
+        if ($dejaCreee instanceof WorkoutLine) {
+            return new WorkoutLineResource($dejaCreee->load(['exercise', 'sets'])->append('recommended_values'));
+        }
 
         $this->authorize('create', [WorkoutLine::class, $workout]);
 

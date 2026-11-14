@@ -92,6 +92,115 @@ describe('idempotent creates', function (): void {
             ->and($second->json('data.id'))->toBe($line->sets()->value('id'));
     });
 
+    it('rend la série déjà créée au rejeu, même si la séance a été close entre-temps (#2293)', function (): void {
+        $compte = User::query()->sole();
+        $seance = Workout::query()->sole();
+        $exercice = Exercise::query()->sole();
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => $seance->id,
+            'exercise_id' => $exercice->id,
+        ]);
+        $payload = ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 8];
+        $headers = ['Idempotency-Key' => 'attempt-set-closed'];
+
+        $first = $this->actingAs($compte)->postJson(route('api.v1.sets.store'), $payload, $headers);
+        $seance->update(['ended_at' => now()]);
+        $replay = $this->actingAs($compte)->postJson(route('api.v1.sets.store'), $payload, $headers);
+
+        $first->assertCreated();
+        $replay->assertOk();
+
+        expect($replay->json('data.id'))->toBe($first->json('data.id'))
+            ->and($line->sets()->count())->toBe(1);
+    });
+
+    it('refuse toujours une nouvelle série sur une séance close, clé ou non (#2293)', function (): void {
+        $compte = User::query()->sole();
+        $seance = Workout::query()->sole();
+        $exercice = Exercise::query()->sole();
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => $seance->id,
+            'exercise_id' => $exercice->id,
+        ]);
+        $seance->update(['ended_at' => now()]);
+        $payload = ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 8];
+
+        $this->actingAs($compte)->postJson(route('api.v1.sets.store'), $payload, ['Idempotency-Key' => 'jamais-vue'])
+            ->assertForbidden();
+        $this->actingAs($compte)->postJson(route('api.v1.sets.store'), $payload)->assertForbidden();
+
+        expect($line->sets()->count())->toBe(0);
+    });
+
+    it('ne rend pas la série d’un autre compte à qui rejoue sa clé (#2293)', function (): void {
+        $compte = User::query()->sole();
+        $seance = Workout::query()->sole();
+        $exercice = Exercise::query()->sole();
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => $seance->id,
+            'exercise_id' => $exercice->id,
+        ]);
+        $payload = ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 8];
+        $headers = ['Idempotency-Key' => 'attempt-set-other'];
+        $this->actingAs($compte)->postJson(route('api.v1.sets.store'), $payload, $headers)->assertCreated();
+        $seance->update(['ended_at' => now()]);
+
+        $this->actingAs(User::factory()->create())->postJson(route('api.v1.sets.store'), $payload, $headers)
+            ->assertUnprocessable()
+            ->assertJsonMissingPath('data');
+    });
+
+    it('l’action ne rend pas non plus la série d’un autre compte, la requête étant contournée (#2293)', function (): void {
+        $compte = User::query()->sole();
+        $seance = Workout::query()->sole();
+        $exercice = Exercise::query()->sole();
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => $seance->id,
+            'exercise_id' => $exercice->id,
+        ]);
+        $donnees = ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 8, 'idempotency_key' => 'attempt-set-action'];
+        app(App\Actions\Workouts\StoreSetAction::class)->execute($compte, $donnees);
+        $seance->update(['ended_at' => now()]);
+
+        expect(fn () => app(App\Actions\Workouts\StoreSetAction::class)->execute(User::factory()->create(), $donnees))
+            ->toThrow(Illuminate\Auth\Access\AuthorizationException::class);
+    });
+
+    it('rend la ligne déjà créée au rejeu, même si la séance a été close entre-temps (#2293)', function (): void {
+        $compte = User::query()->sole();
+        $seance = Workout::query()->sole();
+        $exercice = Exercise::query()->sole();
+        $payload = ['workout_id' => $seance->id, 'exercise_id' => $exercice->id];
+        $headers = ['Idempotency-Key' => 'attempt-line-closed'];
+
+        $first = $this->actingAs($compte)->postJson(route('api.v1.workout-lines.store'), $payload, $headers);
+        $seance->update(['ended_at' => now()]);
+        $replay = $this->actingAs($compte)->postJson(route('api.v1.workout-lines.store'), $payload, $headers);
+
+        $first->assertCreated();
+        $replay->assertOk();
+
+        expect($replay->json('data.id'))->toBe($first->json('data.id'))
+            ->and(WorkoutLine::where('workout_id', $seance->id)->count())->toBe(1);
+    });
+
+    it('refuse toujours une nouvelle ligne sur une séance close, et à un autre compte (#2293)', function (): void {
+        $compte = User::query()->sole();
+        $seance = Workout::query()->sole();
+        $exercice = Exercise::query()->sole();
+        $payload = ['workout_id' => $seance->id, 'exercise_id' => $exercice->id];
+        $headers = ['Idempotency-Key' => 'attempt-line-refused'];
+        $this->actingAs($compte)->postJson(route('api.v1.workout-lines.store'), $payload, $headers)->assertCreated();
+        $seance->update(['ended_at' => now()]);
+
+        $this->actingAs($compte)->postJson(route('api.v1.workout-lines.store'), $payload, ['Idempotency-Key' => 'neuve'])
+            ->assertForbidden();
+        $this->actingAs(User::factory()->create())->postJson(route('api.v1.workout-lines.store'), $payload, $headers)
+            ->assertStatus(422);
+
+        expect(WorkoutLine::where('workout_id', $seance->id)->count())->toBe(1);
+    });
+
     it('still creates a distinct row for a genuinely distinct attempt', function (): void {
         $line = WorkoutLine::factory()->create([
             'workout_id' => $this->workout->id,
