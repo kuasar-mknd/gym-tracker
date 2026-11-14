@@ -60,8 +60,12 @@ const ajouterSansReponse = async (page) => {
     return page.ligne().sets.at(-1)
 }
 
+/** La page dont le cas a mis une création en file sur un 5xx : sa relance de 5 s ne doit pas survivre au cas. */
+let pageDuCas = null
+
 /** Ajoute une série que le serveur enregistre puis répond en 5xx. */
 const ajouterEnCinqCentDeux = async (page, status = 502) => {
+    pageDuCas = page
     uneReponseEnCinqCentDeux(reseau.serveur, status)
     page.addSet(1)
     await flushPromises()
@@ -87,6 +91,11 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+    if (pageDuCas !== null) {
+        clearTimeout(pageDuCas.sync.relance)
+        pageDuCas = null
+    }
+
     await seances.demonterToutes()
     retirerLesEcouteursDuService()
     poserLaPage(null)
@@ -119,6 +128,44 @@ describe('une création enregistrée puis répondue en 5xx', () => {
         const cles = reseau.serveur.requetes.filter((r) => r.method === 'post').map((r) => r.entetes['Idempotency-Key'])
         expect(cles).toHaveLength(2)
         expect(cles[1]).toBe(cles[0])
+    })
+
+    it('crée la série au rejeu quand le 5xx a précédé l’écriture', async () => {
+        const page = await monterLaSeance(seance())
+        pageDuCas = page
+        reseau.serveur.imposer.push(() => {
+            throw { response: { status: 502, data: {}, headers: {} } }
+        })
+        page.addSet(1)
+        await flushPromises()
+        const serie = page.ligne().sets.at(-1)
+
+        expect([...reseau.serveur.series.keys()]).toEqual([3])
+        expect(page.ligne().sets.map((s) => s.id)).toEqual([3, serie.id])
+
+        await leReseauRevient(page)
+
+        expect([...reseau.serveur.series.keys()]).toEqual([3, 100])
+        expect(page.ligne().sets.map((s) => s.id)).toEqual([3, 100])
+        expect(page.sync.queue).toEqual([])
+    })
+
+    it('garde aussi l’exercice ajouté, sans en créer un second au rejeu', async () => {
+        const page = await monterLaSeance(seance())
+        pageDuCas = page
+        uneReponseEnCinqCentDeux(reseau.serveur)
+        page.addExercise(7)
+        await flushPromises()
+
+        expect([...reseau.serveur.lignes.keys()]).toEqual([70])
+        expect(page.localWorkout.value.workout_lines).toHaveLength(2)
+
+        await leReseauRevient(page)
+
+        expect([...reseau.serveur.lignes.keys()]).toEqual([70])
+        expect(page.localWorkout.value.workout_lines).toHaveLength(2)
+        expect(page.localWorkout.value.workout_lines.at(-1).id).toBe(70)
+        expect(page.sync.queue).toEqual([])
     })
 })
 

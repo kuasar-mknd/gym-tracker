@@ -348,6 +348,14 @@ describe('SyncService idempotency', () => {
 describe('SyncService une création directe répondue en 5xx', () => {
     const cleDe = (appel) => appel[0].headers?.['Idempotency-Key']
 
+    beforeEach(() => {
+        vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
     it.each([500, 502, 503, 504])('la met en file, tentée, sous sa clé, sur un %i', async (status) => {
         request.mockRejectedValueOnce({ response: { status, headers: {} } })
 
@@ -360,7 +368,6 @@ describe('SyncService une création directe répondue en 5xx', () => {
     })
 
     it('la rejoue seule après une attente, sous la même clé', async () => {
-        vi.useFakeTimers()
         request.mockRejectedValueOnce({ response: { status: 502, headers: {} } })
 
         const service = await freshService()
@@ -373,7 +380,20 @@ describe('SyncService une création directe répondue en 5xx', () => {
         expect(request).toHaveBeenCalledTimes(2)
         expect(cleDe(request.mock.calls[1])).toBe(cleDe(request.mock.calls[0]))
         expect(service.queue).toEqual([])
-        vi.useRealTimers()
+    })
+
+    it('la classe refusée après six échecs passagers d’un 500 qui persiste, sans doubler la création', async () => {
+        request.mockRejectedValue({ response: { status: 500, headers: {} } })
+
+        const service = await freshService()
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ isOffline: true })
+
+        await vi.advanceTimersByTimeAsync(10 * 60_000)
+        await service.pending
+
+        expect(service.queue).toEqual([])
+        expect(service.failedRequests()).toHaveLength(1)
+        expect(new Set(request.mock.calls.map(cleDe)).size).toBe(1)
     })
 
     it('laisse un refus 4xx tel quel, et ne met pas en file une modification', async () => {
