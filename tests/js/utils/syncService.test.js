@@ -341,6 +341,68 @@ describe('SyncService idempotency', () => {
 })
 
 /**
+ * Un 5xx sur une création directe ne dit pas qu'elle n'a pas été écrite : le
+ * proxy répond 502 ou 504 après traitement, ou un effet de bord échoue une fois
+ * la ligne enregistrée (#2292). Elle se lit comme une réponse perdue.
+ */
+describe('SyncService une création directe répondue en 5xx', () => {
+    const cleDe = (appel) => appel[0].headers?.['Idempotency-Key']
+
+    it.each([500, 502, 503, 504])('la met en file, tentée, sous sa clé, sur un %i', async (status) => {
+        request.mockRejectedValueOnce({ response: { status, headers: {} } })
+
+        const service = await freshService()
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ isOffline: true })
+
+        expect(service.queue).toHaveLength(1)
+        expect(service.queue[0]).toMatchObject({ method: 'post', tentee: true })
+        expect(service.queue[0].headers['Idempotency-Key']).toBe(cleDe(request.mock.calls[0]))
+    })
+
+    it('la rejoue seule après une attente, sous la même clé', async () => {
+        vi.useFakeTimers()
+        request.mockRejectedValueOnce({ response: { status: 502, headers: {} } })
+
+        const service = await freshService()
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ isOffline: true })
+
+        request.mockResolvedValue({ data: { data: { id: 9 } } })
+        await vi.advanceTimersByTimeAsync(5000)
+        await service.pending
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(cleDe(request.mock.calls[1])).toBe(cleDe(request.mock.calls[0]))
+        expect(service.queue).toEqual([])
+        vi.useRealTimers()
+    })
+
+    it('laisse un refus 4xx tel quel, et ne met pas en file une modification', async () => {
+        request.mockRejectedValueOnce({ response: { status: 422, headers: {} } })
+
+        const service = await freshService()
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ response: { status: 422 } })
+
+        request.mockRejectedValueOnce({ response: { status: 502, headers: {} } })
+        await expect(service.patch('/api/v1/sets/1', { reps: 10 })).rejects.toMatchObject({
+            response: { status: 502 },
+        })
+
+        expect(service.queue).toEqual([])
+    })
+
+    it('ne la garde pas quand l’appelant la met en file lui-même', async () => {
+        request.mockRejectedValueOnce({ response: { status: 502, headers: {} } })
+
+        const service = await freshService()
+        await expect(service.post('/api/v1/sets', { reps: 10 }, { garderEnFile: false })).rejects.toMatchObject({
+            response: { status: 502 },
+        })
+
+        expect(service.queue).toEqual([])
+    })
+})
+
+/**
  * The 429 retry used to be the one path that escaped every safeguard around it.
  * It re-sent the ORIGINAL config, dropping the idempotency key on the attempt
  * most likely to need one — a 429 says the server was busy, not that it refused,

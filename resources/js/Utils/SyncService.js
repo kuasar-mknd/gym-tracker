@@ -1106,9 +1106,12 @@ class SyncService {
      * mettrait alors rien en file à sa place).
      */
     queueOrThrow(error, config, compte, notes = {}, seanceDuDepart = null, { garderEnFile = true } = {}) {
-        // A response means the server answered, so this is its verdict, not a
-        // connectivity problem — queueing it would hide a real refusal.
-        if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
+        // A 4xx is the server's verdict, queueing it would hide a real refusal.
+        // A 5xx on a create is not one: it may have been written before it failed (#2292).
+        const sansReponseDuServeur = error.code === 'ERR_NETWORK' || (!error.response && error.request)
+        const creationEnEchecDuServeur = garderEnFile && estUneCreation(config) && Number(error.response?.status) >= 500
+
+        if (sansReponseDuServeur || creationEnEchecDuServeur) {
             if (!garderEnFile && this.isMutation(config)) {
                 return Promise.reject(
                     compte === null ? nonGardee('Network error: no account to queue for') : sansReponse(true),
@@ -1125,6 +1128,11 @@ class SyncService {
             // queueId lets a caller waiting on what this create produces pick its
             // own write out of the drain later — see the `sync:replayed` event.
             if (queueId !== null) {
+                // Le réseau n'est pas tombé : rien d'autre ne rouvrirait la file (#2292).
+                if (!sansReponseDuServeur) {
+                    this.programmerLaRelance(attenteAvantLeProchainEssai(error, 1))
+                }
+
                 return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
             }
 

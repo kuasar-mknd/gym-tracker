@@ -454,9 +454,29 @@ export const uneTentativeQuiTarde = (serveur) => {
 }
 
 /**
+ * La prochaine requête atteint le serveur, qui l'exécute, puis le proxy répond
+ * 502 (ou 504) : le réseau reste là, la page lit un échec du serveur et non une
+ * erreur réseau, alors que l'écriture est faite.
+ *
+ * @param {ReturnType<typeof creerUnFauxServeur>} serveur
+ * @param {number} status
+ */
+export const uneReponseEnCinqCentDeux = (serveur, status = 502) => {
+    const repondre = serveur.repondre
+
+    serveur.repondre = async (config) => {
+        serveur.repondre = repondre
+        await repondre(config)
+
+        throw { response: { status, data: {}, headers: {} } }
+    }
+}
+
+/**
  * La prochaine requête atteint le serveur, qui l'exécute, puis le réseau tombe
  * avant que la réponse revienne : la page ne voit qu'une erreur réseau. C'est le
- * cas ordinaire d'un réseau faible, et celui d'un 502 du proxy après traitement.
+ * cas ordinaire d'un réseau faible ; le 502 du proxy après traitement est
+ * `uneReponseEnCinqCentDeux`.
  *
  * @param {ReturnType<typeof creerUnFauxServeur>} serveur
  */

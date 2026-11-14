@@ -9,6 +9,7 @@ import {
     rechargerQuandLeReseauRevient,
     routeDeTest,
     seances,
+    uneReponseEnCinqCentDeux,
     uneReponsePerdue,
 } from './seanceHorsLigne'
 
@@ -59,6 +60,15 @@ const ajouterSansReponse = async (page) => {
     return page.ligne().sets.at(-1)
 }
 
+/** Ajoute une série que le serveur enregistre puis répond en 5xx. */
+const ajouterEnCinqCentDeux = async (page, status = 502) => {
+    uneReponseEnCinqCentDeux(reseau.serveur, status)
+    page.addSet(1)
+    await flushPromises()
+
+    return page.ligne().sets.at(-1)
+}
+
 /** Le réseau revient : la file se vide, et ce qui en découle part derrière. */
 const leReseauRevient = async (page) => {
     reseau.serveur.enLigne = true
@@ -80,6 +90,36 @@ afterEach(async () => {
     await seances.demonterToutes()
     retirerLesEcouteursDuService()
     poserLaPage(null)
+})
+
+describe('une création enregistrée puis répondue en 5xx', () => {
+    it.each([500, 502, 504])('reste à l’écran, en attente, sur un %i', async (status) => {
+        const page = await monterLaSeance(seance())
+        const serie = await ajouterEnCinqCentDeux(page, status)
+
+        // Le serveur tient la série : la page ne la retire pas, elle la dit non enregistrée.
+        expect([...reseau.serveur.series.keys()]).toEqual([3, 100])
+        expect(page.ligne().sets.map((s) => s.id)).toEqual([3, serie.id])
+        expect(page.unsyncedSetIds.value.has(serie.id)).toBe(true)
+        expect(fileDurable().map((entree) => entree.url)).toEqual(['/api/v1/sets'])
+    })
+
+    it('ne crée pas de seconde série au rejeu, sous la même clé', async () => {
+        const page = await monterLaSeance(seance())
+        const serie = await ajouterEnCinqCentDeux(page)
+
+        await leReseauRevient(page)
+
+        expect([...reseau.serveur.series.keys()]).toEqual([3, 100])
+        expect(page.ligne().sets.map((s) => s.id)).toEqual([3, 100])
+        expect(serie.id).toBe(100)
+        expect(page.unsyncedSetIds.value.size).toBe(0)
+        expect(page.sync.queue).toEqual([])
+
+        const cles = reseau.serveur.requetes.filter((r) => r.method === 'post').map((r) => r.entetes['Idempotency-Key'])
+        expect(cles).toHaveLength(2)
+        expect(cles[1]).toBe(cles[0])
+    })
 })
 
 describe('une création dont la réponse s’est perdue', () => {
