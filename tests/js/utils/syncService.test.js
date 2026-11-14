@@ -1850,6 +1850,27 @@ describe('SyncService une création tentée sans réponse', () => {
         expect(service.failedRequests()).toEqual([])
     })
 
+    it('n’annonce pas le 404 d’une suppression partie sans réponse : elle a pu aboutir (#2293)', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                { id: 'q1', method: 'delete', url: '/api/v1/sets/3', compte: COMPTE, tentee: true },
+                { id: 'q2', method: 'delete', url: '/api/v1/sets/4', compte: COMPTE },
+            ]),
+        )
+        request.mockRejectedValue({ response: { status: 404 } })
+        const refus = vi.fn()
+        window.addEventListener('sync:failed', refus)
+
+        await chargé()
+
+        window.removeEventListener('sync:failed', refus)
+
+        // Seule la suppression jamais tentée reste un refus à annoncer.
+        expect(refus).toHaveBeenCalledTimes(1)
+        expect(refus.mock.calls[0][0].detail).toMatchObject({ url: '/api/v1/sets/4' })
+    })
+
     /*
      * Le serveur reconnaît la clé d'idempotence d'une création qu'il avait
      * déjà faite, rend la série telle qu'il l'avait enregistrée et ignore la

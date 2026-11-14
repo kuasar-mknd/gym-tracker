@@ -2294,14 +2294,18 @@ class SyncService {
      *
      * Pas celui d'une création que l'écran a déjà retirée : l'utilisateur l'a
      * supprimée, et rien n'en reste à lui montrer. Ni le 404 de son
-     * annulation : ce qu'elle devait supprimer n'existe déjà plus.
+     * annulation : ce qu'elle devait supprimer n'existe déjà plus. Ni le 404
+     * d'une suppression partie sans réponse (`tentee`) : elle a pu aboutir,
+     * et la tentative directe expire désormais au bout de 15 s (#2293).
      */
     refusMerite(config, error) {
         if (config.aAnnuler !== undefined) {
             return false
         }
 
-        return !(config.annulation === true && error?.response?.status === 404)
+        const supprimeeDejaTentee = config.annulation === true || (config.method === 'delete' && config.tentee === true)
+
+        return !(supprimeeDejaTentee && error?.response?.status === 404)
     }
 
     /**
