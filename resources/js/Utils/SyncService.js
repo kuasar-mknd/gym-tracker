@@ -2051,7 +2051,6 @@ class SyncService {
             try {
                 // Celle-ci est partie : plus rien ne se fond dans sa charge.
                 this.enVol = config.id
-                this.gestesEnVol = []
 
                 reponse = await http(auDepart(requete))
                 repondue = true
@@ -2367,7 +2366,7 @@ class SyncService {
      * Attend la fin du vol de l'entrée en cours, une fois ses gestes fondus
      * dans l'entrée si elle a échoué (#2291).
      *
-     * @returns {Promise<boolean>} true quand le serveur a répondu
+     * @returns {Promise<boolean>} true quand le serveur a répondu par un succès (2xx)
      */
     apresLeVol() {
         return new Promise((resoudre) => this.finsDeVol.push(resoudre))

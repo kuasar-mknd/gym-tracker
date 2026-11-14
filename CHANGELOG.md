@@ -12,7 +12,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Modifié
 
 ### Corrigé
-- **Une saisie ou une suppression faite pendant le rejeu d'une création n'est plus perdue si la PWA est rechargée avant le retour du réseau** (#2291) : la série dont la création volait, puis échouait sur une erreur réseau, rentrait dans la file avec son ancienne valeur, une série supprimée revenait sur le serveur, et une coche suivie d'une décoche repartait cochée. Ce qui a été tapé ou retiré pendant le vol rejoint désormais l'entrée restée en file.
+- **Une saisie ou une suppression faite pendant le rejeu d'une création n'est plus perdue si la PWA est rechargée avant le retour du réseau** (#2291) : la série dont la création volait, puis échouait sur une erreur réseau, rentrait dans la file avec son ancienne valeur, une série supprimée revenait sur le serveur. Ce qui a été tapé ou retiré pendant le vol rejoint désormais l'entrée restée en file. Un geste fait alors que la requête vole encore reste en mémoire : un rechargement avant qu'elle n'échoue le perd.
 
 ### Optimisé
 
