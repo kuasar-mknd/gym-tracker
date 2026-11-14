@@ -487,6 +487,9 @@ class SyncService {
         /** L'entrée que le vidage est en train d'envoyer, s'il y en a une. */
         this.enVol = null
 
+        /** Les saisies et retraits faits sur l'entrée en vol, dans l'ordre : ils la rejoignent si elle échoue. */
+        this.gestesEnVol = []
+
         /** Combien de vidages sont demandés et pas encore finis, celui qui tourne compris. */
         this.vidagesEnCours = 0
 
@@ -2037,6 +2040,7 @@ class SyncService {
             }
 
             let reponse
+            let repondue = false
 
             /** Combien de fois son compte avait quitté l'appareil à son départ. */
             const oublis = this.oublisDe(normaliserLeCompte(config.compte))
@@ -2044,8 +2048,10 @@ class SyncService {
             try {
                 // Celle-ci est partie : plus rien ne se fond dans sa charge.
                 this.enVol = config.id
+                this.gestesEnVol = []
 
                 reponse = await http(auDepart(requete))
+                repondue = true
             } catch (error) {
                 /*
                  * Son compte a quitté l'appareil pendant qu'elle volait
@@ -2145,6 +2151,14 @@ class SyncService {
                 continue
             } finally {
                 this.enVol = null
+
+                const gestes = this.gestesEnVol
+
+                this.gestesEnVol = []
+
+                if (!repondue) {
+                    this.rejoindreLEntree(config.id, gestes)
+                }
             }
 
             this.rejeuxDepuisLaDerniereVisite += 1
@@ -2319,6 +2333,8 @@ class SyncService {
      */
     modifierEnFile(queueId, valeurs) {
         if (this.enVol === queueId) {
+            this.gestesEnVol.push({ valeurs })
+
             return false
         }
 
@@ -2343,6 +2359,23 @@ class SyncService {
     }
 
     /**
+     * Fond dans l'entrée restée en file ce que la page a saisi ou retiré
+     * pendant que sa requête volait et qui n'a pas abouti (#2291).
+     *
+     * @param {string} queueId
+     * @param {Array<{valeurs?: Object, retrait?: boolean, annulerPar?: (id: string) => string}>} gestes
+     */
+    rejoindreLEntree(queueId, gestes) {
+        gestes.forEach((geste) => {
+            if (geste.retrait === true) {
+                this.retirerDeLaFile(queueId, { annulerPar: geste.annulerPar })
+            } else {
+                this.modifierEnFile(queueId, geste.valeurs)
+            }
+        })
+    }
+
+    /**
      * Retire de la file une écriture qui n'a plus lieu d'être : la création
      * d'une série supprimée avant d'avoir atteint le serveur. La file la
      * rejouait au retour du réseau, et la série supprimée à l'écran réapparaissait
@@ -2363,6 +2396,8 @@ class SyncService {
      */
     retirerDeLaFile(queueId, { annulerPar } = {}) {
         if (this.enVol === queueId) {
+            this.gestesEnVol.push({ retrait: true, annulerPar })
+
             return false
         }
 
