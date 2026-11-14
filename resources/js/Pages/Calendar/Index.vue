@@ -159,7 +159,10 @@ const selectDate = async (day) => {
 
     // Le détail s'ouvre sous la grille, sous la barre du bas : on l'amène dans la vue.
     await nextTick()
-    detailsDuJour.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+    detailsDuJour.value?.scrollIntoView?.({
+        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'nearest',
+    })
 }
 
 /**

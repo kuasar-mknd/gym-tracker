@@ -539,12 +539,19 @@ export const useAjoutEtRetraitDeSerie = ({
             setId,
         )
 
-        deleteSet(setId).catch((err) => {
-            if (!err.isOffline) {
+        // La rangée a quitté l'écran : sa marque « non enregistrée » part avec elle (#2299).
+        deleteSet(setId)
+            .then(() => clearUnsynced(setId))
+            .catch((err) => {
+                if (err.isOffline) {
+                    clearUnsynced(setId)
+
+                    return
+                }
+
                 remettre()
                 reportSyncFailure('La série n’a pas pu être supprimée. Réessaie.')
-            }
-        })
+            })
     }
 
     /**

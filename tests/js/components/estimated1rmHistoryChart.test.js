@@ -26,7 +26,7 @@ describe('Estimated1RMHistoryChart', () => {
     it('annonce une estimation, pas un poids soulevé', () => {
         // The curve is Epley's estimate. Labelled "1RM (kg)" it would read as a
         // maximum the user actually lifted.
-        expect(chartDataOf(mountChart(history), 'Line').datasets[0].label).toBe('1RM Estimé (kg)')
+        expect(chartDataOf(mountChart(history), 'Line').datasets[0].label).toBe('1RM estimé (kg)')
     })
 
     it('donne l’unité dans l’infobulle', () => {

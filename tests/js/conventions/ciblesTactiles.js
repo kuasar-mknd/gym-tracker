@@ -35,6 +35,16 @@ const TEXTES = {
     'text-6xl': { police: 60, ligne: 60 },
 }
 
+/** La bordure de chaque côté, en pixels : `border` vaut 1, `border-2` vaut 2. */
+const largeurDeBordure = (mots) =>
+    Math.max(
+        0,
+        ...mots
+            .map((mot) => /^border(?:-y)?(?:-(\d+))?$/.exec(mot))
+            .filter(Boolean)
+            .map((trouve) => (trouve[1] === undefined ? 1 : Number(trouve[1]))),
+    )
+
 export const echelle = (valeur) => (valeur === 'px' ? 1 : Number(valeur) * 4)
 
 const tailles = (mots, motif) =>
@@ -216,7 +226,9 @@ export const hauteurDuRendu = (controle) => {
     const ligne = mots.map((mot) => TEXTES[mot]?.ligne).find(Boolean) ?? TEXTES['text-base'].ligne
     const rembourrage = Math.max(0, ...tailles(mots, /^py?-(\d+(?:\.5)?|px)$/))
     const debord = Math.max(0, ...tailles(mots, /^before:-inset(?:-y)?-(\d+(?:\.5)?|px)$/))
-    const boite = declarees.length > 0 ? Math.max(...declarees) : ligne + 2 * rembourrage
+    const bordure = largeurDeBordure(mots)
+    const boite = declarees.length > 0 ? Math.max(...declarees) : ligne + 2 * rembourrage + 2 * bordure
 
-    return boite + 2 * debord
+    // Le pseudo-élément déborde du bord intérieur : la bordure ne compte pas dans son étendue.
+    return debord > 0 ? boite - 2 * bordure + 2 * debord : boite
 }

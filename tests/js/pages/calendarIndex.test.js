@@ -470,12 +470,34 @@ describe('what the arrows and the heading do', () => {
         const defiler = vi.fn()
         Element.prototype.scrollIntoView = defiler
 
-        const wrapper = mountPage({ year: 2026, month: 2 })
-        await wrapper.find('[dusk="calendar-day-2026-02-10"]').trigger('click')
-        await wrapper.vm.$nextTick()
+        try {
+            const wrapper = mountPage({ year: 2026, month: 2 })
+            await wrapper.find('[dusk="calendar-day-2026-02-10"]').trigger('click')
+            await wrapper.vm.$nextTick()
 
-        expect(defiler).toHaveBeenCalledTimes(1)
-        delete Element.prototype.scrollIntoView
+            expect(defiler).toHaveBeenCalledTimes(1)
+            expect(defiler).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
+        } finally {
+            delete Element.prototype.scrollIntoView
+        }
+    })
+
+    it('amène le détail du jour sans défilement animé quand la personne réduit les animations', async () => {
+        const defiler = vi.fn()
+        Element.prototype.scrollIntoView = defiler
+        const matchMediaAvant = window.matchMedia
+        window.matchMedia = vi.fn(() => ({ matches: true }))
+
+        try {
+            const wrapper = mountPage({ year: 2026, month: 2 })
+            await wrapper.find('[dusk="calendar-day-2026-02-10"]').trigger('click')
+            await wrapper.vm.$nextTick()
+
+            expect(defiler).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }))
+        } finally {
+            delete Element.prototype.scrollIntoView
+            window.matchMedia = matchMediaAvant
+        }
     })
 
     it('brings the heading home once the jump lands, and closes the open day', async () => {
