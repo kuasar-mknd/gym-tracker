@@ -490,6 +490,9 @@ class SyncService {
         /** Les saisies et retraits faits sur l'entrée en vol, dans l'ordre : ils la rejoignent si elle échoue. */
         this.gestesEnVol = []
 
+        /** Ceux qui attendent la fin du vol de l'entrée en cours, avec ce qu'il a donné : une réponse, ou non. */
+        this.finsDeVol = []
+
         /** Combien de vidages sont demandés et pas encore finis, celui qui tourne compris. */
         this.vidagesEnCours = 0
 
@@ -2159,6 +2162,8 @@ class SyncService {
                 if (!repondue) {
                     this.rejoindreLEntree(config.id, gestes)
                 }
+
+                this.finsDeVol.splice(0).forEach((resoudre) => resoudre(repondue))
             }
 
             this.rejeuxDepuisLaDerniereVisite += 1
@@ -2356,6 +2361,16 @@ class SyncService {
         })
 
         return modifiee
+    }
+
+    /**
+     * Attend la fin du vol de l'entrée en cours, une fois ses gestes fondus
+     * dans l'entrée si elle a échoué (#2291).
+     *
+     * @returns {Promise<boolean>} true quand le serveur a répondu
+     */
+    apresLeVol() {
+        return new Promise((resoudre) => this.finsDeVol.push(resoudre))
     }
 
     /**

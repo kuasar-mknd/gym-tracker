@@ -114,4 +114,56 @@ describe('une série dont la création est rejouée', () => {
         expect([...reseau.serveur.series.keys()]).toEqual([3])
         expect(rechargee.queue).toEqual([])
     })
+
+    it('garde dans la file la dernière coche, cochée pendant le rejeu puis décochée une fois celui-ci échoué', async () => {
+        const { page, serie, coupure } = await rejeuEnVol()
+
+        page.toggleSetCompletion(serie)
+        await flushPromises()
+        await coupure()
+        page.toggleSetCompletion(serie)
+        await flushPromises()
+
+        expect(serie.is_completed).toBe(false)
+        expect(fileDurable().map((entree) => entree.data)).toEqual([
+            { workout_line_id: 1, is_completed: false, weight: 80, reps: 5 },
+        ])
+
+        await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+        expect(reseau.serveur.series.get(100)).toMatchObject({ is_completed: false })
+    })
+
+    it('quitte la file avec ses séries quand son exercice est retiré pendant le rejeu, rechargement compris', async () => {
+        reseau.serveur.enLigne = false
+        const page = await monterLaSeance({ id: 5, workout_lines: [] })
+
+        page.addExercise(7)
+        const ligne = page.ligne()
+
+        page.addSet(ligne.id)
+        await flushPromises()
+
+        reseau.serveur.enLigne = true
+        const couper = uneTentativeQuiTarde(reseau.serveur)
+        const vidage = page.sync.processQueue()
+        await flushPromises()
+
+        page.removeLine(ligne.id)
+        page.confirmerLeRetrait()
+        await flushPromises()
+        await couper()
+        await vidage
+        await flushPromises()
+
+        expect(fileDurable()).toEqual([
+            expect.objectContaining({ url: '/api/v1/workout-lines', aAnnuler: `/api/v1/workout-lines/${A_VENIR}` }),
+        ])
+
+        const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+        expect(reseau.serveur.lignes.size).toBe(0)
+        expect(reseau.serveur.series.size).toBe(1)
+        expect(rechargee.queue).toEqual([])
+    })
 })
