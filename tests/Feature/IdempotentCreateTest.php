@@ -66,8 +66,8 @@ describe('idempotent creates', function (): void {
 
     it('rend la série déjà écrite quand la première tentative a échoué en 500 après l’écriture (#2292)', function (): void {
         $line = WorkoutLine::factory()->create([
-            'workout_id' => $this->workout->id,
-            'exercise_id' => $this->exercise->id,
+            'workout_id' => Workout::query()->sole()->id,
+            'exercise_id' => Exercise::query()->sole()->id,
         ]);
         $payload = ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 8];
         $headers = ['Idempotency-Key' => 'attempt-set-5xx'];

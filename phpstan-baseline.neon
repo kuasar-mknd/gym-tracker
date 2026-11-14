@@ -651,7 +651,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
-			count: 16
+			count: 14
 			path: tests/Feature/IdempotentCreateTest.php
 
 		-
