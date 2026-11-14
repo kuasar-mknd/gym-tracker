@@ -56,7 +56,7 @@
                         v-if="oneRepMax > 0"
                         class="stagger-2 animate-slide-up mt-6 flex flex-col items-center justify-center p-8 text-center"
                     >
-                        <p class="text-text-muted text-sm font-bold tracking-wider uppercase">1RM Estimé</p>
+                        <p class="text-text-muted text-sm font-bold tracking-wider uppercase">1RM estimé</p>
                         <div
                             class="from-accent-primary to-accent-secondary font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
                         >

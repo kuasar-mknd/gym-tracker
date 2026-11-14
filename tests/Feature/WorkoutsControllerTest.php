@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Models\Workout;
+use App\Services\Stats\ClesDeStats;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -115,6 +116,16 @@ it('deletes a workout (Happy Path)', function (): void {
     actingAs($user)
         ->delete(route('workouts.destroy', $workout))
         ->assertRedirect(route('workouts.index'));
+});
+
+it('renews the stats version of the user when a workout is deleted', function (): void {
+    $user = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $user->id]);
+    $cle = ClesDeStats::seances($user, 'weekly_volume');
+
+    actingAs($user)->delete(route('workouts.destroy', $workout))->assertRedirect(route('workouts.index'));
+
+    expect(ClesDeStats::seances($user, 'weekly_volume'))->not->toBe($cle);
 });
 
 it('forbids deleting another users workout (404, indiscernable)', function (): void {

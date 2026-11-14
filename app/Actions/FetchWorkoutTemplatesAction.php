@@ -59,7 +59,7 @@ class FetchWorkoutTemplatesAction
      * pour la salle, et le préchauffage des copies ne demande les props
      * différées que de l'accueil.
      *
-     * @return array<int, array{name: string, lignes: list<array{exercise: array{id: int, name: string|null, type: string|null}, order: int, cle: string, series: list<array{reps: int|float|null, weight: int|float|null, is_warmup: bool, cle: string}>}>}>
+     * @return array<int, array{name: string, lignes: list<array{exercise: array{id: int, name: string, type: string}, order: int, cle: string, series: list<array{reps: int|float|null, weight: int|float|null, is_warmup: bool, cle: string}>}>}>
      */
     public function lancements(User $user): array
     {

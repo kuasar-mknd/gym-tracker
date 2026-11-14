@@ -277,7 +277,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="titre-carte">1RM Estimé</h3>
+                        <h3 class="titre-carte">1RM estimé</h3>
                         <p class="text-text-muted text-xs font-semibold">Meilleur 1RM estimé par séance</p>
                     </div>
                     <div class="h-64">

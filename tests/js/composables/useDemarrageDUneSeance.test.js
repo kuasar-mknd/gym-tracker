@@ -379,3 +379,33 @@ describe('lancer un modèle', () => {
         expect(inertia.page.props.flash.error).toBeUndefined()
     })
 })
+
+describe('démarrer une séance vide sur une réponse 5xx (#2292)', () => {
+    it.each([500, 502, 504])(
+        'ouvre la séance en attente au lieu d’en refuser le démarrage, sur un %i',
+        async (status) => {
+            serveur.reponses.push(() => {
+                throw { response: { status, data: {}, headers: {} } }
+            })
+
+            await demarrer()
+            clearTimeout(sync.relance)
+
+            expect(file()).toEqual(['post /api/v1/workouts'])
+            expect(inertia.router.push).toHaveBeenCalledTimes(1)
+            expect(inertia.router.push.mock.calls[0][0].props.workout.id).toBe(`temp-q${sync.entreesDuCompte()[0].id}`)
+            expect(inertia.page.props.flash.error).toBeUndefined()
+        },
+    )
+
+    it('garde la clé d’idempotence de la création, pour qu’un rejeu ne crée pas une seconde séance', async () => {
+        serveur.reponses.push(() => {
+            throw { response: { status: 502, data: {}, headers: {} } }
+        })
+
+        await demarrer()
+        clearTimeout(sync.relance)
+
+        expect(sync.entreesDuCompte()[0].headers['Idempotency-Key']).toEqual(expect.any(String))
+    })
+})
