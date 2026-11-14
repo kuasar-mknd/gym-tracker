@@ -15,7 +15,7 @@ it('names a workout by its date alone, and clears caches', function (): void {
 
     // On vérifie l'invalidation par l'état du cache, que StatsCacheManager modifie.
 
-    // Seed caches that should be cleared by clearWorkoutRelatedStats & clearWorkoutMetadataStats
+    // Seed caches that should be cleared by the version of the stats renewed after a workout is created
     Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'weekly_volume'), ['some_data'], 600);
     Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30'), ['some_data'], 600);
     Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'volume_history.20'), ['some_data'], 600);

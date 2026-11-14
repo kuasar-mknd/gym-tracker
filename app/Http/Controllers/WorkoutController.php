@@ -18,10 +18,6 @@ use Inertia\Inertia;
 
 class WorkoutController extends Controller
 {
-    public function __construct(protected \App\Services\Stats\StatsCacheManager $statsCache)
-    {
-    }
-
     /**
      * La page des séances : la pagination et le compte des exercices arrivent
      * en fermetures, que la requête de la prop différée, qui rejoue ce
@@ -141,8 +137,6 @@ class WorkoutController extends Controller
         $this->authorize('delete', $workout);
 
         $workout->delete();
-
-        $this->statsCache->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.index');
     }

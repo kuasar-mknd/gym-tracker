@@ -116,24 +116,7 @@ it('vide les historiques en plus des agregats quand elle vide tout', function ()
         'started_at' => now(),
     ]);
 
-    /*
-     * Ce test est ce qui rend sure la suppression de l'appel redondant a
-     * `clearWorkoutMetadataStats()` qui suivait `clearWorkoutRelatedStats()`.
-     *
-     * Les quatre familles de cles que le premier oubliait
-     * (`volume_history.20`, `volume_history.30`, `duration_history.20`,
-     * `volume_trend.{7,30,90,365}`) sont TOUTES deja oubliees par le second :
-     * `clearVolumeStats` boucle sur `BORNES = [20, 30]` et sur `PERIODES`,
-     * `clearDurationStats` sur les memes bornes. Sous-ensemble strict, donc le
-     * second appel n'oubliait rien de neuf — d'ou un mutant qu'aucun test
-     * fonde sur l'etat du cache ne pouvait tuer, et une ligne retiree plutot
-     * qu'une assertion ajoutee.
-     *
-     * Ce que ce test tient : apres un vidage complet, ces entrees sont bien
-     * parties. L'inclusion est verifiee aujourd'hui, pas garantie demain — les
-     * deux listes ont deja derive l'une de l'autre (#1502). Si elle cesse
-     * d'etre vraie, c'est ici que ca se verra.
-     */
+    // Après un vidage complet, les historiques ne doivent plus être en cache (#1502).
     Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'volume_history.20'), ['some_data'], 600);
     Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'volume_history.30'), ['some_data'], 600);
     Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'duration_history.20'), ['some_data'], 600);

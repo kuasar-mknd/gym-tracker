@@ -14,7 +14,7 @@ const labels = computed(() => props.data.map((item) => item.date))
 
 const datasets = computed(() => [
     {
-        label: '1RM Estimé (kg)',
+        label: '1RM estimé (kg)',
         data: props.data.map((item) => item.weight),
         fill: true,
         tension: 0.4,

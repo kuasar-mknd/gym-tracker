@@ -83,9 +83,11 @@ describe('idempotent creates', function (): void {
         });
 
         $first = $this->actingAs($this->user)->postJson(route('api.v1.sets.store'), $payload, $headers);
+        $first->assertServerError();
+        expect($line->sets()->count())->toBe(1);
+
         $second = $this->actingAs($this->user)->postJson(route('api.v1.sets.store'), $payload, $headers);
 
-        $first->assertServerError();
         $second->assertSuccessful();
 
         expect($line->sets()->count())->toBe(1)

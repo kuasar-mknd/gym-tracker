@@ -115,6 +115,32 @@ describe('une série dont la création est rejouée', () => {
         expect(rechargee.queue).toEqual([])
     })
 
+    it("ne garde plus l'identifiant provisoire d'une série supprimée tant qu'elle attendait dans la file (#2299)", async () => {
+        reseau.serveur.enLigne = false
+        const page = await monterLaSeance(seance())
+
+        page.addSet(1)
+        await flushPromises()
+        const serie = page.ligne().sets.at(-1)
+
+        expect(page.unsyncedSetIds.value.has(String(serie.id))).toBe(true)
+
+        page.removeSet(serie.id)
+        await flushPromises()
+
+        expect([...page.unsyncedSetIds.value]).toEqual([])
+    })
+
+    it("ne garde plus l'identifiant provisoire d'une série supprimée pendant le rejeu, une fois celui-ci échoué (#2299)", async () => {
+        const { page, serie, coupure } = await rejeuEnVol()
+
+        page.removeSet(serie.id)
+        await flushPromises()
+        await coupure()
+
+        expect([...page.unsyncedSetIds.value]).toEqual([])
+    })
+
     it('garde dans la file la dernière coche, cochée pendant le rejeu puis décochée une fois celui-ci échoué', async () => {
         const { page, serie, coupure } = await rejeuEnVol()
 

@@ -151,6 +151,37 @@ describe('une création enregistrée puis répondue en 5xx', () => {
         expect(page.sync.queue).toEqual([])
     })
 
+    it('garde dans la file la saisie et la coche faites pendant que la création vole, quand elle revient en 5xx', async () => {
+        const page = await monterLaSeance(seance())
+        pageDuCas = page
+        let relacher
+        const reponse = new Promise((resolve) => (relacher = resolve))
+
+        reseau.serveur.imposer.push(async () => {
+            await reponse
+
+            throw { response: { status: 502, data: {}, headers: {} } }
+        })
+        page.addSet(1)
+        await flushPromises()
+        const serie = page.ligne().sets.at(-1)
+
+        page.saisieTerminee(serie, 'reps', '3')
+        page.toggleSetCompletion(serie)
+        await flushPromises()
+        relacher()
+        await flushPromises()
+
+        expect(fileDurable().map((entree) => entree.data)).toEqual([
+            { workout_line_id: 1, is_completed: true, weight: 80, reps: 3 },
+        ])
+
+        await leReseauRevient(page)
+
+        expect(reseau.serveur.series.get(100)).toMatchObject({ reps: 3, is_completed: true })
+        expect(page.unsyncedSetIds.value.size).toBe(0)
+    })
+
     it('garde aussi l’exercice ajouté, sans en créer un second au rejeu', async () => {
         const page = await monterLaSeance(seance())
         pageDuCas = page
