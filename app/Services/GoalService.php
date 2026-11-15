@@ -159,6 +159,24 @@ final class GoalService
         $this->updateProgressPercentage($goal);
     }
 
+    /**
+     * Un objectif de mensuration sans départ part de la dernière mesure : à 0,
+     * « descendre à 75 » se lirait comme une montée, atteinte dès la création
+     * par une pesée de 82 kg. Sans aucune mesure, le départ reste ce qu'il est.
+     */
+    public function partirDeLaDerniereMesure(Goal $goal): void
+    {
+        if ($goal->type !== GoalType::Measurement) {
+            return;
+        }
+
+        $this->updateMeasurementGoal($goal);
+
+        if ($goal->current_value > 0) {
+            $goal->start_value = $goal->current_value;
+        }
+    }
+
     protected function updateProgressPercentage(Goal $goal): void
     {
         if ($this->neSuitRien($goal)) {

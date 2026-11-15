@@ -20,6 +20,8 @@ class GoalStoreRequest extends FormRequest
 {
     use RameneLesDatesAuFuseauDeLApplication;
 
+    private bool $departEtaitVide = false;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -198,8 +200,18 @@ class GoalStoreRequest extends FormRequest
         }
 
         if ($this->has('start_value') && $this->estVide($this->input('start_value'))) {
+            $this->departEtaitVide = true;
             $this->merge(['start_value' => 0]);
         }
+    }
+
+    /**
+     * Le départ est arrivé vide : il vaut 0 pour les règles, mais une
+     * mensuration le prend à sa dernière mesure.
+     */
+    public function departEtaitVide(): bool
+    {
+        return $this->departEtaitVide;
     }
 
     /**

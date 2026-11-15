@@ -315,7 +315,17 @@ describe('Measurements/Parts/Show — the history list', () => {
 
         expect(given.map((entry) => entry.id)).toEqual([1, 2, 3])
         expect(chart.props('data').map((entry) => entry.id)).toEqual([1, 2, 3])
-        expect(chart.props('unit')).toBe('cm')
+        expect(chart.props('unit')).toBe('in')
+    })
+
+    it('draws the curve in the unit of the latest reading, converting earlier ones (#2328)', async () => {
+        const { wrapper } = mountPart()
+        await flushPromises()
+
+        const chart = wrapper.findComponent({ name: 'BodyPartHistoryChart' })
+
+        expect(chart.props('data').map((entry) => entry.unit)).toEqual(['in', 'in', 'in'])
+        expect(chart.props('data').map((entry) => entry.value)).toEqual([14.96, 15.55, 15.7])
     })
 
     it('leaves the chart out when there is nothing to plot', async () => {

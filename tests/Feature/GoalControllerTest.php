@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\BodyMeasurement;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\User;
@@ -119,6 +120,59 @@ it('enregistre un départ à 0 quand la création l’envoie vide', function (?s
     'départ nul' => [null],
     'départ vide' => [''],
 ]);
+
+it('part de la dernière pesée quand un objectif de mensuration est créé sans départ', function (array $depart): void {
+    $user = User::factory()->create();
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 82, 'measured_at' => now()->toDateString()]);
+
+    actingAs($user)
+        ->post(route('goals.store'), [
+            'title' => 'Poids de corps',
+            'type' => 'measurement',
+            'measurement_type' => 'weight',
+            'target_value' => 75,
+            ...$depart,
+        ])
+        ->assertSessionHasNoErrors();
+
+    $objectif = Goal::query()->sole();
+
+    expect($objectif->completed_at)->toBeNull()
+        ->and($objectif->start_value)->toBe(82.0)
+        ->and($objectif->current_value)->toBe(82.0)
+        ->and($objectif->progress_pct)->toBeLessThan(100);
+})->with([
+    'départ vide' => [['start_value' => '']],
+    'départ absent' => [[]],
+]);
+
+it('part de la dernière pesée quand la modification vide le départ d’un objectif de mensuration', function (): void {
+    $user = User::factory()->create();
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 82, 'measured_at' => now()->toDateString()]);
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => 'measurement',
+        'measurement_type' => 'weight',
+        'exercise_id' => null,
+        'start_value' => 90,
+        'target_value' => 75,
+    ]);
+
+    actingAs($user)
+        ->put(route('goals.update', $goal), [
+            'title' => 'Poids de corps',
+            'type' => 'measurement',
+            'measurement_type' => 'weight',
+            'target_value' => 75,
+            'start_value' => '',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $goal->refresh();
+
+    expect($goal->completed_at)->toBeNull()
+        ->and($goal->start_value)->toBe(82.0);
+});
 
 it('can update an existing goal', function (): void {
     $user = User::factory()->create();

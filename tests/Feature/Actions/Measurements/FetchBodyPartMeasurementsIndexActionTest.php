@@ -212,3 +212,27 @@ it('nomme une partie proposée sans interroger la base', function (): void {
     expect($libelle)->toBe('Taille')
         ->and($requetes)->toBe([]);
 });
+
+it('compare deux relevés dans la même unité, celle du dernier', function (): void {
+    $user = User::factory()->create();
+
+    BodyPartMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'part' => 'Waist',
+        'value' => 80,
+        'unit' => 'cm',
+        'measured_at' => Carbon::now()->subDays(9),
+    ]);
+    BodyPartMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'part' => 'Waist',
+        'value' => 31.5,
+        'unit' => 'in',
+        'measured_at' => Carbon::now(),
+    ]);
+
+    $mesure = app(FetchBodyPartMeasurementsIndexAction::class)->execute($user)['latestMeasurements']->sole();
+
+    expect($mesure['unit'])->toBe('in')
+        ->and(abs($mesure['diff']))->toBeLessThan(0.1);
+});

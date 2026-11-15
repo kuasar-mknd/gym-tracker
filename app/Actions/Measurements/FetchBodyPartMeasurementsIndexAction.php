@@ -62,7 +62,7 @@ class FetchBodyPartMeasurementsIndexAction
                 'current' => $courante,
                 'unit' => $derniere->unit,
                 'date' => Carbon::parse($derniere->measured_at)->format('Y-m-d'),
-                'diff' => $precedente instanceof BodyPartMeasurement ? round($courante - (float) $precedente->value, 2) : 0.0,
+                'diff' => $precedente instanceof BodyPartMeasurement ? round($courante - $precedente->valeurEn($derniere->unit), 2) : 0.0,
             ];
         });
 
