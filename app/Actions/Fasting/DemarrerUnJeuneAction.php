@@ -14,7 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 final class DemarrerUnJeuneAction
 {
-    public const int VIE_DU_VERROU = 10;
+    /** Plus que `octane.max_execution_time` : voir `DemarrerUneSeanceAction::VIE_DU_VERROU`. */
+    public const int VIE_DU_VERROU = 35;
 
     public const int ATTENTE_DU_VERROU = 10;
 
