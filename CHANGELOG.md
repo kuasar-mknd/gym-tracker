@@ -12,6 +12,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Modifié
 
 ### Corrigé
+- **Le verrou de démarrage d'une séance ou d'un jeûne vit plus longtemps que la requête la plus longue** (#2293) : à 10 s, il pouvait expirer en pleine transaction sur un stockage lent et laisser un second appareil créer une deuxième séance en cours ; il vit 35 s, au-delà des 30 s d'`octane.max_execution_time`, et un test garde l'écart. Deux séries ajoutées en même temps depuis deux appareils peuvent recevoir le même rang : chaque lecture les départage désormais par la clé primaire.
 - **Le rejeu d'une création de série ou d'exercice ne reçoit plus 403 quand la séance a été close entre-temps par un autre appareil** (#2293) : la ligne ou la série déjà créée est rendue, comme au rejeu du démarrage et de la fin. Une création neuve sur une séance close reste refusée.
 - **Une écriture directe restée sans réponse ne bloque plus les suivantes de sa ligne** (#2293) : sans délai propre, elle attend 15 s au plus, puis se lit comme une réponse perdue et passe en file. Le 404 du rejeu d'une suppression qui a pu aboutir n'est pas annoncé comme un refus.
 - **La copie hors ligne d'une séance ne se fige plus après la suppression d'une série encore en file** (#2299) : l'identifiant provisoire de la série restait « non enregistré » pour toute la durée de la page, et la copie de la séance n'était plus réécrite. La marque part avec la rangée.
