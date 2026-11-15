@@ -77,6 +77,21 @@ class BodyPartMeasurement extends BaseMeasurement
     ];
 
     /**
+     * La valeur dans l'unité demandée : la saisie accepte le centimètre et le
+     * pouce, et deux relevés ne se comparent que dans la même.
+     */
+    public function valeurEn(string $unite): float
+    {
+        $valeur = (float) $this->value;
+
+        if ($this->unit === $unite) {
+            return $valeur;
+        }
+
+        return $unite === 'cm' ? $valeur * 2.54 : $valeur / 2.54;
+    }
+
+    /**
      * Le nom à afficher pour une partie : le français d'une partie proposée,
      * le nom saisi pour toute autre.
      *

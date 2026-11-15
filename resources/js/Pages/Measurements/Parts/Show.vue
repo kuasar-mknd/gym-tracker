@@ -12,6 +12,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { nombre } from '@/Utils/nombre'
+import { courbeDansLUniteDuDernierReleve } from '@/Utils/mesuresEnUnite'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -27,6 +28,8 @@ const props = defineProps({
 })
 
 const nom = computed(() => props.label ?? props.part)
+
+const courbe = computed(() => courbeDansLUniteDuDernierReleve(props.history))
 
 const showAddForm = ref(false)
 
@@ -95,7 +98,12 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
             <!-- Chart -->
             <GlassCard class="animate-slide-up">
                 <h3 class="text-accent-tertiary-deep sur-titre mb-4">Historique</h3>
-                <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="nom" :unit="history[0].unit" />
+                <BodyPartHistoryChart
+                    v-if="courbe.length > 0"
+                    :data="courbe"
+                    :label="nom"
+                    :unit="courbe[courbe.length - 1].unit"
+                />
             </GlassCard>
 
             <!-- Formulaire d'ajout -->

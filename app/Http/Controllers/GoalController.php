@@ -142,6 +142,10 @@ class GoalController extends Controller
         $goal->fill($data);
         $goal->user_id = $this->user()->id;
 
+        if (! $request->has('start_value') || $request->departEtaitVide()) {
+            $this->goalService->partirDeLaDerniereMesure($goal);
+        }
+
         /*
          * La progression est calculée AVANT l'enregistrement, et non après.
          *
@@ -176,6 +180,10 @@ class GoalController extends Controller
         // la progression recalculée — changer la cible d'un objectif laissait donc
         // le pourcentage d'avant.
         $goal->fill($request->validated());
+
+        if ($request->departEtaitVide()) {
+            $this->goalService->partirDeLaDerniereMesure($goal);
+        }
 
         $this->goalService->updateGoalProgress($goal);
 
