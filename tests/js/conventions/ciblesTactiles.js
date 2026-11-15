@@ -35,15 +35,42 @@ const TEXTES = {
     'text-6xl': { police: 60, ligne: 60 },
 }
 
-/** La bordure de chaque côté, en pixels : `border` vaut 1, `border-2` vaut 2. */
-const largeurDeBordure = (mots) =>
-    Math.max(
-        0,
-        ...mots
-            .map((mot) => /^border(?:-y)?(?:-(\d+))?$/.exec(mot))
-            .filter(Boolean)
-            .map((trouve) => (trouve[1] === undefined ? 1 : Number(trouve[1]))),
-    )
+/**
+ * Les bordures d'un contrôle, côté par côté, en pixels : `border` vaut 1 sur
+ * les quatre côtés, `border-y-2` vaut 2 en haut et en bas, `border-t` vaut 1
+ * en haut, `border-[3px]` vaut 3. `border-transparent` ou `border-border` sont
+ * des couleurs, pas des épaisseurs.
+ *
+ * @param {Array<string>} mots
+ * @returns {{haut: number, bas: number, gauche: number, droite: number}}
+ */
+const bordures = (mots) => {
+    const cotes = { haut: 0, bas: 0, gauche: 0, droite: 0 }
+    const coteDe = {
+        t: ['haut'],
+        b: ['bas'],
+        l: ['gauche'],
+        r: ['droite'],
+        x: ['gauche', 'droite'],
+        y: ['haut', 'bas'],
+    }
+
+    mots.forEach((mot) => {
+        const trouve = /^border(?:-([tblrxy]))?(?:-(\d+)|-\[(\d+)px\])?$/.exec(mot)
+
+        if (trouve === null) {
+            return
+        }
+
+        const epaisseur = Number(trouve[2] ?? trouve[3] ?? 1)
+
+        ;(coteDe[trouve[1]] ?? Object.keys(cotes)).forEach((cote) => {
+            cotes[cote] = Math.max(cotes[cote], epaisseur)
+        })
+    })
+
+    return cotes
+}
 
 export const echelle = (valeur) => (valeur === 'px' ? 1 : Number(valeur) * 4)
 
@@ -226,9 +253,27 @@ export const hauteurDuRendu = (controle) => {
     const ligne = mots.map((mot) => TEXTES[mot]?.ligne).find(Boolean) ?? TEXTES['text-base'].ligne
     const rembourrage = Math.max(0, ...tailles(mots, /^py?-(\d+(?:\.5)?|px)$/))
     const debord = Math.max(0, ...tailles(mots, /^before:-inset(?:-y)?-(\d+(?:\.5)?|px)$/))
-    const bordure = largeurDeBordure(mots)
-    const boite = declarees.length > 0 ? Math.max(...declarees) : ligne + 2 * rembourrage + 2 * bordure
+    const { haut, bas } = bordures(mots)
+    const boite = declarees.length > 0 ? Math.max(...declarees) : ligne + 2 * rembourrage + haut + bas
 
     // Le pseudo-élément déborde du bord intérieur : la bordure ne compte pas dans son étendue.
-    return debord > 0 ? boite - 2 * bordure + 2 * debord : boite
+    return debord > 0 ? boite - haut - bas + 2 * debord : boite
+}
+
+/**
+ * La largeur qu'un contrôle RENDU, de largeur déclarée, offre au doigt : ses
+ * classes `w-*`, plus ce qu'un pseudo-élément déborde de chaque côté, la
+ * bordure déduite comme pour la hauteur.
+ *
+ * @param {Element} controle
+ * @returns {number}
+ */
+export const largeurDuRendu = (controle) => {
+    const mots = (controle.getAttribute('class') ?? '').split(/\s+/)
+    const declarees = tailles(mots, /^(?:min-w|w|size)-(\d+(?:\.5)?|px)$/)
+    const debord = Math.max(0, ...tailles(mots, /^before:-inset(?:-x)?-(\d+(?:\.5)?|px)$/))
+    const { gauche, droite } = bordures(mots)
+    const boite = Math.max(...declarees)
+
+    return debord > 0 ? boite - gauche - droite + 2 * debord : boite
 }
