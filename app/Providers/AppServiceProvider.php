@@ -311,7 +311,7 @@ final class AppServiceProvider extends ServiceProvider
              * refait le meme controle a l'arrivee : cette garde-ci n'evite que
              * la mise en file d'un travail sans objet.
              */
-            if ($set->weight !== null && $set->weight > 0.0 && $set->reps !== null && $set->reps > 0) {
+            if ($set->compteDansLesRecalculs() && $set->weight !== null && $set->weight > 0.0 && $set->reps !== null && $set->reps > 0) {
                 if (config('app.env') === 'testing' || config('database.connections.mysql.database') === 'gym_tracker_testing') {
                     \App\Jobs\SyncPersonalRecord::dispatchSync($set, $user);
                 } else {

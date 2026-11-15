@@ -194,6 +194,16 @@ class Set extends Model
         $this->workoutLine?->workout?->recalculerLeVolume();
     }
 
+    /**
+     * Records, succès et objectifs ne lisent que des séries cochées : une série
+     * qui ne l'est pas, et ne vient pas de cesser de l'être, ne change rien à
+     * ce qu'ils comptent.
+     */
+    public function compteDansLesRecalculs(): bool
+    {
+        return $this->is_completed || $this->wasChanged('is_completed');
+    }
+
     #[\Override]
     protected static function booted(): void
     {
@@ -233,7 +243,7 @@ class Set extends Model
              */
             $user = $set->workoutLine?->workout?->user;
 
-            if ($user instanceof User) {
+            if ($user instanceof User && $set->compteDansLesRecalculs()) {
                 \App\Jobs\SyncUserAchievements::dispatch($user);
                 \App\Jobs\SyncUserGoals::dispatch($user);
             }
