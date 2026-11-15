@@ -57,10 +57,12 @@ final readonly class DemarrerUneSeanceAction
     /**
      * Combien de secondes le verrou d'un démarrage ou d'une fin vit au plus.
      * Il se rend à la fin de la section ; cette durée ne sert que si le
-     * processus meurt sans le rendre, et couvre de loin le lancement du plus
-     * grand modèle.
+     * processus meurt sans le rendre. Elle dépasse le temps qu'une requête
+     * peut durer (`octane.max_execution_time`) : un verrou expiré en pleine
+     * transaction laisserait un second démarrage lire « aucune séance en
+     * cours » et en créer une deuxième (#2293).
      */
-    public const int VIE_DU_VERROU = 10;
+    public const int VIE_DU_VERROU = 35;
 
     /**
      * Combien de secondes un démarrage ou une fin attend le verrou d'un autre
