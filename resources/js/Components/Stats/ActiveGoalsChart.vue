@@ -1,6 +1,7 @@
 <script setup>
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
+import { progressionAffichee } from '@/Utils/nombre'
 import BaseChart from './BaseChart.vue'
 import { grille } from './chartConfig'
 
@@ -18,7 +19,7 @@ const labels = computed(() =>
 const datasets = computed(() => [
     {
         label: 'Progression (%)',
-        data: props.data.map((g) => Math.round(g.progress_pct || 0)),
+        data: props.data.map((g) => Math.round(progressionAffichee(g))),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart

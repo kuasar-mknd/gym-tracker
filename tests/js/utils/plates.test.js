@@ -94,3 +94,14 @@ describe('actualWeight', () => {
         expect(actualWeight(plates, 20)).toBe(100)
     })
 })
+
+describe('calculatePlates, disques non dyadiques', () => {
+    it('charge 21,4 kg avec une paire de 0,5 et une paire de 0,2', () => {
+        const plates = calculatePlates(21.4, 20, [
+            { weight: 0.5, quantity: 2 },
+            { weight: 0.2, quantity: 2 },
+        ])
+
+        expect(actualWeight(plates, 20)).toBeCloseTo(21.4, 5)
+    })
+})

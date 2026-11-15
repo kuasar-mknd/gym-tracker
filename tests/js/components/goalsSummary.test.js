@@ -34,6 +34,13 @@ describe('GoalsSummary', () => {
         expect(wrapper.text()).toContain('Trois séances par semaine')
     })
 
+    it('ne dit pas 100 % d’un objectif qui n’est pas atteint', () => {
+        const wrapper = mountSummary([{ id: 3, title: '200 séances', progress_pct: 99.5 }])
+
+        expect(wrapper.text()).toContain('99')
+        expect(wrapper.text()).not.toContain('100')
+    })
+
     it('stays off the dashboard entirely when nothing is in progress', () => {
         const wrapper = mountSummary([])
 

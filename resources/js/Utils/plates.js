@@ -16,6 +16,9 @@
  */
 const FLOAT_TOLERANCE = 0.01
 
+/** Le reste d'une soustraction de flottants (0,7 - 0,5 = 0,19999…) ne doit pas écarter un disque qui s'y loge. */
+const FLOAT_EPSILON = 1e-9
+
 /**
  * @typedef {{ weight: number|string, quantity: number }} PlateStock
  */
@@ -48,7 +51,7 @@ export function calculatePlates(targetWeight, barWeight, inventory = []) {
         const availablePairs = Math.floor(plate.quantity / 2)
         let pairsUsed = 0
 
-        while (remaining >= plate.weight && pairsUsed < availablePairs) {
+        while (remaining + FLOAT_EPSILON >= plate.weight && pairsUsed < availablePairs) {
             remaining -= plate.weight
             pairsUsed++
             result.push({ weight: plate.weight })
