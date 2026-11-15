@@ -198,10 +198,18 @@ class Set extends Model
      * Records, succès et objectifs ne lisent que des séries cochées : une série
      * qui ne l'est pas, et ne vient pas de cesser de l'être, ne change rien à
      * ce qu'ils comptent.
+     *
+     * La série en mémoire peut être périmée : le client envoie un PATCH par
+     * champ, et la requête qui coche la série peut passer entre la liaison
+     * d'une autre et son écriture. Quand la copie dit « non cochée », la base
+     * tranche (une lecture par la clé), sans quoi la valeur qu'écrit cette
+     * requête n'est lue par aucun recalcul.
      */
     public function compteDansLesRecalculs(): bool
     {
-        return $this->is_completed || $this->wasChanged('is_completed');
+        return $this->is_completed
+            || $this->wasChanged('is_completed')
+            || self::query()->whereKey($this->getKey())->where('is_completed', true)->exists();
     }
 
     #[\Override]

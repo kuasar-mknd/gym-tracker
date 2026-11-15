@@ -68,3 +68,15 @@ it('met les recalculs en file quand une série vient d’être décochée', func
     Queue::assertPushed(SyncUserGoals::class);
     Queue::assertPushed(SyncUserAchievements::class);
 });
+
+it('met les recalculs en file quand une autre requête a coché la série entre la liaison et l’écriture', function (): void {
+    $serie = serieDeTest(false);
+    $perimee = Set::query()->findOrFail($serie->id);
+    Set::query()->findOrFail($serie->id)->update(['is_completed' => true]);
+    Queue::fake();
+
+    $perimee->update(['weight' => 100]);
+
+    Queue::assertPushed(SyncUserGoals::class);
+    Queue::assertPushed(SyncUserAchievements::class);
+});
