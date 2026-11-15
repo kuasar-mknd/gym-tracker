@@ -183,7 +183,8 @@ describe('HabitController Toggle', function (): void {
     });
 
     it('ne répond pas 500 quand deux appuis sur la même case se croisent', function (): void {
-        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+        $compte = User::factory()->create();
+        $habit = Habit::factory()->create(['user_id' => $compte->id]);
         $date = Carbon::today()->format('Y-m-d');
         $croisee = false;
 
@@ -201,7 +202,7 @@ describe('HabitController Toggle', function (): void {
             }
         });
 
-        $this->actingAs($this->user)->post(route('habits.toggle', $habit), ['date' => $date])->assertRedirect();
+        $this->actingAs($compte)->post(route('habits.toggle', $habit), ['date' => $date])->assertRedirect();
 
         expect($croisee)->toBeTrue();
         $this->assertDatabaseHas('habit_logs', ['habit_id' => $habit->id, 'date' => $date]);
