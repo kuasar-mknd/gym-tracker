@@ -131,6 +131,16 @@ const typeInto = async (wrapper, labelText, value) => {
 }
 
 describe('UpdatePasswordForm', () => {
+    it('nomme ses trois champs de mot de passe, que les gestionnaires reconnaissent', () => {
+        const wrapper = mountPartial(UpdatePasswordForm)
+
+        expect(wrapper.findAll('input[type="password"]').map((champ) => champ.attributes('name'))).toEqual([
+            'current_password',
+            'password',
+            'password_confirmation',
+        ])
+    })
+
     const filled = () => {
         const wrapper = mountPartial(UpdatePasswordForm)
         Object.assign(wrapper.vm.form, {

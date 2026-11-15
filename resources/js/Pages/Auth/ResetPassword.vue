@@ -97,6 +97,7 @@ const submit = () => {
 
             <GlassInput
                 v-model="form.password"
+                name="password"
                 type="password"
                 label="Nouveau mot de passe"
                 placeholder="••••••••"
@@ -107,6 +108,7 @@ const submit = () => {
 
             <GlassInput
                 v-model="form.password_confirmation"
+                name="password_confirmation"
                 type="password"
                 label="Confirmer le mot de passe"
                 placeholder="••••••••"

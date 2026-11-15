@@ -10,6 +10,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Ajouté
 
 ### Modifié
+- **Un champ amené dans la vue ne reste plus sous l'en-tête collant, et une boîte de dialogue ne fait plus défiler la page dessous** (#2304) : `scroll-padding-top` réserve la place de l'en-tête (WCAG 2.4.11) ; `overscroll-behavior: contain` sur la boîte et son fond, un enrichissement, le verrou de la page restant ce qui la retient sur les Safari d'avant la 16. Les champs de mot de passe et d'adresse des pages de connexion et du profil portent un `name` stable, que les gestionnaires de mots de passe reconnaissent.
 
 ### Corrigé
 - **Le verrou de démarrage d'une séance ou d'un jeûne vit plus longtemps que la requête la plus longue** (#2293) : à 10 s, il pouvait expirer en pleine transaction sur un stockage lent et laisser un second appareil créer une deuxième séance en cours ; il vit 35 s, au-delà des 30 s d'`octane.max_execution_time`, et un test garde l'écart. Deux séries ajoutées en même temps depuis deux appareils peuvent recevoir le même rang ; chaque lecture les départageait déjà par la clé primaire.
