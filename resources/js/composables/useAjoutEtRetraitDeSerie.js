@@ -209,7 +209,7 @@ export const useAjoutEtRetraitDeSerie = ({
 
         // Retirée pour de bon pendant le vol, la rangée n'a plus à être marquée ; seulement alors : un retrait refusé la remet à l'écran, et sa marque doit y être (#2301).
         const idProvisoire = tempSet.id
-        const retiree = () => seriesRetirees.has(idProvisoire)
+        const retiree = () => seriesRetirees.has(idProvisoire) || seriesRetirees.has(realSetId)
         idsReels.set(idProvisoire, realSetId)
 
         if (ajustement === null) {
