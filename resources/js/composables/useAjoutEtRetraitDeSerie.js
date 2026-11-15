@@ -141,6 +141,12 @@ export const useAjoutEtRetraitDeSerie = ({
      */
     const attentes = creerLesAttentesDeRejeu()
 
+    /** Les identifiants provisoires des séries dont le retrait a abouti ou est parti en file : à l’écran pour de bon, plus. */
+    const seriesRetirees = new Set()
+
+    /** L’identifiant réel que le serveur a donné à une série encore connue sous son identifiant provisoire. */
+    const idsReels = new Map()
+
     if (getCurrentInstance()) {
         onUnmounted(() => attentes.oublierTout())
     }
@@ -201,8 +207,10 @@ export const useAjoutEtRetraitDeSerie = ({
 
         const realSetId = created.id
 
-        // Une rangée retirée pendant le vol n'a plus à être marquée : rien à l'écran ne l'enregistrera (#2301).
-        const resteAffichee = () => localWorkout.value.workout_lines.some((ligne) => ligne.sets.includes(tempSet))
+        // Retirée pour de bon pendant le vol, la rangée n'a plus à être marquée ; seulement alors : un retrait refusé la remet à l'écran, et sa marque doit y être (#2301).
+        const idProvisoire = tempSet.id
+        const retiree = () => seriesRetirees.has(idProvisoire)
+        idsReels.set(idProvisoire, realSetId)
 
         if (ajustement === null) {
             // It is in the database now, under either id it has worn.
@@ -210,7 +218,7 @@ export const useAjoutEtRetraitDeSerie = ({
         } else {
             clearUnsynced(tempSet.id)
 
-            if (SyncService.estEnFile(ajustement) && resteAffichee()) {
+            if (SyncService.estEnFile(ajustement) && !retiree()) {
                 markUnsynced(realSetId)
 
                 // Refusée, la modification laisse la série marquée : le rapport l'a dit.
@@ -228,7 +236,7 @@ export const useAjoutEtRetraitDeSerie = ({
         // Typed after the payload left: the server has never seen it.
         if (Object.keys(edited).length > 0) {
             SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
-                if (!err.isOffline && resteAffichee()) markUnsynced(realSetId)
+                if (!err.isOffline && !retiree()) markUnsynced(realSetId)
             })
         }
 
@@ -544,10 +552,14 @@ export const useAjoutEtRetraitDeSerie = ({
 
         // La rangée a quitté l'écran : sa marque « non enregistrée » part avec elle (#2299).
         deleteSet(setId)
-            .then(() => clearUnsynced(setId))
+            .then(() => {
+                seriesRetirees.add(setId)
+                clearUnsynced(setId, idsReels.get(setId))
+            })
             .catch((err) => {
                 if (err.isOffline) {
-                    clearUnsynced(setId)
+                    seriesRetirees.add(setId)
+                    clearUnsynced(setId, idsReels.get(setId))
 
                     return
                 }
