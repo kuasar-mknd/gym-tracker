@@ -12,6 +12,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Modifié
 
 ### Corrigé
+- **Le rejeu d'une création de série ou d'exercice ne reçoit plus 403 quand la séance a été close entre-temps par un autre appareil** (#2293) : la ligne ou la série déjà créée est rendue, comme au rejeu du démarrage et de la fin. Une création neuve sur une séance close reste refusée.
+- **Une écriture directe restée sans réponse ne bloque plus les suivantes de sa ligne** (#2293) : sans délai propre, elle attend 15 s au plus, puis se lit comme une réponse perdue et passe en file. Le 404 du rejeu d'une suppression qui a pu aboutir n'est pas annoncé comme un refus.
 - **La copie hors ligne d'une séance ne se fige plus après la suppression d'une série encore en file** (#2299) : l'identifiant provisoire de la série restait « non enregistré » pour toute la durée de la page, et la copie de la séance n'était plus réécrite. La marque part avec la rangée.
 - **Le calendrier respecte « réduire les animations »** (#2301) : le détail du jour s'ouvre sans défilement animé quand la personne l'a demandé. « 1RM estimé » s'écrit en minuscules partout.
 - **Une série enregistrée par le serveur puis répondue en erreur 5xx ne disparaît plus de l'écran, et « Réessaie » ne la double plus** (#2292) : une création directe répondue en 502, 504 ou 500 était lue comme un refus, la rangée était retirée alors que la ligne existait, et la seconde tentative en créait une deuxième. Elle se lit maintenant comme une réponse perdue : la rangée reste, marquée « non enregistrée », et part de la file sous la même clé d'idempotence, qui retrouve la ligne déjà écrite.

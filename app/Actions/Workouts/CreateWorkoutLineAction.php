@@ -56,7 +56,7 @@ class CreateWorkoutLineAction
      * dans un en-tête que le client maîtrise, et une recherche globale
      * rendrait la ligne d'un autre utilisateur à qui rejouerait sa clef.
      */
-    private function ligneDejaCreeeSous(Workout $workout, ?string $key): ?WorkoutLine
+    public function ligneDejaCreeeSous(Workout $workout, ?string $key): ?WorkoutLine
     {
         if ($key === null) {
             return null;
