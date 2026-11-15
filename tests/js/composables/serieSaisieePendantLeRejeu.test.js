@@ -211,20 +211,36 @@ describe('une série dont la création est rejouée', () => {
     it("ne marque pas l'identifiant réel d'une série retirée après son adoption, quand le correctif en vol est refusé (#2301)", async () => {
         const page = await monterLaSeance(seance())
         const reel = reseau.serveur.repondre
+        let relacherLaCreation
         let relacherLeCorrectif
-        const attente = new Promise((resolve) => (relacherLeCorrectif = resolve))
+        const creation = new Promise((resolve) => (relacherLaCreation = resolve))
+        const correctif = new Promise((resolve) => (relacherLeCorrectif = resolve))
 
+        reseau.serveur.repondre = async (config) => {
+            if (config.method === 'post') {
+                await creation
+
+                return reel(config)
+            }
+
+            if (config.method === 'patch') {
+                await correctif
+
+                throw { response: { status: 500, data: {}, headers: {} } }
+            }
+
+            return reel(config)
+        }
         page.addSet(1)
         await flushPromises()
         const serie = page.ligne().sets.at(-1)
 
-        reseau.serveur.repondre = async (config) => {
-            reseau.serveur.repondre = reel
-            await attente
-            throw { response: { status: 500, data: {}, headers: {} } }
-        }
         page.saisieTerminee(serie, 'reps', '3')
+        relacherLaCreation()
         await flushPromises()
+
+        expect(serie.id).toBe(100)
+
         page.removeSet(serie.id)
         await flushPromises()
         relacherLeCorrectif()
