@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { progressionAffichee } from '@/Utils/progressionDObjectif'
+import { progressionAffichee } from '@/Utils/nombre'
 
 describe('progressionAffichee', () => {
     it('réserve 100 % à l’objectif atteint', () => {

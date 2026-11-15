@@ -1,7 +1,7 @@
 <script setup>
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
-import { progressionAffichee } from '@/Utils/progressionDObjectif'
+import { progressionAffichee } from '@/Utils/nombre'
 import BaseChart from './BaseChart.vue'
 import { grille } from './chartConfig'
 

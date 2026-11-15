@@ -3,8 +3,7 @@ import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
 import { dateCourte, parseCalendarDate } from '@/Utils/date'
-import { accord, nombre, pourcentage } from '@/Utils/nombre'
-import { progressionAffichee } from '@/Utils/progressionDObjectif'
+import { accord, nombre, pourcentage, progressionAffichee } from '@/Utils/nombre'
 
 const props = defineProps({
     goal: {

@@ -2,8 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
-import { pourcentage } from '@/Utils/nombre'
-import { progressionAffichee } from '@/Utils/progressionDObjectif'
+import { pourcentage, progressionAffichee } from '@/Utils/nombre'
 
 defineProps({
     activeGoals: { type: Array, required: true },
