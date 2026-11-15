@@ -6,6 +6,8 @@ use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -178,6 +180,31 @@ describe('HabitController Toggle', function (): void {
             'habit_id' => $habit->id,
             'date' => $date,
         ]);
+    });
+
+    it('ne répond pas 500 quand deux appuis sur la même case se croisent', function (): void {
+        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+        $date = Carbon::today()->format('Y-m-d');
+        $croisee = false;
+
+        // Le second appui a lu « pas de suivi » avant que le premier n'écrive le sien.
+        DB::listen(function (QueryExecuted $requete) use (&$croisee, $habit, $date): void {
+            if (! $croisee && str_starts_with($requete->sql, 'select') && str_contains($requete->sql, 'habit_logs')) {
+                $croisee = true;
+                DB::table('habit_logs')->insert([
+                    'habit_id' => $habit->id,
+                    'user_id' => $habit->user_id,
+                    'date' => $date,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        $this->actingAs($this->user)->post(route('habits.toggle', $habit), ['date' => $date])->assertRedirect();
+
+        expect($croisee)->toBeTrue();
+        $this->assertDatabaseHas('habit_logs', ['habit_id' => $habit->id, 'date' => $date]);
     });
 
     it('deletes a log if it exists for the date (unchecks the habit)', function (): void {
