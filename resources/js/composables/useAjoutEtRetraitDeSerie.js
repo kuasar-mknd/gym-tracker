@@ -201,13 +201,16 @@ export const useAjoutEtRetraitDeSerie = ({
 
         const realSetId = created.id
 
+        // Une rangée retirée pendant le vol n'a plus à être marquée : rien à l'écran ne l'enregistrera (#2301).
+        const resteAffichee = () => localWorkout.value.workout_lines.some((ligne) => ligne.sets.includes(tempSet))
+
         if (ajustement === null) {
             // It is in the database now, under either id it has worn.
             clearUnsynced(tempSet.id, realSetId)
         } else {
             clearUnsynced(tempSet.id)
 
-            if (SyncService.estEnFile(ajustement)) {
+            if (SyncService.estEnFile(ajustement) && resteAffichee()) {
                 markUnsynced(realSetId)
 
                 // Refusée, la modification laisse la série marquée : le rapport l'a dit.
@@ -225,7 +228,7 @@ export const useAjoutEtRetraitDeSerie = ({
         // Typed after the payload left: the server has never seen it.
         if (Object.keys(edited).length > 0) {
             SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
-                if (!err.isOffline) markUnsynced(realSetId)
+                if (!err.isOffline && resteAffichee()) markUnsynced(realSetId)
             })
         }
 

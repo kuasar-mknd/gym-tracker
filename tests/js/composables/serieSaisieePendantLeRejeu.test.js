@@ -141,6 +141,39 @@ describe('une série dont la création est rejouée', () => {
         expect([...page.unsyncedSetIds.value]).toEqual([])
     })
 
+    it("ne garde pas l'identifiant réel d'une série supprimée pendant le vol de sa création, dont le correctif est refusé en 5xx (#2301)", async () => {
+        const page = await monterLaSeance(seance())
+        const reel = reseau.serveur.repondre
+        let relacher
+        const attente = new Promise((resolve) => (relacher = resolve))
+
+        reseau.serveur.repondre = async (config) => {
+            reseau.serveur.repondre = reel
+            await attente
+            const reponse = await reel(config)
+
+            reseau.serveur.imposer.push(async () => {
+                throw { response: { status: 500, data: {}, headers: {} } }
+            })
+
+            return reponse
+        }
+        page.addSet(1)
+        await flushPromises()
+        const serie = page.ligne().sets.at(-1)
+
+        page.saisieTerminee(serie, 'reps', '3')
+        page.removeSet(serie.id)
+        await flushPromises()
+        relacher()
+        await flushPromises()
+        await page.sync.pending
+        await flushPromises()
+
+        expect(page.ligne().sets.map((s) => s.id)).toEqual([3])
+        expect([...page.unsyncedSetIds.value]).toEqual([])
+    })
+
     it('garde dans la file la dernière coche, cochée pendant le rejeu puis décochée une fois celui-ci échoué', async () => {
         const { page, serie, coupure } = await rejeuEnVol()
 
