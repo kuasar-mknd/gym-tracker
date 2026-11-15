@@ -30,7 +30,6 @@ class FetchWorkoutTemplatesAction
                      */
                     $query->select('id', 'workout_template_id', 'exercise_id')
                         ->orderBy('order')
-                        ->orderBy('id')
                         ->limit(3)
                         ->withCount('workoutTemplateSets')
                         ->with('exercise:id,name');

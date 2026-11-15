@@ -74,7 +74,6 @@ final class UpdateWorkoutTemplateAction
         // Fetch the generated lines to get their IDs
         $lines = \App\Models\WorkoutTemplateLine::where('workout_template_id', $template->id)
             ->orderBy('order')
-            ->orderBy('id')
             ->get();
 
         $donneesDesSeries = [];
