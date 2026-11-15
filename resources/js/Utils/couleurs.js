@@ -36,9 +36,6 @@ export const JETON_PAR_CATEGORIE = {
 /**
  * Le cache est volontaire : `getComputedStyle` force un recalcul de style, et
  * un graphique qui redessine appellerait cette fonction à chaque image.
- *
- * Il est vidé par `oublierLesJetons()`, dont les tests se servent quand ils
- * changent les variables sous les pieds du cache.
  */
 const cache = new Map()
 
@@ -63,11 +60,6 @@ export function jeton(nom) {
     cache.set(nom, valeur)
 
     return valeur
-}
-
-/** @returns {void} */
-export function oublierLesJetons() {
-    cache.clear()
 }
 
 /**

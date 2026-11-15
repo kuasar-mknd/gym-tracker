@@ -49,7 +49,7 @@ function versionsDemarrageDesTroisConteneurs(): void
 {
     event(new DemarrageDUnTravailleurOctane(app()));
     event(new DemarrageDUnTravailleurDeFile('redis', 'default', new WorkerOptions()));
-    event(new ScheduledTaskStarting(app(Schedule::class)->command('inspire')));
+    event(new ScheduledTaskStarting(app(Schedule::class)->command('queue:prune-batches')));
 }
 
 /**

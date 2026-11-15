@@ -28,6 +28,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Sécurité
 
 ### Retiré
+- **Du code que rien n'appelait** : les ressources d'API `AchievementResource` et `GoalResource`, les requêtes `UpdateIntervalTimerRequest` et `SupplementUpdateRequest` (identiques à leurs jumelles de création, désormais partagées), la commande `inspire` du squelette, `oublierLesJetons()` côté graphiques et deux clés vides de `phpstan.neon`. Aucun comportement ne change.
 
 ## [1.7.0] - 2026-11-13
 
