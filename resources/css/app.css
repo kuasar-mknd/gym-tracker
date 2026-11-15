@@ -1656,8 +1656,9 @@
 
     /*
      * Un défilement fait dans une boîte de dialogue ou sur son fond ne passe
-     * pas à la page dessous. Un enrichissement : Safari ne le gère pas, et le
-     * verrou de `useScrollLock` reste ce qui retient la page là-bas.
+     * pas à la page dessous. Un enrichissement : Safari ne le gère qu'à partir de
+     * la 16, et le verrou de `useScrollLock` reste ce qui retient la page
+     * avant.
      */
     dialog:modal {
         overscroll-behavior: contain;
