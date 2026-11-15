@@ -323,7 +323,6 @@ function projectionsLInventaire(): array
             ecrivains: [
                 'la saisie par l’utilisateur' => [
                     'app/Http/Requests/SupplementStoreRequest.php' => ['rules'],
-                    'app/Http/Requests/SupplementUpdateRequest.php' => ['rules'],
                 ],
                 'la saisie dans le panneau d’administration' => [
                     'app/Filament/Resources/Supplements/Schemas/SupplementForm.php' => ['configure'],

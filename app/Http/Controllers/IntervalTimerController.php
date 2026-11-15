@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreIntervalTimerRequest;
-use App\Http\Requests\UpdateIntervalTimerRequest;
 use App\Models\IntervalTimer;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -43,7 +42,7 @@ class IntervalTimerController extends Controller
     /**
      * @throws \Illuminate\Auth\Access\AuthorizationException Si le minuteur n'est pas celui de l'utilisateur.
      */
-    public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): RedirectResponse
+    public function update(StoreIntervalTimerRequest $request, IntervalTimer $intervalTimer): RedirectResponse
     {
         $this->authorize('update', $intervalTimer);
 
