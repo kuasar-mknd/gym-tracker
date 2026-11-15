@@ -17,6 +17,11 @@ const emit = defineEmits(['delete'])
 const progress = computed(() => props.goal.progress_pct || 0)
 const isCompleted = computed(() => !!props.goal.completed_at)
 
+/** « 100 % » est réservé à l'objectif atteint : 99,5 s'arrondirait à 100. */
+const pourcentageAffiche = computed(() =>
+    !isCompleted.value && Math.round(progress.value) >= 100 ? 99 : progress.value,
+)
+
 /**
  * Un objectif « par semaine » repart de zéro chaque lundi : sa cible se lit
  * « 3 séances par semaine », et son badge dit la semaine, pas la fin.
@@ -105,7 +110,7 @@ const statusColor = computed(() => {
 
             <div class="shrink-0 text-right whitespace-nowrap">
                 <div class="font-display text-lg font-black italic drop-shadow-sm" :class="statusColor">
-                    {{ pourcentage(progress, 0) }}
+                    {{ pourcentage(pourcentageAffiche, 0) }}
                 </div>
             </div>
         </div>

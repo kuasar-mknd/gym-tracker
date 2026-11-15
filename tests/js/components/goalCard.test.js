@@ -39,6 +39,21 @@ const percentText = (wrapper) => wrapper.get('.text-right').text()
 
 const flat = (value) => value.replace(/\s+/g, ' ').trim()
 
+describe('le pourcentage affiché', () => {
+    it('ne dit pas 100 % d’un objectif non atteint (199 séances sur 200)', () => {
+        const wrapper = mountCard({ progress_pct: 99.5 })
+
+        expect(percentText(wrapper)).toContain('99')
+        expect(percentText(wrapper)).not.toContain('100')
+    })
+
+    it('dit 100 % d’un objectif atteint', () => {
+        const wrapper = mountCard({ progress_pct: 100, completed_at: '2026-11-01T10:00:00Z' })
+
+        expect(percentText(wrapper)).toContain('100')
+    })
+})
+
 /** The two ends written above the bar, in the order they are read: start, target. */
 const barLegend = (wrapper) =>
     [...bar(wrapper).element.previousElementSibling.querySelectorAll('span')].map((span) => flat(span.textContent))
