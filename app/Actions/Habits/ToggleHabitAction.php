@@ -33,6 +33,7 @@ class ToggleHabitAction
                 $habit->logs()->create(['date' => $jour]);
             } catch (UniqueConstraintViolationException) {
                 // Un second appui, croisé avec celui-ci, a déjà coché la case : elle l'est.
+                return;
             }
         }
     }
