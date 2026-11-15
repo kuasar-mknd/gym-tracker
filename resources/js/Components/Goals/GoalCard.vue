@@ -4,6 +4,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
 import { dateCourte, parseCalendarDate } from '@/Utils/date'
 import { accord, nombre, pourcentage } from '@/Utils/nombre'
+import { progressionAffichee } from '@/Utils/progressionDObjectif'
 
 const props = defineProps({
     goal: {
@@ -17,10 +18,7 @@ const emit = defineEmits(['delete'])
 const progress = computed(() => props.goal.progress_pct || 0)
 const isCompleted = computed(() => !!props.goal.completed_at)
 
-/** « 100 % » est réservé à l'objectif atteint : 99,5 s'arrondirait à 100. */
-const pourcentageAffiche = computed(() =>
-    !isCompleted.value && Math.round(progress.value) >= 100 ? 99 : progress.value,
-)
+const pourcentageAffiche = computed(() => progressionAffichee(props.goal))
 
 /**
  * Un objectif « par semaine » repart de zéro chaque lundi : sa cible se lit
