@@ -33,6 +33,7 @@ const submit = () => {
             <form @submit.prevent="submit" class="space-y-4">
                 <GlassInput
                     v-model="form.password"
+                    name="password"
                     type="password"
                     label="Mot de passe"
                     placeholder="••••••••"

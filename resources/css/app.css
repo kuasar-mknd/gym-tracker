@@ -1650,6 +1650,22 @@
         -moz-osx-font-smoothing: grayscale;
         overflow-x: hidden;
         overscroll-behavior: none;
+        /* Un champ ou un détail amené dans la vue ne reste pas sous l'en-tête collant (WCAG 2.4.11). */
+        scroll-padding-top: calc(var(--safe-area-top) + 5rem);
+    }
+
+    /*
+     * Un défilement fait dans une boîte de dialogue ou sur son fond ne passe
+     * pas à la page dessous. Un enrichissement : Safari ne le gère pas, et le
+     * verrou de `useScrollLock` reste ce qui retient la page là-bas.
+     */
+    dialog:modal {
+        overscroll-behavior: contain;
+    }
+
+    dialog::backdrop {
+        overflow: hidden;
+        overscroll-behavior: contain;
     }
 
     /*

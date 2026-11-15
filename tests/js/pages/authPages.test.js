@@ -901,6 +901,21 @@ describe('ResetPassword', () => {
 })
 
 describe('ConfirmPassword', () => {
+    it('nomme ses champs de mot de passe, que les gestionnaires reconnaissent', () => {
+        expect(mountPage(ConfirmPassword).find('input[type="password"]').attributes('name')).toBe('password')
+        expect(
+            mountPage(ResetPassword, { props: { token: 't', adresse: 'a' } })
+                .find('input[type="email"]')
+                .attributes('name'),
+        ).toBe('email')
+        expect(
+            mountPage(ResetPassword, { props: { token: 't', adresse: 'a' } })
+                .findAll('input[type="password"]')
+                .map((champ) => champ.attributes('name')),
+        ).toEqual(['password', 'password_confirmation'])
+        expect(mountPage(ForgotPassword).find('input[type="email"]').attributes('name')).toBe('email')
+    })
+
     it('poste vers la route de confirmation', async () => {
         const wrapper = mountPage(ConfirmPassword)
 

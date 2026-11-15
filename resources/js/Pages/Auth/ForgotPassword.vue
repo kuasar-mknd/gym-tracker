@@ -45,6 +45,7 @@ const submit = () => {
         <form novalidate @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.email"
+                name="email"
                 type="email"
                 autocomplete="email"
                 label="Email"
