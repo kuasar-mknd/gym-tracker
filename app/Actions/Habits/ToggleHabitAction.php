@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Habits;
 
 use App\Models\Habit;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 
 class ToggleHabitAction
@@ -28,7 +29,12 @@ class ToggleHabitAction
         if ($log instanceof \App\Models\HabitLog) {
             $log->delete();
         } else {
-            $habit->logs()->create(['date' => $jour]);
+            try {
+                $habit->logs()->create(['date' => $jour]);
+            } catch (UniqueConstraintViolationException) {
+                // Un second appui, croisé avec celui-ci, a déjà coché la case : elle l'est.
+                return;
+            }
         }
     }
 }
