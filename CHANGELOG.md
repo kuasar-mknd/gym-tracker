@@ -25,6 +25,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Une saisie ou une suppression faite pendant le rejeu d'une création n'est plus perdue si la PWA est rechargée avant le retour du réseau** (#2291) : la série dont la création volait, puis échouait sur une erreur réseau, rentrait dans la file avec son ancienne valeur, une série supprimée revenait sur le serveur. Ce qui a été tapé ou retiré pendant le vol rejoint désormais l'entrée restée en file. Un geste fait alors que la requête vole encore reste en mémoire : un rechargement avant qu'elle n'échoue le perd.
 
 ### Optimisé
+- **Une série qui n'est pas cochée ne met plus trois recalculs en file** (#2321) : records, succès et objectifs ne lisent que des séries cochées, mais corriger un poids ou des répétitions sur une série non cochée envoyait quand même `SyncPersonalRecord`, `SyncUserAchievements` et `SyncUserGoals`. Ils partent désormais quand la série est cochée, vient de l'être ou de cesser de l'être, ou l'est en base (une autre requête a pu la cocher entre la liaison et l'écriture) : saisir « poids, répétitions, coche » passe de neuf travaux à trois.
 
 ### Sécurité
 
