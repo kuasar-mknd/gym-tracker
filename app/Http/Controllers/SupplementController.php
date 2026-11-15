@@ -6,7 +6,6 @@ namespace App\Http\Controllers;
 
 use App\Actions\Supplements\FetchSupplementsIndexAction;
 use App\Http\Requests\SupplementStoreRequest;
-use App\Http\Requests\SupplementUpdateRequest;
 use App\Models\Supplement;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,7 +36,7 @@ class SupplementController extends Controller
     /**
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException Si le complément n'est pas celui de l'utilisateur (403).
      */
-    public function update(SupplementUpdateRequest $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
+    public function update(SupplementStoreRequest $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $supplement);
 

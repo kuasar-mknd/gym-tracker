@@ -148,7 +148,4 @@ parameters:
           path: tests/Browser/*
           message: '#Laravel\\Dusk\\Browser#'
 
-    excludePaths:
-
-    scanFiles:
 
