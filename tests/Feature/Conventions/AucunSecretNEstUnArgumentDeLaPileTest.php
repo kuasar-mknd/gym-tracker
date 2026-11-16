@@ -32,7 +32,7 @@ use Symfony\Component\Yaml\Yaml;
  * en français (`DB_PASSWORD`, `REDISCLI_AUTH`, `mot_de_passe`, `cle_api`,
  * `JETON`), où qu'il soit dans le nom. Un mot entier : `BYPASS` n'en est pas un.
  */
-const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASS|PASSE|PWD|MDP|SECRET|TOKEN|JETON|AUTH|CREDENTIALS?|PRIVATE_KEY|KEY|CLE|CLEF|CLES|CLEFS)(?![A-Za-z])/i';
+const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASS|PASSE|PWD|MDP|SECRET|TOKEN|JETON|AUTH|CREDENTIALS?|PRIVATE_KEY|KEY|CLE|CLEF|CLES|CLEFS)(?![A-Za-z])|(?:PASSWORD|PASSWD|PWD|SECRET|TOKEN|JETON|APIKEY|MOTDEPASSE)$/i';
 
 /**
  * Les binaires de la famille MySQL, dont `-p <valeur>` est le mot de passe.
@@ -184,14 +184,14 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
     $reste = $texte;
 
     if ($interprete) {
-        $debut = '(?:^|[;&|(\n]|(?<![-\w])env\s|(?<![-\w])export\s)';
+        $debut = '(?:^|[;&|(\n])\s*(?:(?:env|export)\s+)?';
         $reference = '"\$\$\{?[A-Za-z0-9_]+\}?"';
 
         $reste = (string) preg_replace(
             [
                 '/<<-?\s*([\'"]?)(\w+)\1([^\n]*\n)(.*?)\n\s*\2\b/s',
-                "/({$debut}\\s*)MYSQL_PWD={$reference}/",
-                "/({$debut}\\s*[A-Za-z_][A-Za-z0-9_]*=)\\\$\\\$\\([^()]*\\bprintf\\s+%s\\s+{$reference}[^()]*\\)/",
+                "/({$debut})MYSQL_PWD={$reference}/",
+                "/({$debut}[A-Za-z_][A-Za-z0-9_]*=)\\\$\\\$\\(\\s*printf\\s+%s\\s+{$reference}(?:\\s*\\|(?:(?!&&)[^;()|])*)?\\s*\\)/",
                 "/((?:^|[;&\\n])\\s*)printf\\s+%s\\s+{$reference}\\s*\\|(?!\\|)/",
             ],
             ['$3', '$1', '$1', '$1|'],
@@ -357,6 +357,10 @@ it('refuse, sur la vraie composition, chaque trou que la garde laissait', functi
     'un argument de construction repris de l’hôte, sans valeur (table)' => [[['services.app.build', ['context' => '.', 'args' => ['NPM_TOKEN' => null]]]]],
     '-p suivi d’une valeur, en liste (forme exec)' => [[['services.db.healthcheck.test', ['CMD', 'mysqladmin', '-uroot', '-p', 'motdepasse', 'ping']]]],
     'un secret passé par --env, qui n’est pas l’affectation d’une commande' => [[['services.redis.command', 'outil --env JETON=$$(printf %s "$$APP_KEY")', true]]],
+    'un nom collé : GITHUBTOKEN' => [[['services.redis.command', 'notifier "$$GITHUBTOKEN"', true]]],
+    'un nom collé : dbPassword' => [[['services.redis.command', 'notifier "$$dbPassword"', true]]],
+    'une substitution affectée qui laisse aussi le secret à une autre commande' => [[['services.redis.command', 'x=$$(printf %s "$$REDIS_PASSWORD"; curl -u "$$REDIS_PASSWORD" http://h)', true]]],
+    'env au milieu d’une commande' => [[['services.redis.command', 'logger env MYSQL_PWD="$$REDIS_PASSWORD"', true]]],
     'un argument de construction au nom d’un secret, écrit en dur' => [[['services.app.build', ['context' => '.', 'args' => ['NPM_TOKEN' => 'abc123']]]]],
     '-p suivi d’une espace et d’une valeur, pour mysqladmin' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'mysqladmin -uroot -p motdepasse ping']]]],
     '-p suivi d’une espace et d’une référence' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'mysqladmin -uroot -p "$$NEUTRE" ping']]]],
