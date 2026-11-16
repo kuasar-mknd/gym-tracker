@@ -235,6 +235,17 @@ const deuxSeriesDeDeveloppe = {
     ],
 }
 
+describe('un refus de la description d’un modèle', () => {
+    it('se dit une fois, sous le champ que GlassTextarea annonce déjà (#2355)', async () => {
+        const wrapper = mountEdit(deuxSeriesDeDeveloppe)
+
+        templateForm().errors.description = 'La description est trop longue.'
+        await flushPromises()
+
+        expect(wrapper.text().split('La description est trop longue.')).toHaveLength(2)
+    })
+})
+
 /*
  * Les requêtes d'un modèle plafonnent ses exercices et ses séries, et bornent
  * chaque valeur. Un refus portait sur une clé que le formulaire n'affichait

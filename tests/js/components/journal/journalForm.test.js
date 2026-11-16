@@ -232,4 +232,12 @@ describe('the notes box', () => {
 
         expect(wrapper.text()).toContain('Note trop longue.')
     })
+
+    it('ne dit le refus de la note qu’une fois : GlassTextarea l’annonce déjà (#2355)', () => {
+        const { wrapper } = mountForm({ form: makeForm({ errors: { content: 'Note trop longue.' } }) })
+
+        const MESSAGE = 'Note trop longue.'
+        expect(wrapper.text().split('Note trop longue.')).toHaveLength(2)
+        expect(wrapper.findAll('[role="alert"]').filter((alerte) => alerte.text() === MESSAGE)).toHaveLength(1)
+    })
 })

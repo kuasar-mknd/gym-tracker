@@ -302,11 +302,11 @@ const typeLabel = (type) => {
             <div v-else class="stagger-4 animate-slide-up space-y-6">
                 <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
                     <div class="mb-3 flex items-center gap-2 px-1">
-                        <h3 class="text-text-muted/60 sur-titre">
+                        <h3 class="text-text-muted sur-titre">
                             {{ category }}
                         </h3>
                         <div class="bg-surface-sunken h-px flex-1"></div>
-                        <span class="text-text-muted/30 text-2xs font-black">
+                        <span class="text-text-muted text-2xs font-black">
                             {{ exercisesInCat.length }}
                         </span>
                     </div>

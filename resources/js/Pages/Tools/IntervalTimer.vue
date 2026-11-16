@@ -103,7 +103,10 @@ const editTimer = (timer) => {
     form.warmup_seconds = timer.warmup_seconds
     activeTab.value = 'config'
     // Scroll to top of form
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({
+        top: 0,
+        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth',
+    })
 }
 
 const {
@@ -165,7 +168,12 @@ const previewFromForm = () => {
                     class="flex flex-col items-center justify-center border-2 px-4 py-12 transition-colors duration-500"
                     :class="phaseBg"
                 >
-                    <div class="tracking-sur-titre mb-4 text-sm font-black uppercase" :class="phaseColor">
+                    <div
+                        class="tracking-sur-titre mb-4 text-sm font-black uppercase"
+                        :class="phaseColor"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
                         {{ phaseLabel }}
                     </div>
 
@@ -305,14 +313,21 @@ const previewFromForm = () => {
                         :key="timer.id"
                         class="group relative flex items-center justify-between overflow-hidden p-4"
                     >
-                        <div class="relative z-10 cursor-pointer" @click="loadTimer(timer)">
-                            <h4 class="text-text-main group-hover:text-accent-primary-deep font-bold transition-colors">
+                        <button
+                            type="button"
+                            class="focus-visible:ring-accent-primary min-h-touch relative z-10 rounded-lg text-left focus-visible:ring-2 focus-visible:outline-none"
+                            data-charger-le-minuteur
+                            @click="loadTimer(timer)"
+                        >
+                            <span
+                                class="text-text-main group-hover:text-accent-primary-deep block font-bold transition-colors"
+                            >
                                 {{ timer.name }}
-                            </h4>
-                            <p class="text-text-muted text-xs">
+                            </span>
+                            <span class="text-text-muted block text-xs">
                                 {{ timer.rounds }}x {{ timer.work_seconds }}s Travail / {{ timer.rest_seconds }}s Repos
-                            </p>
-                        </div>
+                            </span>
+                        </button>
                         <div class="relative z-10 flex items-center gap-2">
                             <button
                                 @click="loadTimer(timer)"

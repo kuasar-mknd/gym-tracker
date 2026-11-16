@@ -16,8 +16,9 @@ const props = defineProps({
     deferredData: Object,
 })
 
+/** Sans total tant que la période n'est pas arrivée : « 0 kg » dirait qu'on n'a rien soulevé. */
 const totalVolume = computed(() => {
-    return props.volumeTrend?.reduce((acc, curr) => acc + curr.volume, 0) || 0
+    return Array.isArray(props.volumeTrend) ? props.volumeTrend.reduce((acc, curr) => acc + curr.volume, 0) : null
 })
 </script>
 
@@ -43,8 +44,8 @@ const totalVolume = computed(() => {
             <div class="text-right">
                 <div class="text-text-muted text-xs font-black tracking-wider uppercase">Total</div>
                 <div class="font-display text-accent-primary-deep text-2xl font-black">
-                    {{ nombre(totalVolume, 0) }}
-                    <span class="text-text-muted text-sm">kg</span>
+                    {{ totalVolume === null ? '—' : nombre(totalVolume, 0) }}
+                    <span v-if="totalVolume !== null" class="text-text-muted text-sm">kg</span>
                 </div>
             </div>
         </div>

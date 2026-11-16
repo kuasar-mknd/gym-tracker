@@ -216,6 +216,20 @@ describe('saving a new preset', () => {
     })
 })
 
+describe('la phase en cours', () => {
+    it('est annoncée quand elle change : Travail, Repos, Terminé (#2355)', async () => {
+        const wrapper = mountTimer()
+        const region = wrapper.get('[aria-live="polite"]')
+
+        expect(region.text()).toBe('PRÊT')
+        expect(region.attributes('aria-atomic')).toBe('true')
+
+        await byLabel(wrapper, 'Démarrer').trigger('click')
+
+        expect(wrapper.get('[aria-live="polite"]').text()).not.toBe('PRÊT')
+    })
+})
+
 describe('editing a saved preset', () => {
     it('opens the form on the preset that was picked', async () => {
         const wrapper = mountTimer([
@@ -234,6 +248,23 @@ describe('editing a saved preset', () => {
         expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
 
         scrollTo.mockRestore()
+    })
+
+    it('remonte sans animation quand l’appareil demande moins de mouvement (#2355)', async () => {
+        const wrapper = mountTimer([preset({ id: 9 })])
+        const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+        const matchMedia = vi.fn(() => ({ matches: true }))
+        vi.stubGlobal('matchMedia', matchMedia)
+        window.matchMedia = matchMedia
+
+        await openPresets(wrapper)
+        await byLabel(wrapper, 'Modifier le minuteur').trigger('click')
+
+        expect(matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
+        expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' })
+
+        scrollTo.mockRestore()
+        vi.unstubAllGlobals()
     })
 
     it('patches the preset it was opened on, by id', async () => {
@@ -347,13 +378,24 @@ describe('previewing what is in the form', () => {
         expect(clock(wrapper)).toBe('00:25')
     })
 
+    it('charge un préréglage depuis un vrai bouton, que le clavier atteint (#2355)', async () => {
+        const wrapper = mountTimer([preset({ id: 9, name: 'Sprint' })])
+
+        await openPresets(wrapper)
+        const nom = wrapper.get('[data-charger-le-minuteur]')
+
+        expect(nom.element.tagName).toBe('BUTTON')
+        expect(nom.attributes('type')).toBe('button')
+        expect(nom.text()).toContain('Sprint')
+    })
+
     it('loads a saved preset when its name is tapped, not only its play button', async () => {
         const wrapper = mountTimer([
             preset({ id: 9, name: 'Sprint', work_seconds: 30, rest_seconds: 90, warmup_seconds: 45 }),
         ])
 
         await openPresets(wrapper)
-        await wrapper.find('.cursor-pointer').trigger('click')
+        await wrapper.get('[data-charger-le-minuteur]').trigger('click')
 
         expect(wrapper.vm.activeTab).toBe('timer')
         expect(legend(wrapper)[0]).toContain('30s')

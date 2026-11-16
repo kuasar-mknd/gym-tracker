@@ -85,7 +85,7 @@ vi.mock('@/Components/Stats/BodyPartHistoryChart.vue', () => ({
 const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
-import { passesSlot, layoutStub } from './pageStubs'
+import { passesSlot, layoutStub, layoutSansEnTeteDePage } from './pageStubs'
 import { CIBLE, cibleDuRendu, hauteurDuRendu } from '../conventions/ciblesTactiles'
 import { nomAccessible } from '../utils/nomAccessible'
 
@@ -243,6 +243,81 @@ describe('Measurements/Parts/Show — the unit a new entry inherits', () => {
         await openAddForm(wrapper)
 
         expect(wrapper.vm.form.unit).toBe('cm')
+    })
+})
+
+describe('Measurements/Parts/Show — la saisie sur téléphone (#2354)', () => {
+    /** Sous 1 024 px, `#header` n'existe pas : seul `#header-actions` porte une commande. */
+    const monterSurTelephone = (history = historyFixture) =>
+        mount(PartShow, {
+            props: { part: 'Biceps', history: structuredClone(history) },
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutSansEnTeteDePage, GlassCard: passesSlot },
+            },
+        })
+
+    it('ouvre et ferme le formulaire depuis l’en-tête mobile, et le dit', async () => {
+        const wrapper = monterSurTelephone()
+
+        expect(wrapper.find('form').exists()).toBe(false)
+
+        await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+
+        expect(wrapper.find('form').exists()).toBe(true)
+        expect(wrapper.get('button[aria-label="Annuler la saisie"]').text()).toContain('close')
+
+        await wrapper.get('button[aria-label="Annuler la saisie"]').trigger('click')
+
+        expect(wrapper.find('form').exists()).toBe(false)
+    })
+
+    it('change l’icône et le libellé du bouton du bureau avec l’état du formulaire', async () => {
+        const { wrapper } = mountPart()
+        const bouton = () => wrapper.findAll('button').find((candidat) => /(Ajouter|Annuler)$/.test(candidat.text()))
+
+        expect(bouton().text()).toMatch(/add\s*Ajouter$/)
+
+        await bouton().trigger('click')
+
+        expect(bouton().text()).toMatch(/close\s*Annuler$/)
+    })
+
+    it('donne le focus à la valeur quand le « + » de l’en-tête ouvre le formulaire', async () => {
+        const defiler = vi.fn()
+        Element.prototype.scrollIntoView = defiler
+        const wrapper = mount(PartShow, {
+            props: { part: 'Biceps', history: structuredClone(historyFixture) },
+            attachTo: document.body,
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutSansEnTeteDePage, GlassCard: passesSlot },
+            },
+        })
+
+        await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+        await flushPromises()
+
+        expect(document.activeElement).toBe(wrapper.get('input[type="number"]').element)
+        expect(defiler).toHaveBeenCalledTimes(1)
+
+        wrapper.unmount()
+        delete Element.prototype.scrollIntoView
+    })
+
+    it('laisse la valeur à deux décimales : le pas vaut 0.01 et 35,25 part au serveur', async () => {
+        const { wrapper } = mountPart()
+
+        await openAddForm(wrapper)
+        expect(wrapper.get('input[type="number"]').attributes('step')).toBe('0.01')
+
+        await wrapper.get('input[type="number"]').setValue('35.25')
+        await wrapper.find('form').trigger('submit')
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(wrapper.vm.form.value).toBe('35.25')
     })
 })
 

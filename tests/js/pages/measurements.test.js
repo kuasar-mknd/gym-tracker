@@ -559,7 +559,11 @@ describe('Measurements/Index add form', () => {
  * one tap away from the row it belongs to.
  */
 describe('Measurements/Index deletion', () => {
-    const deleteButtonFor = (wrapper, day) => wrapper.find(`[aria-label="Supprimer la mesure du ${day}"]`)
+    /** Le nom du bouton écrit le jour en français (« mer. 5 août 2026 »), jamais en ISO : on le cherche par ce jour. */
+    const JOURS = { '2026-08-05': '5 août 2026', '2026-08-12': '12 août 2026' }
+
+    const deleteButtonFor = (wrapper, day) =>
+        wrapper.find(`[aria-label^="Supprimer la mesure du"][aria-label$="${JOURS[day]}"]`)
 
     /*
      * La question est posée par un dialogue de l'application, plus par
@@ -616,6 +620,7 @@ describe('Measurements/Index deletion', () => {
 
         // The timestamp arrives with a time on it, which no one needs read aloud.
         expect(deleteButtonFor(wrapper, '2026-08-12').exists()).toBe(true)
+        expect(wrapper.find('[aria-label*="2026-08"]').exists()).toBe(false)
     })
 })
 
@@ -757,6 +762,45 @@ describe('Measurements/Parts/Index add form', () => {
         await fillAndSubmit(wrapper)
 
         expect(wrapper.find('form').exists()).toBe(false)
+    })
+})
+
+describe('Measurements/Parts/Index la bascule « Ajouter » (#2354)', () => {
+    const iconesDesBoutons = (wrapper) =>
+        wrapper
+            .findAll('button')
+            .filter((bouton) => /^(add|close)/.test(bouton.text()))
+            .map((bouton) => bouton.text().match(/^(add|close)/)[1])
+
+    it('passe l’icône de « + » à « × » et le libellé à « Annuler » formulaire ouvert, dans les deux en-têtes', async () => {
+        const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
+
+        expect(iconesDesBoutons(wrapper)).toEqual(['add', 'add'])
+
+        await click(wrapper, 'Ajouter')
+
+        expect(iconesDesBoutons(wrapper)).toEqual(['close', 'close'])
+        expect(wrapper.find('button[aria-label="Annuler la saisie"]').exists()).toBe(true)
+
+        await click(wrapper, 'Annuler')
+
+        expect(wrapper.find('form').exists()).toBe(false)
+        expect(iconesDesBoutons(wrapper)).toEqual(['add', 'add'])
+    })
+
+    it('accepte deux décimales dans la valeur', async () => {
+        const wrapper = mount(BodyPartsIndex, {
+            props: structuredClone({ latestMeasurements: PARTS, commonParts: COMMON_PARTS }),
+            global: {
+                mocks: { route: globalThis.route },
+                directives: { press: {} },
+                stubs: { ...stubs, GlassInput: false },
+            },
+        })
+        await flushPromises()
+        await click(wrapper, 'Ajouter')
+
+        expect(wrapper.get('input[type="number"]').attributes('step')).toBe('0.01')
     })
 })
 

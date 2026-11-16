@@ -4,7 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { dateAvecJour, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
@@ -32,6 +32,21 @@ const nom = computed(() => props.label ?? props.part)
 const courbe = computed(() => courbeDansLUniteDuDernierReleve(props.history))
 
 const showAddForm = ref(false)
+const formulaire = ref(null)
+
+/**
+ * Le formulaire s'ouvre au-dessus de l'historique : sous le pli depuis l'état vide, rien ne bougerait. Il se montre et
+ * sa valeur prend le focus, quelle que soit la commande qui l'a ouvert (même geste que `Measurements/Index`).
+ */
+watch(showAddForm, async (ouvert) => {
+    if (!ouvert) {
+        return
+    }
+
+    await nextTick()
+    formulaire.value?.querySelector('input')?.focus()
+    formulaire.value?.scrollIntoView?.({ block: 'center' })
+})
 
 /**
  * La mesure rejoint l'historique de cette page : `keep_part_name` demande au
@@ -81,40 +96,45 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
     <AuthenticatedLayout :page-title="nom">
         <!-- Une navigation : un seul lien, par `href` (#2117). -->
         <template #header-actions>
-            <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary"> Retour </GlassButton>
+            <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary" aria-label="Retour">
+                <GlassIcon name="arrow_back" size="xs" />
+            </GlassButton>
+            <GlassButton
+                :variant="showAddForm ? 'secondary' : 'primary'"
+                size="sm"
+                :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
+                @click="showAddForm = !showAddForm"
+            >
+                <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" />
+            </GlassButton>
         </template>
 
         <template #header>
             <div class="flex items-center justify-between">
                 <h1 class="titre-carte">{{ nom }}</h1>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
-                    <GlassIcon name="add" size="xs" class="mr-2" />
-                    Ajouter
+                    <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
+                    {{ showAddForm ? 'Annuler' : 'Ajouter' }}
                 </GlassButton>
             </div>
         </template>
 
         <div class="space-y-6">
             <!-- Chart -->
-            <GlassCard class="animate-slide-up">
+            <GlassCard v-if="courbe.length > 0" class="animate-slide-up">
                 <h3 class="text-accent-tertiary-deep sur-titre mb-4">Historique</h3>
-                <BodyPartHistoryChart
-                    v-if="courbe.length > 0"
-                    :data="courbe"
-                    :label="nom"
-                    :unit="courbe[courbe.length - 1].unit"
-                />
+                <BodyPartHistoryChart :data="courbe" :label="nom" :unit="courbe[courbe.length - 1].unit" />
             </GlassCard>
 
             <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
                 <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
-                <form @submit.prevent="submit" class="space-y-4">
+                <form ref="formulaire" @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput
                             v-model="form.value"
                             type="number"
-                            step="0.1"
+                            step="0.01"
                             label="Valeur"
                             placeholder="0.00"
                             :error="form.errors.value"
@@ -160,7 +180,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                             <div class="text-text-muted text-sm font-medium">
                                 {{ formatMeasuredAt(item.measured_at) }}
                             </div>
-                            <div v-if="item.notes" class="text-text-muted/70 mt-1 text-xs italic">
+                            <div v-if="item.notes" class="text-text-muted mt-1 text-xs italic">
                                 {{ item.notes }}
                             </div>
                         </div>

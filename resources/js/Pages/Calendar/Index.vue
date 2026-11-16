@@ -340,7 +340,7 @@ const formatDateFull = (dateStr) => {
                                         <div class="text-text-main font-bold">{{ workout.name }}</div>
                                         <div class="text-text-muted text-xs">
                                             {{ compte(workout.exercises_count, 'exercice', 'exercices') }}
-                                            <span v-if="workout.preview_exercises.length" class="text-text-muted/60"
+                                            <span v-if="workout.preview_exercises.length" class="text-text-muted"
                                                 >• {{ workout.preview_exercises.join(', ') }}</span
                                             >
                                         </div>
@@ -375,7 +375,7 @@ const formatDateFull = (dateStr) => {
                                 <div v-if="selectedDayDetails.journal.has_note" class="text-text-muted mt-1 text-sm">
                                     Notes ajoutées...
                                 </div>
-                                <div v-else class="text-text-muted/60 mt-1 text-sm italic">Aucune note écrite.</div>
+                                <div v-else class="text-text-muted mt-1 text-sm italic">Aucune note écrite.</div>
                             </div>
                         </div>
                     </GlassCard>
@@ -390,7 +390,7 @@ const formatDateFull = (dateStr) => {
                 />
             </div>
 
-            <div v-else class="text-text-muted/40 py-12 text-center">
+            <div v-else class="text-text-muted py-12 text-center">
                 <GlassIcon name="touch_app" size="xl" class="mb-2 animate-pulse" />
                 <p>Sélectionne une date pour voir les détails</p>
             </div>
