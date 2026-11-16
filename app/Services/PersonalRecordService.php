@@ -330,6 +330,11 @@ final class PersonalRecordService
         /** @var list<int> $aSupprimer */
         $aSupprimer = [];
 
+        // Les records en place dont une valeur change partent eux aussi en une
+        // seule instruction : un `save()` par type coutait une ecriture chacun.
+        /** @var list<PersonalRecord> $aReecrire */
+        $aReecrire = [];
+
         /** @var array<int, array{record: PersonalRecord, avant: float|null}> $aAnnoncer */
         $aAnnoncer = [];
 
@@ -388,7 +393,16 @@ final class PersonalRecordService
                 'workout_id' => $meilleure['seance'],
                 'set_id' => $meilleure['id'],
                 'achieved_at' => $meilleure['obtenu'],
-            ])->save();
+            ]);
+
+            // Un record cree s'insere tout de suite, son identifiant sert a
+            // l'annonce ; un record en place qui change attend l'instruction
+            // groupee, et un record inchange ne s'ecrit pas.
+            if (! $record->exists) {
+                $record->save();
+            } elseif ($record->isDirty()) {
+                $aReecrire[] = $record;
+            }
 
             // Donné à une série qui ne le tenait pas, au-dessus de ce qu'il
             // portait, ou créé : sa synchronisation n'a pas écrit, et ne
@@ -398,11 +412,64 @@ final class PersonalRecordService
             }
         }
 
+        $this->reecrire($aReecrire);
+
         if ($aSupprimer !== []) {
             PersonalRecord::query()->whereKey($aSupprimer)->delete();
         }
 
         return $aAnnoncer;
+    }
+
+    /**
+     * Ecrit en une seule instruction les records en place dont une valeur
+     * change : chaque colonne prend, par `CASE`, la valeur de son record, et
+     * garde la sienne pour ceux qu'elle ne change pas.
+     *
+     * Les valeurs sont celles que `save()` aurait envoyees : les attributs
+     * castes par `fill()`, la valeur arrondie a deux decimales comprise.
+     *
+     * @param  list<PersonalRecord>  $records  Remplis, au moins une colonne modifiee chacun.
+     */
+    private function reecrire(array $records): void
+    {
+        if ($records === []) {
+            return;
+        }
+
+        $maintenant = $records[0]->freshTimestampString();
+        $affectations = [];
+        $liaisons = [];
+
+        foreach (['value', 'secondary_value', 'workout_id', 'set_id', 'achieved_at'] as $colonne) {
+            $cas = '';
+            $liaisonsDeLaColonne = [];
+
+            foreach ($records as $record) {
+                if ($record->isDirty($colonne)) {
+                    $cas .= ' when ? then ?';
+                    $liaisonsDeLaColonne[] = $record->id;
+                    $liaisonsDeLaColonne[] = $record->getAttributes()[$colonne];
+                }
+            }
+
+            if ($cas !== '') {
+                $affectations[] = "`{$colonne}` = case `id`{$cas} else `{$colonne}` end";
+                $liaisons = [...$liaisons, ...$liaisonsDeLaColonne];
+            }
+        }
+
+        $ids = array_map(static fn (PersonalRecord $record): int => $record->id, $records);
+
+        DB::update(
+            'update `personal_records` set '.implode(', ', $affectations).', `updated_at` = ? where `id` in ('.implode(', ', array_fill(0, count($ids), '?')).')',
+            [...$liaisons, $maintenant, ...$ids],
+        );
+
+        foreach ($records as $record) {
+            $record->setAttribute('updated_at', $maintenant);
+            $record->syncOriginal();
+        }
     }
 
     /**

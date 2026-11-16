@@ -213,7 +213,7 @@ function projectionsLInventaire(): array
                     'app/Services/PersonalRecordService.php' => ['update'],
                 ],
                 'la reconstruction depuis les séries' => [
-                    'app/Services/PersonalRecordService.php' => ['reconstruire'],
+                    'app/Services/PersonalRecordService.php' => ['reconstruire', 'reecrire'],
                 ],
                 'le retrait des types que l’application ne tient plus, avant la reconstruction' => [
                     'app/Services/PersonalRecordService.php' => ['retirerLesTypesNonSuivis'],
