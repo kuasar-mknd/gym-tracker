@@ -57,7 +57,7 @@ declare(strict_types=1);
  * une tâche réglée à 03:xx partait trois fois la nuit du passage à l'heure
  * d'hiver (02:xx CEST, 02:xx CET, 03:xx CET, #2389), et celle de 02:xx, deux
  * (#2332). Celle-ci, 00:30, ouvre la suite des purges de 00:xx, espacées de
- * cinq minutes pour ne pas empiler leurs écritures sur le NAS.
+ * cinq minutes pour ne pas empiler leurs écritures sur le disque de production.
  * `TachesPlanifieesAuChangementDHeureTest` rejoue les deux nuits.
  */
 \Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180, '--force'])
