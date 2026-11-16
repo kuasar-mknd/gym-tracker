@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserAchievement;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -38,7 +39,7 @@ afterEach(function (): void {
  *
  * @return array<string, Achievement>
  */
-function succesDeLEquivalence(): array
+function succesPatchCombine(): array
 {
     return [
         'count' => Achievement::factory()->create(['slug' => 'equiv-count', 'type' => 'count', 'threshold' => 1]),
@@ -55,7 +56,7 @@ function succesDeLEquivalence(): array
  * @param  array{termine: bool, cible: array<string, mixed>}  $plan
  * @return array{user: User, workout: Workout, exercice: Exercise, cible: Set}
  */
-function monde(array $plan, Exercise $exercice): array
+function mondePatchCombine(array $plan, Exercise $exercice): array
 {
     $user = User::factory()->create();
     $debut = Carbon::parse('2026-10-07 10:00:00');
@@ -95,7 +96,7 @@ function monde(array $plan, Exercise $exercice): array
  * @param  array{user: User, workout: Workout, exercice: Exercise, cible: Set}  $monde
  * @return array<string, mixed>
  */
-function photographie(array $monde): array
+function photographiePatchCombine(array $monde): array
 {
     $user = $monde['user']->fresh();
     $rangs = Set::query()
@@ -132,12 +133,12 @@ function photographie(array $monde): array
  * @param  array<string, mixed>  $champs
  * @return array{ecritures: int, requetes: int}
  */
-function envoyerSeparement(User $user, Set $set, array $champs): array
+function envoyerSepareParPatchCombine(User $user, Set $set, array $champs): array
 {
     $total = ['ecritures' => 0, 'requetes' => 0];
 
     foreach ($champs as $nom => $valeur) {
-        $mesure = mesurer(fn () => test()->actingAs($user, 'sanctum')
+        $mesure = mesurerPatchCombine(fn () => test()->actingAs($user, 'sanctum')
             ->patchJson(route('api.v1.sets.update', $set), [$nom => $valeur])
             ->assertOk());
         $total['ecritures'] += $mesure['ecritures'];
@@ -153,9 +154,9 @@ function envoyerSeparement(User $user, Set $set, array $champs): array
  * @param  array<string, mixed>  $champs
  * @return array{ecritures: int, requetes: int}
  */
-function envoyerEnUn(User $user, Set $set, array $champs): array
+function envoyerCombinePatchCombine(User $user, Set $set, array $champs): array
 {
-    return mesurer(fn () => test()->actingAs($user, 'sanctum')
+    return mesurerPatchCombine(fn () => test()->actingAs($user, 'sanctum')
         ->patchJson(route('api.v1.sets.update', $set), $champs)
         ->assertOk());
 }
@@ -163,7 +164,7 @@ function envoyerEnUn(User $user, Set $set, array $champs): array
 /**
  * @return array{ecritures: int, requetes: int}
  */
-function mesurer(Closure $travail): array
+function mesurerPatchCombine(Closure $travail): array
 {
     $ecritures = 0;
     $requetes = 0;
@@ -210,16 +211,16 @@ dataset('parcours', [
 ]);
 
 test('un PATCH combiné laisse le même état que les PATCH séquentiels', function (array $plan, array $champs): void {
-    succesDeLEquivalence();
+    succesPatchCombine();
     $exercice = Exercise::factory()->create();
 
-    $separe = monde($plan, $exercice);
-    $combine = monde($plan, $exercice);
+    $separe = mondePatchCombine($plan, $exercice);
+    $combine = mondePatchCombine($plan, $exercice);
 
-    envoyerSeparement($separe['user'], $separe['cible'], $champs);
-    envoyerEnUn($combine['user'], $combine['cible'], $champs);
+    envoyerSepareParPatchCombine($separe['user'], $separe['cible'], $champs);
+    envoyerCombinePatchCombine($combine['user'], $combine['cible'], $champs);
 
-    expect(photographie($combine))->toEqual(photographie($separe));
+    expect(photographiePatchCombine($combine))->toEqual(photographiePatchCombine($separe));
 
     // La série de jours ne bouge qu'à la fin de la séance (l'API refuse toute
     // série d'une séance terminée) : la fin, faite par la page, la reconstruit
@@ -230,16 +231,16 @@ test('un PATCH combiné laisse le même état que les PATCH séquentiels', funct
             ->assertRedirect(route('dashboard'));
     }
 
-    expect(photographie($combine))->toEqual(photographie($separe));
+    expect(photographiePatchCombine($combine))->toEqual(photographiePatchCombine($separe));
 })->with('parcours');
 
 test('une séance terminée refuse le PATCH combiné comme chacun des PATCH séparés', function (): void {
-    succesDeLEquivalence();
+    succesPatchCombine();
     $exercice = Exercise::factory()->create();
     $plan = ['termine' => true, 'cible' => ['weight' => 50, 'reps' => 8, 'is_completed' => false]];
-    $separe = monde($plan, $exercice);
-    $combine = monde($plan, $exercice);
-    $avant = photographie($combine);
+    $separe = mondePatchCombine($plan, $exercice);
+    $combine = mondePatchCombine($plan, $exercice);
+    $avant = photographiePatchCombine($combine);
 
     foreach (['weight' => 100, 'reps' => 10, 'is_completed' => true] as $nom => $valeur) {
         $this->actingAs($separe['user'], 'sanctum')
@@ -249,25 +250,25 @@ test('une séance terminée refuse le PATCH combiné comme chacun des PATCH sép
         ->patchJson(route('api.v1.sets.update', $combine['cible']), ['weight' => 100, 'reps' => 10, 'is_completed' => true])
         ->assertForbidden();
 
-    expect(photographie($combine))->toEqual($avant)->toEqual(photographie($separe));
+    expect(photographiePatchCombine($combine))->toEqual($avant)->toEqual(photographiePatchCombine($separe));
 });
 
 test('le monde de départ est déjà identique, et le PATCH le fait bouger', function (): void {
-    succesDeLEquivalence();
+    succesPatchCombine();
     $exercice = Exercise::factory()->create();
     $plan = ['termine' => false, 'cible' => ['weight' => null, 'reps' => null, 'is_completed' => false]];
 
-    $a = monde($plan, $exercice);
-    $b = monde($plan, $exercice);
-    expect(photographie($a))->toEqual(photographie($b));
+    $a = mondePatchCombine($plan, $exercice);
+    $b = mondePatchCombine($plan, $exercice);
+    expect(photographiePatchCombine($a))->toEqual(photographiePatchCombine($b));
 
-    envoyerEnUn($a['user'], $a['cible'], ['weight' => 100, 'reps' => 10, 'is_completed' => true]);
+    envoyerCombinePatchCombine($a['user'], $a['cible'], ['weight' => 100, 'reps' => 10, 'is_completed' => true]);
     $this->actingAs($a['user'])->patch(route('workouts.update', $a['workout']), ['is_finished' => true]);
-    $apres = photographie($a);
+    $apres = photographiePatchCombine($a);
 
     // Le test d'équivalence n'est pas vide : des records, un volume, des succès
     // et des objectifs ont bougé, et la série de jours aussi.
-    expect($apres)->not->toEqual(photographie($b))
+    expect($apres)->not->toEqual(photographiePatchCombine($b))
         ->and($apres['records'])->not->toBeEmpty()
         ->and($apres['volume_de_la_seance'])->toBe(1300.0)
         ->and($apres['succes'])->not->toBeEmpty()
@@ -276,10 +277,10 @@ test('le monde de départ est déjà identique, et le PATCH le fait bouger', fun
 });
 
 test('un PATCH combiné dont un champ est refusé n’applique rien du tout', function (): void {
-    succesDeLEquivalence();
+    succesPatchCombine();
     $exercice = Exercise::factory()->create();
-    $monde = monde(['termine' => false, 'cible' => ['weight' => 50, 'reps' => 8, 'is_completed' => false]], $exercice);
-    $avant = photographie($monde);
+    $monde = mondePatchCombine(['termine' => false, 'cible' => ['weight' => 50, 'reps' => 8, 'is_completed' => false]], $exercice);
+    $avant = photographiePatchCombine($monde);
 
     $this->actingAs($monde['user'], 'sanctum')
         ->patchJson(route('api.v1.sets.update', $monde['cible']), [
@@ -291,34 +292,100 @@ test('un PATCH combiné dont un champ est refusé n’applique rien du tout', fu
         ->assertJsonValidationErrors(['reps'])
         ->assertJsonMissingValidationErrors(['weight', 'is_completed']);
 
-    expect(photographie($monde))->toEqual($avant);
+    expect(photographiePatchCombine($monde))->toEqual($avant);
 });
 
 test('un PATCH combiné rejoué est idempotent', function (): void {
-    succesDeLEquivalence();
+    succesPatchCombine();
     $exercice = Exercise::factory()->create();
-    $monde = monde(['termine' => false, 'cible' => ['weight' => null, 'reps' => null, 'is_completed' => false]], $exercice);
+    $monde = mondePatchCombine(['termine' => false, 'cible' => ['weight' => null, 'reps' => null, 'is_completed' => false]], $exercice);
     $champs = ['weight' => 100, 'reps' => 10, 'is_completed' => true];
 
-    envoyerEnUn($monde['user'], $monde['cible'], $champs);
-    $apres = photographie($monde);
-    envoyerEnUn($monde['user'], $monde['cible'], $champs);
+    envoyerCombinePatchCombine($monde['user'], $monde['cible'], $champs);
+    $apres = photographiePatchCombine($monde);
+    envoyerCombinePatchCombine($monde['user'], $monde['cible'], $champs);
 
-    expect(photographie($monde))->toEqual($apres);
+    expect(photographiePatchCombine($monde))->toEqual($apres);
 });
 
 test('le gain mesuré : requêtes HTTP et écritures SQL, trois PATCH contre un', function (): void {
-    succesDeLEquivalence();
+    succesPatchCombine();
     $exercice = Exercise::factory()->create();
     $plan = ['termine' => false, 'cible' => ['weight' => null, 'reps' => null, 'is_completed' => false]];
     $champs = ['weight' => 100, 'reps' => 10, 'is_completed' => true];
 
-    $separe = monde($plan, $exercice);
-    $combine = monde($plan, $exercice);
+    $separe = mondePatchCombine($plan, $exercice);
+    $combine = mondePatchCombine($plan, $exercice);
 
-    $avant = envoyerSeparement($separe['user'], $separe['cible'], $champs);
-    $apres = envoyerEnUn($combine['user'], $combine['cible'], $champs);
+    $avant = envoyerSepareParPatchCombine($separe['user'], $separe['cible'], $champs);
+    $apres = envoyerCombinePatchCombine($combine['user'], $combine['cible'], $champs);
 
     expect($apres['ecritures'])->toBeLessThan($avant['ecritures'])
         ->and($apres['requetes'])->toBeLessThan($avant['requetes']);
+});
+
+/*
+ * Les états INTERMÉDIAIRES. Séparés, les PATCH font passer le serveur par des
+ * états que le PATCH combiné ne traverse jamais : une série cochée dont on
+ * corrige poids puis répétitions fut un instant 200 x 10. Ce que ce passage
+ * a verrouillé (un succès, un objectif atteint) ne se reprend pas.
+ */
+dataset('ordres', [
+    'poids puis répétitions : l\'état intermédiaire dépasse le final' => [['weight', 'reps'], true],
+    'répétitions puis poids : aucun pic intermédiaire' => [['reps', 'weight'], false],
+]);
+
+test('un état intermédiaire franchit un seuil que l’état final ne franchit pas : où l’équivalence cesse', function (array $ordre, bool $divergence): void {
+    succesPatchCombine();
+    $exercice = Exercise::factory()->create();
+    $plan = ['termine' => false, 'cible' => ['weight' => 20, 'reps' => 10, 'is_completed' => true]];
+    $final = ['weight' => 120, 'reps' => 1];
+
+    $separe = mondePatchCombine($plan, $exercice);
+    $combine = mondePatchCombine($plan, $exercice);
+
+    envoyerSepareParPatchCombine($separe['user'], $separe['cible'], array_replace(array_flip($ordre), $final));
+    envoyerCombinePatchCombine($combine['user'], $combine['cible'], $final);
+
+    $s = photographiePatchCombine($separe);
+    $c = photographiePatchCombine($combine);
+
+    expect($c['series'])->toEqual($s['series'])
+        ->and($c['volume_de_la_seance'])->toEqual($s['volume_de_la_seance'])
+        ->and($c['records'])->toEqual($s['records']);
+
+    // Le volume cumulé (1 000) n'est franchi que par l'état intermédiaire
+    // 120 x 10 ; l'état final (120 x 1) ne pèse que 420. Un succès débloqué
+    // ne se reprend pas : les PATCH séparés l'ont, le combiné non.
+    if ($divergence) {
+        expect($s['succes'])->toContain('equiv-volume')
+            ->and($c['succes'])->not->toContain('equiv-volume');
+    } else {
+        expect($c['succes'])->toEqual($s['succes'])
+            ->and($c['objectifs'])->toEqual($s['objectifs']);
+    }
+})->with('ordres');
+
+test('la réponse du PATCH combiné est celle du dernier PATCH séparé', function (): void {
+    succesPatchCombine();
+    $exercice = Exercise::factory()->create();
+    $plan = ['termine' => false, 'cible' => ['weight' => 50, 'reps' => 8, 'is_completed' => false]];
+    $champs = ['weight' => 120, 'reps' => 9, 'is_completed' => true];
+
+    $separe = mondePatchCombine($plan, $exercice);
+    $combine = mondePatchCombine($plan, $exercice);
+
+    $derniere = null;
+    foreach ($champs as $nom => $valeur) {
+        $derniere = $this->actingAs($separe['user'], 'sanctum')
+            ->patchJson(route('api.v1.sets.update', $separe['cible']), [$nom => $valeur])->assertOk()->json('data');
+    }
+    $reponse = $this->actingAs($combine['user'], 'sanctum')
+        ->patchJson(route('api.v1.sets.update', $combine['cible']), $champs)->assertOk()->json('data');
+
+    foreach (['weight', 'reps', 'is_completed', 'is_warmup', 'duration_seconds', 'distance_km'] as $cle) {
+        expect($reponse[$cle])->toEqual($derniere[$cle]);
+    }
+    expect(Arr::only($reponse['personal_record'], ['type', 'value', 'secondary_value']))->toEqual(Arr::only($derniere['personal_record'], ['type', 'value', 'secondary_value']))
+        ->and(array_keys($reponse))->toEqual(array_keys($derniere));
 });
