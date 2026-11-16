@@ -259,6 +259,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: [
             \App\Http\Middleware\CleDesCopiesHorsLigne::TEMOIN,
             \App\Http\Middleware\CleDesCopiesHorsLigne::TEMOIN_EN_HTTPS,
+            \App\Support\AppareilConnu::NOM,
         ]);
 
         /*

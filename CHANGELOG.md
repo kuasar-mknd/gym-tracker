@@ -8,7 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Ajouté
-- **Une adresse ne supporte plus que 20 échecs de connexion par heure, toutes adresses IP confondues** (#2310) : au-delà, la connexion répond 429 (`Retry-After`) sans attendre ni occuper de processus, que le compte existe ou non ; seuls les échecs comptent, sur l'adresse canonique. Le plafond se lève à la fin de l'heure ou à la réinitialisation du mot de passe ; les limiteurs existants sont inchangés.
+- **Une adresse ne supporte plus que 20 échecs de connexion par heure, toutes adresses IP confondues, sauf pour l'appareil qui a déjà ouvert le compte** (#2310) : au-delà, la connexion refuse sur le champ « adresse » (renvoi vers « mot de passe oublié »), sans attente ; seuls les échecs comptent, sur l'adresse canonique, comptes inconnus compris. Un cookie d'appareil connu (chiffré, 180 jours, posé à la connexion, à la déconnexion et à la réinitialisation, révoqué par un changement de mot de passe) exempte son appareil, pour que le plafond n'enferme pas le titulaire. Les limiteurs existants sont inchangés.
 
 ### Modifié
 - **Un graphique ne se trace qu'à l'approche de l'écran, et un palier d'échauffement garde sa ligne** (#2325) : `BaseChart` construit son canevas quand sa boîte approche (marge de 200 px, hauteur gardée, tracé immédiat sans `IntersectionObserver`, nom accessible gardé avant le tracé, tout tracé sans animation à l'impression) ; retirer un palier du calculateur ne fait plus glisser la saisie d'une ligne à l'autre.

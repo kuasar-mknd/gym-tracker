@@ -9,6 +9,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\NewPasswordRequest;
 use App\Models\User;
+use App\Support\AppareilConnu;
 use App\Support\DureeDesReponsesDAuthentification;
 use App\Support\LiensDesCourriels;
 use Closure;
@@ -192,6 +193,7 @@ class NewPasswordController extends Controller
                 }
 
                 RateLimiter::clear(LoginRequest::clefDeLAdresse($user->email));
+                AppareilConnu::poser($user);
 
                 event(new PasswordReset($user));
 

@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Requests\Auth;
 
 use App\Actions\Auth\ConnecterLeCompte;
+use App\Models\User;
 use App\Support\AdresseCanonique;
+use App\Support\AppareilConnu;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +23,8 @@ class LoginRequest extends FormRequest
     public const int ECHECS_PAR_ADRESSE = 20;
 
     public const int SECONDES_DE_LA_FENETRE_PAR_ADRESSE = 3600;
+
+    private ?bool $appareilConnu = null;
 
     public function authorize(): bool
     {
@@ -65,7 +68,10 @@ class LoginRequest extends FormRequest
 
         if (! app(ConnecterLeCompte::class)->execute($identifiants, $this->boolean('remember'), $this->session())) {
             RateLimiter::hit($this->throttleKey());
-            RateLimiter::hit(self::clefDeLAdresse($this->adresseCanonique()), self::SECONDES_DE_LA_FENETRE_PAR_ADRESSE);
+
+            if (! $this->appareilConnu()) {
+                RateLimiter::hit(self::clefDeLAdresse($this->adresseCanonique()), self::SECONDES_DE_LA_FENETRE_PAR_ADRESSE);
+            }
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -73,6 +79,10 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        if ($this->appareilConnu()) {
+            RateLimiter::clear(self::clefDeLAdresse($this->adresseCanonique()));
+        }
     }
 
     /**
@@ -99,29 +109,50 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Refuse d'emblée, en 429, une adresse dont les échecs de la dernière
-     * heure, de toutes les adresses IP, passent le plafond (#2310). Le refus
-     * ne tient aucun processus : il répond avant le plancher des réponses, et
-     * ne dépend pas de l'existence du compte, l'adresse inconnue comptant comme
-     * l'autre. Un essai refusé ici ne compte pas : le plafond se lève à la fin
-     * de la fenêtre, ou par la réinitialisation du mot de passe.
+     * Refuse d'emblée une adresse dont les échecs de la dernière heure, de
+     * toutes les adresses IP, passent le plafond (#2310), sauf à un appareil
+     * connu de ce compte. Même forme que le limiteur du couple : une erreur
+     * sur `email`, qui renvoie vers « mot de passe oublié », la sortie qui ne
+     * dépend que de la boîte. Le refus répond avant le plancher des réponses
+     * et ne dépend pas de l'existence du compte, l'adresse inconnue comptant
+     * comme l'autre. Un essai refusé ici ne compte pas.
      *
-     * @throws \Illuminate\Http\Exceptions\ThrottleRequestsException
+     * @throws \Illuminate\Validation\ValidationException
      */
     private function ensureAddressIsNotOverLimit(): void
     {
-        $clef = self::clefDeLAdresse($this->adresseCanonique());
+        if ($this->appareilConnu()) {
+            return;
+        }
 
-        if (! RateLimiter::tooManyAttempts($clef, self::ECHECS_PAR_ADRESSE)) {
+        if (! RateLimiter::tooManyAttempts(self::clefDeLAdresse($this->adresseCanonique()), self::ECHECS_PAR_ADRESSE)) {
             return;
         }
 
         event(new Lockout($this));
 
-        throw new ThrottleRequestsException(
-            'Too Many Attempts.',
-            headers: ['Retry-After' => RateLimiter::availableIn($clef)],
-        );
+        throw ValidationException::withMessages([
+            'email' => trans('auth.plafond'),
+        ]);
+    }
+
+    /**
+     * Cet appareil porte-t-il le cookie du compte que désigne l'adresse
+     * saisie ? Le compte du cookie doit répondre à la même clef que l'adresse
+     * (casse, accents, forme du domaine), sinon le cookie vaut pour un autre.
+     */
+    private function appareilConnu(): bool
+    {
+        return $this->appareilConnu ??= $this->jugerLAppareil();
+    }
+
+    private function jugerLAppareil(): bool
+    {
+        $compte = AppareilConnu::compteDe($this);
+
+        return $compte instanceof User
+            && self::clefDeLAdresse($compte->email) === self::clefDeLAdresse($this->adresseCanonique())
+            && AppareilConnu::vautPour($this, $compte);
     }
 
     /**
