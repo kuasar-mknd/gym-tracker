@@ -20,7 +20,7 @@ class AdminRateLimiter
     {
         $key = 'admin-panel:'.($request->ip() ?? 'unknown');
 
-        if (RateLimiter::tooManyAttempts($key, 30)) {
+        if (RateLimiter::tooManyAttempts($key, 120)) {
             abort(429, 'Too Many Requests');
         }
 

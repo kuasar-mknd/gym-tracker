@@ -77,10 +77,10 @@ it('laisse passer une mise a jour Livewire du panneau venue d une adresse de la 
     miseAJourLivewireDepuis(ADRESSE_ADMISE_DU_PANNEAU, $instantane)->assertOk();
 });
 
-it('limite les mises a jour Livewire du panneau a trente par minute et par adresse', function (): void {
+it('limite les mises a jour Livewire du panneau a cent vingt par minute et par adresse', function (): void {
     $instantane = instantaneDeLaConnexionDuPanneau();
 
-    foreach (range(1, 29) as $_) {
+    foreach (range(1, 119) as $_) {
         miseAJourLivewireDepuis(ADRESSE_ADMISE_DU_PANNEAU, $instantane)->assertOk();
     }
 
