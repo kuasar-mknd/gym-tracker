@@ -85,4 +85,63 @@ describe('la carte d’un exercice', () => {
 
         expect(poserLeConteneur).toHaveBeenCalledWith(expect.any(HTMLElement), expect.anything())
     })
+
+    describe('la ligne « Dernière fois »', () => {
+        const avec = (type, valeurs) =>
+            monter({
+                line: {
+                    ...ligne(),
+                    exercise: { ...ligne().exercise, type },
+                    recommended_values: valeurs,
+                },
+            })
+        const lue = (wrapper) => wrapper.find('[data-derniere-fois]')
+
+        it('cite le poids et les répétitions en fr-CH', () => {
+            const wrapper = avec('strength', { weight: 62.5, reps: 8, distance_km: 0, duration_seconds: 30 })
+
+            expect(lue(wrapper).text()).toBe('Dernière fois : 62,5 kg × 8')
+        })
+
+        it('ne cite que les répétitions d’une série au poids du corps', () => {
+            const wrapper = avec('strength', { weight: 0, reps: 12, distance_km: 0, duration_seconds: 30 })
+
+            expect(lue(wrapper).text()).toBe('Dernière fois : 12 réps')
+        })
+
+        it('accorde les répétitions au singulier', () => {
+            expect(lue(avec('strength', { weight: 0, reps: 1, distance_km: 0, duration_seconds: 30 })).text()).toBe(
+                'Dernière fois : 1 rép',
+            )
+        })
+
+        it('écrit une durée d’une heure ou plus comme la roue de durée', () => {
+            const wrapper = avec('timed', { weight: 0, reps: 10, distance_km: 0, duration_seconds: 3725 })
+
+            expect(lue(wrapper).text()).toBe('Dernière fois : 01:02:05')
+        })
+
+        it('cite la distance et la durée d’un exercice de cardio', () => {
+            const wrapper = avec('cardio', { weight: 0, reps: 10, distance_km: 5.2, duration_seconds: 1500 })
+
+            expect(lue(wrapper).text()).toBe('Dernière fois : 5,2 km en 25:00')
+        })
+
+        it('cite la durée d’un exercice chronométré', () => {
+            const wrapper = avec('timed', { weight: 0, reps: 10, distance_km: 0, duration_seconds: 75 })
+
+            expect(lue(wrapper).text()).toBe('Dernière fois : 1:15')
+        })
+
+        it('se tait quand le serveur ne rend que le pré-remplissage, ou rien', () => {
+            expect(lue(avec('strength', { weight: 0, reps: 10, distance_km: 0, duration_seconds: 30 })).exists()).toBe(
+                false,
+            )
+            expect(lue(avec('strength', null)).exists()).toBe(false)
+            expect(lue(monter()).exists()).toBe(false)
+            expect(lue(avec('timed', { weight: 0, reps: 10, distance_km: 0, duration_seconds: 0 })).exists()).toBe(
+                false,
+            )
+        })
+    })
 })
