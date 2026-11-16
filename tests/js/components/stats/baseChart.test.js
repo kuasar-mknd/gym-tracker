@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 
@@ -316,5 +317,91 @@ describe('BaseChart pour un lecteur d’écran', () => {
         expect(ids).toHaveLength(2)
         expect(ids[0]).not.toBe(ids[1])
         ids.forEach((id) => expect(page.find(`[id="${id}"]`).text()).toBe('Reps — lun. : 12 ; mar. : 8.'))
+    })
+})
+
+describe('BaseChart hors de l’écran', () => {
+    let observateurs
+
+    beforeEach(() => {
+        observateurs = []
+        vi.stubGlobal(
+            'IntersectionObserver',
+            class {
+                constructor(rappel, reglages) {
+                    this.rappel = rappel
+                    this.reglages = reglages
+                    this.disconnect = vi.fn()
+                    this.observe = vi.fn()
+                    observateurs.push(this)
+                }
+            },
+        )
+    })
+
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('ne construit pas le tracé tant que la boîte est loin de l’écran, et lui garde sa hauteur', () => {
+        const wrapper = monter({ hauteur: 'h-64' })
+
+        expect(trace(wrapper).exists()).toBe(false)
+        expect(wrapper.find('.h-64').exists()).toBe(true)
+        expect(observateurs[0].observe).toHaveBeenCalledTimes(1)
+    })
+
+    it('garde le résumé lisible même quand le tracé attend', () => {
+        const wrapper = monter()
+
+        expect(wrapper.find('p.sr-only').text()).toContain('lun. : 12')
+        expect(trace(wrapper).exists()).toBe(false)
+    })
+
+    it('construit le tracé à l’approche, une fois, puis cesse d’observer', async () => {
+        const wrapper = monter()
+
+        observateurs[0].rappel([{ isIntersecting: false }])
+        await nextTick()
+        expect(trace(wrapper).exists()).toBe(false)
+
+        observateurs[0].rappel([{ isIntersecting: true }])
+        await nextTick()
+        expect(trace(wrapper).exists()).toBe(true)
+        expect(observateurs[0].disconnect).toHaveBeenCalled()
+    })
+
+    it('observe avec une marge pour tracer avant l’arrivée à l’écran', () => {
+        monter()
+
+        expect(observateurs[0].reglages.rootMargin).toBe('200px')
+    })
+
+    it('cesse d’observer quand la carte disparaît', () => {
+        const wrapper = monter()
+
+        wrapper.unmount()
+
+        expect(observateurs[0].disconnect).toHaveBeenCalled()
+    })
+
+    it('garde son nom accessible avant d’être tracé', () => {
+        const wrapper = monter({ description: 'Poids par jour' })
+        const image = wrapper.find('[role="img"]')
+
+        expect(image.attributes('aria-label')).toBe('Poids par jour')
+        expect(image.attributes('aria-describedby')).toBe(wrapper.find('p.sr-only').attributes('id'))
+    })
+
+    it('trace tout, sans animation, à l’impression, puis rend l’animation après', async () => {
+        const wrapper = monter()
+
+        window.dispatchEvent(new Event('beforeprint'))
+        await nextTick()
+        expect(trace(wrapper).exists()).toBe(true)
+        expect(trace(wrapper).props('options').animation).toBe(false)
+        expect(observateurs[0].disconnect).toHaveBeenCalled()
+
+        window.dispatchEvent(new Event('afterprint'))
+        await nextTick()
+        expect(trace(wrapper).props('options').animation).not.toBe(false)
     })
 })
