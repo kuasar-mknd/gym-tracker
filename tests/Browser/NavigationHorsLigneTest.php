@@ -69,14 +69,15 @@ class NavigationHorsLigneTest extends DuskTestCase
 
     /**
      * Si la carte « Aperçu Historique » de la liste des séances porte son
-     * canevas, et plus le composant d'erreur des graphiques.
+     * graphique (le résumé que `BaseChart` écrit sitôt le morceau chargé : le
+     * canevas, lui, attend d'approcher de l'écran), et plus le composant d'erreur des graphiques.
      */
     private const string LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE = <<<'SCRIPT'
         (() => {
             const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Aperçu Historique');
             const carte = titre?.parentElement?.parentElement ?? null;
 
-            return carte !== null && carte.querySelector('canvas') !== null && carte.querySelector('[data-graphique-indisponible]') === null;
+            return carte !== null && carte.querySelector('p.sr-only') !== null && carte.querySelector('[data-graphique-indisponible]') === null;
         })()
     SCRIPT;
 

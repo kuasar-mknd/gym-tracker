@@ -20,7 +20,7 @@ import {
     Title,
     Tooltip,
 } from 'chart.js'
-import { computed, useId } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 import { jeton } from '@/Utils/couleurs'
 import { optionsDAnneau } from '@/Utils/donut'
 import { fusionner, graduations, grille, infobulle as habillageInfobulle } from './chartConfig'
@@ -244,6 +244,38 @@ const reglagesDuGraphique = computed(() => {
     return fusionner(base, props.options)
 })
 
+/*
+ * Un canevas ne se construit que lorsqu'il approche de l'écran : sur une page
+ * de statistiques, la quarantaine de graphiques sous le pli instanciaient
+ * chacun Chart.js et jouaient leur animation sans que personne les voie
+ * (#2325). La boîte garde sa hauteur déclarée : rien ne saute à l'arrivée du
+ * tracé. Sans IntersectionObserver (vieux navigateur, jsdom), le tracé est
+ * immédiat, comme avant.
+ */
+const MARGE_D_APPROCHE = '200px'
+const boite = ref(null)
+const approche = ref(typeof IntersectionObserver === 'undefined')
+let observateur = null
+
+onMounted(() => {
+    if (approche.value || !boite.value) {
+        return
+    }
+
+    observateur = new IntersectionObserver(
+        (entrees) => {
+            if (entrees.some((entree) => entree.isIntersecting)) {
+                approche.value = true
+                observateur.disconnect()
+            }
+        },
+        { rootMargin: MARGE_D_APPROCHE },
+    )
+    observateur.observe(boite.value)
+})
+
+onBeforeUnmount(() => observateur?.disconnect())
+
 const style = computed(() =>
     props.lueur
         ? { '--lueur': `var(--color-${props.lueur})`, '--lueur-opacite': String(props.lueurOpacite) }
@@ -254,11 +286,12 @@ const style = computed(() =>
 <template>
     <div class="flex h-full w-full flex-col">
         <div
+            ref="boite"
             :class="['relative w-full', hauteur === 'h-full' ? 'min-h-0 flex-1' : hauteur, { 'avec-lueur': lueur }]"
             :style="style"
         >
             <slot v-if="vide" name="vide" />
-            <template v-else>
+            <template v-else-if="approche">
                 <component
                     :is="composant"
                     :data="chartData"
