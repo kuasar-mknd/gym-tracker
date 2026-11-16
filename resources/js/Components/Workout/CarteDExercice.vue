@@ -8,8 +8,10 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { computed } from 'vue'
+import { nombre } from '@/Utils/nombre'
 
-defineProps({
+const props = defineProps({
     line: { type: Object, required: true },
     lineIndex: { type: Number, required: true },
     isFinished: { type: Boolean, default: false },
@@ -34,6 +36,41 @@ defineEmits([
     'deplacer-serie',
     'pointerdown',
 ])
+
+const duree = (secondes) => {
+    const total = Math.round(Number(secondes))
+
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+}
+
+// Sans historique, le serveur rend le pré-remplissage de l'écran (0 kg, 10 réps, 0 km, 30 s).
+const derniereFois = computed(() => {
+    const valeurs = props.line.recommended_values
+
+    if (!valeurs) {
+        return null
+    }
+
+    const { weight, reps, distance_km: distance, duration_seconds: secondes } = valeurs
+
+    if (Number(weight) === 0 && Number(reps) === 10 && Number(distance) === 0 && Number(secondes) === 30) {
+        return null
+    }
+
+    switch (props.line.exercise.type) {
+        case 'cardio':
+            return [
+                Number(distance) > 0 ? `${nombre(distance)} km` : null,
+                Number(secondes) > 0 ? duree(secondes) : null,
+            ]
+                .filter(Boolean)
+                .join(' en ')
+        case 'timed':
+            return Number(secondes) > 0 ? duree(secondes) : null
+        default:
+            return Number(weight) > 0 ? `${nombre(weight)} kg × ${nombre(reps, 0)}` : `${nombre(reps, 0)} réps`
+    }
+})
 </script>
 
 <template>
@@ -60,6 +97,9 @@ defineEmits([
                 </h3>
                 <p class="text-text-muted text-xs font-bold uppercase">
                     {{ line.exercise.category }}
+                </p>
+                <p v-if="derniereFois" class="text-text-muted text-xs tabular-nums" data-derniere-fois>
+                    Dernière fois : {{ derniereFois }}
                 </p>
             </div>
             <div class="flex shrink-0 items-center gap-1">
