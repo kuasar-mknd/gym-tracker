@@ -21,7 +21,9 @@ class FetchBodyPartMeasurementShowAction
      *
      * Les plus recentes sont prises par l'index, puis remises dans l'ordre
      * croissant que la courbe attend — un `order by asc` avec `limit` aurait
-     * rendu les plus ANCIENNES.
+     * rendu les plus ANCIENNES. Deux relevés du même jour se départagent par
+     * leur identifiant, dans le même sens que l'index et `GoalService` : le
+     * dernier saisi est le dernier, et l'unité de la courbe suit (#2339).
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\BodyPartMeasurement>
      */
@@ -30,6 +32,7 @@ class FetchBodyPartMeasurementShowAction
         $recentes = $user->bodyPartMeasurements()
             ->where('part', $part)
             ->orderBy('measured_at', 'desc')
+            ->orderBy('id', 'desc')
             ->limit(self::POINTS_MAX)
             ->get();
 

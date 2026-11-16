@@ -42,7 +42,7 @@ class EditGoal extends EditRecord
     {
         /** @var Goal $record */
         return tap(self::modifier($record, $data), function (): void {
-            $this->refreshFormData(['current_value', 'completed_at']);
+            $this->refreshFormData(['current_value', 'completed_at', 'start_value']);
         });
     }
 

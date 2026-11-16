@@ -61,7 +61,7 @@ final class GoalService
          */
         $identifiants = [];
         $quand = [];
-        $liaisons = ['current_value' => [], 'progress_pct' => [], 'completed_at' => []];
+        $liaisons = ['current_value' => [], 'progress_pct' => [], 'completed_at' => [], 'start_value' => []];
 
         foreach ($dirtyGoals as $goal) {
             $identifiants[] = $goal->id;
@@ -75,13 +75,14 @@ final class GoalService
         }
 
         $cas = 'case id '.implode(' ', $quand).' end';
-        $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas
+        $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas.', start_value = '.$cas
             .', updated_at = ? where user_id = ? and id in ('.implode(', ', array_map(static fn (): string => '?', $identifiants)).')';
 
         \Illuminate\Support\Facades\DB::update($requete, [
             ...$liaisons['current_value'],
             ...$liaisons['progress_pct'],
             ...$liaisons['completed_at'],
+            ...$liaisons['start_value'],
             $maintenant,
             $user->id,
             ...$identifiants,
@@ -155,8 +156,33 @@ final class GoalService
             GoalType::Measurement => $this->updateMeasurementGoal($goal, $mesures),
         };
 
+        $this->partirDeLaPremiereMesure($goal);
         $this->checkCompletion($goal, $maintenant);
         $this->updateProgressPercentage($goal);
+    }
+
+    /**
+     * Un objectif de mensuration créé avant toute mesure garde un départ de 0 :
+     * à la première mesure reçue (82 kg), « descendre à 75 » se lirait comme
+     * une montée, atteinte aussitôt (#2337). Le départ devient cette mesure.
+     *
+     * Seul le passage de « aucune mesure » (valeur actuelle stockée à 0) à une
+     * mesure le déclenche : un objectif déjà suivi, dont le départ vaut 0
+     * parce que quelqu'un l'a voulu, ou atteint depuis, ne bouge pas.
+     */
+    private function partirDeLaPremiereMesure(Goal $goal): void
+    {
+        if ($goal->type !== GoalType::Measurement || ! $goal->exists || $goal->start_value > 0 || $goal->current_value <= 0) {
+            return;
+        }
+
+        $avant = $goal->getOriginal('current_value');
+
+        if (is_numeric($avant) && (float) $avant > 0) {
+            return;
+        }
+
+        $goal->start_value = $goal->current_value;
     }
 
     /**

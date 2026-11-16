@@ -567,6 +567,22 @@ describe('Goals/Edit', () => {
         })
     })
 
+    it('ouvre une mensuration au départ de 0 sur un champ vide, pas sur le 0 stocké', () => {
+        const wrapper = mountEdit({ type: 'measurement', measurement_type: 'weight', start_value: 0 })
+
+        // Un 0 renvoyé tel quel est un départ donné : la première pesée le
+        // disait atteint. Vide, le serveur prend la dernière mesure (#2337).
+        expect(wrapper.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe('')
+    })
+
+    it('garde le départ d’une mensuration qui en a un, et le 0 des autres types', () => {
+        const mensuration = mountEdit({ type: 'measurement', measurement_type: 'weight', start_value: 82 })
+        const charge = mountEdit({ start_value: 0 })
+
+        expect(mensuration.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe(82)
+        expect(charge.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe(0)
+    })
+
     it('reprend la période de l’objectif existant', () => {
         const wrapper = mountEdit({ period: 'week' })
 

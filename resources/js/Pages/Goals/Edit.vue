@@ -29,7 +29,10 @@ const form = useForm({
     measurement_type: props.goal.measurement_type,
     period: props.goal.period,
     deadline: props.goal.deadline,
-    start_value: props.goal.start_value,
+    // Un départ de 0 sur une mensuration est un départ jamais donné : vide, il
+    // part de la dernière mesure au lieu de renvoyer le 0 stocké (#2337).
+    start_value:
+        props.goal.type === 'measurement' && Number(props.goal.start_value) === 0 ? '' : props.goal.start_value,
 })
 
 const submit = () => {
