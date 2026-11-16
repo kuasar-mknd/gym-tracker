@@ -80,6 +80,17 @@ describe('la page HorsLigne', () => {
         )
     })
 
+    it('dit qu’aucune page n’est gardée plutôt que de laisser une liste vide (#2355)', () => {
+        page.props = reactive({ horsLigne: { copieDu: COPIE_DU, raison: 'reseau', datesDesProps: {} } })
+        const wrapper = mount(HorsLigne, {
+            props: { pagesSansReseau: [] },
+            global: { stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot } },
+        })
+
+        expect(wrapper.find('ul').exists()).toBe(false)
+        expect(wrapper.text()).toContain('Aucune page gardée pour le moment')
+    })
+
     it('sans réseau, ne propose pas d’attendre la réponse', () => {
         const wrapper = monter('reseau')
 

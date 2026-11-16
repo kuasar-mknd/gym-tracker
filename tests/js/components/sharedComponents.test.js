@@ -590,6 +590,34 @@ describe('GoalForm', () => {
         wrapper.unmount()
     })
 
+    it('écrit la cible du titre en nombre français, avec deux décimales au plus (#2355)', async () => {
+        const form = goalForm({ target_value: '62.5' })
+        const wrapper = mountGoalForm(form, { autoTitle: true })
+
+        form.exercise_id = 3
+        await wrapper.vm.$nextTick()
+
+        expect(form.title).toBe('Soulever 62,5 kg au Développé couché')
+
+        form.target_value = '62.25'
+        await wrapper.vm.$nextTick()
+
+        expect(form.title).toBe('Soulever 62,25 kg au Développé couché')
+
+        wrapper.unmount()
+    })
+
+    it('laisse le pas de la valeur cible et de départ à deux décimales (#2354)', () => {
+        const wrapper = mountGoalForm(goalForm({ type: 'weight' }))
+
+        expect(wrapper.findAll('input[type="number"]').map((champ) => champ.attributes('step'))).toEqual([
+            '0.01',
+            '0.01',
+        ])
+
+        wrapper.unmount()
+    })
+
     it('recognises the exercise even though the select hands back a string', async () => {
         // `<select>` values are always strings; the ids they are compared with
         // come off the database as numbers. A strict comparison names nothing.

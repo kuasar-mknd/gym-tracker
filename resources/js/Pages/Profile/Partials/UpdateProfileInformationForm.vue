@@ -217,14 +217,16 @@ const submit = () => {
                     Enregistrer
                 </GlassButton>
 
-                <Transition
-                    enter-active-class="transition ease-in-out"
-                    enter-from-class="opacity-0"
-                    leave-active-class="transition ease-in-out"
-                    leave-to-class="opacity-0"
-                >
-                    <p v-if="form.recentlySuccessful" class="text-accent-state-deep text-sm">Enregistré ✓</p>
-                </Transition>
+                <div role="status">
+                    <Transition
+                        enter-active-class="transition ease-in-out"
+                        enter-from-class="opacity-0"
+                        leave-active-class="transition ease-in-out"
+                        leave-to-class="opacity-0"
+                    >
+                        <p v-if="form.recentlySuccessful" class="text-accent-state-deep text-sm">Enregistré</p>
+                    </Transition>
+                </div>
             </div>
         </form>
     </GlassCard>

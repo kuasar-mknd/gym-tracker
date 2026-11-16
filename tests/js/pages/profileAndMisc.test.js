@@ -85,7 +85,7 @@ vi.mock('@/Components/Stats/BodyPartHistoryChart.vue', () => ({
 const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
-import { passesSlot, layoutStub } from './pageStubs'
+import { passesSlot, layoutStub, layoutSansEnTeteDePage } from './pageStubs'
 import { CIBLE, cibleDuRendu, hauteurDuRendu } from '../conventions/ciblesTactiles'
 import { nomAccessible } from '../utils/nomAccessible'
 
@@ -243,6 +243,76 @@ describe('Measurements/Parts/Show — the unit a new entry inherits', () => {
         await openAddForm(wrapper)
 
         expect(wrapper.vm.form.unit).toBe('cm')
+    })
+})
+
+describe('Measurements/Parts/Show — la saisie sur téléphone (#2354)', () => {
+    /** Sous 1 024 px, `#header` n'existe pas : seul `#header-actions` porte une commande. */
+    const monterSurTelephone = (history = historyFixture) =>
+        mount(PartShow, {
+            props: { part: 'Biceps', history: structuredClone(history) },
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutSansEnTeteDePage, GlassCard: passesSlot },
+            },
+        })
+
+    it('ouvre et ferme le formulaire depuis l’en-tête mobile, et le dit', async () => {
+        const wrapper = monterSurTelephone()
+
+        expect(wrapper.find('form').exists()).toBe(false)
+
+        await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
+
+        expect(wrapper.find('form').exists()).toBe(true)
+        expect(wrapper.get('button[aria-label="Annuler la saisie"]').text()).toContain('close')
+
+        await wrapper.get('button[aria-label="Annuler la saisie"]').trigger('click')
+
+        expect(wrapper.find('form').exists()).toBe(false)
+    })
+
+    it('change l’icône et le libellé du bouton du bureau avec l’état du formulaire', async () => {
+        const { wrapper } = mountPart()
+        const bouton = () => wrapper.findAll('button').find((candidat) => /(Ajouter|Annuler)$/.test(candidat.text()))
+
+        expect(bouton().text()).toMatch(/add\s*Ajouter$/)
+
+        await bouton().trigger('click')
+
+        expect(bouton().text()).toMatch(/close\s*Annuler$/)
+    })
+
+    it('propose d’ajouter une première mesure sur une partie vide, et ouvre le formulaire', async () => {
+        const wrapper = monterSurTelephone([])
+
+        expect(wrapper.text()).toContain('Aucune mesure')
+        expect(wrapper.find('[data-testid="empty-state-measurement-part-show"]').exists()).toBe(true)
+
+        await wrapper.get('[data-testid="empty-state-measurement-part-show"]').trigger('click')
+
+        expect(wrapper.find('form').exists()).toBe(true)
+        expect(wrapper.text()).not.toContain('Aucune mesure')
+    })
+
+    it('n’affiche pas d’état vide quand la partie a un historique', () => {
+        expect(monterSurTelephone().text()).not.toContain('Aucune mesure')
+    })
+
+    it('accepte deux décimales : 35,25 cm ne déclenche pas la bulle du navigateur', async () => {
+        const { wrapper } = mountPart()
+
+        await openAddForm(wrapper)
+
+        expect(wrapper.get('input[type="number"]').attributes('step')).toBe('0.01')
+    })
+
+    it('nomme la mesure à supprimer par son jour en français, jamais en ISO', () => {
+        const { wrapper } = mountPart([{ id: 9, value: 39.5, unit: 'cm', measured_at: '2026-03-15', notes: null }])
+        const nom = wrapper.get('[aria-label^="Supprimer la mesure"]').attributes('aria-label')
+
+        expect(normalise(nom)).toBe('Supprimer la mesure du dim. 15 mars 2026')
     })
 })
 

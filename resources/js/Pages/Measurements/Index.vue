@@ -10,7 +10,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { computed, nextTick, ref, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
-import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
+import { dateAvecJour, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassStat from '@/Components/UI/GlassStat.vue'
@@ -337,22 +337,15 @@ const latestBodyFat = computed(() => {
                                     >
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">
-                                    {{
-                                        parseCalendarDate(measurement.measured_at)?.toLocaleDateString('fr-FR', {
-                                            weekday: 'short',
-                                            day: 'numeric',
-                                            month: 'short',
-                                            year: 'numeric',
-                                        })
-                                    }}
+                                    {{ dateAvecJour(parseCalendarDate(measurement.measured_at)) }}
                                 </div>
-                                <div v-if="measurement.notes" class="text-text-muted/70 mt-1 text-xs italic">
+                                <div v-if="measurement.notes" class="text-text-muted mt-1 text-xs italic">
                                     {{ measurement.notes }}
                                 </div>
                             </div>
                             <GlassIconButton
                                 icon="delete"
-                                :label="`Supprimer la mesure du ${measurement.measured_at.substring(0, 10)}`"
+                                :label="`Supprimer la mesure du ${dateAvecJour(parseCalendarDate(measurement.measured_at))}`"
                                 ton="danger"
                                 class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-visible:opacity-100"
                                 @click="demanderSuppression(measurement)"

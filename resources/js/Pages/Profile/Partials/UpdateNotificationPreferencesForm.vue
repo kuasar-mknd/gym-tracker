@@ -61,7 +61,10 @@ const errors = ref({})
 
 let minuteurDeSucces
 
-const marquerEnregistre = () => {
+const enAttenteDuReseau = ref(false)
+
+const marquerEnregistre = (horsLigne = false) => {
+    enAttenteDuReseau.value = horsLigne
     recentlySuccessful.value = true
     clearTimeout(minuteurDeSucces)
     minuteurDeSucces = setTimeout(() => {
@@ -89,10 +92,10 @@ const updatePreferences = () => {
     pushError.value = null
 
     SyncService.patch(route('profile.preferences.update'), form)
-        .then(marquerEnregistre)
+        .then(() => marquerEnregistre())
         .catch((err) => {
             if (err.isOffline) {
-                marquerEnregistre()
+                marquerEnregistre(true)
 
                 return
             }
@@ -144,7 +147,7 @@ const updatePreferences = () => {
                     </div>
                 </div>
 
-                <div v-else-if="!pushSupported" class="text-text-muted/50 mb-6 text-xs italic">
+                <div v-else-if="!pushSupported" class="text-text-muted mb-6 text-xs italic">
                     Ton navigateur ne prend pas en charge les notifications push.
                 </div>
 
@@ -240,14 +243,18 @@ const updatePreferences = () => {
                     Enregistrer
                 </GlassButton>
 
-                <Transition
-                    enter-active-class="transition ease-in-out"
-                    enter-from-class="opacity-0"
-                    leave-active-class="transition ease-in-out"
-                    leave-to-class="opacity-0"
-                >
-                    <p v-if="recentlySuccessful" class="text-accent-state-deep text-sm">Enregistré.</p>
-                </Transition>
+                <div role="status">
+                    <Transition
+                        enter-active-class="transition ease-in-out"
+                        enter-from-class="opacity-0"
+                        leave-active-class="transition ease-in-out"
+                        leave-to-class="opacity-0"
+                    >
+                        <p v-if="recentlySuccessful" class="text-accent-state-deep text-sm">
+                            {{ enAttenteDuReseau ? 'Sera enregistré au retour du réseau' : 'Enregistré' }}
+                        </p>
+                    </Transition>
+                </div>
             </div>
 
             <p

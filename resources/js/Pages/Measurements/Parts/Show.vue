@@ -11,6 +11,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { nombre } from '@/Utils/nombre'
 import { courbeDansLUniteDuDernierReleve } from '@/Utils/mesuresEnUnite'
 
@@ -82,28 +83,31 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
         <!-- Une navigation : un seul lien, par `href` (#2117). -->
         <template #header-actions>
             <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary"> Retour </GlassButton>
+            <GlassButton
+                :variant="showAddForm ? 'secondary' : 'primary'"
+                size="sm"
+                :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
+                @click="showAddForm = !showAddForm"
+            >
+                <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" />
+            </GlassButton>
         </template>
 
         <template #header>
             <div class="flex items-center justify-between">
                 <h1 class="titre-carte">{{ nom }}</h1>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
-                    <GlassIcon name="add" size="xs" class="mr-2" />
-                    Ajouter
+                    <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
+                    {{ showAddForm ? 'Annuler' : 'Ajouter' }}
                 </GlassButton>
             </div>
         </template>
 
         <div class="space-y-6">
             <!-- Chart -->
-            <GlassCard class="animate-slide-up">
+            <GlassCard v-if="courbe.length > 0" class="animate-slide-up">
                 <h3 class="text-accent-tertiary-deep sur-titre mb-4">Historique</h3>
-                <BodyPartHistoryChart
-                    v-if="courbe.length > 0"
-                    :data="courbe"
-                    :label="nom"
-                    :unit="courbe[courbe.length - 1].unit"
-                />
+                <BodyPartHistoryChart :data="courbe" :label="nom" :unit="courbe[courbe.length - 1].unit" />
             </GlassCard>
 
             <!-- Formulaire d'ajout -->
@@ -114,7 +118,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                         <GlassInput
                             v-model="form.value"
                             type="number"
-                            step="0.1"
+                            step="0.01"
                             label="Valeur"
                             placeholder="0.00"
                             :error="form.errors.value"
@@ -147,8 +151,19 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                 </form>
             </GlassCard>
 
+            <GlassEmptyState
+                v-if="history.length === 0 && !showAddForm"
+                icon="📏"
+                color="cyan"
+                title="Aucune mesure"
+                description="Enregistre une première mesure pour ouvrir la courbe."
+                action-label="Ajouter une mesure"
+                action-id="empty-state-measurement-part-show"
+                @action="showAddForm = true"
+            />
+
             <!-- List -->
-            <div class="stagger-2 animate-slide-up space-y-2">
+            <div v-else-if="history.length > 0" class="stagger-2 animate-slide-up space-y-2">
                 <GlassCard v-for="item in [...history].reverse()" :key="item.id" padding="p-4" class="group">
                     <div class="flex items-center justify-between">
                         <div>
@@ -160,7 +175,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                             <div class="text-text-muted text-sm font-medium">
                                 {{ formatMeasuredAt(item.measured_at) }}
                             </div>
-                            <div v-if="item.notes" class="text-text-muted/70 mt-1 text-xs italic">
+                            <div v-if="item.notes" class="text-text-muted mt-1 text-xs italic">
                                 {{ item.notes }}
                             </div>
                         </div>

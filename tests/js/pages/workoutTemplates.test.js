@@ -240,6 +240,17 @@ const deuxSeriesDeDeveloppe = {
  * chaque valeur. Un refus portait sur une clé que le formulaire n'affichait
  * pas (`exercises.0.sets.0.reps`) : « Enregistrer » restait sans effet visible.
  */
+describe('un refus de la description d’un modèle', () => {
+    it('se dit une fois, sous le champ que GlassTextarea annonce déjà (#2355)', async () => {
+        const wrapper = mountEdit(deuxSeriesDeDeveloppe)
+
+        templateForm().errors.description = 'La description est trop longue.'
+        await flushPromises()
+
+        expect(wrapper.text().split('La description est trop longue.')).toHaveLength(2)
+    })
+})
+
 describe('les bornes d’un modèle dans son formulaire', () => {
     it('affiche le message du serveur sous la série et l’exercice refusés, et le dit près du bouton', async () => {
         const wrapper = mountEdit(deuxSeriesDeDeveloppe)

@@ -28,7 +28,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { computed, ref, watch } from 'vue'
 import { demainEnJourCalendaire } from '@/Utils/date'
-import { compte } from '@/Utils/nombre'
+import { compte, nombre } from '@/Utils/nombre'
 
 const props = defineProps({
     form: { type: Object, required: true },
@@ -96,7 +96,7 @@ watch(
         if (props.form.type === 'weight' && props.form.exercise_id) {
             const exercise = props.exercises.find((candidate) => candidate.id == props.form.exercise_id)
             if (exercise) {
-                props.form.title = `Soulever ${props.form.target_value || '?'} kg au ${exercise.name}`
+                props.form.title = `Soulever ${props.form.target_value ? nombre(props.form.target_value, 2) : '?'} kg au ${exercise.name}`
             }
         } else if (props.form.type === 'measurement' && props.form.measurement_type) {
             const measurement = props.measurementTypes.find(
@@ -111,7 +111,7 @@ watch(
                         : props.form.measurement_type === 'weight'
                           ? 'kg'
                           : 'cm'
-                props.form.title = `Atteindre ${props.form.target_value || '?'} ${unit} de ${measurement.label}`
+                props.form.title = `Atteindre ${props.form.target_value ? nombre(props.form.target_value, 2) : '?'} ${unit} de ${measurement.label}`
             }
         } else if (props.form.type === 'frequency') {
             if (props.form.period === 'week') {
@@ -190,7 +190,7 @@ watch(
                     v-model="form.target_value"
                     :label="estHebdomadaire ? 'Séances par semaine' : 'Valeur Cible'"
                     type="number"
-                    :step="estHebdomadaire ? 1 : 0.1"
+                    :step="estHebdomadaire ? 1 : 0.01"
                     :min="estHebdomadaire ? 1 : undefined"
                     :max="estHebdomadaire ? 14 : undefined"
                     required
@@ -201,7 +201,7 @@ watch(
                     v-model="form.start_value"
                     label="Valeur de Départ (Optionnel)"
                     type="number"
-                    step="0.1"
+                    step="0.01"
                     placeholder="0"
                     :error="form.errors.start_value"
                 />

@@ -156,13 +156,13 @@ const {
                                 class="text-text-muted border-border bg-surface-card/50 flex items-center gap-2 rounded-xl border px-2 py-1 text-xs transition duration-300 hover:-translate-y-0.5 active:scale-95"
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
-                                <span class="text-text-muted/50"
+                                <span class="text-text-muted"
                                     >• {{ compte(line.workout_template_sets_count || 0, 'série', 'séries') }}</span
                                 >
                             </div>
                             <div
                                 v-if="template.workout_template_lines_count > 3"
-                                class="text-text-muted/50 mt-2 ml-1 text-xs font-bold italic"
+                                class="text-text-muted mt-2 ml-1 text-xs font-bold italic"
                             >
                                 + {{ compte(template.workout_template_lines_count - 3, 'exercice', 'exercices') }}
                             </div>

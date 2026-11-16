@@ -145,9 +145,6 @@ const emit = defineEmits(['close', 'submit'])
                     placeholder="Comment s'est passée ta journée ? Entraînement, repas, sensations..."
                     :error="form.errors.content"
                 />
-                <div v-if="form.errors.content" class="text-accent-danger-deep mt-1 text-xs">
-                    {{ form.errors.content }}
-                </div>
             </div>
 
             <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

@@ -61,9 +61,6 @@ const envoyer = () => {
                         dusk="workout-notes-input"
                         :error="form.errors.notes"
                     />
-                    <p v-if="form.errors.notes" class="text-accent-danger-deep mt-2 text-sm font-medium">
-                        {{ form.errors.notes }}
-                    </p>
                 </div>
 
                 <GlassButton

@@ -50,7 +50,7 @@ class ProfileEditTest extends DuskTestCase
                 ->script("document.querySelector('[dusk=\"save-profile-btn\"]').scrollIntoView({block: 'center'});");
 
             $browser->click('@save-profile-btn')
-                ->waitForText('Enregistré ✓', 15)
+                ->waitForText('Enregistré', 15)
                 ->assertInputValue('@profile-name-input', $newName);
 
             // « Enregistré ✓ » est un message, pas une preuve. Sans cette
@@ -83,7 +83,7 @@ class ProfileEditTest extends DuskTestCase
                 ->type('@confirm-password-input', 'newpassword123')
                 ->clickWhenSettled('[data-testid="update-password-button"]');
 
-            // Aucune attente sur « Enregistré ✓ » ici : UpdateProfileInformationForm
+            // Aucune attente sur « Enregistré » ici : UpdateProfileInformationForm
             // affiche EXACTEMENT le même texte, encore visible depuis l'étape
             // précédente. C'est ce faux positif qui masquait l'échec — la seule
             // preuve qui vaille est l'état du mot de passe en base, ci-dessous.
