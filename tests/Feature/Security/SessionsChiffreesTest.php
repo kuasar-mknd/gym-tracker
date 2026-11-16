@@ -8,6 +8,7 @@ use App\Support\CleDesCopiesEnSession;
 use App\Support\EcheanceDuCookie;
 use App\Support\Sessions\SessionChiffreeGardee;
 use App\Support\Sessions\SessionGardee;
+use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,7 +39,15 @@ use Tests\Support\UneAutreRequete;
  */
 function chiffreesPoser(bool $chiffrees): void
 {
-    config(['session.driver' => 'memcached', 'session.store' => 'array', 'session.encrypt' => $chiffrees]);
+    // Un seul gestionnaire pour tout le test : `forgetDrivers()` rebâtit sinon
+    // le magasin sur un clone vide, et la bascule ne verrait aucune session.
+    if (! app()->bound('chiffrees.gestionnaire')) {
+        app()->instance('chiffrees.gestionnaire', new ArraySessionHandler(config()->integer('session.lifetime')));
+    }
+
+    $gestionnaire = app('chiffrees.gestionnaire');
+    app('session')->extend('chiffrees-partage', static fn (): mixed => $gestionnaire);
+    config(['session.driver' => 'chiffrees-partage', 'session.encrypt' => $chiffrees]);
 
     app('session')->forgetDrivers();
     app()->forgetInstance('session.store');
@@ -109,6 +118,8 @@ it('ferme une fois la session écrite en clair à la bascule, sans erreur, et en
         ->and(UneAutreRequete::litLaSession($identifiant))->toContain('login_web');
 
     chiffreesPoser(true);
+
+    expect(UneAutreRequete::litLaSession($identifiant))->toContain('login_web');
 
     $reponse = $appareil->envoyer('GET', '/dashboard');
 
@@ -246,6 +257,8 @@ function chiffreesAppareilApresLaBascule(): Appareil
     $appareil = chiffreesAppareilConnecte(User::factory()->create());
     $appareil->envoyer('GET', '/dashboard')->assertOk();
     chiffreesPoser(true);
+
+    expect(UneAutreRequete::litLaSession(chiffreesIdentifiant($appareil)))->toContain('login_web');
 
     return $appareil;
 }
