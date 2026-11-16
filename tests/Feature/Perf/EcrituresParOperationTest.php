@@ -72,8 +72,9 @@ it('crée une série en deux écritures : la série et le volume de la séance',
 
     expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
         // Lectures comprises : la ligne, sa séance et leur compte se lisent une
-        // fois, que l'action pose sur la série et sur la séance (#2325).
-        ->and($mesure['requetes'])->toBe(9, implode("\n", $mesure['toutes']));
+        // fois, que l'action pose sur la série et sur la séance (#2325) ; la fin de la
+        // séance se relit en base à chaque série cochée (une lecture).
+        ->and($mesure['requetes'])->toBe(10, implode("\n", $mesure['toutes']));
 });
 
 it('crée une série sous une clé d idempotence sans chercher deux fois la clé, ni relire la ligne', function (): void {
@@ -91,7 +92,7 @@ it('crée une série sous une clé d idempotence sans chercher deux fois la clé
         ->and($lecturesDeLaCle)->toHaveCount(1)
         ->and($lecturesDeLaLigne)->toHaveCount(1)
         ->and($lecturesDeLaSeance)->toHaveCount(1)
-        ->and($mesure['requetes'])->toBe(10, implode("\n", $mesure['toutes']));
+        ->and($mesure['requetes'])->toBe(11, implode("\n", $mesure['toutes']));
 });
 
 it('modifie une série en deux écritures', function (): void {
