@@ -1,5 +1,6 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import { useVerrouDEcran } from '@/composables/useVerrouDEcran'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
@@ -32,7 +33,21 @@ export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
         )
     }
 
-    const showTimer = ref(false)
+    const verrouDEcran = useVerrouDEcran()
+
+    const carteOuverte = ref(false)
+
+    /** Fermer la carte (`showTimer = false`) rend le verrou d'écran : l'écran peut s'éteindre de nouveau. */
+    const showTimer = computed({
+        get: () => carteOuverte.value,
+        set: (ouverte) => {
+            carteOuverte.value = ouverte
+
+            if (!ouverte) {
+                verrouDEcran.relacher()
+            }
+        },
+    })
     const timerDuration = ref(90)
 
     /**
@@ -57,9 +72,10 @@ export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
      */
     const demarrerLeRepos = (duree) => {
         sortieAudio.preparer()
+        verrouDEcran.garder()
         timerDuration.value = duree || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
-        showTimer.value = true
+        carteOuverte.value = true
     }
 
     const openRestTimer = () => demarrerLeRepos()
@@ -115,5 +131,13 @@ export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
      */
     const timerRun = ref(0)
 
-    return { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation }
+    return {
+        showTimer,
+        timerDuration,
+        autoRestTimer,
+        timerRun,
+        openRestTimer,
+        setAutoRestTimer,
+        apresValidation,
+    }
 }
