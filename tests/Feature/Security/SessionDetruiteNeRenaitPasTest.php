@@ -472,6 +472,7 @@ it('rouvre par le cookie « se souvenir de moi » une session neuve, et la pose'
  * de la base (`ExistenceAwareInterface`). Seul le magasin change.
  */
 it('bâtit chaque magasin de sessions en SessionGardee, sur le gestionnaire de Laravel', function (string $pilote, string $gestionnaire): void {
+    config(['session.encrypt' => false]);
     detruitePoserLePilote($pilote);
 
     $magasin = app('session.store');

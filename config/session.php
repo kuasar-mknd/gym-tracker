@@ -47,9 +47,14 @@ return [
     | should be encrypted before it's stored. All encryption is performed
     | automatically by Laravel and you may use the session like normal.
     |
+    | Vrai par défaut (#2353) : la session porte la clé des copies hors ligne
+    | (`CleDesCopiesEnSession`), et ne se lit plus en clair dans Redis. Une
+    | session écrite sans chiffrement ne se déchiffre pas : Laravel la lit
+    | comme vide, son titulaire en ouvre une neuve.
+    |
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', false),
+    'encrypt' => filter_var(env('SESSION_ENCRYPT', true), FILTER_VALIDATE_BOOLEAN),
 
     /*
     |--------------------------------------------------------------------------
