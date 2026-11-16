@@ -146,7 +146,7 @@ it('ramène les archives sous le seuil du contrôle du matin, avec de la place p
 
         expect(sauvegardesPlanifieesLancer('backup:clean'))->toBe(0, Artisan::output());
 
-        // La sauvegarde de 02:30 et trois lancées du panneau avant le contrôle de 08:00 : 400 Mo,
+        // La sauvegarde de 01:55 et trois lancées du panneau avant le contrôle de 08:00 : 400 Mo,
         // dans les 500 de marge sans les remplir. Le contrôle n'échoue qu'au-delà de son seuil (`>`) :
         // 5 500 Mo pile passeraient aussi, mais ne prouveraient que cette comparaison.
         foreach (range(0, 3) as $rang) {
@@ -212,12 +212,12 @@ it('ne garde aucune archive de plus de sept mois, et une par mois jusqu’à six
     $archives = $dossier.'/'.config()->string('backup.backup.name');
     File::ensureDirectoryExists($archives);
 
-    // Le nettoyage de 02:00, après trois ans de sauvegardes de 02:30.
-    Carbon::setTestNow(Carbon::parse('2026-10-12 02:00:00'));
+    // Le nettoyage de 01:50, après trois ans de sauvegardes de 01:55.
+    Carbon::setTestNow(Carbon::parse('2026-10-12 01:50:00'));
 
     try {
         foreach (range(1, 3 * 365) as $jours) {
-            sauvegardesPlanifieesPetiteArchive($archives, now()->subDays($jours)->setTime(2, 30));
+            sauvegardesPlanifieesPetiteArchive($archives, now()->subDays($jours)->setTime(1, 55));
         }
 
         expect(sauvegardesPlanifieesLancer('backup:clean'))->toBe(0, Artisan::output());
@@ -235,3 +235,48 @@ it('ne garde aucune archive de plus de sept mois, et une par mois jusqu’à six
         EventHandler::enable();
     }
 });
+
+/*
+ * Aucune sauvegarde ne part deux fois la nuit du passage à l'heure d'hiver
+ * (#2332). Le fuseau répète 02:00–03:00 le 25 octobre 2026 : une tâche à
+ * 02:30 s'y présente deux fois, à une heure d'écart, et son verrou ne la
+ * retient que le temps de son exécution ; et toute tâche réglée à 03:xx part
+ * alors trois fois (02:xx CEST, 02:xx CET, 03:xx CET), aussi hors de l'heure
+ * répétée. Au printemps, l'heure sautée n'en
+ * fait partir aucune de moins.
+ */
+it('ne lance chaque tâche de sauvegarde qu’une fois par nuit de changement d’heure', function (string $nuit): void {
+    $minuit = Carbon::parse($nuit.' 00:00:00', 'Europe/Paris');
+    $fin = $minuit->copy()->addDay()->utc();
+    $debut = $minuit->copy()->utc();
+    $prefixe = Application::formatCommandString('backup:');
+    $evenements = collect(app(Schedule::class)->events())
+        ->filter(static fn (Event $evenement): bool => str_starts_with((string) $evenement->command, $prefixe));
+
+    expect($evenements)->toHaveCount(3);
+
+    $departs = [];
+
+    try {
+        for ($instant = $debut->copy(); $instant->lessThan($fin); $instant->addMinute()) {
+            Carbon::setTestNow($instant->copy());
+
+            foreach ($evenements as $evenement) {
+                if ($evenement->isDue(app())) {
+                    $departs[(string) $evenement->command][] = now()->timezone('Europe/Paris')->format('H:i T');
+                }
+            }
+        }
+    } finally {
+        Carbon::setTestNow();
+    }
+
+    expect($departs)->toHaveCount(3);
+
+    foreach ($departs as $commande => $heures) {
+        expect($heures)->toHaveCount(1, $commande.' part à '.implode(', ', $heures));
+    }
+})->with([
+    'heure d’hiver' => ['2026-10-25'],
+    'heure d’été' => ['2026-03-29'],
+]);
