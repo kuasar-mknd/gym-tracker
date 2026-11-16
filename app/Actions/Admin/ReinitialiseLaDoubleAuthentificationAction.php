@@ -32,7 +32,9 @@ final readonly class ReinitialiseLaDoubleAuthentificationAction
             'app_authentication_recovery_codes' => null,
         ])->save();
 
-        Log::notice('Double authentification d\'un administrateur réinitialisée.', ['admin_id' => $admin->id]);
+        if ($enAvait) {
+            Log::notice('Double authentification d\'un administrateur réinitialisée.', ['admin_id' => $admin->id]);
+        }
 
         return $enAvait;
     }

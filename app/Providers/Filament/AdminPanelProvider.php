@@ -328,6 +328,10 @@ final class AdminPanelProvider extends PanelProvider
         return [
             \App\Http\Middleware\AdminRateLimiter::class,
             \App\Http\Middleware\IpWhitelist::class,
+            // La double authentification obligatoire (#2353) n'est un middleware que des
+            // pages : sans lui ici, un administrateur sans secret garderait les mises à
+            // jour Livewire d'un composant ouvert avant le déploiement ou la réinitialisation.
+            \App\Http\Middleware\ExigeLaDoubleAuthentificationDuPanneau::class,
         ];
     }
 }

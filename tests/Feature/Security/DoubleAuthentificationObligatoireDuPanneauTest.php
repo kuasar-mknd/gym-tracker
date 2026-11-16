@@ -16,6 +16,8 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\Support\FilamentAdminPanel;
 
+use function Livewire\trigger;
+
 /*
  * La double authentification est obligatoire au panneau (#2353) : un
  * administrateur qui n'a pas enrôlé son application est conduit à l'enrôlement
@@ -100,6 +102,45 @@ it('enrôle l’application et ses codes de récupération depuis la page d’en
         ->and(Hash::check($enrolement['recoveryCodes'][0], $administrateur->getAppAuthenticationRecoveryCodes()[0] ?? ''))->toBeTrue();
 
     $this->get('/backoffice')->assertOk();
+});
+
+it('refuse aussi les mises à jour Livewire d’un composant du panneau ouvert avant la perte de la double authentification', function (): void {
+    $administrateur = superAdministrateurDuPanneau();
+    /** @var string $page */
+    $page = $this->actingAs($administrateur, 'admin')->get('/backoffice')->assertOk()->getContent();
+    expect(preg_match('/wire:snapshot="([^"]+)"/', $page, $trouvaille))->toBe(1);
+    $instantane = html_entity_decode($trouvaille[1] ?? '', ENT_QUOTES);
+
+    $envoyer = function () use ($instantane) {
+        trigger('flush-state');
+
+        return $this->withSession(['_token' => 'jeton'])->postJson(
+            route('default-livewire.update', absolute: false),
+            ['components' => [['snapshot' => $instantane, 'updates' => [], 'calls' => []]]],
+            ['X-Livewire' => 'true', 'X-CSRF-TOKEN' => 'jeton'],
+        );
+    };
+
+    $envoyer()->assertOk();
+
+    $administrateur->forceFill(['app_authentication_secret' => null])->save();
+
+    $envoyer()->assertRedirect(adresseDeLEnrolement());
+});
+
+it('laisse passer les mises à jour Livewire de la page d’enrôlement elle-même', function (): void {
+    $administrateur = superAdministrateurDuPanneau(avecLaDoubleAuthentification: false);
+    /** @var string $page */
+    $page = $this->actingAs($administrateur, 'admin')->get(adresseDeLEnrolement())->assertOk()->getContent();
+    expect(preg_match('/wire:snapshot="([^"]+)"/', $page, $trouvaille))->toBe(1);
+
+    trigger('flush-state');
+
+    $this->withSession(['_token' => 'jeton'])->postJson(
+        route('default-livewire.update', absolute: false),
+        ['components' => [['snapshot' => html_entity_decode($trouvaille[1] ?? '', ENT_QUOTES), 'updates' => [], 'calls' => []]]],
+        ['X-Livewire' => 'true', 'X-CSRF-TOKEN' => 'jeton'],
+    )->assertOk();
 });
 
 it('renvoie de la page d’enrôlement celui qui l’a déjà fait', function (): void {
