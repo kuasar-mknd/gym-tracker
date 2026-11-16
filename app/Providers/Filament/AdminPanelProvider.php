@@ -104,7 +104,7 @@ final class AdminPanelProvider extends PanelProvider
             ->pages([Dashboard::class])
             ->widgets($this->getWidgets())
             ->middleware($this->getMiddleware())
-            ->middleware($this->getMiddlewarePersistant(), isPersistent: true)
+            ->middleware($this->getPersistentMiddleware(), isPersistent: true)
             ->authMiddleware([Authenticate::class])
             ->plugins($this->getPlugins())
             ->navigationItems($this->getNavigationItems());
@@ -313,7 +313,7 @@ final class AdminPanelProvider extends PanelProvider
      *
      * @return array<int, class-string>
      */
-    private function getMiddlewarePersistant(): array
+    private function getPersistentMiddleware(): array
     {
         return [
             \App\Http\Middleware\AdminRateLimiter::class,
