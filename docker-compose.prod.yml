@@ -111,7 +111,9 @@ services:
         restart: always
         logging: *app-logging
         ports:
-            - 8888:80
+            # Sur la boucle locale de l'hôte : le proxy inverse y joint app, et
+            # aucun autre appareil du réseau ne peut forger X-Forwarded-For (#2309).
+            - 127.0.0.1:8888:80
         environment:
             <<: *app-env
             # Security & Admin
