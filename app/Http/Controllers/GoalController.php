@@ -183,6 +183,8 @@ class GoalController extends Controller
 
         if ($request->departEtaitVide()) {
             $this->goalService->partirDeLaDerniereMesure($goal);
+        } else {
+            $this->goalService->repartirSiLaMesureChange($goal);
         }
 
         $this->goalService->updateGoalProgress($goal);

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use App\Enums\GoalType;
 use App\Enums\PersonalRecordType;
+use App\Filament\Resources\Goals\GoalResource;
+use App\Filament\Resources\Goals\Pages\EditGoal;
 use App\Models\BodyMeasurement;
+use App\Models\BodyPartMeasurement;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\PersonalRecord;
@@ -13,6 +16,8 @@ use App\Services\GoalService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Livewire\Livewire;
+use Tests\Support\FilamentAdminPanel;
 
 use function Pest\Laravel\actingAs;
 
@@ -280,4 +285,102 @@ it('part de la première mesure aussi par le chemin d’un seul objectif', funct
 
     expect($lu->start_value)->toBe(82.0)
         ->and($lu->completed_at)->toBeNull();
+});
+
+/**
+ * Un objectif de poids de corps déjà suivi, à départ 0 : 82 kg lus, cible 90.
+ */
+function objectifDePoidsDejaSuivi(User $user): Goal
+{
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 82, 'measured_at' => '2026-06-10']);
+    BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Waist', 'value' => 80, 'unit' => 'cm', 'measured_at' => '2026-06-10']);
+
+    return Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'weight',
+        'exercise_id' => null,
+        'start_value' => 0,
+        'current_value' => 82,
+        'progress_pct' => 91.1,
+        'target_value' => 90,
+    ]);
+}
+
+it('repart de la dernière mesure de la nouvelle partie du corps quand on change la mensuration', function (): void {
+    $user = User::factory()->create();
+    $objectif = objectifDePoidsDejaSuivi($user);
+
+    actingAs($user)
+        ->put(route('goals.update', $objectif), ['title' => 'Taille', 'type' => 'measurement', 'measurement_type' => 'Waist', 'target_value' => 75, 'start_value' => 0])
+        ->assertSessionHasNoErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->start_value)->toBe(80.0)
+        ->and($objectif->current_value)->toBe(80.0)
+        ->and($objectif->progress_pct)->toBe(0.0)
+        ->and($objectif->completed_at)->toBeNull();
+});
+
+it('repart de la dernière mesure au panneau quand on change la mensuration', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Goal')), 'admin');
+    $objectif = objectifDePoidsDejaSuivi(User::factory()->create());
+
+    Livewire::test(EditGoal::class, ['record' => $objectif->getKey()])
+        ->fillForm(['measurement_type' => 'Waist', 'target_value' => 75, 'start_value' => 0])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->start_value)->toBe(80.0)
+        ->and($objectif->progress_pct)->toBe(0.0)
+        ->and($objectif->completed_at)->toBeNull();
+});
+
+it('ne marque pas atteint un objectif de charge devenu mensuration', function (): void {
+    $user = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Waist', 'value' => 80, 'unit' => 'cm', 'measured_at' => '2026-06-10']);
+    $exercice = Exercise::factory()->create(['user_id' => null, 'type' => 'strength']);
+    PersonalRecord::factory()->create(['user_id' => $user->id, 'exercise_id' => $exercice->id, 'type' => PersonalRecordType::MaxWeight, 'value' => 100]);
+    $objectif = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Weight,
+        'measurement_type' => null,
+        'exercise_id' => $exercice->id,
+        'start_value' => 0,
+        'target_value' => 120,
+    ]);
+    app(GoalService::class)->syncGoals($user);
+    expect($objectif->refresh()->current_value)->toBe(100.0);
+
+    actingAs($user)
+        ->put(route('goals.update', $objectif), ['title' => 'Taille', 'type' => 'measurement', 'measurement_type' => 'Waist', 'target_value' => 75, 'start_value' => 0])
+        ->assertSessionHasNoErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->start_value)->toBe(80.0)
+        ->and($objectif->completed_at)->toBeNull();
+});
+
+it('lit la mesure chez le compte choisi au panneau quand on change de compte et vide le départ', function (): void {
+    $ancien = User::factory()->create();
+    $nouveau = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $ancien->id, 'part' => 'Waist', 'value' => 95, 'unit' => 'cm', 'measured_at' => '2026-06-10']);
+    BodyPartMeasurement::factory()->create(['user_id' => $nouveau->id, 'part' => 'Waist', 'value' => 80, 'unit' => 'cm', 'measured_at' => '2026-06-10']);
+    $objectif = Goal::factory()->create([
+        'user_id' => $ancien->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'Waist',
+        'exercise_id' => null,
+        'start_value' => 95,
+        'target_value' => 75,
+    ]);
+    $objectif->load('user');
+
+    $enregistre = GoalResource::enregistrer($objectif, ['user_id' => $nouveau->id, 'title' => 'T', 'type' => 'measurement', 'measurement_type' => 'Waist', 'target_value' => 75, 'start_value' => null]);
+
+    expect($enregistre->start_value)->toBe(80.0);
 });
