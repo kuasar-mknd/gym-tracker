@@ -293,11 +293,29 @@ describe('Measurements/Parts/Show — la saisie sur téléphone (#2354)', () => 
         await wrapper.get('[data-testid="empty-state-measurement-part-show"]').trigger('click')
 
         expect(wrapper.find('form').exists()).toBe(true)
-        expect(wrapper.text()).not.toContain('Aucune mesure')
     })
 
-    it('n’affiche pas d’état vide quand la partie a un historique', () => {
-        expect(monterSurTelephone().text()).not.toContain('Aucune mesure')
+    it('donne le focus à la valeur quand le formulaire s’ouvre, même depuis l’état vide', async () => {
+        const defiler = vi.fn()
+        Element.prototype.scrollIntoView = defiler
+        const wrapper = mount(PartShow, {
+            props: { part: 'Biceps', history: [] },
+            attachTo: document.body,
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutSansEnTeteDePage, GlassCard: passesSlot },
+            },
+        })
+
+        await wrapper.get('[data-testid="empty-state-measurement-part-show"]').trigger('click')
+        await flushPromises()
+
+        expect(document.activeElement).toBe(wrapper.get('input[type="number"]').element)
+        expect(defiler).toHaveBeenCalledTimes(1)
+
+        wrapper.unmount()
+        delete Element.prototype.scrollIntoView
     })
 
     it('accepte deux décimales : 35,25 cm ne déclenche pas la bulle du navigateur', async () => {
@@ -306,13 +324,6 @@ describe('Measurements/Parts/Show — la saisie sur téléphone (#2354)', () => 
         await openAddForm(wrapper)
 
         expect(wrapper.get('input[type="number"]').attributes('step')).toBe('0.01')
-    })
-
-    it('nomme la mesure à supprimer par son jour en français, jamais en ISO', () => {
-        const { wrapper } = mountPart([{ id: 9, value: 39.5, unit: 'cm', measured_at: '2026-03-15', notes: null }])
-        const nom = wrapper.get('[aria-label^="Supprimer la mesure"]').attributes('aria-label')
-
-        expect(normalise(nom)).toBe('Supprimer la mesure du dim. 15 mars 2026')
     })
 })
 

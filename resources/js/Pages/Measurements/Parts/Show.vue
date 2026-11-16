@@ -4,7 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { dateAvecJour, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
@@ -33,6 +33,21 @@ const nom = computed(() => props.label ?? props.part)
 const courbe = computed(() => courbeDansLUniteDuDernierReleve(props.history))
 
 const showAddForm = ref(false)
+const formulaire = ref(null)
+
+/**
+ * Le formulaire s'ouvre au-dessus de l'historique : sous le pli depuis l'état vide, rien ne bougerait. Il se montre et
+ * sa valeur prend le focus, quelle que soit la commande qui l'a ouvert (même geste que `Measurements/Index`).
+ */
+watch(showAddForm, async (ouvert) => {
+    if (!ouvert) {
+        return
+    }
+
+    await nextTick()
+    formulaire.value?.querySelector('input')?.focus()
+    formulaire.value?.scrollIntoView?.({ block: 'center' })
+})
 
 /**
  * La mesure rejoint l'historique de cette page : `keep_part_name` demande au
@@ -82,7 +97,9 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
     <AuthenticatedLayout :page-title="nom">
         <!-- Une navigation : un seul lien, par `href` (#2117). -->
         <template #header-actions>
-            <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary"> Retour </GlassButton>
+            <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary" aria-label="Retour">
+                <GlassIcon name="arrow_back" size="xs" />
+            </GlassButton>
             <GlassButton
                 :variant="showAddForm ? 'secondary' : 'primary'"
                 size="sm"
@@ -113,7 +130,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
             <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
                 <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
-                <form @submit.prevent="submit" class="space-y-4">
+                <form ref="formulaire" @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput
                             v-model="form.value"
@@ -152,7 +169,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
             </GlassCard>
 
             <GlassEmptyState
-                v-if="history.length === 0 && !showAddForm"
+                v-if="history.length === 0"
                 icon="📏"
                 color="cyan"
                 title="Aucune mesure"
