@@ -32,10 +32,25 @@ use Symfony\Component\Yaml\Yaml;
  * en français (`DB_PASSWORD`, `REDISCLI_AUTH`, `mot_de_passe`, `cle_api`,
  * `JETON`), où qu'il soit dans le nom. Un mot entier : `BYPASS` n'en est pas un.
  */
-const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASS|PASSE|PWD|MDP|SECRET|TOKEN|JETON|AUTH|CREDENTIALS?|PRIVATE_KEY|KEY|CLE|CLEF|CLES|CLEFS)(?![A-Za-z])|(?:PASSWORD|PASSWD|PWD|SECRET|TOKEN|JETON|APIKEY|MOTDEPASSE)$/i';
+const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASSPHRASE|PASS|PASSE|PWD|PW|MDP|SECRETS?|TOKEN|JETON|AUTH|CREDENTIALS?|PRIVATE_KEY|KEY|CLE|CLEF|CLES|CLEFS)(?![A-Za-z])|(?:PASSWORD|PASSWD|PASSPHRASE|PWD|SECRETS?|TOKEN|JETON|APIKEY|MOTDEPASSE)$/i';
 
 /**
- * Les binaires de la famille MySQL, dont `-p <valeur>` est le mot de passe.
+ * Ce que lit sans le lancer un processus au bout d'un tube : le secret qu'il
+ * reçoit sur son entrée ne finit pas dans sa ligne de commande. Tout autre
+ * lecteur (`xargs`, `sh`, `curl`…) peut le remettre en argument.
+ */
+const SECRETS_EN_ARGUMENT_LECTEURS_SURS = '(?:sed|tr|base64|wc|cat|head|tail|cut|openssl|sha256sum|sha1sum|md5sum|tee|redis-cli|mysql)';
+
+/**
+ * Les interpréteurs et lanceurs qui exécutent ce qu'ils lisent : le corps d'un
+ * document intégré qui leur est donné se lit comme une ligne de commande.
+ */
+const SECRETS_EN_ARGUMENT_INTERPRETEURS = '/(?<![\w.-])(?:sh|bash|zsh|dash|ash|ksh|eval|xargs|source)(?![\w.-])/';
+
+/**
+ * Les binaires de la famille MySQL. `-p <valeur>` n'y est pas un mot de passe
+ * (le client le demande ensuite) : la garde le refuse par prudence, parce
+ * qu'on l'écrit souvent ainsi à tort.
  */
 const SECRETS_EN_ARGUMENT_BINAIRES_MYSQL = '(?:mysql|mysqladmin|mysqldump|mysqlcheck|mysqlpump|mariadb|mariadb-admin|mariadb-dump)';
 
@@ -75,7 +90,15 @@ function secretsEnArgumentLignesDuService(array $service): array
 {
     $lignes = [];
 
-    foreach (['command' => 'command', 'entrypoint' => 'entrypoint', 'healthcheck.test' => 'healthcheck.test'] as $nom => $chemin) {
+    $chemins = ['command' => 'command', 'entrypoint' => 'entrypoint', 'healthcheck.test' => 'healthcheck.test'];
+
+    foreach (['post_start', 'pre_stop'] as $crochet) {
+        foreach (array_keys(is_array($service[$crochet] ?? null) ? $service[$crochet] : []) as $position) {
+            $chemins["{$crochet}.{$position}.command"] = "{$crochet}.{$position}.command";
+        }
+    }
+
+    foreach ($chemins as $nom => $chemin) {
         $valeur = data_get($service, $chemin);
 
         if (is_array($valeur)) {
@@ -117,6 +140,7 @@ function secretsEnArgumentChampsInertes(array $service): array
         'labels' => $service['labels'] ?? [],
         'build.labels' => is_array($construction) ? ($construction['labels'] ?? []) : [],
         'build.args' => is_array($construction) ? ($construction['args'] ?? []) : [],
+        'logging.options' => data_get($service, 'logging.options', []),
     ];
 
     foreach ($sections as $nom => $section) {
@@ -167,12 +191,24 @@ function secretsEnArgumentNoms(array $composition): array
  * Ce qu'une ligne lancée laisse voir d'un secret, une phrase par défaut.
  *
  * Ne laissent pas la valeur dans une ligne de commande, et sont donc admis :
- * `MYSQL_PWD="$$NOM"` en affectation, au début d'une commande ; `printf %s
- * "$$NOM"` au début d'une commande et devant un tube (sa sortie est l'entrée
- * d'un autre processus) ; `NOM=$$(… printf %s "$$NOM" …)`, la substitution
- * affectée à une variable. Le même `printf` dans l'argument d'une commande
- * (`curl "$$(printf %s "$$NOM")"`) est un argument comme un autre. Le corps
- * d'un document intégré (`<<FIN`) est l'entrée d'un processus, pas un argument.
+ * - `MYSQL_PWD="$$NOM"` en affectation, au début d'une commande ;
+ * - `printf %s "$$NOM"` au début d'une commande, devant un tube dont l'autre
+ *   bout est un lecteur sûr (`sed`, `tr`, `base64`, `wc`… : jamais `xargs`,
+ *   `sh` ou `curl`, qui peuvent remettre le secret en argument) ;
+ * - `NOM=$$(printf %s "$$NOM" | lecteur sûr)`, la substitution affectée à une
+ *   variable ; le nom affecté devient lui-même un secret (`valeur=$$(…)` puis
+ *   `curl -u "u:$$valeur"` est refusé) ;
+ * - le corps d'un document intégré (`<<FIN`) donné à un processus qui ne
+ *   l'exécute pas : jamais à `sh`, `bash`, `eval`, `xargs`…, et, s'il n'est pas
+ *   coté (`<<'FIN'`), seulement sans `$(` ni apostrophe inverse, que le shell
+ *   exécuterait.
+ *
+ * Ce qu'elle ne peut pas voir : un secret qui voyage dans une variable
+ * intermédiaire à plusieurs pas, un lecteur sûr qui le remet en argument par
+ * lui-même (`openssl … -pass pass:`), les alias d'environnement à plus d'un
+ * niveau, un secret construit par morceaux (`$$A$$B`), et ce qu'un script
+ * externe copié dans l'image fait de son environnement. `docker inspect`
+ * montre de toute façon l'environnement du conteneur.
  *
  * @param  list<string>  $secrets  les noms de variables qui portent un secret
  * @param  bool  $interprete  vrai pour une ligne qu'un interpréteur lit (`$$NOM`)
@@ -184,34 +220,49 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
     $reste = $texte;
 
     if ($interprete) {
-        $debut = '(?:^|[;&|(\n])\s*(?:(?:env|export)\s+)?';
-        $reference = '"\$\$\{?[A-Za-z0-9_]+\}?"';
+        $substitutions = [
+            '__D__' => '(?:^|[;&|(\n])\s*(?:(?:env|export)\s+)?',
+            '__R__' => '"\$\$\{?[A-Za-z0-9_]+\}?"',
+            '__S__' => SECRETS_EN_ARGUMENT_LECTEURS_SURS,
+        ];
+
+        $reste = (string) preg_replace_callback(
+            '/((?:[^;&|\n\\\\]|\\\\.)*)<<-?\s*([\'"]?)(\w+)\2([^\n]*\n)(.*?)\n\s*\3\b/s',
+            static fn (array $trouve): string => preg_match(SECRETS_EN_ARGUMENT_INTERPRETEURS, $trouve[1]) === 1
+                || ($trouve[2] === '' && preg_match('/\$\$\(|`/', $trouve[5]) === 1)
+                    ? $trouve[0]
+                    : $trouve[1].$trouve[4],
+            $reste,
+        );
+
+        preg_match_all(strtr('/__D__([A-Za-z_][A-Za-z0-9_]*)=\$\$\(\s*printf\s+%s\s+__R__/', $substitutions), $reste, $affectes);
+        $secrets = [...$secrets, ...$affectes[1]];
 
         $reste = (string) preg_replace(
-            [
-                '/<<-?\s*([\'"]?)(\w+)\1([^\n]*\n)(.*?)\n\s*\2\b/s',
-                "/({$debut})MYSQL_PWD={$reference}/",
-                "/({$debut}[A-Za-z_][A-Za-z0-9_]*=)\\\$\\\$\\(\\s*printf\\s+%s\\s+{$reference}(?:\\s*\\|(?:(?!&&)[^;()|])*)?\\s*\\)/",
-                "/((?:^|[;&\\n])\\s*)printf\\s+%s\\s+{$reference}\\s*\\|(?!\\|)/",
-            ],
-            ['$3', '$1', '$1', '$1|'],
+            array_map(static fn (string $motif): string => strtr($motif, $substitutions), [
+                '/(__D__)MYSQL_PWD=__R__/',
+                '/(__D__[A-Za-z_][A-Za-z0-9_]*=)\$\$\(\s*printf\s+%s\s+__R__(?:\s*\|\s*__S__\b(?:(?!&&)[^;()|])*)*\s*\)/',
+                '/((?:^|[;&\n])\s*)printf\s+%s\s+__R__\s*\|\s*(?=__S__\b)/',
+            ]),
+            ['$1', '$1', '$1| '],
             $reste,
         );
     }
 
-    preg_match_all('/(?<!\$)\$\$?\{?([A-Za-z_][A-Za-z0-9_]*)/', $reste, $references);
+    preg_match_all('/(?<!\$)\$\$?\{?([A-Za-z_][A-Za-z0-9_]*)|\bprintenv\s+([A-Za-z_][A-Za-z0-9_]*)/', $reste, $references);
 
-    foreach (array_unique($references[1]) as $nom) {
+    foreach (array_unique(array_filter([...$references[1], ...$references[2]], static fn (string $nom): bool => $nom !== '')) as $nom) {
         if (in_array($nom, $secrets, true) || preg_match(SECRETS_EN_ARGUMENT_MOTIF, $nom) === 1) {
             $defauts[] = "référence à {$nom}";
         }
     }
 
     $mysql = SECRETS_EN_ARGUMENT_BINAIRES_MYSQL;
-    $longues = '(?:^|\s)--(?:requirepass|masterauth|password|passwd|pass|secret|token|jeton|cle|key|api-key|auth|mot-de-passe)(?=[=\s]|$)';
+    $longues = '(?:^|\s)--(?:requirepass|masterauth|password|passwd|passphrase|pass|secret|token|jeton|cle|key|api-key|auth|mot-de-passe)(?=[=\s]|$)';
     $courtes = '(?:^|\s)(?:-a\s|-p\S)';
-    // `-p <valeur>` : le mot de passe de la famille MySQL, d'une ligne de shell
-    // comme d'une liste (dont les éléments se joignent par des retours à la ligne).
+    // `-p <valeur>` de la famille MySQL, refusé par prudence, d'une ligne de
+    // shell comme d'une liste (dont les éléments se joignent par des retours
+    // à la ligne).
     $apres = "/\\b{$mysql}\\b[^|;&]*?\\s-p\\s+\\S/";
 
     if (preg_match("/{$longues}/i", $reste) === 1 || preg_match("/{$courtes}/", $reste) === 1 || preg_match($apres, $reste) === 1) {
@@ -250,9 +301,16 @@ function secretsEnArgumentDefautsDeLaComposition(array $composition): array
 
         $construction = $service['build'] ?? null;
 
-        foreach (secretsEnArgumentCouples(is_array($construction) ? ($construction['args'] ?? []) : []) as $cle => $valeur) {
-            if (preg_match(SECRETS_EN_ARGUMENT_MOTIF, $cle) === 1) {
-                $defauts[] = "{$nom}.build.args.{$cle} : un secret dans l'historique de l'image, valeur ou non";
+        $nommes = [
+            'build.args' => is_array($construction) ? ($construction['args'] ?? []) : [],
+            'logging.options' => data_get($service, 'logging.options', []),
+        ];
+
+        foreach ($nommes as $section => $couples) {
+            foreach (secretsEnArgumentCouples($couples) as $cle => $valeur) {
+                if (preg_match(SECRETS_EN_ARGUMENT_MOTIF, $cle) === 1) {
+                    $defauts[] = "{$nom}.{$section}.{$cle} : un secret que `docker inspect` ou l'historique de l'image montrent, valeur ou non";
+                }
             }
         }
     }
@@ -357,6 +415,21 @@ it('refuse, sur la vraie composition, chaque trou que la garde laissait', functi
     'un argument de construction repris de l’hôte, sans valeur (table)' => [[['services.app.build', ['context' => '.', 'args' => ['NPM_TOKEN' => null]]]]],
     '-p suivi d’une valeur, en liste (forme exec)' => [[['services.db.healthcheck.test', ['CMD', 'mysqladmin', '-uroot', '-p', 'motdepasse', 'ping']]]],
     'un secret passé par --env, qui n’est pas l’affectation d’une commande' => [[['services.redis.command', 'outil --env JETON=$$(printf %s "$$APP_KEY")', true]]],
+    'un document intégré que sh exécute (sonde)' => [[['services.db.healthcheck.test', ['CMD-SHELL', "sh <<FIN\nmysqladmin ping -uroot --host=db \"-p\$\$MYSQL_ROOT_PASSWORD\"\nFIN"]]]],
+    'un document intégré que sh exécute (commande)' => [[['services.redis.command', "sh <<FIN\nmysqladmin ping -uroot --host=db \"-p\$\$REDIS_PASSWORD\"\nFIN", true]]],
+    'un document intégré non coté dont $(…) s’exécute (sonde)' => [[['services.db.healthcheck.test', ['CMD-SHELL', "cat <<FIN\n\$\$(mysqladmin ping -uroot -p\$\$MYSQL_ROOT_PASSWORD)\nFIN"]]]],
+    'un document intégré non coté dont $(…) s’exécute (commande)' => [[['services.redis.command', "cat <<FIN\n\$\$(curl -u u:\$\$REDIS_PASSWORD http://h)\nFIN", true]]],
+    'un document intégré donné à xargs' => [[['services.redis.command', "xargs curl -u <<FIN\n\$\$REDIS_PASSWORD\nFIN", true]]],
+    'A1 : le secret affecté puis passé en argument' => [[['services.redis.command', 'valeur=$$(printf %s "$$REDIS_PASSWORD"); curl -u "u:$$valeur" http://h', true]]],
+    'A2 : printf devant xargs' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | xargs -I{} curl -u u:{} http://h', true]]],
+    'A3 : printenv' => [[['services.redis.command', 'curl -u "u:$$(printenv REDIS_PASSWORD)" http://h', true]]],
+    'A10 : post_start' => [[['services.app.post_start', [['command' => 'curl -u u:${DB_PASSWORD} http://h']]]]],
+    'A10 : pre_stop avec une référence du shell' => [[['services.app.pre_stop', [['command' => 'curl -u "u:$$DB_PASSWORD" http://h']]]]],
+    'un nom en PW' => [[['services.redis.command', 'notifier "$$REDIS_PW"', true]]],
+    'un nom en SECRETS' => [[['services.redis.command', 'notifier "$$APP_SECRETS"', true]]],
+    'un nom en PASSPHRASE' => [[['services.redis.command', 'notifier "$$BACKUP_PASSPHRASE"', true]]],
+    'une option --passphrase' => [[['services.redis.command', 'sauvegarde --passphrase abc', true]]],
+    'une option de journalisation au nom d’un secret' => [[['services.app.logging', ['driver' => 'splunk', 'options' => ['splunk-token' => '${SPLUNK_VALEUR}']]]]],
     'un nom collé : GITHUBTOKEN' => [[['services.redis.command', 'notifier "$$GITHUBTOKEN"', true]]],
     'un nom collé : dbPassword' => [[['services.redis.command', 'notifier "$$dbPassword"', true]]],
     'une substitution affectée qui laisse aussi le secret à une autre commande' => [[['services.redis.command', 'x=$$(printf %s "$$REDIS_PASSWORD"; curl -u "$$REDIS_PASSWORD" http://h)', true]]],
@@ -374,6 +447,9 @@ it('admet, sur la vraie composition, ce qui n’est pas un secret en argument', 
     'printf dans une affectation' => [[['services.redis.command', 'longueur=$$(printf %s "$$REDIS_PASSWORD" | wc -c)', true]]],
     'MYSQL_PWD en affectation derrière env' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'env MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping']]]],
     'un secret dans le corps d’un document intégré' => [[['services.redis.command', "cat <<FIN\nrequirepass \"\$\$mot_de_passe\"\nFIN", true]]],
+    'un document intégré coté, que le shell ne développe pas' => [[['services.redis.command', "cat <<'FIN'\n\$\$(echo \$\$mot_de_passe)\nFIN", true]]],
+    'printf devant un lecteur sûr' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | base64', true]]],
+    'une option de journalisation sans secret' => [[['services.app.logging', ['driver' => 'json-file', 'options' => ['max-size' => '10m']]]]],
     'mkdir -p avec une référence' => [[['services.redis.command', 'mkdir -p "$$DOSSIER"', true]]],
     'redis-cli -p avec une référence' => [[['services.redis.command', 'redis-cli -p "$$REDIS_PORT" ping', true]]],
     'un -P de port avec une référence' => [[['services.redis.command', 'mysql -P ${DB_PORT} -h db', true]]],
