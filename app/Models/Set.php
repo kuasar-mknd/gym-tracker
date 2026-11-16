@@ -243,7 +243,7 @@ class Set extends Model
 
             // La ligne en mémoire n'est crue que si c'est celle que la clef nomme.
             $ligne = $set->relationLoaded('workoutLine') ? $set->workoutLine : null;
-            $proprietaire = $ligne instanceof WorkoutLine && $ligne->getKey() === (int) $set->workout_line_id
+            $proprietaire = $ligne instanceof WorkoutLine && $ligne->getKey() === (int) $set->workout_line_id && array_key_exists('user_id', $ligne->getAttributes())
                 ? $ligne->user_id
                 : WorkoutLine::whereKey($set->workout_line_id)->value('user_id');
             $set->user_id = is_numeric($proprietaire) ? (int) $proprietaire : null;

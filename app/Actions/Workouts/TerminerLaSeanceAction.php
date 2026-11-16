@@ -42,7 +42,7 @@ final readonly class TerminerLaSeanceAction
      * fois, sous le verrou : l'appelant n'a pas à la charger avant. L'horloge
      * se lit une fois, en tête, avant l'attente du verrou (`.ai/rules/horloge.md`).
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Si le compte n'a pas cette séance.
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Si la séance n'existe pas.
      * @throws \Illuminate\Auth\Access\AuthorizationException Si le compte n'a pas le droit de la voir.
      * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou du compte reste pris trop longtemps.
      */
@@ -53,7 +53,7 @@ final readonly class TerminerLaSeanceAction
         /** @var Workout $close */
         $close = DemarrerUneSeanceAction::verrouDuCompte($compte->id)
             ->block(DemarrerUneSeanceAction::ATTENTE_DU_VERROU, function () use ($compte, $seanceId, $ageDuGeste, $maintenant): Workout {
-                $seance = Workout::query()->whereKey($seanceId)->where('user_id', $compte->id)->firstOrFail();
+                $seance = Workout::query()->findOrFail($seanceId);
                 Gate::forUser($compte)->authorize('view', $seance);
 
                 return $this->ecrireLaFin($seance, $ageDuGeste, $maintenant);

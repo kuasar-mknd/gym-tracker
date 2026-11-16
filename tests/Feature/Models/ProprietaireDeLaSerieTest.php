@@ -14,14 +14,14 @@ use Illuminate\Support\Facades\DB;
  * épargne une lecture, mais seulement si c'est celle que la clef nomme (#2325).
  */
 
-function ligneDuCompte(User $compte): WorkoutLine
+function proprietaireDeLaSerieLigneDuCompte(User $compte): WorkoutLine
 {
     return WorkoutLine::factory()->create(['workout_id' => Workout::factory()->create(['user_id' => $compte->id])->id]);
 }
 
 it('copie le compte de la ligne en mémoire à la création, sans relire la ligne', function (): void {
     $compte = User::factory()->create();
-    $ligne = ligneDuCompte($compte);
+    $ligne = proprietaireDeLaSerieLigneDuCompte($compte);
 
     $lectures = 0;
     DB::listen(function (QueryExecuted $requete) use (&$lectures): void {
@@ -41,8 +41,8 @@ it('copie le compte de la ligne en mémoire à la création, sans relire la lign
 it('relit le compte quand la clef change malgré la ligne gardée en mémoire', function (): void {
     $ancien = User::factory()->create();
     $nouveau = User::factory()->create();
-    $ligne = ligneDuCompte($ancien);
-    $ligneDuNouveau = ligneDuCompte($nouveau);
+    $ligne = proprietaireDeLaSerieLigneDuCompte($ancien);
+    $ligneDuNouveau = proprietaireDeLaSerieLigneDuCompte($nouveau);
 
     $serie = Set::factory()->create(['workout_line_id' => $ligne->id]);
     $serie->setRelation('workoutLine', $ligne);

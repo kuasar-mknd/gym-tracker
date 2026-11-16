@@ -45,9 +45,7 @@ class StoreSetAction
             Gate::forUser($user)->authorize('create', [Set::class, $workoutLine]);
 
             // Le droit d'écrire vaut propriétaire : la séance n'a pas à relire le compte.
-            if ($workoutLine->relationLoaded('workout')) {
-                $workoutLine->workout?->setRelation('user', $user);
-            }
+            $workoutLine->workout?->setRelation('user', $user);
 
             return $this->createSetAction->execute($user, $workoutLine, $donneesValidees, dejaCherchee: true);
         } catch (\Exception $e) {
