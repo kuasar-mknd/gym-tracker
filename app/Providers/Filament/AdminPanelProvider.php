@@ -307,7 +307,7 @@ final class AdminPanelProvider extends PanelProvider
      * Ce que chaque requête Livewire du panneau rejoue (#2352).
      *
      * La connexion et toutes les actions du panneau passent par
-     * `POST /livewire/update`, route que ne porte aucun middleware du panneau :
+     * `POST /livewire-{empreinte}/update`, route que ne porte aucun middleware du panneau :
      * seuls ceux déclarés persistants sont rejoués sur la page d'origine du
      * composant.
      *
