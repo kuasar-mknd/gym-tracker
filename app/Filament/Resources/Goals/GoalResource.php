@@ -71,6 +71,19 @@ class GoalResource extends Resource
         $attributs = Arr::except($data, [...self::CHAMPS_ASSIGNES_EXPLICITEMENT, ...self::CHAMPS_CALCULES]);
 
         $objectif->user_id = (int) $identifiant;
+
+        /*
+         * Un départ vide arrive nul, et la colonne le refuse : il vaut 0, comme
+         * à `GoalStoreRequest`, sauf pour une mensuration, qui part de sa
+         * dernière mesure (#2338). Un départ absent (champ masqué) ne change
+         * rien.
+         */
+        $departEtaitVide = array_key_exists('start_value', $attributs) && $attributs['start_value'] === null;
+
+        if ($departEtaitVide) {
+            $attributs['start_value'] = 0.0;
+        }
+
         $objectif->fill($attributs);
 
         // La période ne sert qu'à la fréquence : un objectif qui change de type
@@ -84,6 +97,12 @@ class GoalResource extends Resource
         // d'un objectif passé « au total » à « par semaine » resterait.
         if ($objectif->estHebdomadaire()) {
             $objectif->start_value = 0.0;
+        }
+
+        if ($departEtaitVide) {
+            // Le compte a pu changer : la mesure se lit chez le compte choisi.
+            $objectif->unsetRelation('user');
+            app(GoalService::class)->partirDeLaDerniereMesure($objectif);
         }
 
         DB::transaction(static function () use ($objectif): void {

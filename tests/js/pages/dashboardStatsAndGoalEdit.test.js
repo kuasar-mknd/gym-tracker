@@ -567,6 +567,17 @@ describe('Goals/Edit', () => {
         })
     })
 
+    it('renvoie tel quel le départ de 0 d’une mensuration : un renommage ne doit pas le dire vidé', () => {
+        const wrapper = mountEdit({ type: 'measurement', measurement_type: 'weight', start_value: 0 })
+
+        wrapper.findComponent({ name: 'GoalForm' }).vm.$emit('submit')
+
+        // Vide, le serveur y lirait un départ effacé et reprendrait la dernière
+        // mesure : un objectif ancien à départ 0, atteint, perdrait son atteinte.
+        expect(formPut).toHaveBeenCalledTimes(1)
+        expect(wrapper.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe(0)
+    })
+
     it('reprend la période de l’objectif existant', () => {
         const wrapper = mountEdit({ period: 'week' })
 

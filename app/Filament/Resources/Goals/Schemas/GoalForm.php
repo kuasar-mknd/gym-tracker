@@ -116,7 +116,8 @@ class GoalForm
                 ),
             TextInput::make('current_value')->label('Valeur actuelle')->numeric()->disabled()->hiddenOn(Operation::Create)
                 ->helperText(self::AVANCEMENT_CALCULE),
-            TextInput::make('start_value')->label('Valeur de départ')->required()->numeric()->default(0)
+            TextInput::make('start_value')->label('Valeur de départ')->numeric()->placeholder('0')
+                ->helperText('Facultatif. Vide, une mensuration part de sa dernière mesure.')
                 ->visible(fn (Get $get): bool => ! self::estHebdomadaire($get)),
             Select::make('exercise_id')->label('Exercice')
                 ->relationship('exercise', 'name', modifyQueryUsing: fn (Builder $query, Get $get): Builder => self::exercicesDuCompte($query, $get('user_id')))

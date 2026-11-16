@@ -62,6 +62,7 @@ final class GoalService
         $identifiants = [];
         $quand = [];
         $liaisons = ['current_value' => [], 'progress_pct' => [], 'completed_at' => []];
+        $departs = [];
 
         foreach ($dirtyGoals as $goal) {
             $identifiants[] = $goal->id;
@@ -72,16 +73,23 @@ final class GoalService
                 $liaisons[$colonne][] = $goal->id;
                 $liaisons[$colonne][] = $attributs[$colonne] ?? null;
             }
+
+            if ($goal->isDirty('start_value')) {
+                $departs[] = $goal->id;
+                $departs[] = $attributs['start_value'] ?? null;
+            }
         }
 
         $cas = 'case id '.implode(' ', $quand).' end';
         $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas
+            .($departs === [] ? '' : ', start_value = case '.implode(' ', array_fill(0, intdiv(count($departs), 2), 'when id = ? and start_value = 0 then ?')).' else start_value end')
             .', updated_at = ? where user_id = ? and id in ('.implode(', ', array_map(static fn (): string => '?', $identifiants)).')';
 
         \Illuminate\Support\Facades\DB::update($requete, [
             ...$liaisons['current_value'],
             ...$liaisons['progress_pct'],
             ...$liaisons['completed_at'],
+            ...$departs,
             $maintenant,
             $user->id,
             ...$identifiants,
@@ -155,8 +163,30 @@ final class GoalService
             GoalType::Measurement => $this->updateMeasurementGoal($goal, $mesures),
         };
 
+        $this->partirDeLaPremiereMesure($goal);
         $this->checkCompletion($goal, $maintenant);
         $this->updateProgressPercentage($goal);
+    }
+
+    /**
+     * La première mesure d'un objectif de mensuration en devient le départ
+     * (#2337) : à 0, « descendre à 75 » se lisait comme une montée, atteinte
+     * à 82 kg. Seul le passage de « aucune mesure » (valeur actuelle stockée à
+     * 0) le déclenche : un objectif déjà suivi, même à départ 0, ne bouge pas.
+     */
+    private function partirDeLaPremiereMesure(Goal $goal): void
+    {
+        if ($goal->type !== GoalType::Measurement || $goal->start_value > 0) {
+            return;
+        }
+
+        $avant = $goal->getOriginal('current_value');
+
+        if (is_numeric($avant) && (float) $avant > 0) {
+            return;
+        }
+
+        $goal->start_value = $goal->current_value;
     }
 
     /**

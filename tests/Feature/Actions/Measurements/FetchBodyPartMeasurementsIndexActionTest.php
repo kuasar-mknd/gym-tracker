@@ -236,3 +236,24 @@ it('compare deux relevés dans la même unité, celle du dernier', function (): 
     expect($mesure['unit'])->toBe('in')
         ->and(abs($mesure['diff']))->toBeLessThan(0.1);
 });
+
+it('range deux relevés du même jour dans l’ordre de leur saisie, la courbe finissant sur le dernier', function (): void {
+    $user = User::factory()->create();
+    $jour = Carbon::now()->subDay()->toDateString();
+
+    $premier = BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Waist', 'value' => 80, 'unit' => 'cm', 'measured_at' => $jour]);
+    $second = BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Waist', 'value' => 31.5, 'unit' => 'in', 'measured_at' => $jour]);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $courbe = app(App\Actions\Measurements\FetchBodyPartMeasurementShowAction::class)->execute($user, 'Waist');
+    $requetes = array_column(DB::getQueryLog(), 'query');
+    DB::disableQueryLog();
+
+    // Les données ne tranchent pas : le parcours de l'index rend déjà
+    // l'identifiant décroissant à date égale. Seul le texte de la requête
+    // prouve le départage (`.ai/rules/services.md`).
+    expect($requetes)->toHaveCount(1)
+        ->and($requetes[0])->toContain('order by `measured_at` desc, `id` desc limit 200')
+        ->and($courbe->pluck('id')->all())->toBe([$premier->id, $second->id]);
+});
