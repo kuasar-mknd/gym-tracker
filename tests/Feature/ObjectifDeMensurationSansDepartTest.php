@@ -144,13 +144,63 @@ it('ne reprend pas un départ donné, même quand la valeur stockée est retomb�
         'measurement_type' => 'weight',
         'exercise_id' => null,
         'start_value' => 90,
-        'current_value' => 0,
         'target_value' => 75,
     ]);
+    DB::table('goals')->where('id', $objectif->id)->update(['current_value' => 0, 'start_value' => 90]);
+
+    $recalcule = app(GoalService::class)->objectifsRecalcules($user)->sole();
+
+    expect($recalcule->current_value)->toBe(82.0)
+        ->and($recalcule->start_value)->toBe(90.0);
 
     app(GoalService::class)->syncGoals($user);
+    $objectif->refresh();
 
-    expect($objectif->refresh()->start_value)->toBe(90.0);
+    expect($objectif->current_value)->toBe(82.0)
+        ->and($objectif->start_value)->toBe(90.0);
+});
+
+it('ne réécrit pas un objectif déjà atteint à départ 0 quand on le renomme', function (): void {
+    $user = User::factory()->create();
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 41, 'measured_at' => '2026-06-10']);
+    $objectif = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'weight',
+        'exercise_id' => null,
+        'start_value' => 0,
+        'current_value' => 41,
+        'target_value' => 40,
+        'completed_at' => '2026-06-10 10:00:00',
+    ]);
+    DB::table('goals')->where('id', $objectif->id)->update(['current_value' => 41, 'progress_pct' => 100, 'completed_at' => '2026-06-10 10:00:00']);
+
+    actingAs($user)
+        ->put(route('goals.update', $objectif), ['title' => 'Renommé', 'type' => 'measurement', 'measurement_type' => 'weight', 'target_value' => 40, 'start_value' => 0])
+        ->assertSessionHasNoErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->title)->toBe('Renommé')
+        ->and($objectif->start_value)->toBe(0.0)
+        ->and($objectif->current_value)->toBe(41.0)
+        ->and($objectif->completed_at?->toDateString())->toBe('2026-06-10');
+});
+
+it('part de la première pesée quand on modifie un objectif sans mesure suivie, le 0 renvoyé tel quel', function (): void {
+    Queue::fake();
+    $user = User::factory()->create();
+    $objectif = objectifDeMensurationSansMesure($user, 'weight');
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 82, 'measured_at' => '2026-06-10']);
+
+    actingAs($user)
+        ->put(route('goals.update', $objectif), ['title' => 'Renommé', 'type' => 'measurement', 'measurement_type' => 'weight', 'target_value' => 75, 'start_value' => 0])
+        ->assertSessionHasNoErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->start_value)->toBe(82.0)
+        ->and($objectif->completed_at)->toBeNull();
 });
 
 it('laisse à 0 le départ d’un objectif de charge qui prend un record', function (): void {

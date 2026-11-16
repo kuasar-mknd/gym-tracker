@@ -567,20 +567,15 @@ describe('Goals/Edit', () => {
         })
     })
 
-    it('ouvre une mensuration au départ de 0 sur un champ vide, pas sur le 0 stocké', () => {
+    it('renvoie tel quel le départ de 0 d’une mensuration : un renommage ne doit pas le dire vidé', () => {
         const wrapper = mountEdit({ type: 'measurement', measurement_type: 'weight', start_value: 0 })
 
-        // Un 0 renvoyé tel quel est un départ donné : la première pesée le
-        // disait atteint. Vide, le serveur prend la dernière mesure (#2337).
-        expect(wrapper.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe('')
-    })
+        wrapper.findComponent({ name: 'GoalForm' }).vm.$emit('submit')
 
-    it('garde le départ d’une mensuration qui en a un, et le 0 des autres types', () => {
-        const mensuration = mountEdit({ type: 'measurement', measurement_type: 'weight', start_value: 82 })
-        const charge = mountEdit({ start_value: 0 })
-
-        expect(mensuration.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe(82)
-        expect(charge.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe(0)
+        // Vide, le serveur y lirait un départ effacé et reprendrait la dernière
+        // mesure : un objectif ancien à départ 0, atteint, perdrait son atteinte.
+        expect(formPut).toHaveBeenCalledTimes(1)
+        expect(wrapper.findComponent({ name: 'GoalForm' }).props('form').start_value).toBe(0)
     })
 
     it('reprend la période de l’objectif existant', () => {
