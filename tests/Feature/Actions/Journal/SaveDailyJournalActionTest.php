@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Actions\Journal\SaveDailyJournalAction;
+use App\Models\DailyJournal;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 it('creates a new daily journal entry', function (): void {
     $user = User::factory()->create();
@@ -48,6 +50,34 @@ it('updates an existing daily journal entry', function (): void {
         ->and($journal->content)->toBe('Updated content');
 
     expect($user->dailyJournals()->count())->toBe(1);
+});
+
+it('met à jour l\'entrée qu\'un enregistrement croisé vient de créer entre la lecture et l\'écriture', function (): void {
+    $user = User::factory()->create();
+    $date = '2026-11-16';
+    $croise = false;
+
+    DailyJournal::creating(function () use ($user, $date, &$croise): void {
+        if ($croise) {
+            return;
+        }
+
+        $croise = true;
+        DB::table('daily_journals')->insert([
+            'user_id' => $user->id,
+            'date' => $date,
+            'content' => 'Écrit par l\'autre requête',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+
+    $journal = app(SaveDailyJournalAction::class)->execute($user, ['date' => $date, 'content' => 'Écrit par celle-ci']);
+
+    expect($croise)->toBeTrue()
+        ->and($user->dailyJournals()->count())->toBe(1)
+        ->and($journal->content)->toBe('Écrit par celle-ci')
+        ->and($user->dailyJournals()->first()?->content)->toBe('Écrit par celle-ci');
 });
 
 it('throws exception if date is missing', function (): void {
