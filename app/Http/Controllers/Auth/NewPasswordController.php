@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Requests\Auth\NewPasswordRequest;
 use App\Models\User;
+use App\Support\AppareilConnu;
 use App\Support\DureeDesReponsesDAuthentification;
 use App\Support\LiensDesCourriels;
+use App\Support\PlafondParAdresse;
 use Closure;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
@@ -188,6 +190,9 @@ class NewPasswordController extends Controller
                 if ($user->estEnAttente()) {
                     self::reprendreLeCompteEnAttente($user);
                 }
+
+                PlafondParAdresse::oublier($user->email);
+                AppareilConnu::poser($user);
 
                 event(new PasswordReset($user));
 

@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Ajouté
+- **Une adresse ne supporte plus que 20 échecs de connexion par heure, toutes adresses IP confondues, sauf pour l'appareil qui a déjà ouvert le compte** (#2310) : au-delà, la connexion refuse sur le champ « adresse » (renvoi vers « mot de passe oublié »), sans attente ; seuls les échecs comptent, sur l'adresse canonique, comptes inconnus compris. Un cookie d'appareil connu (chiffré, 180 jours, posé à la connexion, à la déconnexion et à la réinitialisation, révoqué par un changement de mot de passe) exempte son appareil, pour que le plafond n'enferme pas le titulaire. Les limiteurs existants sont inchangés.
 
 ### Modifié
 - **Corriger, décocher ou supprimer ce qui porte des records ne les écrit plus un type à la fois** (#2324) : la reconstruction d'un exercice (`PersonalRecordService::reconstruire()`) réécrit ses records en place en une seule instruction (`UPDATE … CASE`, ids lus sous le verrou) au lieu d'un `save()` par type, et un record inchangé ne coûte aucune écriture. Les créations restent des `save()`, la synchronisation d'une série (`processUpdates()`) et le verrou ne changent pas. Écritures mesurées : corriger le poids d'une série qui tient les trois records de son exercice 5 → 3, la décocher 4 → 2, supprimer une séance close de cinq exercices 17 → 7.

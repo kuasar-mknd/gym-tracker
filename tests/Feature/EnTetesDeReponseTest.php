@@ -278,8 +278,8 @@ it('garde les en-têtes de chaque page complète sous le budget', function (bool
  * remplissait.
  *
  * La réponse à la connexion est la plus chargée de l'application : elle pose
- * quatre cookies (session, XSRF, celui qui se souvient, et depuis #2048 le
- * témoin des copies hors ligne). Si elle passait la limite, le 502 tomberait
+ * cinq cookies (session, XSRF, celui qui se souvient, depuis #2048 le
+ * témoin des copies hors ligne, depuis #2310 l'appareil connu). Si elle passait la limite, le 502 tomberait
  * à la connexion même, et effacer les cookies ne suffirait plus.
  */
 it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » sous le budget', function (): void {
@@ -295,7 +295,7 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
     $cookie = $connexion->getCookie($nomDuCookie);
 
     expect($cookie)->not->toBeNull()
-        ->and($connexion->baseResponse->headers->getCookies())->toHaveCount(4)
+        ->and($connexion->baseResponse->headers->getCookies())->toHaveCount(5)
         ->and(enTetesPorteLeTemoinDesCopies($connexion))->toBeTrue()
         ->and(enTetesTailleDuBloc($connexion))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 
@@ -355,7 +355,7 @@ it('garde sous le budget le changement de mot de passe et la session qu’il fer
     $refus->assertRedirect(enTetesHoteDeProduction().'/login')
         ->assertCookieExpired(CleDesCopiesHorsLigne::nom());
 
-    expect($changement->baseResponse->headers->getCookies())->toHaveCount(4)
+    expect($changement->baseResponse->headers->getCookies())->toHaveCount(5)
         ->and(enTetesPorteLeTemoinDesCopies($changement))->toBeTrue()
         ->and(enTetesTailleDuBloc($changement))->toBeLessThanOrEqual(enTetesBudgetEnOctets())
         ->and($refus->baseResponse->headers->getCookies())->toHaveCount(4)

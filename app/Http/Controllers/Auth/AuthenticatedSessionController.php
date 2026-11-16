@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
+use App\Support\AppareilConnu;
 use App\Support\DureeDesReponsesDAuthentification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +55,8 @@ class AuthenticatedSessionController extends Controller
         DureeDesReponsesDAuthentification::appeler(static function (Timebox $delai) use ($request): void {
             $request->authenticate();
 
+            self::marquerLAppareil($request);
+
             $request->session()->regenerate();
 
             $delai->returnEarly();
@@ -71,6 +75,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        self::marquerLAppareil($request);
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
@@ -80,5 +86,21 @@ class AuthenticatedSessionController extends Controller
         Inertia::clearHistory();
 
         return redirect('/');
+    }
+
+    /**
+     * Pose le cookie d'appareil connu (#2310) pour le compte connecté, à la
+     * connexion et à la déconnexion : un appareil « se souvenir de moi » ou une
+     * session ouverte avant le cookie ne passe jamais par la connexion, et la
+     * déconnexion est son dernier moment authentifié. Le cookie glisse ainsi de
+     * 180 jours à chaque passage.
+     */
+    private static function marquerLAppareil(Request $request): void
+    {
+        $compte = $request->user();
+
+        if ($compte instanceof User) {
+            AppareilConnu::poser($compte);
+        }
     }
 }
