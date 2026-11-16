@@ -32,7 +32,7 @@
         "@vitejs/plugin-vue": "^6.0.11",
         "@vitest/coverage-v8": "^5.1.0",
         "@vue/test-utils": "^2.5.1",
-        "concurrently": "^10.0.6",
+        "concurrently": "^10.0.7",
         "eslint": "^10.14.0",
         "eslint-plugin-vue": "^10.12.1",
         "globals": "^17.14.0",
