@@ -200,7 +200,15 @@ const axeY = (reglage) =>
         border: { display: false },
     })
 
+const animationReduite = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true
+
 const chartOptions = computed(() => {
+    const reglages = reglagesDuGraphique.value
+
+    return animationReduite() ? { ...reglages, animation: false } : reglages
+})
+
+const reglagesDuGraphique = computed(() => {
     const { accent, opaque, ...reglages } = props.infobulle
 
     if (props.type === 'doughnut') {

@@ -109,6 +109,7 @@
                             label="Quantité personnalisée"
                             hide-label
                             placeholder="Ex. 330"
+                            :error="saisiePersonnaliseeEnvoyee ? form.errors.amount : ''"
                             class="grow"
                         >
                             <template #suffix>

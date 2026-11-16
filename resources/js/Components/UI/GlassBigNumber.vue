@@ -71,6 +71,11 @@ const champId = computed(() => attrs.id ?? `grand-nombre-${genere}`)
  * le lot les faisait écraser par le `undefined` du spread, et le champ perdait
  * l'identifiant que son propre label désigne.
  */
+/** Un poids est décimal par défaut ; seul un pas entier déclaré (des répétitions) donne le clavier des entiers. */
+const modeDeSaisie = computed(
+    () => attrs.inputmode ?? (attrs.step !== undefined && Number.isInteger(Number(attrs.step)) ? 'numeric' : 'decimal'),
+)
+
 const reste = computed(() => {
     const { id: _id, class: _class, ...autres } = attrs
 
@@ -87,6 +92,7 @@ const reste = computed(() => {
                 v-bind="reste"
                 :id="champId"
                 type="number"
+                :inputmode="modeDeSaisie"
                 :value="modelValue"
                 class="font-display text-text-main placeholder-text-muted/50 focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-3 text-center text-2xl font-black tabular-nums backdrop-blur-md transition outline-none focus:ring-2"
                 :class="{ 'pr-11': unite }"

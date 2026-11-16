@@ -37,13 +37,21 @@
                         <!-- Height -->
                         <GlassInput
                             type="number"
+                            inputmode="decimal"
                             v-model="form.height"
                             label="Taille (cm)"
                             placeholder="175"
                             size="lg"
                         />
                         <!-- Weight -->
-                        <GlassInput type="number" v-model="form.weight" label="Poids (kg)" placeholder="70" size="lg" />
+                        <GlassInput
+                            type="number"
+                            inputmode="decimal"
+                            v-model="form.weight"
+                            label="Poids (kg)"
+                            placeholder="70"
+                            size="lg"
+                        />
                     </div>
 
                     <!-- Activity Level -->
