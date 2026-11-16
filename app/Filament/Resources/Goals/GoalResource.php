@@ -99,10 +99,13 @@ class GoalResource extends Resource
             $objectif->start_value = 0.0;
         }
 
+        // Le compte a pu changer : la mesure se lit chez le compte choisi.
+        $objectif->unsetRelation('user');
+
         if ($departEtaitVide) {
-            // Le compte a pu changer : la mesure se lit chez le compte choisi.
-            $objectif->unsetRelation('user');
             app(GoalService::class)->partirDeLaDerniereMesure($objectif);
+        } else {
+            app(GoalService::class)->repartirSiLaMesureChange($objectif);
         }
 
         DB::transaction(static function () use ($objectif): void {
