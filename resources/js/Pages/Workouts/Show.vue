@@ -83,16 +83,8 @@ watch(
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const sortieAudio = useSortieAudio()
-const {
-    showTimer,
-    timerDuration,
-    autoRestTimer,
-    timerRun,
-    openRestTimer,
-    fermerLeRepos,
-    setAutoRestTimer,
-    apresValidation,
-} = useMinuteurDeRepos({ sortieAudio })
+const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
+    useMinuteurDeRepos({ sortieAudio })
 // Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
@@ -399,7 +391,7 @@ onUnmounted(() => {
             :reglage-desactive="surUneCopie"
             :raison-du-reglage="raisonDUneEcriture"
             :sortie-audio="sortieAudio"
-            @close="fermerLeRepos"
+            @close="showTimer = false"
             @update:auto-rest-timer="setAutoRestTimer"
             dusk="rest-timer"
         />

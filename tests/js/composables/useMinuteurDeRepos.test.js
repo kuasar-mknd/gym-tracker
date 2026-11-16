@@ -181,7 +181,7 @@ describe('le verrou d’écran du repos (#2314)', () => {
         await flushPromises()
         expect(verrousActifs()).toHaveLength(1)
 
-        minuteur.fermerLeRepos()
+        minuteur.showTimer.value = false
         await flushPromises()
         expect(minuteur.showTimer.value).toBe(false)
         expect(verrousActifs()).toHaveLength(0)
