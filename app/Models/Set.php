@@ -166,6 +166,16 @@ class Set extends Model
         return $this->hasOne(PersonalRecord::class);
     }
 
+    /**
+     * Pose le compte connecté comme compte de la séance, quand l'autorisation
+     * vient de dire qu'il en est le propriétaire : les écouteurs de la série
+     * ne le relisent pas.
+     */
+    public function rattacherLeProprietaire(User $proprietaire): void
+    {
+        $this->workoutLine?->workout?->setRelation('user', $proprietaire);
+    }
+
     public function mettreAJourLesVolumes(): void
     {
         $this->synchroniserLesVolumes();
@@ -231,7 +241,11 @@ class Set extends Model
                 return;
             }
 
-            $proprietaire = WorkoutLine::whereKey($set->workout_line_id)->value('user_id');
+            // La ligne en mémoire n'est crue que si c'est celle que la clef nomme.
+            $ligne = $set->relationLoaded('workoutLine') ? $set->workoutLine : null;
+            $proprietaire = $ligne instanceof WorkoutLine && $ligne->getKey() === (int) $set->workout_line_id
+                ? $ligne->user_id
+                : WorkoutLine::whereKey($set->workout_line_id)->value('user_id');
             $set->user_id = is_numeric($proprietaire) ? (int) $proprietaire : null;
         });
 

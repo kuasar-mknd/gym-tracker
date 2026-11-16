@@ -47,6 +47,7 @@ class SetController extends Controller
     public function update(SetUpdateRequest $request, Set $set): SetResource
     {
         $this->authorize('update', $set);
+        $set->rattacherLeProprietaire($this->user());
 
         $set->update($request->validated());
 

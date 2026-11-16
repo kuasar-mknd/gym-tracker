@@ -100,9 +100,9 @@ it('garde la première fin quand deux fins de la même séance se croisent', fun
     $seconde = null;
 
     $issue = finsConcurrentesEntrelacer(
-        fn (): Workout => $terminer->execute($seance, 1800),
-        function () use ($terminer, $seance, &$seconde): void {
-            $seconde = $terminer->execute(Workout::query()->findOrFail($seance->id), 600);
+        fn (): Workout => $terminer->terminerCelleDuCompte($compte, $seance->id, 1800),
+        function () use ($terminer, $compte, $seance, &$seconde): void {
+            $seconde = $terminer->terminerCelleDuCompte($compte, $seance->id, 600);
         },
     );
 
@@ -126,7 +126,7 @@ it('garde la première fin quand la page termine pendant une fin de la file', fu
     $parLaPage = null;
 
     $issue = finsConcurrentesEntrelacer(
-        fn (): Workout => $terminer->execute($seance, 1800),
+        fn (): Workout => $terminer->terminerCelleDuCompte($compte, $seance->id, 1800),
         function () use ($seance, &$parLaPage): void {
             $parLaPage = app(UpdateWorkoutAction::class)->execute(Workout::query()->findOrFail($seance->id), ['is_finished' => true]);
         },
@@ -149,7 +149,7 @@ it('fait attendre à un démarrage la fin de la séance en cours', function (): 
     $demarree = null;
 
     $issue = finsConcurrentesEntrelacer(
-        fn (): Workout => $terminer->execute($seance, 1800),
+        fn (): Workout => $terminer->terminerCelleDuCompte($compte, $seance->id, 1800),
         function () use ($compte, &$demarree): void {
             $demarree = app(DemarrerUneSeanceAction::class)->execute($compte, '0b6f5d1e-2049-4c11-9d1a-0000000000f1');
         },
@@ -170,9 +170,9 @@ it('ne fait pas attendre la fin d’une séance d’un autre compte', function (
     $finDeLAutre = null;
 
     $issue = finsConcurrentesEntrelacer(
-        fn (): Workout => $terminer->execute($seance, 1800),
-        function () use ($terminer, $deLAutre, &$finDeLAutre): void {
-            $finDeLAutre = $terminer->execute($deLAutre, 1200);
+        fn (): Workout => $terminer->terminerCelleDuCompte($compte, $seance->id, 1800),
+        function () use ($terminer, $autre, $deLAutre, &$finDeLAutre): void {
+            $finDeLAutre = $terminer->terminerCelleDuCompte($autre, $deLAutre->id, 1200);
         },
     );
 

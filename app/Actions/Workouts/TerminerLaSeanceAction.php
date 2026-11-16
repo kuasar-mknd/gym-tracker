@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions\Workouts;
 
+use App\Models\User;
 use App\Models\Workout;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Termine une séance à l'heure du geste, une seule fois (#2049).
@@ -36,27 +38,32 @@ use Carbon\CarbonInterface;
 final readonly class TerminerLaSeanceAction
 {
     /**
-     * L'horloge se lit une fois, en tête, avant l'attente du verrou
-     * (`.ai/rules/horloge.md`).
+     * Termine la séance de ce compte que nomme son identifiant, lue une seule
+     * fois, sous le verrou : l'appelant n'a pas à la charger avant. L'horloge
+     * se lit une fois, en tête, avant l'attente du verrou (`.ai/rules/horloge.md`).
      *
-     * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou du compte reste pris plus de `DemarrerUneSeanceAction::ATTENTE_DU_VERROU` secondes.
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Si le compte n'a pas cette séance.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si le compte n'a pas le droit de la voir.
+     * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou du compte reste pris trop longtemps.
      */
-    public function execute(Workout $seance, ?int $ageDuGeste): Workout
+    public function terminerCelleDuCompte(User $compte, int $seanceId, ?int $ageDuGeste): Workout
     {
         $maintenant = now();
 
         /** @var Workout $close */
-        $close = DemarrerUneSeanceAction::verrouDuCompte($seance->user_id)
-            ->block(DemarrerUneSeanceAction::ATTENTE_DU_VERROU, fn (): Workout => $this->sousLeVerrou($seance, $ageDuGeste, $maintenant));
+        $close = DemarrerUneSeanceAction::verrouDuCompte($compte->id)
+            ->block(DemarrerUneSeanceAction::ATTENTE_DU_VERROU, function () use ($compte, $seanceId, $ageDuGeste, $maintenant): Workout {
+                $seance = Workout::query()->whereKey($seanceId)->where('user_id', $compte->id)->firstOrFail();
+                Gate::forUser($compte)->authorize('view', $seance);
+
+                return $this->ecrireLaFin($seance, $ageDuGeste, $maintenant);
+            });
 
         return $close;
     }
 
-    private function sousLeVerrou(Workout $seance, ?int $ageDuGeste, CarbonInterface $maintenant): Workout
+    private function ecrireLaFin(Workout $seance, ?int $ageDuGeste, CarbonInterface $maintenant): Workout
     {
-        // Relue sous le verrou : la séance a pu être close depuis sa liaison, par une autre requête.
-        $seance->refresh();
-
         if ($seance->ended_at !== null) {
             return $seance;
         }

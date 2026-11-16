@@ -180,7 +180,7 @@ it('oublie la séance en cours après la validation de l’écriture, pas avant'
     expect(seanceApresValidationPartagee($compte))->toMatchArray(['id' => $seance->id, 'workout_lines_count' => $exercicesAttendus]);
 })->with([
     'la fin de la séance' => [
-        fn (Workout $seance): Workout => app(TerminerLaSeanceAction::class)->execute($seance, null),
+        fn (Workout $seance): Workout => app(TerminerLaSeanceAction::class)->terminerCelleDuCompte(User::query()->findOrFail($seance->user_id), $seance->id, null),
         null,
     ],
     'la suppression de la séance' => [
@@ -243,7 +243,7 @@ it('ne partage plus la séance qui vient de se terminer', function (): void {
     $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
     expect(app(ActiveWorkoutService::class)->for($compte)?->id)->toBe($seance->id);
 
-    app(TerminerLaSeanceAction::class)->execute($seance, null);
+    app(TerminerLaSeanceAction::class)->terminerCelleDuCompte($compte, $seance->id, null);
 
     expect(app(ActiveWorkoutService::class)->for($compte))->toBeNull();
     expect(seanceApresValidationPartagee($compte))->toBeNull();

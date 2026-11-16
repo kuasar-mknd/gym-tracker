@@ -44,7 +44,12 @@ class StoreSetAction
 
             Gate::forUser($user)->authorize('create', [Set::class, $workoutLine]);
 
-            return $this->createSetAction->execute($user, $workoutLine, $donneesValidees);
+            // Le droit d'écrire vaut propriétaire : la séance n'a pas à relire le compte.
+            if ($workoutLine->relationLoaded('workout')) {
+                $workoutLine->workout?->setRelation('user', $user);
+            }
+
+            return $this->createSetAction->execute($user, $workoutLine, $donneesValidees, dejaCherchee: true);
         } catch (\Exception $e) {
             // Ni pile ni charge utile : l'exception est relancée et le gestionnaire
             // la rapporte avec sa pile ; la charge utile n'a rien à faire en journal.
