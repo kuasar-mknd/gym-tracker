@@ -37,16 +37,20 @@ final class CreateSetAction
     /**
      * Create a new set for a workout line.
      *
+     * `$dejaCherchee` : l'appelant a déjà cherché la série que la clé a créée
+     * (`StoreSetAction`) ; l'index unique tranche une course.
+     *
      * @param  array<string, mixed>  $data
      */
-    public function execute(User $user, WorkoutLine $workoutLine, array $data): Set
+    public function execute(User $user, WorkoutLine $workoutLine, array $data, bool $dejaCherchee = false): Set
     {
-        $key = self::idempotencyKey($data);
-        $existing = $this->serieDejaCreee($workoutLine, $data);
+        $existing = $dejaCherchee ? null : $this->serieDejaCreee($workoutLine, $data);
 
         if ($existing instanceof Set) {
             return $existing;
         }
+
+        $key = self::idempotencyKey($data);
 
         /**
          * La forme est declaree parce que rien ne la porte jusqu'ici.
@@ -79,6 +83,8 @@ final class CreateSetAction
             $attributs
         );
         $set->idempotency_key = $key;
+        // La ligne est déjà en mémoire : les écouteurs de la série ne la relisent pas.
+        $set->setRelation('workoutLine', $workoutLine);
 
         try {
             $set->save();

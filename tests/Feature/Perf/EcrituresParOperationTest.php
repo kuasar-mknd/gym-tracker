@@ -71,9 +71,28 @@ it('crée une série en deux écritures : la série et le volume de la séance',
         ->assertCreated());
 
     expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
-        // Lectures comprises : le contrôleur ne cherche plus la ligne que l'action
-        // cherche déjà (#1676).
-        ->and($mesure['requetes'])->toBe(13);
+        // Lectures comprises : la ligne, sa séance et leur compte se lisent une
+        // fois, que l'action pose sur la série et sur la séance (#2325) ; la fin de la
+        // séance se relit en base à chaque série cochée (une lecture).
+        ->and($mesure['requetes'])->toBe(10, implode("\n", $mesure['toutes']));
+});
+
+it('crée une série sous une clé d idempotence sans chercher deux fois la clé, ni relire la ligne', function (): void {
+    [$user, , $line] = seanceOuvertePourLesEcritures();
+
+    $mesure = ecrituresPendant(fn () => actingAs($user, 'sanctum')
+        ->postJson(route('api.v1.sets.store'), ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true], ['Idempotency-Key' => 'une-tentative'])
+        ->assertCreated());
+
+    $lecturesDeLaCle = array_filter($mesure['toutes'], fn (string $s): bool => str_contains($s, '`idempotency_key` = ?') && str_starts_with($s, 'select'));
+    $lecturesDeLaLigne = array_filter($mesure['toutes'], fn (string $s): bool => str_starts_with($s, 'select * from `workout_lines`'));
+    $lecturesDeLaSeance = array_filter($mesure['toutes'], fn (string $s): bool => str_starts_with($s, 'select * from `workouts`'));
+
+    expect($mesure['ecritures'])->toBe(2)
+        ->and($lecturesDeLaCle)->toHaveCount(1)
+        ->and($lecturesDeLaLigne)->toHaveCount(1)
+        ->and($lecturesDeLaSeance)->toHaveCount(1)
+        ->and($mesure['requetes'])->toBe(11, implode("\n", $mesure['toutes']));
 });
 
 it('modifie une série en deux écritures', function (): void {
@@ -84,7 +103,12 @@ it('modifie une série en deux écritures', function (): void {
         ->patchJson(route('api.v1.sets.update', $set), ['weight' => 85])
         ->assertOk());
 
-    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']));
+    // La liaison de la série, la ligne et sa séance une fois chacune, le compte
+    // connecté pour celui de la séance, puis les deux lectures de records et
+    // le volume (#2325).
+    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
+        ->and($mesure['requetes'])->toBe(9, implode("\n", $mesure['toutes']))
+        ->and(array_filter($mesure['toutes'], fn (string $s): bool => str_starts_with($s, 'select * from `users`')))->toBe([]);
 });
 
 /*
@@ -284,7 +308,7 @@ it('termine une séance faite par la file hors ligne en une lecture de ses séan
     expect(serieDeJoursLectures($sql))->toHaveCount(1)
         ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
         ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(10, implode("\n", $sql));
+        ->and(count($sql))->toBe(9, implode("\n", $sql));
 });
 
 it('supprime une séance faite en une lecture des séances faites qui restent et une écriture de la série', function (): void {

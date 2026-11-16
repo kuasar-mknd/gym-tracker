@@ -455,7 +455,6 @@ CREATE TABLE `personal_records` (
   KEY `personal_records_exercise_id_foreign` (`exercise_id`),
   KEY `personal_records_workout_id_foreign` (`workout_id`),
   KEY `personal_records_set_id_foreign` (`set_id`),
-  KEY `personal_records_user_id_exercise_id_type_index` (`user_id`,`exercise_id`,`type`),
   KEY `personal_records_user_id_achieved_at_index` (`user_id`,`achieved_at`),
   CONSTRAINT `personal_records_exercise_id_foreign` FOREIGN KEY (`exercise_id`) REFERENCES `exercises` (`id`) ON DELETE CASCADE,
   CONSTRAINT `personal_records_set_id_foreign` FOREIGN KEY (`set_id`) REFERENCES `sets` (`id`) ON DELETE SET NULL,
