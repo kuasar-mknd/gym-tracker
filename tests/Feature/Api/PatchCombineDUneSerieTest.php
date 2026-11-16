@@ -319,11 +319,6 @@ test('le gain mesuré : requêtes HTTP et écritures SQL, trois PATCH contre un'
     $avant = envoyerSeparement($separe['user'], $separe['cible'], $champs);
     $apres = envoyerEnUn($combine['user'], $combine['cible'], $champs);
 
-    fwrite(STDERR, sprintf(
-        "\n[#2349] HTTP 3 -> 1 ; SQL total %d -> %d ; écritures %d -> %d\n",
-        $avant['requetes'], $apres['requetes'], $avant['ecritures'], $apres['ecritures'],
-    ));
-
     expect($apres['ecritures'])->toBeLessThan($avant['ecritures'])
         ->and($apres['requetes'])->toBeLessThan($avant['requetes']);
 });
