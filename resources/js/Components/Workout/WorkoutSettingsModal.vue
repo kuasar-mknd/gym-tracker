@@ -63,6 +63,10 @@ const envoyer = () => {
                     />
                 </div>
 
+                <p v-if="form.errors.base" role="alert" class="text-accent-danger-deep text-center text-sm font-medium">
+                    {{ form.errors.base }}
+                </p>
+
                 <GlassButton
                     type="submit"
                     variant="primary"
