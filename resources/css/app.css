@@ -1511,6 +1511,10 @@
     padding-bottom: calc(9rem + var(--safe-area-bottom));
 }
 
+@utility pb-main-safe-repos {
+    padding-bottom: calc(22rem + var(--safe-area-bottom));
+}
+
 /*
  * ===== ZONES SÛRES (#2043) =====
  *
