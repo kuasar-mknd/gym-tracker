@@ -198,7 +198,8 @@ function secretsEnArgumentNoms(array $composition): array
  *   `tr`, `base64`, `wc`, `cat`, `head`, `tail`, `cut`, `openssl`, `sha*sum`,
  *   `md5sum`) et qui finit la commande : seul `printf %s "$$NOM" |` est effacé,
  *   les options et les `$$(…)` des maillons restent contrôlés (`-a`, `-p`,
- *   `--pass`, `-pass`, `pass:`) ; `openssl -pass stdin` reste admis ;
+ *   `--pass`, `-pass`, `pass:`) ; `openssl -pass stdin` est la seule chose
+ *   admise que la garde d'avant refusait, le secret n'y étant pas en argument ;
  * - les références du shell (`$$NOM`) du corps du document intégré que lit
  *   `redis-server` (avec `exec` ou `docker-entrypoint.sh` devant), sur une ligne
  *   sans tube ni `;`, et non coté ni `$(` : `${NOM}`, interpolation de Compose
@@ -210,7 +211,8 @@ function secretsEnArgumentNoms(array $composition): array
  * Ce qu'elle ne peut pas voir : un secret qui voyage dans une variable
  * intermédiaire à plusieurs pas, un lecteur sûr qui le remet en argument par
  * lui-même (`sed` avec `e`), les alias d'environnement à plus d'un niveau, un
- * secret construit par morceaux (`$$A$$B`), et ce qu'un script externe copié
+ * secret construit par morceaux (`$$A$$B`), l'environnement tout entier lu sans
+ * nom (`env | grep`), et ce qu'un script externe copié
  * dans l'image fait de son environnement. `docker inspect` montre de toute façon
  * l'environnement du conteneur.
  *
@@ -228,7 +230,7 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
         $substitutions = [
             '__D__' => '(?:^|[;&|(\n])\s*(?:(?:env|export)\s+)?',
             '__R__' => '"\$\$\{?[A-Za-z0-9_]+\}?"',
-            '__C__' => "(?=(?:\\s*{$lecteurs}\\b(?>(?:(?!&&)[^|;\\n)])*)\\|?)+\\s*(?:\\)|\\n|\$))",
+            '__C__' => "(?=(?:\\s*{$lecteurs}\\b(?>(?:(?!&&|\\$\\$\\(|\\$\\()[^|;\\n)`>])*)\\|?)+\\s*(?:\\)|\\n|\$))",
         ];
 
         // Le document intégré de Redis, et lui seul : ses références du shell
@@ -238,7 +240,7 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
             static fn (array $trouve): string => preg_match('/^\s*(?:exec\s+)?(?:docker-entrypoint\.sh\s+)?redis-server(?![\w.-])/', $trouve[1]) === 1
                 && preg_match('/[|;]|&&/', $trouve[3]) === 0
                 && preg_match('/\$\$\(|`/', $trouve[4]) === 0
-                    ? $trouve[1].$trouve[3].preg_replace('/\$\$\{?[A-Za-z_]\w*\}?/', '', $trouve[4])
+                    ? $trouve[1].$trouve[3].preg_replace('/(?<!\$)\$\$(?!\$)\{?[A-Za-z_]\w*\}?/', '', $trouve[4])
                     : $trouve[0],
             $reste,
         );
@@ -249,7 +251,7 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
         $reste = (string) preg_replace(
             array_map(static fn (string $motif): string => strtr($motif, $substitutions), [
                 '/(__D__)MYSQL_PWD=__R__/',
-                '/((?:^|[;&\n])\s*|[A-Za-z_][A-Za-z0-9_]*=\$\$\(\s*)printf\s+%s\s+__R__\s*\|__C__/',
+                '/((?:^|[;&\n])\s*|__D__[A-Za-z_][A-Za-z0-9_]*=\$\$\(\s*)printf\s+%s\s+__R__\s*\|__C__/',
             ]),
             ['$1', '$1'],
             $reste,
@@ -399,7 +401,7 @@ function secretsEnArgumentCompositionMutee(array $mutations): array
     return $composition;
 }
 
-it('refuse, sur la vraie composition, chaque trou que la garde laissait', function (array $mutations): void {
+it('refuse, sur la vraie composition, chaque cas de la campagne #2397 (trous laissés et cas que la garde d’avant refusait déjà)', function (array $mutations): void {
     expect(secretsEnArgumentDefautsDeLaComposition(secretsEnArgumentCompositionMutee($mutations)))->not->toBe([]);
 })->with([
     'printf dans l’argument d’une commande, que l’exemption admettait sur toute la ligne' => [[['services.redis.command', 'curl -H "X: $$(printf %s "$$REDIS_PASSWORD")" http://x', true]]],
@@ -464,6 +466,14 @@ it('refuse, sur la vraie composition, chaque trou que la garde laissait', functi
     'printf devant mysql, dont l’option garde le secret' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'printf %s "$$MYSQL_ROOT_PASSWORD" | mysql -uroot -p"$$(cat)" -e "select 1"']]]],
     'printf, sed puis redis-cli --pass' => [[['services.redis.healthcheck.test', ['CMD-SHELL', 'printf %s "$$REDIS_PASSWORD" | sed s/a/a/ | redis-cli --pass "$$(cat)" ping']]]],
     'printf devant openssl -pass pass:' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | openssl enc -pass "pass:$$(cat)" -in /data/f', true]]],
+    'le document intégré de Redis : $$ suivi de l’interpolation de Compose' => [[['services.redis.command', ['sh', '-c', "exec docker-entrypoint.sh redis-server - --appendonly yes <<CONFIGURATION\nrequirepass \"\$\$\${REDIS_PASSWORD}\"\nCONFIGURATION"]]]],
+    'le document intégré de Redis : $$$NOM' => [[['services.redis.command', ['sh', '-c', "exec docker-entrypoint.sh redis-server - --appendonly yes <<CONFIGURATION\nrequirepass \"\$\$\$REDIS_PASSWORD\"\nCONFIGURATION"]]]],
+    'une affectation en argument, devant un tube de lecteurs sûrs' => [[['services.redis.command', 'curl -d x=$$(printf %s "$$REDIS_PASSWORD" | cat) http://h', true]]],
+    'une affectation après --env, devant un tube de lecteurs sûrs' => [[['services.redis.command', 'outil --env X=$$(printf %s "$$REDIS_PASSWORD" | cat)', true]]],
+    'openssl passwd qui relit le secret par $(cat)' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | openssl passwd -6 "$$(cat)"', true]]],
+    'sed qui relit le secret par $(cat)' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | sed "s/x/$$(cat)/"', true]]],
+    'head qui relit le secret par $(cat)' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | head -c "$$(cat)"', true]]],
+    'C9 : un tube vers un fichier, puis xargs à la ligne suivante' => [[['services.redis.command', "printf %s \"\$\$REDIS_PASSWORD\" | cat > /tmp/p\nxargs curl -u < /tmp/p", true]]],
     'une option --token' => [[['services.redis.command', 'notifier --token abc', true]]],
 ]);
 
