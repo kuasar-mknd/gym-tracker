@@ -72,9 +72,74 @@ function chiffreesIdentifiant(Appareil $appareil): string
 }
 
 it('est vrai par défaut, et la composition de production le transmet', function (): void {
-    expect((string) file_get_contents(base_path('config/session.php')))->toContain("env('SESSION_ENCRYPT', true)")
-        ->and((string) file_get_contents(base_path('docker-compose.prod.yml')))->toContain('SESSION_ENCRYPT: ${SESSION_ENCRYPT:-true}')
+    expect((string) file_get_contents(base_path('docker-compose.prod.yml')))->toContain('SESSION_ENCRYPT: ${SESSION_ENCRYPT:-true}')
         ->and((string) file_get_contents(base_path('.env.example')))->toContain("\nSESSION_ENCRYPT=true\n");
+});
+
+/**
+ * Ce que `config/session.php` rend de `encrypt` pour une valeur de `SESSION_ENCRYPT`,
+ * `null` pour une variable absente.
+ */
+function chiffreesConfigurationPour(?string $valeur): mixed
+{
+    $avantServeur = $_SERVER['SESSION_ENCRYPT'] ?? null;
+    $avantEnvironnement = $_ENV['SESSION_ENCRYPT'] ?? null;
+
+    unset($_SERVER['SESSION_ENCRYPT'], $_ENV['SESSION_ENCRYPT']);
+
+    if ($valeur !== null) {
+        $_SERVER['SESSION_ENCRYPT'] = $_ENV['SESSION_ENCRYPT'] = $valeur;
+    }
+
+    try {
+        /** @var array<string, mixed> $configuration */
+        $configuration = require base_path('config/session.php');
+
+        return $configuration['encrypt'];
+    } finally {
+        unset($_SERVER['SESSION_ENCRYPT'], $_ENV['SESSION_ENCRYPT']);
+
+        if ($avantServeur !== null) {
+            $_SERVER['SESSION_ENCRYPT'] = $avantServeur;
+        }
+
+        if ($avantEnvironnement !== null) {
+            $_ENV['SESSION_ENCRYPT'] = $avantEnvironnement;
+        }
+    }
+}
+
+it('ne s’éteint que sur un refus explicite : vide, absent ou faute de frappe laissent le chiffrement', function (?string $valeur, bool $attendu): void {
+    expect(chiffreesConfigurationPour($valeur))->toBe($attendu);
+})->with([
+    'absente' => [null, true],
+    'vide' => ['', true],
+    'des espaces' => ['  ', true],
+    'true' => ['true', true],
+    '1' => ['1', true],
+    'une faute de frappe' => ['flase', true],
+    'un mot sans rapport' => ['peut-être', true],
+    'false' => ['false', false],
+    'FALSE' => ['FALSE', false],
+    '0' => ['0', false],
+    'off' => ['off', false],
+    'no' => ['no', false],
+]);
+
+it('n’a aucun réglage de la suite ni de la pile qui éteigne le chiffrement', function (): void {
+    $phpunit = simplexml_load_file(base_path('phpunit.xml'));
+    expect($phpunit)->not->toBeFalse();
+    assert($phpunit instanceof SimpleXMLElement);
+
+    $valeurs = [];
+
+    foreach ($phpunit->xpath('//php/env[@name="SESSION_ENCRYPT"]') ?? [] as $variable) {
+        $valeurs[] = strtolower(trim((string) $variable['value']));
+    }
+
+    expect($valeurs)->not->toBe([])
+        ->and(array_intersect($valeurs, ['false', '0', 'off', 'no', '']))->toBe([])
+        ->and((string) file_get_contents(base_path('.env.example')))->not->toMatch('/^SESSION_ENCRYPT=(?:false|0|off|no)?\s*$/mi');
 });
 
 it('écrit la session chiffrée : ni la clé des copies ni le compte ne se lisent dans le magasin', function (): void {

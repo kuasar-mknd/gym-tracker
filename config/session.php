@@ -52,9 +52,13 @@ return [
     | session écrite sans chiffrement ne se déchiffre pas : Laravel la lit
     | comme vide, son titulaire en ouvre une neuve.
     |
+    | Seul un refus explicite (`false`, `0`, `off`, `no`) l'éteint : une
+    | variable vide ou une faute de frappe laisse le chiffrement (#2397).
+    |
     */
 
-    'encrypt' => filter_var(env('SESSION_ENCRYPT', true), FILTER_VALIDATE_BOOLEAN),
+    'encrypt' => env('SESSION_ENCRYPT') !== false
+        && ! in_array(strtolower(trim((string) env('SESSION_ENCRYPT'))), ['0', 'off', 'no'], true),
 
     /*
     |--------------------------------------------------------------------------

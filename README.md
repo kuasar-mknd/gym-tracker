@@ -228,6 +228,8 @@ Elles se posent dans l'environnement de la pile : les variables de la pile, ou u
 
 Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_PASSWORD` sous les noms `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` et `MYSQL_ROOT_PASSWORD`, et ne les lit **qu'à l'initialisation d'un volume vide** : les changer ensuite ne modifie ni la base ni ses comptes, et un `DB_PASSWORD` changé dans la pile sans `ALTER USER` dans MySQL coupe l'application.
 
+**Mots de passe de MySQL : évitez l'apostrophe, l'antislash et les guillemets** dans `DB_PASSWORD` et `DB_ROOT_PASSWORD`. L'initialisation de MySQL 8.4 échoue avec une apostrophe (`'`) ou certains antislash (`\`) et guillemets (`"`) , constat de #2397 : le script d'initialisation de l'image les écrit dans des instructions SQL, et le volume ne s'initialise pas. La sonde de santé de `db` ne le voit pas : `mysqladmin ping` rend 0 tant que `mysqld` répond, accès refusé compris, donc le service peut rester vert sur un volume mal initialisé. Prenez des lettres, des chiffres et des signes simples (`-`, `_`, `.`, `@`, `#`), assez longs ; `docker compose -f docker-compose.prod.yml logs db` dit l'erreur d'initialisation. À l'inverse, le mot de passe de Redis (`REDIS_PASSWORD`) en supporte davantage (« Mise en production »). Ce n'est pas testé automatiquement : la garde `AucunSecretNEstUnArgumentDeLaPileTest` ne lit que la composition.
+
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
 | `DB_DATABASE` | oui | vide : aucune base n'est créée, la migration échoue et `app` s'arrête | Nom de la base de l'application. |
