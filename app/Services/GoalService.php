@@ -61,7 +61,8 @@ final class GoalService
          */
         $identifiants = [];
         $quand = [];
-        $liaisons = ['current_value' => [], 'progress_pct' => [], 'completed_at' => [], 'start_value' => []];
+        $liaisons = ['current_value' => [], 'progress_pct' => [], 'completed_at' => []];
+        $departs = [];
 
         foreach ($dirtyGoals as $goal) {
             $identifiants[] = $goal->id;
@@ -72,17 +73,23 @@ final class GoalService
                 $liaisons[$colonne][] = $goal->id;
                 $liaisons[$colonne][] = $attributs[$colonne] ?? null;
             }
+
+            if ($goal->isDirty('start_value')) {
+                $departs[] = $goal->id;
+                $departs[] = $attributs['start_value'] ?? null;
+            }
         }
 
         $cas = 'case id '.implode(' ', $quand).' end';
-        $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas.', start_value = '.$cas
+        $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas
+            .($departs === [] ? '' : ', start_value = case '.implode(' ', array_fill(0, intdiv(count($departs), 2), 'when id = ? and start_value = 0 then ?')).' else start_value end')
             .', updated_at = ? where user_id = ? and id in ('.implode(', ', array_map(static fn (): string => '?', $identifiants)).')';
 
         \Illuminate\Support\Facades\DB::update($requete, [
             ...$liaisons['current_value'],
             ...$liaisons['progress_pct'],
             ...$liaisons['completed_at'],
-            ...$liaisons['start_value'],
+            ...$departs,
             $maintenant,
             $user->id,
             ...$identifiants,
@@ -162,17 +169,14 @@ final class GoalService
     }
 
     /**
-     * Un objectif de mensuration créé avant toute mesure garde un départ de 0 :
-     * à la première mesure reçue (82 kg), « descendre à 75 » se lirait comme
-     * une montée, atteinte aussitôt (#2337). Le départ devient cette mesure.
-     *
-     * Seul le passage de « aucune mesure » (valeur actuelle stockée à 0) à une
-     * mesure le déclenche : un objectif déjà suivi, dont le départ vaut 0
-     * parce que quelqu'un l'a voulu, ou atteint depuis, ne bouge pas.
+     * La première mesure d'un objectif de mensuration en devient le départ
+     * (#2337) : à 0, « descendre à 75 » se lisait comme une montée, atteinte
+     * à 82 kg. Seul le passage de « aucune mesure » (valeur actuelle stockée à
+     * 0) le déclenche : un objectif déjà suivi, même à départ 0, ne bouge pas.
      */
     private function partirDeLaPremiereMesure(Goal $goal): void
     {
-        if ($goal->type !== GoalType::Measurement || ! $goal->exists || $goal->start_value > 0 || $goal->current_value <= 0) {
+        if ($goal->type !== GoalType::Measurement || $goal->start_value > 0) {
             return;
         }
 

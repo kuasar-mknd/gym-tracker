@@ -3,12 +3,16 @@
 declare(strict_types=1);
 
 use App\Enums\GoalType;
+use App\Enums\PersonalRecordType;
 use App\Models\BodyMeasurement;
-use App\Models\BodyPartMeasurement;
+use App\Models\Exercise;
 use App\Models\Goal;
+use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Services\GoalService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 
 use function Pest\Laravel\actingAs;
 
@@ -35,6 +39,19 @@ function objectifDeMensurationSansMesure(User $user, string $mensuration, float 
         ->assertSessionHasNoErrors();
 
     return Goal::query()->where('user_id', $user->id)->sole();
+}
+
+function ecritureDesObjectifsLue(): ?string
+{
+    foreach (DB::getQueryLog() as $entree) {
+        $requete = (string) $entree['query'];
+
+        if (str_starts_with($requete, 'update goals')) {
+            return $requete;
+        }
+    }
+
+    return null;
 }
 
 function peseeParLaRoute(User $user, float $poids, string $le): void
@@ -73,27 +90,27 @@ it('part de la première pesée, et la garde aux pesées suivantes', function ()
         ->and($objectif->completed_at)->not->toBeNull();
 });
 
-it('part de la première mesure d’une partie du corps, en pouces comme en centimètres', function (): void {
+it('part de la première mesure d’une partie du corps, saisie en pouces, et la garde ensuite', function (): void {
     $user = User::factory()->create();
     $objectif = objectifDeMensurationSansMesure($user, 'Waist', 80);
 
     actingAs($user)
-        ->post(route('body-parts.store'), ['part' => 'Waist', 'value' => 90, 'unit' => 'cm', 'measured_at' => '2026-06-10'])
+        ->post(route('body-parts.store'), ['part' => 'Waist', 'value' => 35, 'unit' => 'in', 'measured_at' => '2026-06-10'])
         ->assertSessionHasNoErrors();
 
     $objectif->refresh();
 
-    expect($objectif->start_value)->toBe(90.0)
-        ->and($objectif->progress_pct)->toBe(0.0)
+    expect($objectif->start_value)->toBe($objectif->current_value)
+        ->and($objectif->start_value)->toBeGreaterThan(88)
         ->and($objectif->completed_at)->toBeNull();
 
+    $depart = $objectif->start_value;
+
     actingAs($user)
-        ->post(route('body-parts.store'), ['part' => 'Waist', 'value' => 34, 'unit' => 'in', 'measured_at' => '2026-06-15'])
+        ->post(route('body-parts.store'), ['part' => 'Waist', 'value' => 84, 'unit' => 'cm', 'measured_at' => '2026-06-15'])
         ->assertSessionHasNoErrors();
 
-    $objectif->refresh();
-
-    expect($objectif->start_value)->toBe(90.0)
+    expect($objectif->refresh()->start_value)->toBe($depart)
         ->and($objectif->completed_at)->toBeNull();
 });
 
@@ -118,31 +135,81 @@ it('ne touche pas au départ d’un objectif déjà suivi, même à 0', function
         ->and($atteint->completed_at)->not->toBeNull();
 });
 
-it('ne prend pas une mesure à zéro pour un départ', function (): void {
+it('ne reprend pas un départ donné, même quand la valeur stockée est retombée à 0', function (): void {
     $user = User::factory()->create();
-    $objectif = objectifDeMensurationSansMesure($user, 'Waist', 80);
-    BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Waist', 'value' => 0, 'unit' => 'cm', 'measured_at' => '2026-06-10']);
-
-    app(GoalService::class)->syncGoals($user);
-
-    expect($objectif->refresh()->start_value)->toBe(0.0);
-});
-
-it('laisse le départ des autres types d’objectif', function (): void {
-    $user = User::factory()->create();
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 82, 'measured_at' => '2026-06-10']);
     $objectif = Goal::factory()->create([
         'user_id' => $user->id,
-        'type' => GoalType::Frequency,
-        'measurement_type' => null,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'weight',
         'exercise_id' => null,
-        'start_value' => 0,
+        'start_value' => 90,
         'current_value' => 0,
-        'target_value' => 5,
+        'target_value' => 75,
     ]);
 
     app(GoalService::class)->syncGoals($user);
 
-    expect($objectif->refresh()->start_value)->toBe(0.0);
+    expect($objectif->refresh()->start_value)->toBe(90.0);
+});
+
+it('laisse à 0 le départ d’un objectif de charge qui prend un record', function (): void {
+    $user = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => null, 'type' => 'strength']);
+    PersonalRecord::factory()->create(['user_id' => $user->id, 'exercise_id' => $exercice->id, 'type' => PersonalRecordType::MaxWeight, 'value' => 80]);
+    $objectif = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Weight,
+        'measurement_type' => null,
+        'exercise_id' => $exercice->id,
+        'start_value' => 0,
+        'current_value' => 0,
+        'target_value' => 100,
+    ]);
+
+    app(GoalService::class)->syncGoals($user);
+    $objectif->refresh();
+
+    expect($objectif->current_value)->toBe(80.0)
+        ->and($objectif->start_value)->toBe(0.0);
+});
+
+it('part de la première pesée même quand le départ 0 est saisi, à la création par l’application', function (): void {
+    $user = User::factory()->create();
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 82, 'measured_at' => '2026-06-10']);
+
+    actingAs($user)
+        ->post(route('goals.store'), ['title' => 'Descendre', 'type' => 'measurement', 'measurement_type' => 'weight', 'target_value' => 75, 'start_value' => 0])
+        ->assertSessionHasNoErrors();
+
+    $objectif = Goal::query()->sole();
+
+    expect($objectif->start_value)->toBe(82.0)
+        ->and($objectif->completed_at)->toBeNull();
+});
+
+it('n’écrit le départ que des objectifs dont le recalcul l’a changé', function (): void {
+    Queue::fake();
+    $user = User::factory()->create();
+    $objectif = objectifDeMensurationSansMesure($user, 'weight');
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 82, 'measured_at' => '2026-06-10']);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    app(GoalService::class)->syncGoals($user);
+    $premiere = ecritureDesObjectifsLue();
+
+    // Une pesée de plus : la valeur change, le départ est déjà posé.
+    BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 80, 'measured_at' => '2026-06-15']);
+    DB::flushQueryLog();
+    app(GoalService::class)->syncGoals($user);
+    $seconde = ecritureDesObjectifsLue();
+    DB::disableQueryLog();
+
+    expect($premiere)->toContain('start_value = case when id = ? and start_value = 0 then ? else start_value end')
+        ->and($seconde)->not->toBeNull()
+        ->and($seconde)->not->toContain('start_value')
+        ->and($objectif->refresh()->start_value)->toBe(82.0);
 });
 
 it('part de la première mesure aussi par le chemin d’un seul objectif', function (): void {

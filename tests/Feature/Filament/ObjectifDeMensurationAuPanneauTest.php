@@ -48,15 +48,27 @@ function peseeDuPanneau(User $compte, float $poids): void
 }
 
 it('ne pré-remplit plus le départ d’un objectif créé au panneau', function (): void {
-    Livewire::test(CreateGoal::class)->assertFormSet(['start_value' => null]);
+    expect(Livewire::test(CreateGoal::class)->get('data.start_value'))->toBeNull();
 });
 
-it('part de la dernière pesée quand l’objectif de mensuration est créé au panneau sans départ', function (): void {
+it('part de la première pesée même quand le départ 0 est saisi au panneau', function (): void {
     $compte = User::factory()->create();
     peseeDuPanneau($compte, 82);
 
     Livewire::test(CreateGoal::class)
-        ->fillForm(['user_id' => $compte->id, 'title' => 'Descendre', 'type' => 'measurement', 'measurement_type' => 'weight', 'target_value' => 75, 'start_value' => null])
+        ->fillForm(['user_id' => $compte->id, 'title' => 'Descendre', 'type' => 'measurement', 'measurement_type' => 'weight', 'target_value' => 75, 'start_value' => 0])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Goal::query()->sole()->start_value)->toBe(82.0);
+});
+
+it('part de la dernière pesée quand l’objectif de mensuration est créé au panneau sans départ', function (?string $vide): void {
+    $compte = User::factory()->create();
+    peseeDuPanneau($compte, 82);
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm(['user_id' => $compte->id, 'title' => 'Descendre', 'type' => 'measurement', 'measurement_type' => 'weight', 'target_value' => 75, 'start_value' => $vide])
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -65,7 +77,10 @@ it('part de la dernière pesée quand l’objectif de mensuration est créé au 
     expect($objectif->start_value)->toBe(82.0)
         ->and($objectif->completed_at)->toBeNull()
         ->and($objectif->progress_pct)->toBe(0.0);
-});
+})->with([
+    'départ nul' => [null],
+    'départ vide' => [''],
+]);
 
 it('garde un départ saisi au panneau', function (): void {
     $compte = User::factory()->create();
