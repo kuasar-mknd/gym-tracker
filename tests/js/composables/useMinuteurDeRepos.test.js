@@ -8,6 +8,8 @@ vi.mock('@inertiajs/vue3', () => ({
 
 import { REPOS_AUTOMATIQUE_SANS_RESEAU, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useSortieAudio } from '@/composables/useSortieAudio'
+import { installerLeVerrouDEcran, retirerLeVerrouDEcran, verrousActifs } from '../utils/verrouDEcranSimule'
+import { flushPromises } from '@vue/test-utils'
 import { annoncesPendant } from '../utils/annoncesSansReseau'
 import { noterQueLeServeurRepond, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 import { dansUnGeste, installerLaSortieWebKit, retirerLaSortieWebKit, sorties } from '../utils/sortieAudioWebKit'
@@ -160,5 +162,40 @@ describe('la sortie audio du repos', () => {
             { dansUnGeste: true, etat: 'interrupted' },
         ])
         expect(sorties[0].state).toBe('running')
+    })
+})
+
+describe('le verrou d’écran du repos (#2314)', () => {
+    beforeEach(() => installerLeVerrouDEcran())
+    afterEach(() => retirerLeVerrouDEcran())
+
+    it('garde l’écran allumé dès le départ du repos, et le rend à la fermeture de la carte', async () => {
+        const minuteur = minuteurDeLaPage()
+        expect(verrousActifs()).toHaveLength(0)
+
+        minuteur.apresValidation(90)
+        await flushPromises()
+        expect(verrousActifs()).toHaveLength(1)
+
+        minuteur.apresValidation(60)
+        await flushPromises()
+        expect(verrousActifs()).toHaveLength(1)
+
+        minuteur.fermerLeRepos()
+        await flushPromises()
+        expect(minuteur.showTimer.value).toBe(false)
+        expect(verrousActifs()).toHaveLength(0)
+    })
+
+    it('ne demande rien quand le repos automatique est coupé, mais le repos demandé à la main garde l’écran', async () => {
+        const minuteur = minuteurDeLaPage()
+        minuteur.setAutoRestTimer(false)
+        minuteur.apresValidation(90)
+        await flushPromises()
+        expect(verrousActifs()).toHaveLength(0)
+
+        minuteur.openRestTimer()
+        await flushPromises()
+        expect(verrousActifs()).toHaveLength(1)
     })
 })

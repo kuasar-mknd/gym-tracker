@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import { useVerrouDEcran } from '@/composables/useVerrouDEcran'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
@@ -32,6 +33,8 @@ export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
         )
     }
 
+    const verrouDEcran = useVerrouDEcran()
+
     const showTimer = ref(false)
     const timerDuration = ref(90)
 
@@ -57,9 +60,16 @@ export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
      */
     const demarrerLeRepos = (duree) => {
         sortieAudio.preparer()
+        verrouDEcran.garder()
         timerDuration.value = duree || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
         showTimer.value = true
+    }
+
+    /** La carte se ferme : l'écran peut s'éteindre de nouveau. */
+    const fermerLeRepos = () => {
+        showTimer.value = false
+        verrouDEcran.relacher()
     }
 
     const openRestTimer = () => demarrerLeRepos()
@@ -115,5 +125,14 @@ export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
      */
     const timerRun = ref(0)
 
-    return { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation }
+    return {
+        showTimer,
+        timerDuration,
+        autoRestTimer,
+        timerRun,
+        openRestTimer,
+        fermerLeRepos,
+        setAutoRestTimer,
+        apresValidation,
+    }
 }
