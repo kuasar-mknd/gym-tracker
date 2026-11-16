@@ -15,7 +15,7 @@ use LogicException;
 /**
  * Le cookie d'appareil connu (#2310) : il dit que cet appareil a déjà ouvert
  * ce compte, et lui épargne le plafond d'échecs par adresse
- * (`LoginRequest::ECHECS_PAR_ADRESSE`), que d'autres adresses IP peuvent
+ * (`PlafondParAdresse::ECHECS`), que d'autres adresses IP peuvent
  * remplir sans rien savoir du mot de passe.
  *
  * Il porte l'identifiant du compte et une empreinte de son mot de passe, comme
@@ -78,8 +78,9 @@ final class AppareilConnu
     }
 
     /**
-     * L'identifiant et l'empreinte du cookie, vides quand il manque ou n'a pas
-     * la forme `identifiant|empreinte`.
+     * L'identifiant et l'empreinte du cookie, vides quand il manque. Sans
+     * barre verticale, l'empreinte est vide et l'identifiant est tout le
+     * cookie : il ne vaut rien, `vautPour()` compare l'empreinte.
      *
      * @return array{string, string}
      */
