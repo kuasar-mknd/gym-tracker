@@ -40,18 +40,10 @@ const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASSPHRASE|P
 /**
  * Ce que lit sans le lancer un processus au bout d'un tube : le secret qu'il
  * reçoit sur son entrée ne finit pas dans sa ligne de commande. Tout autre
- * lecteur (`xargs`, `sh`, `curl`…) peut le remettre en argument.
+ * lecteur (`xargs`, `sh`, `curl`, `tee >(sh)`, `redis-cli`, `mysql`…) peut le
+ * remettre en argument.
  */
-const SECRETS_EN_ARGUMENT_LECTEURS_SURS = '(?:sed|tr|base64|wc|cat|head|tail|cut|openssl|sha256sum|sha1sum|md5sum|tee|redis-cli|mysql)';
-
-/**
- * Les seuls destinataires dont un document intégré (`<<FIN`) n'est qu'une
- * entrée : Redis (son entrée standard est une configuration), `redis-cli`,
- * `mysql` (du SQL) et `cat > fichier`, sans tube. Tout autre destinataire
- * (`sh`, `python3`, `php`, `perl`, `node`, `cat | sh`…) peut exécuter le corps :
- * il se lit alors comme du shell.
- */
-const SECRETS_EN_ARGUMENT_DESTINATAIRES_SURS = '/^\s*(?:(?:exec\s+)?(?:docker-entrypoint\.sh\s+)?(?:redis-server|redis-cli|mysql)(?![\w.-])|cat\s*>\s*\S+\s*)/';
+const SECRETS_EN_ARGUMENT_LECTEURS_SURS = '(?:sed|tr|base64|wc|cat|head|tail|cut|openssl|sha256sum|sha1sum|md5sum)';
 
 /**
  * Les binaires de la famille MySQL. `-p <valeur>` n'y est pas un mot de passe
@@ -196,29 +188,31 @@ function secretsEnArgumentNoms(array $composition): array
 /**
  * Ce qu'une ligne lancée laisse voir d'un secret, une phrase par défaut.
  *
- * Ne laissent pas la valeur dans une ligne de commande, et sont donc admis :
+ * La base est la garde d'avant #2397 : toute référence à une variable qui porte
+ * un secret est un défaut, et toute option qui prend un mot de passe aussi. Le
+ * reste s'ajoute sans jamais admettre ce qu'elle refusait, hors les trois gestes
+ * qui ne laissent pas la valeur dans une ligne de commande :
  * - `MYSQL_PWD="$$NOM"` en affectation, au début d'une commande ;
- * - `printf %s "$$NOM"` au début d'une commande, devant un tube dont l'autre
- *   bout est un lecteur sûr (`sed`, `tr`, `base64`, `wc`… : jamais `xargs`,
- *   `sh` ou `curl`, qui peuvent remettre le secret en argument) ;
- * - `NOM=$$(printf %s "$$NOM" | lecteur sûr)`, la substitution affectée à une
- *   variable ; le nom affecté devient lui-même un secret (`valeur=$$(…)` puis
- *   `curl -u "u:$$valeur"` est refusé) ;
- *   Tous les maillons d'un tube doivent être des lecteurs sûrs : un seul
- *   `xargs`, `sh` ou `curl` après un `sed` suffit à le refuser ;
- * - le corps d'un document intégré (`<<FIN`) donné à l'un des seuls
- *   destinataires sûrs (`redis-server`, `redis-cli`, `mysql`, `cat > fichier`),
- *   sur une ligne sans `|`, `;` ni `&&` après le marqueur, et, s'il n'est pas
- *   coté (`<<'FIN'`), sans `$(` ni apostrophe inverse que le shell exécuterait.
- *   Tout autre destinataire (`sh`, `cat | sh`, `python3`, `php`, `perl`,
- *   `node`…) peut exécuter le corps : il se lit comme du shell ;
+ * - `printf %s "$$NOM" |` à l'entrée d'un tube, au début d'une commande ou dans
+ *   `VAR=$$(…)`, dont les maillons suivants sont tous des lecteurs sûrs (`sed`,
+ *   `tr`, `base64`, `wc`, `cat`, `head`, `tail`, `cut`, `openssl`, `sha*sum`,
+ *   `md5sum`) et qui finit la commande : seul `printf %s "$$NOM" |` est effacé,
+ *   les options et les `$$(…)` des maillons restent contrôlés (`-a`, `-p`,
+ *   `--pass`, `-pass`, `pass:`) ; `openssl -pass stdin` reste admis ;
+ * - les références du shell (`$$NOM`) du corps du document intégré que lit
+ *   `redis-server` (avec `exec` ou `docker-entrypoint.sh` devant), sur une ligne
+ *   sans tube ni `;`, et non coté ni `$(` : `${NOM}`, interpolation de Compose
+ *   écrite dans la configuration du conteneur, reste toujours un défaut.
+ * Le nom affecté par `VAR=$$(printf %s "$$NOM" …)` devient lui-même un secret.
+ * `redis-cli`, `mysql`, `cat > fichier` ne sont PAS admis : un fichier s'exécute
+ * ou se source, `\!` et `system` du client MySQL exécutent.
  *
  * Ce qu'elle ne peut pas voir : un secret qui voyage dans une variable
  * intermédiaire à plusieurs pas, un lecteur sûr qui le remet en argument par
- * lui-même (`openssl … -pass pass:`), les alias d'environnement à plus d'un
- * niveau, un secret construit par morceaux (`$$A$$B`), et ce qu'un script
- * externe copié dans l'image fait de son environnement. `docker inspect`
- * montre de toute façon l'environnement du conteneur.
+ * lui-même (`sed` avec `e`), les alias d'environnement à plus d'un niveau, un
+ * secret construit par morceaux (`$$A$$B`), et ce qu'un script externe copié
+ * dans l'image fait de son environnement. `docker inspect` montre de toute façon
+ * l'environnement du conteneur.
  *
  * @param  list<string>  $secrets  les noms de variables qui portent un secret
  * @param  bool  $interprete  vrai pour une ligne qu'un interpréteur lit (`$$NOM`)
@@ -230,18 +224,21 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
     $reste = $texte;
 
     if ($interprete) {
+        $lecteurs = SECRETS_EN_ARGUMENT_LECTEURS_SURS;
         $substitutions = [
             '__D__' => '(?:^|[;&|(\n])\s*(?:(?:env|export)\s+)?',
             '__R__' => '"\$\$\{?[A-Za-z0-9_]+\}?"',
-            '__S__' => SECRETS_EN_ARGUMENT_LECTEURS_SURS,
+            '__C__' => "(?=(?:\\s*{$lecteurs}\\b(?>(?:(?!&&)[^|;\\n)])*)\\|?)+\\s*(?:\\)|\\n|\$))",
         ];
 
+        // Le document intégré de Redis, et lui seul : ses références du shell
+        // s'effacent, l'interpolation de Compose reste vue.
         $reste = (string) preg_replace_callback(
-            '/((?:[^;&|\n\\\\]|\\\\.)*)<<-?\s*([\'"]?)(\w+)\2([^\n]*\n)(.*?)\n\s*\3\b/s',
-            static fn (array $trouve): string => preg_match(SECRETS_EN_ARGUMENT_DESTINATAIRES_SURS, $trouve[1]) === 1
-                && preg_match('/[|;]|&&/', $trouve[4]) === 0
-                && ($trouve[2] !== '' || preg_match('/\$\$\(|`/', $trouve[5]) === 0)
-                    ? $trouve[1].$trouve[4]
+            '/((?:[^;&|\n\\\\]|\\\\.)*)<<-?\s*(\w+)([^\n]*\n)(.*?)\n\s*\2\b/s',
+            static fn (array $trouve): string => preg_match('/^\s*(?:exec\s+)?(?:docker-entrypoint\.sh\s+)?redis-server(?![\w.-])/', $trouve[1]) === 1
+                && preg_match('/[|;]|&&/', $trouve[3]) === 0
+                && preg_match('/\$\$\(|`/', $trouve[4]) === 0
+                    ? $trouve[1].$trouve[3].preg_replace('/\$\$\{?[A-Za-z_]\w*\}?/', '', $trouve[4])
                     : $trouve[0],
             $reste,
         );
@@ -252,15 +249,14 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
         $reste = (string) preg_replace(
             array_map(static fn (string $motif): string => strtr($motif, $substitutions), [
                 '/(__D__)MYSQL_PWD=__R__/',
-                '/(__D__[A-Za-z_][A-Za-z0-9_]*=)\$\$\(\s*printf\s+%s\s+__R__(?:\s*\|\s*__S__\b(?:(?!&&)[^;()|])*)*\s*\)/',
-                '/((?:^|[;&\n])\s*)printf\s+%s\s+__R__(?:\s*\|\s*__S__\b(?>(?:(?!&&)[^|;\n])*))+(?!\s*\|)/',
+                '/((?:^|[;&\n])\s*|[A-Za-z_][A-Za-z0-9_]*=\$\$\(\s*)printf\s+%s\s+__R__\s*\|__C__/',
             ]),
-            ['$1', '$1', '$1'],
+            ['$1', '$1'],
             $reste,
         );
     }
 
-    preg_match_all('/(?<!\$)\$\$?\{?([A-Za-z_][A-Za-z0-9_]*)|\bprintenv\s+([A-Za-z_][A-Za-z0-9_]*)/', $reste, $references);
+    preg_match_all('/\$\$?\{?([A-Za-z_][A-Za-z0-9_]*)|\bprintenv\s+([A-Za-z_][A-Za-z0-9_]*)/', $reste, $references);
 
     foreach (array_unique(array_filter([...$references[1], ...$references[2]], static fn (string $nom): bool => $nom !== '')) as $nom) {
         if (in_array($nom, $secrets, true) || preg_match(SECRETS_EN_ARGUMENT_MOTIF, $nom) === 1) {
@@ -269,14 +265,15 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
     }
 
     $mysql = SECRETS_EN_ARGUMENT_BINAIRES_MYSQL;
-    $longues = '(?:^|\s)--(?:requirepass|masterauth|password|passwd|passphrase|pass|secret|token|jeton|cle|key|api-key|auth|mot-de-passe)(?=[=\s]|$)';
-    $courtes = '(?:^|\s)(?:-a\s|-p\S)';
+    $longues = '(?:^|\s)--(?:(?:requirepass|masterauth|password|pass|auth)\b|(?:passwd|passphrase|secret|token|jeton|cle|key|api-key|mot-de-passe)(?=[=\s]|$))';
+    $courtes = '(?:^|\s)(?:-a\s|-p(?!ass(?:in|out)?\s+["\']?(?:stdin|env:|file:|fd:))\S)';
+    $openssl = '(?<![\w-])pass:|(?:^|\s)-pass(?:in|out)?\s+(?!["\']?(?:stdin|env:|file:|fd:))\S';
     // `-p <valeur>` de la famille MySQL, refusé par prudence, d'une ligne de
     // shell comme d'une liste (dont les éléments se joignent par des retours
     // à la ligne).
     $apres = "/\\b{$mysql}\\b[^|;&]*?\\s-p\\s+\\S/";
 
-    if (preg_match("/{$longues}/i", $reste) === 1 || preg_match("/{$courtes}/", $reste) === 1 || preg_match($apres, $reste) === 1) {
+    if (preg_match("/{$longues}|{$courtes}/i", $reste) === 1 || preg_match("/{$openssl}/", $reste) === 1 || preg_match($apres, $reste) === 1) {
         $defauts[] = 'option qui prend un mot de passe';
     }
 
@@ -463,6 +460,10 @@ it('refuse, sur la vraie composition, chaque trou que la garde laissait', functi
     'un argument de construction au nom d’un secret, écrit en dur' => [[['services.app.build', ['context' => '.', 'args' => ['NPM_TOKEN' => 'abc123']]]]],
     '-p suivi d’une espace et d’une valeur, pour mysqladmin' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'mysqladmin -uroot -p motdepasse ping']]]],
     '-p suivi d’une espace et d’une référence' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'mysqladmin -uroot -p "$$NEUTRE" ping']]]],
+    'printf devant redis-cli, dont l’option garde le secret' => [[['services.redis.healthcheck.test', ['CMD-SHELL', 'printf %s "$$REDIS_PASSWORD" | redis-cli -a "$$(cat)" ping']]]],
+    'printf devant mysql, dont l’option garde le secret' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'printf %s "$$MYSQL_ROOT_PASSWORD" | mysql -uroot -p"$$(cat)" -e "select 1"']]]],
+    'printf, sed puis redis-cli --pass' => [[['services.redis.healthcheck.test', ['CMD-SHELL', 'printf %s "$$REDIS_PASSWORD" | sed s/a/a/ | redis-cli --pass "$$(cat)" ping']]]],
+    'printf devant openssl -pass pass:' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | openssl enc -pass "pass:$$(cat)" -in /data/f', true]]],
     'une option --token' => [[['services.redis.command', 'notifier --token abc', true]]],
 ]);
 
@@ -472,11 +473,10 @@ it('admet, sur la vraie composition, ce qui n’est pas un secret en argument', 
     'printf devant un tube, en début de commande' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | wc -c', true]]],
     'printf dans une affectation' => [[['services.redis.command', 'longueur=$$(printf %s "$$REDIS_PASSWORD" | wc -c)', true]]],
     'MYSQL_PWD en affectation derrière env' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'env MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping']]]],
-    'un secret dans le corps d’un document intégré' => [[['services.redis.command', "cat > /tmp/conf <<FIN\nrequirepass \"\$\$mot_de_passe\"\nFIN", true]]],
-    'un document intégré coté, que le shell ne développe pas' => [[['services.redis.command', "cat > /tmp/conf <<'FIN'\n\$\$(echo \$\$mot_de_passe)\nFIN", true]]],
+    'openssl lit le secret sur son entrée' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | openssl enc -aes256 -pass stdin -in /data/f', true]]],
+    'le document intégré réel de Redis, ses références du shell effacées' => [[['services.redis.command', ['sh', '-c', "exec docker-entrypoint.sh redis-server - --appendonly yes <<CONFIGURATION\nrequirepass \"\$\$REDIS_PASSWORD\"\nCONFIGURATION"]]]],
     'printf devant un lecteur sûr' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | base64', true]]],
     'un tube dont tous les maillons sont sûrs' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | sed s/a/b/ | base64 | wc -c', true]]],
-    'un document intégré pour mysql' => [[['services.redis.command', "mysql -uroot <<FIN\nALTER USER x IDENTIFIED BY \"\$\$mot_de_passe\";\nFIN", true]]],
     'une variable en AUTH_MODE, qui n’est pas un secret' => [[['services.redis.command', 'notifier "$$MAIL_AUTH_MODE" "$$AUTH_ENABLED"', true]]],
     'une disposition de clavier en KEY_LAYOUT' => [[['services.redis.command', 'notifier "$$KEY_LAYOUT"', true]]],
     'un chemin de clé dans les options de journalisation' => [[['services.app.logging', ['driver' => 'syslog', 'options' => ['syslog-tls-key' => '/etc/ssl/k.pem']]]]],
@@ -490,5 +490,406 @@ it('admet, sur la vraie composition, ce qui n’est pas un secret en argument', 
     'une étiquette et un argument de construction sans secret' => [[
         ['services.app.labels', ['com.exemple.version=${VERSION:-1}']],
         ['services.app.build', ['context' => '.', 'args' => ['NODE_VERSION' => '24']]],
+    ]],
+]);
+
+it('refuse encore tout ce que la garde d’avant #2397 refusait (et les contournements relevés après)', function (array $mutations): void {
+    expect(secretsEnArgumentDefautsDeLaComposition(secretsEnArgumentCompositionMutee($mutations)))->not->toBe([]);
+})->with([
+    'un document intégré que sh exécute (sonde)' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'sh <<FIN
+mysqladmin ping -uroot --host=db "-p$$MYSQL_ROOT_PASSWORD"
+FIN',
+            ],
+        ],
+    ]],
+    'un document intégré que sh exécute (commande)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'sh <<FIN
+mysqladmin ping -uroot --host=db "-p$$REDIS_PASSWORD"
+FIN',
+            2 => true,
+        ],
+    ]],
+    'un document intégré non coté dont $(…) s’exécute (sonde)' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'cat <<FIN
+$$(mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD)
+FIN',
+            ],
+        ],
+    ]],
+    'un document intégré non coté dont $(…) s’exécute (commande)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'cat <<FIN
+$$(curl -u u:$$REDIS_PASSWORD http://h)
+FIN',
+            2 => true,
+        ],
+    ]],
+    'un document intégré donné à cat, dont la sortie va à sh' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'cat <<FIN | sh
+mysqladmin ping -uroot "-p$$MYSQL_ROOT_PASSWORD"
+FIN',
+            ],
+        ],
+    ]],
+    'un document intégré donné à python3' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'python3 <<FIN
+x = (\'-p$$MYSQL_ROOT_PASSWORD\')
+FIN',
+            ],
+        ],
+    ]],
+    'un document intégré donné à php' => [[
+        0 => [
+            0 => 'services.app.command',
+            1 => 'php <<FIN
+<?php echo \'u:$$DB_PASSWORD\';
+FIN',
+        ],
+    ]],
+    'un document intégré donné à perl' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'perl <<FIN
+$x = \'u:$$REDIS_PASSWORD\';
+FIN',
+            2 => true,
+        ],
+    ]],
+    'un document intégré donné à node' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'node <<FIN
+console.log(\'u:$$REDIS_PASSWORD\');
+FIN',
+            2 => true,
+        ],
+    ]],
+    'un document intégré coté donné à sh' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'sh <<\'FIN\'
+curl -u u:$$REDIS_PASSWORD http://h
+FIN',
+            2 => true,
+        ],
+    ]],
+    'un document intégré de Redis dont la ligne se prolonge par un tube' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'redis-cli <<FIN | sh
+AUTH $$REDIS_PASSWORD
+FIN',
+            2 => true,
+        ],
+    ]],
+    'un document intégré donné à xargs' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'xargs curl -u <<FIN
+$$REDIS_PASSWORD
+FIN',
+            2 => true,
+        ],
+    ]],
+    'un nom collé : GITHUBTOKEN' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'notifier "$$GITHUBTOKEN"',
+            2 => true,
+        ],
+    ]],
+    'un nom collé : dbPassword' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'notifier "$$dbPassword"',
+            2 => true,
+        ],
+    ]],
+    'une substitution affectée qui laisse aussi le secret à une autre commande' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'x=$$(printf %s "$$REDIS_PASSWORD"; curl -u "$$REDIS_PASSWORD" http://h)',
+            2 => true,
+        ],
+    ]],
+    'C1 interpolation Compose dans le heredoc de Redis' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'exec docker-entrypoint.sh redis-server - --appendonly yes <<CONFIGURATION
+requirepass "${REDIS_PASSWORD}"
+CONFIGURATION',
+            ],
+        ],
+    ]],
+    'C1b interpolation Compose, cat > fichier' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'cat > /tmp/r.conf <<FIN
+requirepass ${REDIS_PASSWORD}
+FIN
+exec redis-server /tmp/r.conf',
+            ],
+        ],
+    ]],
+    'C2 script ecrit par cat > puis execute' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'cat > /tmp/x.sh <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN
+sh /tmp/x.sh',
+            ],
+        ],
+    ]],
+    'C3 mysql heredoc avec \\! (commande systeme du client)' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'mysql -uroot <<FIN
+\\! mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD
+FIN',
+            ],
+        ],
+    ]],
+    'C4 printf | redis-cli -a "$(cat)"' => [[
+        0 => [
+            0 => 'services.redis.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'printf %s "$$REDIS_PASSWORD" | redis-cli -a "$$(cat)" ping',
+            ],
+        ],
+    ]],
+    'C5 printf | mysql -p"$(cat)"' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'printf %s "$$MYSQL_ROOT_PASSWORD" | mysql -uroot -p"$$(cat)" -e \'select 1\'',
+            ],
+        ],
+    ]],
+    'C6 printf | sed | redis-cli --pass "$(cat)"' => [[
+        0 => [
+            0 => 'services.redis.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'printf %s "$$REDIS_PASSWORD" | sed s/a/a/ | redis-cli --pass "$$(cat)" ping',
+            ],
+        ],
+    ]],
+    'C7 printf | openssl -pass pass:$(cat)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'printf %s "$$REDIS_PASSWORD" | openssl enc -aes256 -pass "pass:$$(cat)" -in /data/f',
+            ],
+        ],
+    ]],
+    'C8 printf | tee >(sh)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'printf \'curl -u u:%s h\' "$$REDIS_PASSWORD" | tee >(sh)',
+            ],
+        ],
+    ]],
+    'C9 printf %s | head -c 99 puis xargs (&& sh)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'printf %s "$$REDIS_PASSWORD" | cat > /tmp/p && xargs curl -u < /tmp/p',
+            ],
+        ],
+    ]],
+    'C10 redis-server heredoc puis ; sh' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server - <<FIN ; curl -u u:$$REDIS_PASSWORD h
+requirepass x
+FIN',
+            ],
+        ],
+    ]],
+    'C11 cat > >(sh) heredoc (bash)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'bash',
+                1 => '-c',
+                2 => 'cat > >(sh) <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'C12 heredoc <<- tabule vers redis-cli puis xargs ligne suivante' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-cli <<-FIN
+AUTH $$REDIS_PASSWORD
+FIN
+true',
+            ],
+        ],
+    ]],
+    'C13 mysql heredoc avec system' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'mysql -uroot <<FIN
+system curl -u u:$$MYSQL_ROOT_PASSWORD http://h
+FIN',
+            ],
+        ],
+    ]],
+    'C14 cat > fichier .env source' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'cat > /tmp/e <<FIN
+export X=$$REDIS_PASSWORD
+FIN
+. /tmp/e',
+            ],
+        ],
+    ]],
+    'C15 compose interpolation dans heredoc mysql' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'mysql -uroot <<FIN
+SELECT \'${DB_PASSWORD}\';
+FIN',
+            ],
+        ],
+    ]],
+    'B2 tube enchaine : cat puis sh' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'printf \'curl -u u:%s http://h\' "$$REDIS_PASSWORD" | cat | sh',
+            2 => true,
+        ],
+    ]],
+    'B3 heredoc pipe vers sh (cat <<FIN | sh)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'cat <<FIN | sh
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            2 => true,
+        ],
+    ]],
+    'B4 heredoc a python3' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'python3 <<FIN
+import subprocess; subprocess.run([\'curl\',\'-u\',\'u:$$REDIS_PASSWORD\',\'http://h\'])
+FIN',
+            2 => true,
+        ],
+    ]],
+    'B5 heredoc a php' => [[
+        0 => [
+            0 => 'services.app.command',
+            1 => 'php <<FIN
+<?php passthru(\'curl -u u:$$DB_PASSWORD http://h\');
+FIN',
+        ],
+    ]],
+    'B9 /bin/sh heredoc' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => '/bin/sh <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            2 => true,
+        ],
+    ]],
+    'B10 heredoc tee >(sh)' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => 'tee >(sh) <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            2 => true,
+        ],
+    ]],
+    'B3 sonde : cat <<FIN | sh' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'cat <<FIN | sh
+mysqladmin ping -uroot "-p$$MYSQL_ROOT_PASSWORD"
+FIN',
+            ],
+        ],
+    ]],
+    'B4 sonde : python3 <<FIN' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'python3 <<FIN
+import os; os.system(\'mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD\')
+FIN',
+            ],
+        ],
+    ]],
+    'B1 sonde : printf | sed | xargs' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'printf %s "$$MYSQL_ROOT_PASSWORD" | sed s/x/x/ | xargs -I{} mysqladmin ping -uroot -p{}',
+            ],
+        ],
     ]],
 ]);
