@@ -47,6 +47,7 @@ describe('BaseChart à l’impression, sur un vrai Chart.js', () => {
         const avant = animation(wrapper)
 
         expect(avant).not.toBe(false)
+        expect(avant.duration).toBe(Chart.defaults.animation.duration)
 
         window.dispatchEvent(new Event('beforeprint'))
         await nextTick()
@@ -57,6 +58,25 @@ describe('BaseChart à l’impression, sur un vrai Chart.js', () => {
         expect(animation(wrapper)).not.toBe(false)
         expect(animation(wrapper)).toEqual(avant)
 
+        // vue-chartjs met un update en file : le laisser passer avant de détruire le Chart.
+        await nextTick()
+        wrapper.unmount()
+    })
+
+    it('laisse l’animation propre à la carte l’emporter hors « réduire les animations »', async () => {
+        const wrapper = mount(BaseChart, {
+            props: {
+                description: 'Reps',
+                datasets: [{ label: 'Reps', data: [12, 8] }],
+                labels: ['lun.', 'mar.'],
+                options: { animation: { duration: 123 } },
+            },
+            attachTo: document.body,
+        })
+
+        expect(animation(wrapper).duration).toBe(123)
+
+        await nextTick()
         wrapper.unmount()
     })
 
