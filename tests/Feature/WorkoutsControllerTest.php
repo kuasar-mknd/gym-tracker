@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use App\Services\Stats\ClesDeStats;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -138,4 +140,29 @@ it('forbids deleting another users workout (404, indiscernable)', function (): v
         ->assertNotFound();
 
     expect($workout->fresh())->not->toBeNull();
+});
+
+/*
+ * La carte d'une séance ne lit que `line.id`, `line.exercise.name` et
+ * `line.sets_count` : le reste des lignes et des exercices (clefs de copie,
+ * horodatages, notes, description) alourdissait chaque page de la liste, la
+ * copie hors ligne et le préchauffage (#2322).
+ */
+it('n’envoie de chaque ligne de la liste que ce que la carte lit', function (): void {
+    $user = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => null]);
+
+    foreach (range(1, 20) as $rang) {
+        $seance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays($rang)]);
+        WorkoutLine::factory()->count(3)->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    }
+
+    $reponse = actingAs($user)->get(route('workouts.index'))->assertOk();
+    /** @var array{props: array{workouts: array{data: list<array{workout_lines: list<array{exercise: array<string, mixed>}>}>}}} $page */
+    $page = $reponse->viewData('page');
+    $lignes = $page['props']['workouts']['data'][0]['workout_lines'];
+
+    expect(array_keys($lignes[0]))->toEqualCanonicalizing(['id', 'workout_id', 'exercise_id', 'order', 'sets_count', 'exercise'])
+        ->and(array_keys($lignes[0]['exercise']))->toEqualCanonicalizing(['id', 'name'])
+        ->and(mb_strlen((string) json_encode($page['props']['workouts'])))->toBeLessThan(25_000);
 });
