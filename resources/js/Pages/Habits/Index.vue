@@ -83,7 +83,7 @@ const toggleHabit = (habit, date) => {
              * and Inertia keeps the value from before the tick. Ticking a box
              * moved the row and left both charts describing the previous state.
              */
-            only: ['habits', 'stats'],
+            only: ['habits', 'weekDates', 'stats'],
         },
     )
 }

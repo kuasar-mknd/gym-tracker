@@ -6,6 +6,7 @@ namespace App\Actions\Journal;
 
 use App\Models\DailyJournal;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 
 class SaveDailyJournalAction
@@ -36,7 +37,16 @@ class SaveDailyJournalAction
         }
 
         $journal->fill($data);
-        $journal->save();
+
+        try {
+            $journal->save();
+        } catch (UniqueConstraintViolationException) {
+            // Un enregistrement croisé a créé l'entrée du jour entre la lecture et l'écriture : on la met à jour.
+            /** @var DailyJournal $journal */
+            $journal = $user->dailyJournals()->where('date', $dateString)->firstOrFail();
+            $journal->fill($data);
+            $journal->save();
+        }
 
         return $journal;
     }

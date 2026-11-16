@@ -132,7 +132,7 @@ describe('ticking a day', () => {
         expect(options).toMatchObject({
             preserveScroll: true,
             preserveState: true,
-            only: ['habits', 'stats'],
+            only: ['habits', 'weekDates', 'stats'],
         })
     })
 })

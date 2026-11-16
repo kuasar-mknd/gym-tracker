@@ -52,6 +52,19 @@ function recordsEgaliteAttentes(User $user, Exercise $exercice, Closure $action)
     return $attentes;
 }
 
+it('classe le 1RM estimé comme le calcul PHP : 333,33 kg ne ravit pas le record à 333,34 kg', function (): void {
+    [$user, $exercice, $ligne] = recordsEgaliteScene();
+
+    $quasiEgale = Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => 200, 'reps' => 20, 'is_warmup' => false, 'is_completed' => true]);
+    $detentrice = Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => 333.34, 'reps' => 1, 'is_warmup' => false, 'is_completed' => true]);
+
+    $attendus = app(PersonalRecordService::class)->recordsAttendus($user->id, $exercice->id);
+
+    expect($quasiEgale->id)->toBeLessThan($detentrice->id)
+        ->and($attendus['max_1rm']['serie'])->toBe($detentrice->id)
+        ->and($attendus['max_1rm']['valeur'])->toBe(333.34);
+});
+
 it('ne déplace pas un record de volume qu’une série égale seulement', function (float $poids, int $repetitions): void {
     [$user, , $ligne] = recordsEgaliteScene();
     $service = app(PersonalRecordService::class);
