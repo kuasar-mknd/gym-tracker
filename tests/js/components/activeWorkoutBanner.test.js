@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import { mount } from '@vue/test-utils'
 
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
-import { entier } from '@/Utils/nombre'
 
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${params.workout}`
@@ -62,11 +61,13 @@ describe('ActiveWorkoutBanner elapsed time', () => {
         expect(wrapper.text()).not.toContain('125 min')
     })
 
-    it("écrit les heures d'une séance ancienne en fr-CH, avec le séparateur de milliers", async () => {
-        const wrapper = await mountRunningFor(1899 * 3600 + 13 * 60)
+    it("écrit les heures jusqu'à douze, puis la date de début d'une séance oubliée", async () => {
+        const jusquaDouze = await mountRunningFor(12 * 3600)
+        expect(jusquaDouze.text()).toContain('12 h 00 min')
 
-        expect(wrapper.text()).toContain(`${entier(1899)} h 13 min`)
-        expect(wrapper.text()).not.toContain('1899')
+        const oubliee = await mountRunningFor(1899 * 3600 + 13 * 60)
+        expect(oubliee.text()).toContain('commencée le 25/05/2026')
+        expect(oubliee.text()).not.toContain(' h ')
     })
 
     it('keeps counting while the banner is on screen', async () => {

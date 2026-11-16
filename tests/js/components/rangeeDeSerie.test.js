@@ -135,3 +135,31 @@ describe('la coche, le numéro et le retrait', () => {
         expect(wrapper.emitted('pointerdown')[0][0]).toBeInstanceOf(Event)
     })
 })
+
+describe('un écran de 320 px', () => {
+    it("rend aux chiffres la place de l'unité sous 360 px, sans perdre l'unité du lecteur d'écran (#2313)", () => {
+        const wrapper = monter({ set: { id: 9, weight: 142.5, reps: 12, is_completed: false, personal_record: null } })
+
+        for (const dusk of ['weight-input-2-1', 'reps-input-2-1']) {
+            const champ = wrapper.get(`[dusk="${dusk}"]`)
+            expect(champ.classes()).toContain('max-[359px]:px-0.5')
+            expect(champ.classes()).toContain('max-[359px]:text-sm')
+        }
+
+        const unites = wrapper.findAll('span[aria-hidden="true"]').filter((s) => ['kg', 'réps'].includes(s.text()))
+        expect(unites).toHaveLength(2)
+        for (const unite of unites) {
+            expect(unite.classes()).toContain('max-[359px]:hidden')
+        }
+        expect(wrapper.get('[dusk="weight-input-2-1"]').attributes('aria-label')).toContain('Poids en kg')
+    })
+
+    it('fait de même pour la distance du cardio', () => {
+        const wrapper = monter({
+            line: { id: 1, exercise: { type: 'cardio', name: 'Course' } },
+            set: { id: 9, distance_km: 142.5, duration_seconds: 1500 },
+        })
+
+        expect(wrapper.get('[dusk="distance-input-2-1"]').classes()).toContain('max-[359px]:px-0.5')
+    })
+})

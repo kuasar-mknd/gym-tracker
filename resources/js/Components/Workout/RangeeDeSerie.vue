@@ -125,10 +125,10 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                         :disabled="isFinished"
                         :dusk="`weight-input-${lineIndex}-${index}`"
                         :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
-                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums"
+                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums max-[359px]:px-0.5 max-[359px]:text-sm"
                     />
                     <span
-                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold"
+                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold max-[359px]:hidden"
                         aria-hidden="true"
                         >kg</span
                     >
@@ -144,10 +144,10 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                         :disabled="isFinished"
                         :dusk="`reps-input-${lineIndex}-${index}`"
                         :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
-                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums"
+                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums max-[359px]:px-0.5 max-[359px]:text-sm"
                     />
                     <span
-                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold"
+                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold max-[359px]:hidden"
                         aria-hidden="true"
                         >réps</span
                     >
@@ -167,10 +167,10 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                         :disabled="isFinished"
                         :dusk="`distance-input-${lineIndex}-${index}`"
                         :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
-                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums"
+                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums max-[359px]:px-0.5 max-[359px]:text-sm"
                     />
                     <span
-                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold"
+                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold max-[359px]:hidden"
                         aria-hidden="true"
                         >km</span
                     >
