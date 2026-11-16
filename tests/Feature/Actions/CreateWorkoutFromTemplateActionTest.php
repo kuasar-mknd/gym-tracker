@@ -3,10 +3,14 @@
 declare(strict_types=1);
 
 use App\Actions\CreateWorkoutFromTemplateAction;
+use App\Models\Set;
 use App\Models\User;
+use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 
 use function PHPUnit\Framework\assertNotNull;
 
@@ -337,4 +341,51 @@ it('ramène des répétitions lues en texte à un entier', function (): void {
 
     expect($lancement[0]['series'][0]['reps'])->toBe(8)
         ->and($lancement[0]['series'][0]['weight'])->toBe(42.5);
+});
+
+/*
+ * Un modèle de six exercices de quatre séries coûtait six relectures de la
+ * séance, une par ligne, et six écritures de ligne (#2323). La séance, les
+ * lignes et les séries tiennent en trois écritures, et la séance n'est jamais
+ * relue.
+ */
+it('lance un modèle sans relire la séance et en trois écritures', function (): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+
+    foreach (range(0, 5) as $rang) {
+        $ligne = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id, 'order' => $rang]);
+        WorkoutTemplateSet::factory()->count(4)->create(['workout_template_line_id' => $ligne->id]);
+    }
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $workout = app(CreateWorkoutFromTemplateAction::class)->execute($user, $template);
+    $requetes = array_map(fn (array $entree): string => mb_strtolower((string) $entree['query']), DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $relectures = array_filter($requetes, fn (string $requete): bool => str_starts_with($requete, 'select * from `workouts`'));
+    $ecritures = array_filter($requetes, fn (string $requete): bool => preg_match('/^(insert|update|delete)\b/', $requete) === 1);
+
+    expect($relectures)->toBeEmpty(implode("\n", $requetes))
+        ->and($ecritures)->toHaveCount(3, implode("\n", $ecritures))
+        ->and($workout->workoutLines()->count())->toBe(6)
+        ->and(Set::query()->where('user_id', $user->id)->count())->toBe(24);
+});
+
+it('recopie sur chaque ligne lancée le propriétaire, le début de la séance et le rang du modèle', function (): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+
+    foreach ([5, 2, 9] as $rang) {
+        WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id, 'order' => $rang]);
+    }
+
+    $debut = Date::parse('2026-03-29 02:30:00', config()->string('app.timezone'));
+    $workout = app(CreateWorkoutFromTemplateAction::class)->execute($user, $template, $debut);
+    $lignes = $workout->workoutLines()->get();
+
+    expect($lignes->pluck('order')->all())->toBe([2, 5, 9])
+        ->and($lignes->every(fn (WorkoutLine $ligne): bool => $ligne->user_id === $user->id))->toBeTrue()
+        ->and($lignes->every(fn (WorkoutLine $ligne): bool => $ligne->getRawOriginal('workout_started_at') === $workout->debutALHeureMurale()))->toBeTrue();
 });

@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use Carbon\CarbonInterface;
@@ -108,21 +109,33 @@ final readonly class CreateWorkoutFromTemplateAction
      */
     private function createLinesAndSets(Workout $workout, WorkoutTemplate $template, CarbonInterface $debut): void
     {
-        $allSets = [];
+        $lancement = self::lignesDuLancement($template);
         $horodatage = $debut->toDateTimeString();
 
-        foreach (self::lignesDuLancement($template) as $ligneLancee) {
-            $workoutLine = $workout->workoutLines()->make([
-                'exercise_id' => $ligneLancee['exercise_id'],
-                'order' => $ligneLancee['order'],
-            ]);
-            // Hors de `$fillable`, comme toute clé d'idempotence : elle se pose à la main.
-            $workoutLine->idempotency_key = $ligneLancee['cle'];
-            $workoutLine->save();
+        // `insert()` saute `WorkoutLine::saving` : le propriétaire et le début se posent ici (`.ai/rules/models.md`).
+        if ($lancement === []) {
+            return;
+        }
 
+        WorkoutLine::query()->insert(array_map(fn (array $ligneLancee): array => [
+            'workout_id' => $workout->id,
+            'exercise_id' => $ligneLancee['exercise_id'],
+            'order' => $ligneLancee['order'],
+            'user_id' => $workout->user_id,
+            'workout_started_at' => $workout->debutALHeureMurale(),
+            'idempotency_key' => $ligneLancee['cle'],
+            'created_at' => $horodatage,
+            'updated_at' => $horodatage,
+        ], $lancement));
+
+        /** @var \Illuminate\Support\Collection<string, int> $identifiants */
+        $identifiants = WorkoutLine::query()->where('workout_id', $workout->id)->pluck('id', 'idempotency_key');
+        $allSets = [];
+
+        foreach ($lancement as $ligneLancee) {
             foreach ($ligneLancee['series'] as $serie) {
                 $allSets[] = [
-                    'workout_line_id' => $workoutLine->id,
+                    'workout_line_id' => $identifiants[$ligneLancee['cle']],
                     // `insert()` ne pose aucun defaut : sans ce rang, toutes
                     // les series de l'exercice partageraient un ordre nul et
                     // rien ne les departagerait.
@@ -130,7 +143,7 @@ final readonly class CreateWorkoutFromTemplateAction
                     // `insert()` ne declenche aucun evenement : la copie du
                     // proprietaire doit etre posee ici, sans quoi ces series
                     // seraient invisibles a `GET /api/v1/sets`.
-                    'user_id' => $workoutLine->user_id,
+                    'user_id' => $workout->user_id,
                     'reps' => $serie['reps'],
                     'weight' => $serie['weight'],
                     'is_warmup' => $serie['is_warmup'],

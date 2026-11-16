@@ -255,6 +255,9 @@ function projectionsLInventaire(): array
                 'la copie posée à l’enregistrement de la ligne' => [
                     'app/Models/WorkoutLine.php' => ['booted'],
                 ],
+                'l’insertion en masse depuis un modèle de séance' => [
+                    'app/Actions/CreateWorkoutFromTemplateAction.php' => ['createLinesAndSets'],
+                ],
             ],
         ),
         'la date de séance recopiée sur ses lignes' => projectionsDecrire(
@@ -275,6 +278,9 @@ function projectionsLInventaire(): array
                  */
                 'la propagation quand la séance change de date' => [
                     'app/Models/Workout.php' => ['recopierLeDebutSurSesLignes'],
+                ],
+                'l’insertion en masse depuis un modèle de séance' => [
+                    'app/Actions/CreateWorkoutFromTemplateAction.php' => ['createLinesAndSets'],
                 ],
             ],
             dette: 'La copie se pose quand la ligne s’écrit et se propage quand la séance change de date : '
