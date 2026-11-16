@@ -272,6 +272,7 @@ function chiffreesAppareilDontLaSessionAExpire(): Appareil
  * dont le README dit ce qu'elle fait des copies et des écritures en attente.
  */
 it('répond à la bascule comme à une session expirée, pour chaque requête que l’appareil envoie hors du parcours de la page', function (string $methode, string $chemin, array $entetes): void {
+    /** @var array<string, string> $entetes */
     $apresLaBascule = chiffreesAppareilApresLaBascule();
     $expiree = chiffreesAppareilDontLaSessionAExpire();
 

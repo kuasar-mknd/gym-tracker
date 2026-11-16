@@ -46,10 +46,13 @@ it('vide le cache par cache:clear sans toucher aux sessions, à la file ni aux v
 
     expect(Artisan::call('cache:clear'))->toBe(0);
 
-    $relue = app('session')->driver()->getHandler()->read($identifiant);
+    $session = app('session')->driver();
+    $session->flush();
+    $session->setId($identifiant);
+    $session->start();
 
     expect(Cache::get('redis-reel:entree'))->toBeNull()
-        ->and($relue)->toContain('gardée')
+        ->and($session->get('redis-reel'))->toBe('gardée')
         ->and(Queue::connection('redis')->size('redis-reel'))->toBe(1)
         ->and(Cache::lock('redis-reel:verrou', 60)->get())->toBeFalse();
 
