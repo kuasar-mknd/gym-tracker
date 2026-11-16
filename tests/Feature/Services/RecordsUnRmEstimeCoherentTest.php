@@ -47,5 +47,6 @@ it('désigne le même détenteur du 1RM estimé par synchronisation et par recon
         ->and($reconstruction)->toBe($rangDuDetenteur === 1 ? $idPremiere : $idSeconde);
 })->with([
     'égalité exacte à la demi-unité, 250,75×27 puis 280,25×21 : 476,42 puis 476,43' => [250.75, 27, 280.25, 21, 2],
+    'ordre inverse, 280,25×21 puis 250,75×27 : le détenteur le reste' => [280.25, 21, 250.75, 27, 1],
     'égalité exacte entière, 44×6 puis 48×3 : le détenteur le reste' => [44.0, 6, 48.0, 3, 1],
 ]);
