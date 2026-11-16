@@ -8,6 +8,7 @@ use App\Filament\Sauvegardes\PageDesSauvegardes;
 use App\Http\Middleware\CleDesCopiesHorsLigne;
 use App\Http\Middleware\ConditionalCspHeaders;
 use App\Http\Middleware\OuvreLaSession;
+use App\Support\AuthentificationParApplication;
 use App\Support\AvatarDesInitiales;
 use App\Support\ComptesVusParPulse;
 use App\Support\Csp\Nonce\SigneLesScriptsEnLigneDesPaquets;
@@ -18,7 +19,6 @@ use Filament\Actions\BulkAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -148,7 +148,17 @@ final class AdminPanelProvider extends PanelProvider
              * panneau les porte toutes (`LePanneauAutoriseChaqueActionTest`).
              */
             ->strictAuthorization()
-            ->multiFactorAuthentication([AppAuthentication::make()]);
+            /*
+             * Obligatoire (#2353) : sans elle, un super administrateur n'était
+             * gardé que par son mot de passe et la liste d'adresses, alors
+             * qu'il fixe le mot de passe de tout compte et télécharge les
+             * sauvegardes. Un administrateur qui n'en a pas est conduit à
+             * l'enrôlement à sa première page (secret, puis codes de
+             * récupération, qui servent une fois) ; celui qui a perdu
+             * l'application passe par un code, ou par
+             * `php artisan admin:reinitialiser-mfa`.
+             */
+            ->multiFactorAuthentication([AuthentificationParApplication::make()->recoverable()], isRequired: true);
     }
 
     /** @return array<int, \Filament\Contracts\Plugin> */
@@ -318,6 +328,10 @@ final class AdminPanelProvider extends PanelProvider
         return [
             \App\Http\Middleware\AdminRateLimiter::class,
             \App\Http\Middleware\IpWhitelist::class,
+            // La double authentification obligatoire (#2353) n'est un middleware que des
+            // pages : sans lui ici, un administrateur sans secret garderait les mises à
+            // jour Livewire d'un composant ouvert avant le déploiement ou la réinitialisation.
+            \App\Http\Middleware\ExigeLaDoubleAuthentificationDuPanneau::class,
         ];
     }
 }

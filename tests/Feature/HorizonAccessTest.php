@@ -167,6 +167,18 @@ it('ouvre Horizon à l’administrateur à qui un autre rôle donne view-outils'
     get('/horizon')->assertOk();
 });
 
+it('ferme Horizon à l’administrateur qui n’a pas enrôlé sa double authentification, permission ou non', function (): void {
+    horizonEnProductionDepuis('203.0.113.5', ['203.0.113.5']);
+    $role = Role::findOrCreate('exploitation', 'admin');
+    $role->givePermissionTo(Permission::findOrCreate('view-outils', 'admin'));
+    $admin = Admin::factory()->sansDoubleAuthentification()->create();
+    $admin->assignRole($role);
+
+    withSession(horizonSessionDuPanneau($admin->fresh() ?? $admin));
+
+    get('/horizon')->assertForbidden();
+});
+
 it('ferme Horizon et son API au super administrateur hors des adresses admises', function (): void {
     horizonEnProductionDepuis('198.51.100.7', ['203.0.113.5']);
     horizonSansRedis();
