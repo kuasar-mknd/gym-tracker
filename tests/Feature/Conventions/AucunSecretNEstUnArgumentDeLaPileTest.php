@@ -184,7 +184,7 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
     $reste = $texte;
 
     if ($interprete) {
-        $debut = '(?:^|[;&|(\n]|\benv\s|\bexport\s)';
+        $debut = '(?:^|[;&|(\n]|(?<![-\w])env\s|(?<![-\w])export\s)';
         $reference = '"\$\$\{?[A-Za-z0-9_]+\}?"';
 
         $reste = (string) preg_replace(
@@ -208,9 +208,13 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
     }
 
     $mysql = SECRETS_EN_ARGUMENT_BINAIRES_MYSQL;
-    $options = '(?:^|\s)(?:--(?:requirepass|masterauth|password|passwd|pass|secret|token|jeton|cle|key|api-key|auth|mot-de-passe)(?=[=\s]|$)|-a\s|-p\S|-p\s+["\']?\$)';
+    $longues = '(?:^|\s)--(?:requirepass|masterauth|password|passwd|pass|secret|token|jeton|cle|key|api-key|auth|mot-de-passe)(?=[=\s]|$)';
+    $courtes = '(?:^|\s)(?:-a\s|-p\S)';
+    // `-p <valeur>` : le mot de passe de la famille MySQL, d'une ligne de shell
+    // comme d'une liste (dont les éléments se joignent par des retours à la ligne).
+    $apres = "/\\b{$mysql}\\b[^|;&]*?\\s-p\\s+\\S/";
 
-    if (preg_match("/{$options}/i", $reste) === 1 || preg_match("/\\b{$mysql}\\b[^|;&\\n]*\\s-p\\s+\\S/", $reste) === 1) {
+    if (preg_match("/{$longues}/i", $reste) === 1 || preg_match("/{$courtes}/", $reste) === 1 || preg_match($apres, $reste) === 1) {
         $defauts[] = 'option qui prend un mot de passe';
     }
 
@@ -247,8 +251,8 @@ function secretsEnArgumentDefautsDeLaComposition(array $composition): array
         $construction = $service['build'] ?? null;
 
         foreach (secretsEnArgumentCouples(is_array($construction) ? ($construction['args'] ?? []) : []) as $cle => $valeur) {
-            if ($valeur !== '' && preg_match(SECRETS_EN_ARGUMENT_MOTIF, $cle) === 1) {
-                $defauts[] = "{$nom}.build.args.{$cle} : un secret dans l'historique de l'image";
+            if (preg_match(SECRETS_EN_ARGUMENT_MOTIF, $cle) === 1) {
+                $defauts[] = "{$nom}.build.args.{$cle} : un secret dans l'historique de l'image, valeur ou non";
             }
         }
     }
@@ -349,6 +353,10 @@ it('refuse, sur la vraie composition, chaque trou que la garde laissait', functi
     'l’image' => [[['services.db.image', 'registre.exemple/mysql:${REDIS_PASSWORD}']]],
     'un argument de construction qui interpole un secret' => [[['services.app.build', ['context' => '.', 'args' => ['NPM' => '${DB_PASSWORD}']]]]],
     'un argument de construction en liste' => [[['services.app.build', ['context' => '.', 'args' => ['GIT=${APP_KEY}']]]]],
+    'un argument de construction repris de l’hôte, sans valeur (liste)' => [[['services.app.build', ['context' => '.', 'args' => ['NPM_TOKEN']]]]],
+    'un argument de construction repris de l’hôte, sans valeur (table)' => [[['services.app.build', ['context' => '.', 'args' => ['NPM_TOKEN' => null]]]]],
+    '-p suivi d’une valeur, en liste (forme exec)' => [[['services.db.healthcheck.test', ['CMD', 'mysqladmin', '-uroot', '-p', 'motdepasse', 'ping']]]],
+    'un secret passé par --env, qui n’est pas l’affectation d’une commande' => [[['services.redis.command', 'outil --env JETON=$$(printf %s "$$APP_KEY")', true]]],
     'un argument de construction au nom d’un secret, écrit en dur' => [[['services.app.build', ['context' => '.', 'args' => ['NPM_TOKEN' => 'abc123']]]]],
     '-p suivi d’une espace et d’une valeur, pour mysqladmin' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'mysqladmin -uroot -p motdepasse ping']]]],
     '-p suivi d’une espace et d’une référence' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'mysqladmin -uroot -p "$$NEUTRE" ping']]]],
@@ -362,6 +370,9 @@ it('admet, sur la vraie composition, ce qui n’est pas un secret en argument', 
     'printf dans une affectation' => [[['services.redis.command', 'longueur=$$(printf %s "$$REDIS_PASSWORD" | wc -c)', true]]],
     'MYSQL_PWD en affectation derrière env' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'env MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping']]]],
     'un secret dans le corps d’un document intégré' => [[['services.redis.command', "cat <<FIN\nrequirepass \"\$\$mot_de_passe\"\nFIN", true]]],
+    'mkdir -p avec une référence' => [[['services.redis.command', 'mkdir -p "$$DOSSIER"', true]]],
+    'redis-cli -p avec une référence' => [[['services.redis.command', 'redis-cli -p "$$REDIS_PORT" ping', true]]],
+    'un -P de port avec une référence' => [[['services.redis.command', 'mysql -P ${DB_PORT} -h db', true]]],
     'mkdir -p, qui n’est pas un mot de passe' => [[['services.redis.command', 'mkdir -p /data/dossier', true]]],
     'une étiquette et un argument de construction sans secret' => [[
         ['services.app.labels', ['com.exemple.version=${VERSION:-1}']],

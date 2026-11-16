@@ -86,9 +86,11 @@ function chiffreesConfigurationPour(?string $valeur): mixed
     $avantEnvironnement = $_ENV['SESSION_ENCRYPT'] ?? null;
 
     unset($_SERVER['SESSION_ENCRYPT'], $_ENV['SESSION_ENCRYPT']);
+    putenv('SESSION_ENCRYPT');
 
     if ($valeur !== null) {
         $_SERVER['SESSION_ENCRYPT'] = $_ENV['SESSION_ENCRYPT'] = $valeur;
+        putenv("SESSION_ENCRYPT={$valeur}");
     }
 
     try {
@@ -98,9 +100,11 @@ function chiffreesConfigurationPour(?string $valeur): mixed
         return $configuration['encrypt'];
     } finally {
         unset($_SERVER['SESSION_ENCRYPT'], $_ENV['SESSION_ENCRYPT']);
+        putenv('SESSION_ENCRYPT');
 
         if ($avantServeur !== null) {
             $_SERVER['SESSION_ENCRYPT'] = $avantServeur;
+            putenv('SESSION_ENCRYPT='.(is_scalar($avantServeur) ? (string) $avantServeur : ''));
         }
 
         if ($avantEnvironnement !== null) {
