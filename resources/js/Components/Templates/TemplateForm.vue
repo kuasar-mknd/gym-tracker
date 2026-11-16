@@ -178,9 +178,6 @@ const submit = () => {
                             placeholder="Détails de la séance..."
                             :error="form.errors.description"
                         />
-                        <p v-if="form.errors.description" class="text-accent-danger-deep mt-2 text-sm font-medium">
-                            {{ form.errors.description }}
-                        </p>
                     </div>
                 </div>
             </GlassCard>
@@ -264,7 +261,7 @@ const submit = () => {
                                             :class="
                                                 set.is_warmup
                                                     ? 'bg-accent-primary/20 text-accent-primary-deep'
-                                                    : 'text-text-muted/50 bg-surface-sunken'
+                                                    : 'text-text-muted bg-surface-sunken'
                                             "
                                             :aria-label="`Échauffement, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                             :aria-pressed="set.is_warmup"

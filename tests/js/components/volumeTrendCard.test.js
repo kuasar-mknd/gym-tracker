@@ -55,8 +55,11 @@ describe('VolumeTrendCard', () => {
         expect(total(wrapper)).toContain('kg')
     })
 
-    it('affiche zéro tant qu’aucune période n’est chargée', async () => {
-        expect(total(await mountCard({}))).toContain('0 kg')
+    it('affiche un tiret, sans unité, tant que la période n’est pas chargée', async () => {
+        const chargement = total(await mountCard({}))
+
+        expect(chargement).toBe('—')
+        expect(chargement).not.toContain('kg')
     })
 
     it('affiche zéro plutôt que « NaN » sur une période vide', async () => {

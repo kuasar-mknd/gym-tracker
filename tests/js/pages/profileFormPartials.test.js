@@ -267,15 +267,27 @@ describe('UpdatePasswordForm', () => {
         expect(button().attributes('aria-busy')).toBe('false')
     })
 
-    it('ne confirme l’enregistrement qu’une fois qu’il a eu lieu', async () => {
+    it('annonce « Enregistré » dans une région role="status" déjà présente avant le message (#2355)', async () => {
         const wrapper = filled()
 
-        expect(wrapper.text()).not.toContain('Enregistré ✓')
+        expect(wrapper.findAll('[role="status"]')).toHaveLength(1)
+        expect(wrapper.get('[role="status"]').text()).toBe('')
 
         wrapper.vm.form.recentlySuccessful = true
         await nextTick()
 
-        expect(wrapper.text()).toContain('Enregistré ✓')
+        expect(wrapper.get('[role="status"]').text()).toBe('Enregistré')
+    })
+
+    it('ne confirme l’enregistrement qu’une fois qu’il a eu lieu', async () => {
+        const wrapper = filled()
+
+        expect(wrapper.text()).not.toContain('Enregistré')
+
+        wrapper.vm.form.recentlySuccessful = true
+        await nextTick()
+
+        expect(wrapper.text()).toContain('Enregistré')
     })
 
     /*
@@ -752,17 +764,31 @@ describe('UpdateProfileInformationForm', () => {
         expect(aide).not.toContain('Mot de passe oublié')
     })
 
+    it('annonce « Enregistré » dans une région role="status" déjà présente avant le message (#2355)', async () => {
+        signedInAs(sam)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+
+        expect(wrapper.findAll('[role="status"]')).toHaveLength(1)
+        expect(wrapper.get('[role="status"]').text()).toBe('')
+
+        wrapper.vm.form.recentlySuccessful = true
+        await nextTick()
+
+        expect(wrapper.get('[role="status"]').text()).toBe('Enregistré')
+    })
+
     it('ne confirme l’enregistrement qu’une fois qu’il a eu lieu', async () => {
         signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
 
-        expect(wrapper.text()).not.toContain('Enregistré ✓')
+        expect(wrapper.text()).not.toContain('Enregistré')
 
         wrapper.vm.form.recentlySuccessful = true
         await nextTick()
 
-        expect(wrapper.text()).toContain('Enregistré ✓')
+        expect(wrapper.text()).toContain('Enregistré')
     })
 
     /*

@@ -23,6 +23,7 @@ import { Head, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { RAISON_RESEAU_LENT } from '@/Utils/copiesServies'
 import { dateAvecJour, heureCourte } from '@/Utils/date'
@@ -116,7 +117,15 @@ const attendre = () => {
             <GlassCard class="space-y-4">
                 <h2 class="titre-carte">Ce qui s'ouvre sans réseau</h2>
 
-                <ul class="space-y-2">
+                <GlassEmptyState
+                    v-if="pages.length === 0"
+                    taille="ligne"
+                    icon="cloud_off"
+                    title="Aucune page gardée pour le moment"
+                    description="Ouvre-les une fois avec du réseau : elles s'ouvriront ensuite sans."
+                />
+
+                <ul v-else class="space-y-2">
                     <li v-for="page in pages" :key="page.chemin">
                         <Link
                             :href="page.chemin"

@@ -59,7 +59,7 @@ const selectCommonPart = (part) => {
                 :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
                 @click="showAddForm = !showAddForm"
             >
-                <GlassIcon name="add" size="xs" />
+                <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" />
             </GlassButton>
         </template>
 
@@ -67,8 +67,8 @@ const selectCommonPart = (part) => {
             <div class="flex items-center justify-between">
                 <h1 class="titre-carte">Mensurations</h1>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
-                    <GlassIcon name="add" size="xs" class="mr-2" />
-                    Ajouter
+                    <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
+                    {{ showAddForm ? 'Annuler' : 'Ajouter' }}
                 </GlassButton>
             </div>
         </template>
@@ -107,7 +107,7 @@ const selectCommonPart = (part) => {
                         <GlassInput
                             v-model="form.value"
                             type="number"
-                            step="0.1"
+                            step="0.01"
                             label="Valeur"
                             placeholder="0.00"
                             :error="form.errors.value"

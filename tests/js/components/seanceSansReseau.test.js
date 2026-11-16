@@ -72,6 +72,19 @@ describe('les réglages de la séance', () => {
             global: { directives: { press: {} }, stubs: modaleSansFenetre },
         })
 
+    it('ne disent le refus des notes qu’une fois, sous le champ (#2355)', () => {
+        const form = formulaire()
+        form.errors.notes = 'Les notes sont trop longues.'
+        const wrapper = mount(WorkoutSettingsModal, {
+            props: { show: true, form },
+            global: { directives: { press: {} }, stubs: modaleSansFenetre },
+        })
+
+        const MESSAGE = 'Les notes sont trop longues.'
+        expect(wrapper.text().split('Les notes sont trop longues.')).toHaveLength(2)
+        expect(wrapper.findAll('[role="alert"]').filter((alerte) => alerte.text() === MESSAGE)).toHaveLength(1)
+    })
+
     it('s’envoient quand le serveur répond', async () => {
         const wrapper = monter()
 

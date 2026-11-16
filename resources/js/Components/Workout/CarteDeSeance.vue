@@ -77,13 +77,11 @@ const formatDate = (dateStr) =>
                                 class="text-text-muted border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
                             >
                                 {{ line.exercise.name }}
-                                <span class="text-text-muted/50"
-                                    >• {{ compte(line.sets_count, 'série', 'séries') }}</span
-                                >
+                                <span class="text-text-muted">• {{ compte(line.sets_count, 'série', 'séries') }}</span>
                             </span>
                             <span
                                 v-if="seance.workout_lines.length > 3"
-                                class="text-text-muted/50 border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
+                                class="text-text-muted border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
                             >
                                 +{{ seance.workout_lines.length - 3 }}
                             </span>

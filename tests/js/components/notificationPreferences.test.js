@@ -217,6 +217,26 @@ describe('UpdateNotificationPreferencesForm', () => {
         wrapper.unmount()
     })
 
+    it('confirme l’enregistrement dans une région role="status", et dit qu’il attend le réseau hors ligne (#2355)', async () => {
+        const wrapper = mountForm({ hasPushSubscription: true })
+        const region = () => wrapper.get('[role="status"]')
+
+        expect(region().text()).toBe('')
+
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(region().text()).toBe('Enregistré')
+
+        patch.mockRejectedValueOnce({ isOffline: true })
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(region().text()).toBe('Sera enregistré au retour du réseau')
+
+        wrapper.unmount()
+    })
+
     it('keeps quiet when the save succeeds', async () => {
         const wrapper = mountForm({ hasPushSubscription: true })
         await wrapper.find('form').trigger('submit')
