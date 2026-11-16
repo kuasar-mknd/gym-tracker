@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
+use Tests\Support\HorlogeQuiPasseMinuit;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -188,4 +191,29 @@ it('forbids toggling another users habit', function (): void {
         ->assertNotFound();
 
     expect(\App\Models\HabitLog::where('habit_id', $habit->id)->exists())->toBeFalse();
+});
+
+it('rend la semaine du lundi quand la grille rechargée après minuit redemande weekDates', function (): void {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->create(['user_id' => $user->id, 'archived' => false]);
+
+    Carbon::setTestNow('2026-11-15 23:59:30');
+    $avant = actingAs($user)->get(route('habits.index'))->viewData('page');
+
+    HorlogeQuiPasseMinuit::apres(0, '2026-11-15 23:59:59', '2026-11-16 00:00:05');
+    actingAs($user)->post(route('habits.toggle', $habit), ['date' => '2026-11-16'])->assertRedirect();
+
+    $apres = actingAs($user)->get(route('habits.index'), [
+        'X-Inertia' => 'true',
+        'X-Requested-With' => 'XMLHttpRequest',
+        'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
+        'X-Inertia-Partial-Component' => 'Habits/Index',
+        'X-Inertia-Partial-Data' => 'habits,weekDates,stats',
+    ])->assertOk()->json('props');
+
+    expect(data_get($avant, 'props.weekDates.0.date'))->toBe('2026-11-09')
+        ->and(data_get($avant, 'props.weekDates.6.is_today'))->toBeTrue()
+        ->and(data_get($apres, 'weekDates.0.date'))->toBe('2026-11-16')
+        ->and(data_get($apres, 'weekDates.0.is_today'))->toBeTrue()
+        ->and(data_get($apres, 'habits.0.logs.0.date'))->toBe('2026-11-16');
 });
