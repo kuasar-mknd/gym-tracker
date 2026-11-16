@@ -60,7 +60,7 @@ declare(strict_types=1);
  * Un jeton de réinitialisation du mot de passe expire au bout de 60 minutes
  * (`config/auth.php`), mais sa ligne restait en base, sous l'adresse de
  * courriel, que le compte existe encore ou non (#1938). La commande ne demande
- * aucune confirmation en production. 01:45 : avant la sauvegarde de 02:30, et
+ * aucune confirmation en production. 01:45 : avant la sauvegarde de 01:55, et
  * hors de l'heure que les changements d'heure sautent ou répètent.
  */
 \Illuminate\Support\Facades\Schedule::command('auth:clear-resets')
@@ -75,7 +75,7 @@ declare(strict_types=1);
  * trente jours, comme les exceptions enregistrées ; Horizon, de son côté, ne
  * garde les siennes que sept jours (`config/horizon.php`). La commande ne
  * demande aucune confirmation en production. 01:30 : avant la sauvegarde de
- * 02:30, et hors de l'heure que les changements d'heure sautent ou répètent.
+ * 01:55, et hors de l'heure que les changements d'heure sautent ou répètent.
  */
 \Illuminate\Support\Facades\Schedule::command('queue:prune-failed', ['--hours' => 30 * 24])
     ->dailyAt('01:30');
@@ -116,7 +116,7 @@ declare(strict_types=1);
  * jour, ou plus de 5 500 Mo d'archives) passe par le moniteur des tâches, qui
  * met la santé au rouge et écrit à `HEALTH_TO_ADDRESS` ; « Archives des
  * sauvegardes », sur la page de santé, voit déjà une archive de plus de
- * vingt-six heures. Le nettoyage de 02:00 ramène les archives à 5 000 Mo au
+ * vingt-six heures. Le nettoyage de 01:50 ramène les archives à 5 000 Mo au
  * plus, pour que ce seuil de place ne sonne pas chaque matin
  * (`config/backup.php`).
  */
@@ -124,10 +124,10 @@ declare(strict_types=1);
     ->withoutOverlapping(expiresAt: 25 * 60)
     ->group(function (): void {
         \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications'])
-            ->dailyAt('02:00');
+            ->dailyAt('01:50');
 
         \Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db', '--disable-notifications'])
-            ->dailyAt('02:30');
+            ->dailyAt('01:55');
 
         \Illuminate\Support\Facades\Schedule::command('backup:monitor')
             ->dailyAt('08:00');
