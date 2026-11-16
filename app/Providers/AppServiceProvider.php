@@ -451,10 +451,10 @@ final class AppServiceProvider extends ServiceProvider
              */
             if ($workout->wasChanged('ended_at') || ($workout->wasChanged('started_at') && $workout->ended_at !== null)) {
                 app(StreakService::class)->recalculerPourLaSeance($workout);
-            }
 
-            \App\Jobs\SyncUserAchievements::dispatch($workout->user);
-            \App\Jobs\SyncUserGoals::dispatch($workout->user);
+                \App\Jobs\SyncUserAchievements::dispatch($workout->user);
+                \App\Jobs\SyncUserGoals::dispatch($workout->user);
+            }
         });
 
         /**

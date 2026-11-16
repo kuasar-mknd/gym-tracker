@@ -395,7 +395,7 @@ it('efface chaque nuit les comptes jamais ouverts au-delà du délai, et eux seu
         ->filter(static fn (TachePlanifiee $tache): bool => str_contains((string) $tache->command, 'model:prune') && str_contains((string) $tache->command, User::class));
 
     expect($purges)->toHaveCount(1)
-        ->and($purges->sole()->expression)->toBe('50 3 * * *');
+        ->and($purges->sole()->expression)->toBe('50 0 * * *');
 });
 
 it('écrit le lien d’ouverture en français, sur APP_URL, sans rien de l’inscription', function (): void {
