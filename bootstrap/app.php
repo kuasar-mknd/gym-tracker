@@ -485,4 +485,20 @@ return Application::configure(basePath: dirname(__DIR__))
          * paths are real routes: it becomes the 404 of an unknown path (#2032).
          */
         $exceptions->render(fn (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, \Illuminate\Http\Request $request): ?\Symfony\Component\HttpFoundation\Response => $request->is('diagnostic/*') ? $notFound($request) : null);
+
+        /*
+         * Un verrou de compte pris trop longtemps se rend rejouable (#2308).
+         *
+         * 503 et `Retry-After`, pas 409 ni 423 : `classifySyncError` lit tout
+         * 4xx comme un refus définitif, et une séance démarrée hors ligne serait
+         * abandonnée. Le 503 reste « à rejouer ». Sur le web, la page garde
+         * son état et reçoit le message en flash, plutôt qu'une erreur brute.
+         */
+        $exceptions->render(function (\Illuminate\Contracts\Cache\LockTimeoutException $e, \Illuminate\Http\Request $request) use ($speaksJson): \Symfony\Component\HttpFoundation\Response {
+            $message = 'Une autre requête met à jour tes séances. Réessaie dans un instant.';
+
+            return $speaksJson($request)
+                ? response()->json(['message' => $message], 503, ['Retry-After' => '2'])
+                : redirect()->back()->with('error', $message);
+        });
     })->create();
