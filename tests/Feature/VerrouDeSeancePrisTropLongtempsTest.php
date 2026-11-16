@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Actions\Workouts\DemarrerUneSeanceAction;
 use App\Exceptions\LeVerrouDesSeancesEstPris;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Sleep;
 use Laravel\Sanctum\Sanctum;
@@ -111,4 +113,39 @@ it('ne rend en 503 que le verrou des séances, pas un autre verrou', function ()
 
     $this->get('/_test/verrou-des-records', ['Accept' => 'application/json'])->assertStatus(500);
     $this->get('/_test/verrou-des-seances', ['Accept' => 'application/json'])->assertStatus(503);
+});
+
+it('rend le verrou quand la section lève, pour la requête suivante', function (): void {
+    $user = User::factory()->create();
+
+    expect(fn (): mixed => DemarrerUneSeanceAction::sousLeVerrouDuCompte($user->id, function (): never {
+        throw new RuntimeException('la section échoue');
+    }))->toThrow(RuntimeException::class, 'la section échoue');
+
+    Sleep::fake(syncWithCarbon: true);
+
+    expect(DemarrerUneSeanceAction::sousLeVerrouDuCompte($user->id, fn (): string => 'reprise'))->toBe('reprise');
+});
+
+it('tient le verrou pendant la section et le rend quand elle réussit', function (): void {
+    $user = User::factory()->create();
+    Sleep::fake(syncWithCarbon: true);
+
+    $pris = DemarrerUneSeanceAction::sousLeVerrouDuCompte(
+        $user->id,
+        fn (): bool => (bool) Cache::lock("seances-du-compte:{$user->id}", 5)->get(),
+    );
+
+    expect($pris)->toBeFalse();
+    expect(Cache::lock("seances-du-compte:{$user->id}", 5)->get())->toBeTrue();
+});
+
+it('rapporte la prise manquée du verrou en rendant le 503', function (): void {
+    Exceptions::fake();
+
+    Sanctum::actingAs(unCompteDontLeVerrouDesSeancesEstPris());
+
+    postJson(route('api.v1.workouts.store'))->assertStatus(503);
+
+    Exceptions::assertReported(LeVerrouDesSeancesEstPris::class);
 });

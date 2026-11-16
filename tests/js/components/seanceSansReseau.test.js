@@ -85,6 +85,18 @@ describe('les réglages de la séance', () => {
         expect(wrapper.findAll('[role="alert"]').filter((alerte) => alerte.text() === MESSAGE)).toHaveLength(1)
     })
 
+    it('disent le refus du serveur qui n’est d’aucun champ, sous les champs (#2308)', () => {
+        const form = formulaire()
+        form.errors.base = 'Une autre requête met à jour tes séances. Réessaie dans un instant.'
+        const wrapper = mount(WorkoutSettingsModal, {
+            props: { show: true, form },
+            global: { directives: { press: {} }, stubs: modaleSansFenetre },
+        })
+
+        const alertes = wrapper.findAll('[role="alert"]').map((alerte) => alerte.text())
+        expect(alertes.filter((texte) => texte === form.errors.base)).toHaveLength(1)
+    })
+
     it('s’envoient quand le serveur répond', async () => {
         const wrapper = monter()
 

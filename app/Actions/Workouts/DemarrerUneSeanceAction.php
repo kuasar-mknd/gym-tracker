@@ -68,7 +68,7 @@ final readonly class DemarrerUneSeanceAction
 
     /**
      * Combien de secondes un démarrage ou une fin attend le verrou d'un autre
-     * avant d'abandonner par une `LockTimeoutException`.
+     * avant d'abandonner par une `LeVerrouDesSeancesEstPris`.
      */
     public const int ATTENTE_DU_VERROU = 10;
 
