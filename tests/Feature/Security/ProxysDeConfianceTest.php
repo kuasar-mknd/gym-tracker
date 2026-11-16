@@ -164,3 +164,28 @@ it('lit un client à adresse publique sous sa vraie adresse, réglage ou non', f
     proxysDeConfianceLireDepuis('203.0.113.50', ['X-Forwarded-For' => '198.51.100.9'])
         ->assertJson(['adresse' => '203.0.113.50']);
 });
+
+/*
+ * #2309 : le limiteur de connexion ne se contourne pas en changeant
+ * X-Forwarded-For quand le pair n'est pas un proxy de confiance. Avec la
+ * liste par défaut, un pair privé qui atteint le port serait cru : c'est la
+ * topologie (port publié sur la boucle locale seule, docker-compose.prod.yml)
+ * qui lui ferme le chemin, pas ce test.
+ */
+it('ne laisse pas un pair qui n’est pas le proxy changer d’adresse devant le limiteur de connexion', function (string $pair): void {
+    config(['trustedproxy.proxies' => ['192.0.2.10']]);
+
+    $statuts = [];
+
+    foreach (range(1, 7) as $essai) {
+        $statuts[] = withServerVariables(['REMOTE_ADDR' => $pair])
+            ->withHeaders(['X-Forwarded-For' => "198.51.100.{$essai}"])
+            ->post('/login', ['email' => 'personne@example.org', 'password' => 'mauvais'])
+            ->getStatusCode();
+    }
+
+    expect($statuts[6])->toBe(429);
+})->with([
+    'pair du réseau local' => ['192.168.1.50'],
+    'pair public' => ['203.0.113.50'],
+]);
