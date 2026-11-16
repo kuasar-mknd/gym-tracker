@@ -9,7 +9,7 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed } from 'vue'
-import { nombre } from '@/Utils/nombre'
+import { compte, nombre } from '@/Utils/nombre'
 
 const props = defineProps({
     line: { type: Object, required: true },
@@ -37,10 +37,17 @@ defineEmits([
     'pointerdown',
 ])
 
+const deuxChiffres = (n) => String(n).padStart(2, '0')
+
 const duree = (secondes) => {
     const total = Math.round(Number(secondes))
+    const heures = Math.floor(total / 3600)
+    const minutes = Math.floor((total % 3600) / 60)
+    const reste = total % 60
 
-    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+    return heures > 0
+        ? `${deuxChiffres(heures)}:${deuxChiffres(minutes)}:${deuxChiffres(reste)}`
+        : `${minutes}:${deuxChiffres(reste)}`
 }
 
 // Sans historique, le serveur rend le pré-remplissage de l'écran (0 kg, 10 réps, 0 km, 30 s).
@@ -68,7 +75,7 @@ const derniereFois = computed(() => {
         case 'timed':
             return Number(secondes) > 0 ? duree(secondes) : null
         default:
-            return Number(weight) > 0 ? `${nombre(weight)} kg × ${nombre(reps, 0)}` : `${nombre(reps, 0)} réps`
+            return Number(weight) > 0 ? `${nombre(weight)} kg × ${nombre(reps, 0)}` : compte(reps, 'rép', 'réps')
     }
 })
 </script>

@@ -109,6 +109,18 @@ describe('la carte d’un exercice', () => {
             expect(lue(wrapper).text()).toBe('Dernière fois : 12 réps')
         })
 
+        it('accorde les répétitions au singulier', () => {
+            expect(lue(avec('strength', { weight: 0, reps: 1, distance_km: 0, duration_seconds: 30 })).text()).toBe(
+                'Dernière fois : 1 rép',
+            )
+        })
+
+        it('écrit une durée d’une heure ou plus comme la roue de durée', () => {
+            const wrapper = avec('timed', { weight: 0, reps: 10, distance_km: 0, duration_seconds: 3725 })
+
+            expect(lue(wrapper).text()).toBe('Dernière fois : 01:02:05')
+        })
+
         it('cite la distance et la durée d’un exercice de cardio', () => {
             const wrapper = avec('cardio', { weight: 0, reps: 10, distance_km: 5.2, duration_seconds: 1500 })
 
