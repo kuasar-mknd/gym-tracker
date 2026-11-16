@@ -57,7 +57,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
         <div
             :data-poignee-serie="reordonnable ? '' : undefined"
             @pointerdown="$emit('pointerdown', $event)"
-            class="border-surface-card carte-portable flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
+            class="border-surface-card carte-portable flex items-center gap-2 rounded-2xl border p-3 shadow-sm max-[359px]:gap-1.5 max-[359px]:p-2"
             :class="set.is_completed ? 'bg-surface-card/40' : 'bg-surface-card/80'"
         >
             <button

@@ -13,7 +13,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { compte, entier } from '@/Utils/nombre'
 import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
-import { dateCourte } from '@/Utils/date'
+import { jourEtMois } from '@/Utils/date'
 
 const props = defineProps({
     workout: { type: Object, required: true },
@@ -59,7 +59,7 @@ const updateElapsed = () => {
     // Une horloge décalée ou un fuseau changé ne donnent jamais une durée négative.
     const diff = Math.max(0, Math.floor((now - start) / 1000))
     if (diff > DUREE_MAX_AFFICHEE) {
-        elapsed.value = `commencée le ${dateCourte(start)}`
+        elapsed.value = `dès le ${jourEtMois(start)}`
 
         return
     }

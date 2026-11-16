@@ -161,5 +161,8 @@ describe('un écran de 320 px', () => {
         })
 
         expect(wrapper.get('[dusk="distance-input-2-1"]').classes()).toContain('max-[359px]:px-0.5')
+        expect(wrapper.get('.carte-portable').classes()).toEqual(
+            expect.arrayContaining(['max-[359px]:gap-1.5', 'max-[359px]:p-2']),
+        )
     })
 })

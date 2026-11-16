@@ -167,6 +167,15 @@ const estUneDate = (date) => date instanceof Date && !Number.isNaN(date.getTime(
 export const dateCourte = (date) => (estUneDate(date) ? date.toLocaleDateString(LANGUE_DES_DATES) : '')
 
 /**
+ * Le jour et le mois, sans l'année : `26/08`. Là où la place est comptée.
+ *
+ * @param {Date|null|undefined} date
+ * @returns {string} Le jour et le mois, ou une chaîne vide si la date manque ou ne se lit pas.
+ */
+export const jourEtMois = (date) =>
+    estUneDate(date) ? date.toLocaleDateString(LANGUE_DES_DATES, { day: '2-digit', month: '2-digit' }) : ''
+
+/**
  * Une date avec son jour de la semaine : `dim. 4 oct. 2026`.
  *
  * @param {Date|null|undefined} date

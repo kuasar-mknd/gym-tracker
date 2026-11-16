@@ -66,7 +66,7 @@ describe('ActiveWorkoutBanner elapsed time', () => {
         expect(jusquaDouze.text()).toContain('12 h 00 min')
 
         const oubliee = await mountRunningFor(1899 * 3600 + 13 * 60)
-        expect(oubliee.text()).toContain('commencée le 25/05/2026')
+        expect(oubliee.text()).toContain('dès le 25/05')
         expect(oubliee.text()).not.toContain(' h ')
     })
 
