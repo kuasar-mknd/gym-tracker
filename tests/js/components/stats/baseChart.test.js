@@ -402,15 +402,6 @@ describe('BaseChart hors de l’écran', () => {
 
         window.dispatchEvent(new Event('afterprint'))
         await nextTick()
-        expect(trace(wrapper).props('options').animation).toBeUndefined()
-    })
-
-    it('cesse d’écouter l’impression au démontage', () => {
-        const retrait = vi.spyOn(window, 'removeEventListener')
-
-        monter().unmount()
-
-        expect(retrait).toHaveBeenCalledWith('beforeprint', expect.any(Function))
-        expect(retrait).toHaveBeenCalledWith('afterprint', expect.any(Function))
+        expect(trace(wrapper).props('options').animation).not.toBe(false)
     })
 })

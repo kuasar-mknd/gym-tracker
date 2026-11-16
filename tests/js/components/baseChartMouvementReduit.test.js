@@ -42,6 +42,6 @@ describe('BaseChart sous « réduire les animations »', () => {
     it('garde les animations de Chart.js sinon', () => {
         reduire(false)
 
-        expect(chartOptionsOf(monter('bar'), 'Bar').animation).toBeUndefined()
+        expect(chartOptionsOf(monter('bar'), 'Bar').animation).not.toBe(false)
     })
 })

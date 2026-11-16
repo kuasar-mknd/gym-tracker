@@ -208,7 +208,10 @@ const impression = ref(false)
 const chartOptions = computed(() => {
     const reglages = reglagesDuGraphique.value
 
-    return impression.value || animationReduite() ? { ...reglages, animation: false } : reglages
+    // vue-chartjs fusionne les options sans jamais retirer une clé : l'animation se rend explicitement, par la valeur de Chart.js.
+    return impression.value || animationReduite()
+        ? { ...reglages, animation: false }
+        : { animation: ChartJS.defaults.animation, ...reglages }
 })
 
 const reglagesDuGraphique = computed(() => {
