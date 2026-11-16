@@ -384,3 +384,68 @@ it('lit la mesure chez le compte choisi au panneau quand on change de compte et 
 
     expect($enregistre->start_value)->toBe(80.0);
 });
+
+/**
+ * Un objectif de charge qui porte déjà « Waist » comme mensuration (un reste de
+ * l'ancien type), suivi à 100 par un record, à départ 0.
+ */
+function objectifDeChargeSuiviQuiGardeSaMensuration(User $user): Goal
+{
+    BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Waist', 'value' => 80, 'unit' => 'cm', 'measured_at' => '2026-06-10']);
+    $exercice = Exercise::factory()->create(['user_id' => null, 'type' => 'strength']);
+    PersonalRecord::factory()->create(['user_id' => $user->id, 'exercise_id' => $exercice->id, 'type' => PersonalRecordType::MaxWeight, 'value' => 100]);
+    $objectif = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Weight,
+        'measurement_type' => 'Waist',
+        'exercise_id' => $exercice->id,
+        'start_value' => 0,
+        'target_value' => 120,
+    ]);
+    app(GoalService::class)->syncGoals($user);
+
+    expect($objectif->refresh()->current_value)->toBe(100.0);
+
+    return $objectif;
+}
+
+it('repart de la dernière mesure quand seul le type change, par l’application', function (): void {
+    $user = User::factory()->create();
+    $objectif = objectifDeChargeSuiviQuiGardeSaMensuration($user);
+
+    actingAs($user)
+        ->put(route('goals.update', $objectif), ['title' => 'Taille', 'type' => 'measurement', 'measurement_type' => 'Waist', 'target_value' => 75, 'start_value' => 0])
+        ->assertSessionHasNoErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->start_value)->toBe(80.0)
+        ->and($objectif->completed_at)->toBeNull();
+});
+
+it('repart de la dernière mesure quand seul le type change, au panneau', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Goal')), 'admin');
+    $objectif = objectifDeChargeSuiviQuiGardeSaMensuration(User::factory()->create());
+
+    Livewire::test(EditGoal::class, ['record' => $objectif->getKey()])
+        ->fillForm(['type' => 'measurement', 'target_value' => 75, 'start_value' => 0])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $objectif->refresh();
+
+    expect($objectif->start_value)->toBe(80.0)
+        ->and($objectif->completed_at)->toBeNull();
+});
+
+it('ne touche pas à un départ de 1 quand la mensuration change', function (): void {
+    $user = User::factory()->create();
+    $objectif = objectifDePoidsDejaSuivi($user);
+    DB::table('goals')->where('id', $objectif->id)->update(['start_value' => 1]);
+
+    actingAs($user)
+        ->put(route('goals.update', $objectif), ['title' => 'Taille', 'type' => 'measurement', 'measurement_type' => 'Waist', 'target_value' => 75, 'start_value' => 1])
+        ->assertSessionHasNoErrors();
+
+    expect($objectif->refresh()->start_value)->toBe(1.0);
+});
