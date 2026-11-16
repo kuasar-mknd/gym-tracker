@@ -104,6 +104,7 @@ final class AdminPanelProvider extends PanelProvider
             ->pages([Dashboard::class])
             ->widgets($this->getWidgets())
             ->middleware($this->getMiddleware())
+            ->middleware($this->getPersistentMiddleware(), isPersistent: true)
             ->authMiddleware([Authenticate::class])
             ->plugins($this->getPlugins())
             ->navigationItems($this->getNavigationItems());
@@ -299,6 +300,22 @@ final class AdminPanelProvider extends PanelProvider
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
+        ];
+    }
+
+    /**
+     * Ce que chaque requête Livewire du panneau rejoue (#2352).
+     *
+     * La connexion et toutes les actions du panneau passent par
+     * `POST /livewire-{empreinte}/update`, route que ne porte aucun middleware du panneau :
+     * seuls ceux déclarés persistants sont rejoués sur la page d'origine du
+     * composant.
+     *
+     * @return array<int, class-string>
+     */
+    private function getPersistentMiddleware(): array
+    {
+        return [
             \App\Http\Middleware\AdminRateLimiter::class,
             \App\Http\Middleware\IpWhitelist::class,
         ];
