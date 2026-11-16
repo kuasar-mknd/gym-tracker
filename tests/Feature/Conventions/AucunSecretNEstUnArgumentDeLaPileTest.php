@@ -29,10 +29,13 @@ use Symfony\Component\Yaml\Yaml;
 
 /**
  * Ce que le nom d'une variable dit d'un secret : un mot entier, en anglais ou
- * en français (`DB_PASSWORD`, `REDISCLI_AUTH`, `mot_de_passe`, `cle_api`,
- * `JETON`), où qu'il soit dans le nom. Un mot entier : `BYPASS` n'en est pas un.
+ * en français (`DB_PASSWORD`, `mot_de_passe`, `cle_api`, `JETON`), où qu'il
+ * soit dans le nom (`BYPASS` n'en est pas un) ; ou un nom qui FINIT par un mot
+ * qui en désigne un, collé ou non (`REDISCLI_AUTH`, `APP_KEY`, `GITHUBTOKEN`).
+ * `AUTH` et `KEY` ne comptent qu'en fin de nom : `MAIL_AUTH_MODE` et
+ * `KEY_LAYOUT` n'en sont pas.
  */
-const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASSPHRASE|PASS|PASSE|PWD|PW|MDP|SECRETS?|TOKEN|JETON|AUTH|CREDENTIALS?|PRIVATE_KEY|KEY|CLE|CLEF|CLES|CLEFS)(?![A-Za-z])|(?:PASSWORD|PASSWD|PASSPHRASE|PWD|SECRETS?|TOKEN|JETON|APIKEY|MOTDEPASSE)$/i';
+const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASSPHRASE|PASS|PASSE|PWD|PW|MDP|SECRETS?|TOKEN|JETON|CREDENTIALS?|PRIVATE_KEY|CLE|CLEF|CLES|CLEFS)(?![A-Za-z])|(?:PASSWORD|PASSWD|PASSPHRASE|PWD|SECRETS?|TOKEN|JETON|APIKEY|MOTDEPASSE|AUTH|KEY)$/i';
 
 /**
  * Ce que lit sans le lancer un processus au bout d'un tube : le secret qu'il
@@ -42,10 +45,13 @@ const SECRETS_EN_ARGUMENT_MOTIF = '/(?<![A-Za-z])(?:PASSWORD|PASSWD|PASSPHRASE|P
 const SECRETS_EN_ARGUMENT_LECTEURS_SURS = '(?:sed|tr|base64|wc|cat|head|tail|cut|openssl|sha256sum|sha1sum|md5sum|tee|redis-cli|mysql)';
 
 /**
- * Les interpréteurs et lanceurs qui exécutent ce qu'ils lisent : le corps d'un
- * document intégré qui leur est donné se lit comme une ligne de commande.
+ * Les seuls destinataires dont un document intégré (`<<FIN`) n'est qu'une
+ * entrée : Redis (son entrée standard est une configuration), `redis-cli`,
+ * `mysql` (du SQL) et `cat > fichier`, sans tube. Tout autre destinataire
+ * (`sh`, `python3`, `php`, `perl`, `node`, `cat | sh`…) peut exécuter le corps :
+ * il se lit alors comme du shell.
  */
-const SECRETS_EN_ARGUMENT_INTERPRETEURS = '/(?<![\w.-])(?:sh|bash|zsh|dash|ash|ksh|eval|xargs|source)(?![\w.-])/';
+const SECRETS_EN_ARGUMENT_DESTINATAIRES_SURS = '/^\s*(?:(?:exec\s+)?(?:docker-entrypoint\.sh\s+)?(?:redis-server|redis-cli|mysql)(?![\w.-])|cat\s*>\s*\S+\s*)/';
 
 /**
  * Les binaires de la famille MySQL. `-p <valeur>` n'y est pas un mot de passe
@@ -198,10 +204,14 @@ function secretsEnArgumentNoms(array $composition): array
  * - `NOM=$$(printf %s "$$NOM" | lecteur sûr)`, la substitution affectée à une
  *   variable ; le nom affecté devient lui-même un secret (`valeur=$$(…)` puis
  *   `curl -u "u:$$valeur"` est refusé) ;
- * - le corps d'un document intégré (`<<FIN`) donné à un processus qui ne
- *   l'exécute pas : jamais à `sh`, `bash`, `eval`, `xargs`…, et, s'il n'est pas
- *   coté (`<<'FIN'`), seulement sans `$(` ni apostrophe inverse, que le shell
- *   exécuterait.
+ *   Tous les maillons d'un tube doivent être des lecteurs sûrs : un seul
+ *   `xargs`, `sh` ou `curl` après un `sed` suffit à le refuser ;
+ * - le corps d'un document intégré (`<<FIN`) donné à l'un des seuls
+ *   destinataires sûrs (`redis-server`, `redis-cli`, `mysql`, `cat > fichier`),
+ *   sur une ligne sans `|`, `;` ni `&&` après le marqueur, et, s'il n'est pas
+ *   coté (`<<'FIN'`), sans `$(` ni apostrophe inverse que le shell exécuterait.
+ *   Tout autre destinataire (`sh`, `cat | sh`, `python3`, `php`, `perl`,
+ *   `node`…) peut exécuter le corps : il se lit comme du shell ;
  *
  * Ce qu'elle ne peut pas voir : un secret qui voyage dans une variable
  * intermédiaire à plusieurs pas, un lecteur sûr qui le remet en argument par
@@ -228,10 +238,11 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
 
         $reste = (string) preg_replace_callback(
             '/((?:[^;&|\n\\\\]|\\\\.)*)<<-?\s*([\'"]?)(\w+)\2([^\n]*\n)(.*?)\n\s*\3\b/s',
-            static fn (array $trouve): string => preg_match(SECRETS_EN_ARGUMENT_INTERPRETEURS, $trouve[1]) === 1
-                || ($trouve[2] === '' && preg_match('/\$\$\(|`/', $trouve[5]) === 1)
-                    ? $trouve[0]
-                    : $trouve[1].$trouve[4],
+            static fn (array $trouve): string => preg_match(SECRETS_EN_ARGUMENT_DESTINATAIRES_SURS, $trouve[1]) === 1
+                && preg_match('/[|;]|&&/', $trouve[4]) === 0
+                && ($trouve[2] !== '' || preg_match('/\$\$\(|`/', $trouve[5]) === 0)
+                    ? $trouve[1].$trouve[4]
+                    : $trouve[0],
             $reste,
         );
 
@@ -242,9 +253,9 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
             array_map(static fn (string $motif): string => strtr($motif, $substitutions), [
                 '/(__D__)MYSQL_PWD=__R__/',
                 '/(__D__[A-Za-z_][A-Za-z0-9_]*=)\$\$\(\s*printf\s+%s\s+__R__(?:\s*\|\s*__S__\b(?:(?!&&)[^;()|])*)*\s*\)/',
-                '/((?:^|[;&\n])\s*)printf\s+%s\s+__R__\s*\|\s*(?=__S__\b)/',
+                '/((?:^|[;&\n])\s*)printf\s+%s\s+__R__(?:\s*\|\s*__S__\b(?>(?:(?!&&)[^|;\n])*))+(?!\s*\|)/',
             ]),
-            ['$1', '$1', '$1| '],
+            ['$1', '$1', '$1'],
             $reste,
         );
     }
@@ -308,8 +319,13 @@ function secretsEnArgumentDefautsDeLaComposition(array $composition): array
 
         foreach ($nommes as $section => $couples) {
             foreach (secretsEnArgumentCouples($couples) as $cle => $valeur) {
-                if (preg_match(SECRETS_EN_ARGUMENT_MOTIF, $cle) === 1) {
-                    $defauts[] = "{$nom}.{$section}.{$cle} : un secret que `docker inspect` ou l'historique de l'image montrent, valeur ou non";
+                // Un chemin ou une adresse n'est pas un secret (`syslog-tls-key: /etc/ssl/k.pem`) ;
+                // un argument de construction sans valeur la prend de l'hôte.
+                $estUnChemin = preg_match('~^(?:\.{0,2}/|[a-z][a-z0-9+.-]*://)~i', $valeur) === 1;
+                $sansValeur = $valeur === '' && $section === 'build.args';
+
+                if (preg_match(SECRETS_EN_ARGUMENT_MOTIF, $cle) === 1 && ! $estUnChemin && ($valeur !== '' || $sansValeur)) {
+                    $defauts[] = "{$nom}.{$section}.{$cle} : un secret que `docker inspect` ou l'historique de l'image montrent";
                 }
             }
         }
@@ -419,6 +435,16 @@ it('refuse, sur la vraie composition, chaque trou que la garde laissait', functi
     'un document intégré que sh exécute (commande)' => [[['services.redis.command', "sh <<FIN\nmysqladmin ping -uroot --host=db \"-p\$\$REDIS_PASSWORD\"\nFIN", true]]],
     'un document intégré non coté dont $(…) s’exécute (sonde)' => [[['services.db.healthcheck.test', ['CMD-SHELL', "cat <<FIN\n\$\$(mysqladmin ping -uroot -p\$\$MYSQL_ROOT_PASSWORD)\nFIN"]]]],
     'un document intégré non coté dont $(…) s’exécute (commande)' => [[['services.redis.command', "cat <<FIN\n\$\$(curl -u u:\$\$REDIS_PASSWORD http://h)\nFIN", true]]],
+    'un document intégré donné à cat, dont la sortie va à sh' => [[['services.db.healthcheck.test', ['CMD-SHELL', "cat <<FIN | sh\nmysqladmin ping -uroot \"-p\$\$MYSQL_ROOT_PASSWORD\"\nFIN"]]]],
+    'un document intégré donné à python3' => [[['services.db.healthcheck.test', ['CMD-SHELL', "python3 <<FIN\nimport os; os.system('mysqladmin ping -uroot -p\$\$MYSQL_ROOT_PASSWORD')\nFIN"]]]],
+    'un document intégré donné à php' => [[['services.app.command', "php <<FIN\n<?php passthru('curl -u u:\$\$DB_PASSWORD http://h');\nFIN"]]],
+    'un document intégré donné à perl' => [[['services.redis.command', "perl <<FIN\nsystem('curl -u u:\$\$REDIS_PASSWORD http://h');\nFIN", true]]],
+    'un document intégré donné à node' => [[['services.redis.command', "node <<FIN\nrequire('child_process').execSync('curl -u u:\$\$REDIS_PASSWORD http://h');\nFIN", true]]],
+    'un document intégré coté donné à sh' => [[['services.redis.command', "sh <<'FIN'\ncurl -u u:\$\$REDIS_PASSWORD http://h\nFIN", true]]],
+    'un document intégré de Redis dont la ligne se prolonge par un tube' => [[['services.redis.command', "redis-cli <<FIN | sh\nAUTH \$\$REDIS_PASSWORD\nFIN", true]]],
+    'B1 : un tube dont le deuxième maillon est xargs' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | sed s/a/a/ | xargs -I{} curl -u u:{} http://h', true]]],
+    'B1 : un tube dont le troisième maillon est xargs' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | cat | xargs curl -u', true]]],
+    'B1 : une affectation dont le deuxième maillon est xargs' => [[['services.redis.command', 'x=$$(printf %s "$$REDIS_PASSWORD" | sed s/a/a/ | xargs curl -u)', true]]],
     'un document intégré donné à xargs' => [[['services.redis.command', "xargs curl -u <<FIN\n\$\$REDIS_PASSWORD\nFIN", true]]],
     'A1 : le secret affecté puis passé en argument' => [[['services.redis.command', 'valeur=$$(printf %s "$$REDIS_PASSWORD"); curl -u "u:$$valeur" http://h', true]]],
     'A2 : printf devant xargs' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | xargs -I{} curl -u u:{} http://h', true]]],
@@ -446,9 +472,16 @@ it('admet, sur la vraie composition, ce qui n’est pas un secret en argument', 
     'printf devant un tube, en début de commande' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | wc -c', true]]],
     'printf dans une affectation' => [[['services.redis.command', 'longueur=$$(printf %s "$$REDIS_PASSWORD" | wc -c)', true]]],
     'MYSQL_PWD en affectation derrière env' => [[['services.db.healthcheck.test', ['CMD-SHELL', 'env MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping']]]],
-    'un secret dans le corps d’un document intégré' => [[['services.redis.command', "cat <<FIN\nrequirepass \"\$\$mot_de_passe\"\nFIN", true]]],
-    'un document intégré coté, que le shell ne développe pas' => [[['services.redis.command', "cat <<'FIN'\n\$\$(echo \$\$mot_de_passe)\nFIN", true]]],
+    'un secret dans le corps d’un document intégré' => [[['services.redis.command', "cat > /tmp/conf <<FIN\nrequirepass \"\$\$mot_de_passe\"\nFIN", true]]],
+    'un document intégré coté, que le shell ne développe pas' => [[['services.redis.command', "cat > /tmp/conf <<'FIN'\n\$\$(echo \$\$mot_de_passe)\nFIN", true]]],
     'printf devant un lecteur sûr' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | base64', true]]],
+    'un tube dont tous les maillons sont sûrs' => [[['services.redis.command', 'printf %s "$$REDIS_PASSWORD" | sed s/a/b/ | base64 | wc -c', true]]],
+    'un document intégré pour mysql' => [[['services.redis.command', "mysql -uroot <<FIN\nALTER USER x IDENTIFIED BY \"\$\$mot_de_passe\";\nFIN", true]]],
+    'une variable en AUTH_MODE, qui n’est pas un secret' => [[['services.redis.command', 'notifier "$$MAIL_AUTH_MODE" "$$AUTH_ENABLED"', true]]],
+    'une disposition de clavier en KEY_LAYOUT' => [[['services.redis.command', 'notifier "$$KEY_LAYOUT"', true]]],
+    'un chemin de clé dans les options de journalisation' => [[['services.app.logging', ['driver' => 'syslog', 'options' => ['syslog-tls-key' => '/etc/ssl/k.pem']]]]],
+    'une adresse dans les options de journalisation' => [[['services.app.logging', ['driver' => 'awslogs', 'options' => ['awslogs-credentials-endpoint' => 'https://exemple.org/c']]]]],
+    'un argument de construction KEY_LAYOUT ou AUTH_ENABLED' => [[['services.app.build', ['context' => '.', 'args' => ['KEY_LAYOUT' => 'fr', 'AUTH_ENABLED' => '1']]]]],
     'une option de journalisation sans secret' => [[['services.app.logging', ['driver' => 'json-file', 'options' => ['max-size' => '10m']]]]],
     'mkdir -p avec une référence' => [[['services.redis.command', 'mkdir -p "$$DOSSIER"', true]]],
     'redis-cli -p avec une référence' => [[['services.redis.command', 'redis-cli -p "$$REDIS_PORT" ping', true]]],
