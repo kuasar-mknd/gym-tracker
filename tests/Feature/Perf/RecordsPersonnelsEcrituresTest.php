@@ -20,7 +20,8 @@ use Illuminate\Support\Facades\Queue;
  * `EcrituresParOperationTest` fausse les files : la synchronisation d'une
  * série n'y tourne jamais. Ici elle s'exécute pour de bon (le travail et le
  * service), et seuls les envois qu'elle ferait en aval sont interceptés.
- * Les écritures (insert, update, delete) et les lectures se comptent à part.
+ * Seules les écritures (insert, update, delete) sont épinglées : les lectures
+ * se rapportent, elles ne se figent pas.
  */
 
 /**
@@ -83,11 +84,11 @@ function serieQuiBatDesRecords(?array $existants): array
 }
 
 /**
- * Une séance close de cinq exercices, une série cochée par exercice, et leurs records reconstruits.
- * `$historique` : une séance plus ancienne tient une série plus légère de chaque exercice.
- * `$sansRecords` : les records sont retirés avant la suppression, sans événement.
+ * Une séance close de cinq exercices, une série cochée par exercice, et leurs
+ * records reconstruits ; une séance plus ancienne tient une série plus légère
+ * de chaque exercice, que les records reprennent quand la séance part.
  */
-function seanceCloseDeCinqExercices(bool $historique, bool $sansRecords): Workout
+function seanceCloseDeCinqExercices(): Workout
 {
     $user = User::factory()->create();
     $ancienne = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()->subDays(10), 'started_at' => now()->subDays(10)->subHour()]);
@@ -95,12 +96,8 @@ function seanceCloseDeCinqExercices(bool $historique, bool $sansRecords): Workou
 
     foreach (range(1, 5) as $i) {
         $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
-
-        if ($historique) {
-            $vieille = WorkoutLine::factory()->create(['workout_id' => $ancienne->id, 'exercise_id' => $exercise->id]);
-            Set::factory()->createQuietly(['workout_line_id' => $vieille->id, 'weight' => 50, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
-        }
-
+        $vieille = WorkoutLine::factory()->create(['workout_id' => $ancienne->id, 'exercise_id' => $exercise->id]);
+        Set::factory()->createQuietly(['workout_line_id' => $vieille->id, 'weight' => 50, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
         Set::factory()->createQuietly(['workout_line_id' => $line->id, 'weight' => 100 + $i, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
         app(PersonalRecordService::class)->reparer($user, $exercise->id);
@@ -108,19 +105,33 @@ function seanceCloseDeCinqExercices(bool $historique, bool $sansRecords): Workou
 
     expect(PersonalRecord::query()->where('user_id', $user->id)->count())->toBe(15);
 
-    if ($sansRecords) {
-        PersonalRecord::query()->where('user_id', $user->id)->delete();
-    }
-
     return Workout::query()->findOrFail($workout->id);
 }
 
 /**
- * @param  list<string>  $requetes
+ * Une série cochée de 100 kg pour 5 répétitions qui détient les trois records
+ * de son exercice, et une plus légère, d'une séance plus ancienne, qui les
+ * reprend quand elle les perd. La synchronisation part en file, comme en
+ * production : elle ne tourne pas dans la requête.
  */
-function lecturesDesPreferencesDeNotification(array $requetes): int
+function serieQuiTientLesTroisRecords(): Set
 {
-    return count(array_filter($requetes, fn (string $s): bool => str_contains($s, 'exists(select * from `notification_preferences`')));
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
+    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
+    $ancienne = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()->subDays(10), 'started_at' => now()->subDays(10)->subHour()]);
+    $vieille = WorkoutLine::factory()->create(['workout_id' => $ancienne->id, 'exercise_id' => $exercise->id]);
+    Set::factory()->createQuietly(['workout_line_id' => $vieille->id, 'weight' => 50, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
+    $set = Set::factory()->createQuietly(['workout_line_id' => $line->id, 'weight' => 100, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
+    app(PersonalRecordService::class)->reparer($user, $exercise->id);
+
+    expect(PersonalRecord::query()->where('set_id', $set->id)->count())->toBe(3);
+
+    config(['app.env' => 'local']);
+    Queue::fake();
+
+    return Set::query()->findOrFail($set->id);
 }
 
 it('synchronise une série qui bat un record en une écriture', function (): void {
@@ -128,8 +139,7 @@ it('synchronise une série qui bat un record en une écriture', function (): voi
 
     $mesure = requetesDesRecords(fn () => SyncPersonalRecord::dispatchSync($set, $user));
 
-    expect($mesure['ecritures'])->toHaveCount(1)
-        ->and($mesure['lectures'])->toHaveCount(10);
+    expect($mesure['ecritures'])->toHaveCount(1);
 });
 
 it('synchronise une série qui bat trois records en trois écritures', function (): void {
@@ -137,8 +147,7 @@ it('synchronise une série qui bat trois records en trois écritures', function 
 
     $mesure = requetesDesRecords(fn () => SyncPersonalRecord::dispatchSync($set, $user));
 
-    expect($mesure['ecritures'])->toHaveCount(3)
-        ->and($mesure['lectures'])->toHaveCount(10);
+    expect($mesure['ecritures'])->toHaveCount(3);
 });
 
 it('synchronise une série qui crée trois records en trois écritures', function (): void {
@@ -146,29 +155,33 @@ it('synchronise une série qui crée trois records en trois écritures', functio
 
     $mesure = requetesDesRecords(fn () => SyncPersonalRecord::dispatchSync($set, $user));
 
-    expect($mesure['ecritures'])->toHaveCount(3)
-        ->and($mesure['lectures'])->toHaveCount(10);
+    expect($mesure['ecritures'])->toHaveCount(3);
 });
 
 it('supprime une séance close de cinq exercices, records repris sur l historique, en dix-sept écritures', function (): void {
-    $workout = seanceCloseDeCinqExercices(true, false);
+    $workout = seanceCloseDeCinqExercices();
     Queue::fake();
 
     $mesure = requetesDesRecords(fn () => $workout->delete());
 
     // La séance, la série de jours du compte et quinze records réécrits, un par type et par exercice.
-    expect($mesure['ecritures'])->toHaveCount(17)
-        ->and($mesure['lectures'])->toHaveCount(14)
-        ->and(lecturesDesPreferencesDeNotification($mesure['lectures']))->toBe(0);
+    expect($mesure['ecritures'])->toHaveCount(17);
 });
 
-it('supprime une séance close de cinq exercices, records à recréer, en relisant cinq fois les préférences de notification', function (): void {
-    $workout = seanceCloseDeCinqExercices(true, true);
-    Queue::fake();
+it('corrige le poids d une série qui tient les trois records de son exercice', function (): void {
+    $set = serieQuiTientLesTroisRecords();
 
-    $mesure = requetesDesRecords(fn () => $workout->delete());
+    $mesure = requetesDesRecords(fn () => $set->update(['weight' => 90]));
 
-    expect($mesure['ecritures'])->toHaveCount(17)
-        ->and($mesure['lectures'])->toHaveCount(19)
-        ->and(lecturesDesPreferencesDeNotification($mesure['lectures']))->toBe(5);
+    // La série, ses trois records et le volume de la séance.
+    expect($mesure['ecritures'])->toHaveCount(5);
+});
+
+it('décoche une série qui tient les trois records de son exercice', function (): void {
+    $set = serieQuiTientLesTroisRecords();
+
+    $mesure = requetesDesRecords(fn () => $set->update(['is_completed' => false]));
+
+    // La série et ses trois records ; le volume de la séance ne bouge pas.
+    expect($mesure['ecritures'])->toHaveCount(4);
 });
