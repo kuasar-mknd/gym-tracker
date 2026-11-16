@@ -230,15 +230,16 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
         $substitutions = [
             '__D__' => '(?:^|[;&|(\n])\s*(?:(?:env|export)\s+)?',
             '__R__' => '"\$\$\{?[A-Z0-9_]+\}?"',
-            '__C__' => "(?=(?:\\s*{$lecteurs}\\b(?>(?:(?!&&|\\$\\$\\(|\\$\\()[^|;\\n)`>])*)\\|?)+\\s*(?:\\)|\\n|\$))",
+            '__C__' => "(?=(?:\\s*{$lecteurs}\\b(?>(?:(?!&&|\\$\\$\\(|\\$\\()[^|;\\n)`>])*)\\|?)+(?<!\\\\)\\s*(?:\\)|\\n|\$))",
         ];
 
         // Le document intégré de Redis, et lui seul : ses références du shell
         // s'effacent, l'interpolation de Compose reste vue.
         $reste = (string) preg_replace_callback(
             '/((?:[^;&|\n\\\\]|\\\\.)*)<<-?\s*(\w+)([^\n]*\n)(.*?)(?:\n|(?<=\n))\s*\2\b/s',
-            static fn (array $trouve): string => preg_match('/^\s*(?:exec\s+)?(?:docker-entrypoint\.sh\s+)?redis-server(?![\w.\/-])/', $trouve[1][0]) === 1
-                && preg_match('/[|;\\\\]|&&/', $trouve[3][0]) === 0
+            static fn (array $trouve): string => preg_match('/^[ \t]*(?:exec[ \t]+)?(?:docker-entrypoint\.sh[ \t]+)?redis-server(?:(?:[ \t]|\\\\\n)+(?:[A-Za-z0-9._-]+|\'\'))*(?:[ \t]|\\\\\n)*$/', $trouve[1][0]) === 1
+                && preg_match('/\(\s*\)|\bfunction\b|\balias\b|\bPATH=/', substr($reste, 0, $trouve[0][1])) === 0
+                && preg_match('/[|;&\\\\]/', $trouve[3][0]) === 0
                 && preg_match('/\$\$\(|`/', $trouve[4][0]) === 0
                 && ($trouve[0][1] === 0 || $reste[$trouve[0][1] - 1] === "\n")
                     ? $trouve[1][0].$trouve[3][0].preg_replace('/(?<!\$)\$\$(?!\$)\{?[A-Za-z_]\w*\}?/', '', $trouve[4][0])
@@ -272,12 +273,12 @@ function secretsEnArgumentDefauts(string $texte, array $secrets, bool $interpret
 
     $mysql = SECRETS_EN_ARGUMENT_BINAIRES_MYSQL;
     $longues = '(?:^|\s)--(?:(?:requirepass|masterauth|password|pass|auth)\b|(?:passwd|passphrase|secret|token|jeton|cle|key|api-key|mot-de-passe)(?=[=\s]|$))';
-    // `-pass stdin` n'est une exception que pour openssl : ailleurs `-pass` est
-    // `-p` suivi du mot de passe `ass`.
-    $courtes = preg_match('/\bopenssl\b/', $reste) === 1
-        ? '(?:^|\s)(?:-a\s|-p(?!ass(?:in|out)?\s+["\']?(?:stdin|env:|file:|fd:))\S)'
-        : '(?:^|\s)(?:-a\s|-p\S)';
-    $openssl = '(?<![\w-])pass:|(?:^|\s)-pass(?:in|out)?\s+(?!["\']?(?:stdin|env:|file:|fd:))\S';
+    // `-pass stdin` n'est une exception que dans le maillon d'openssl lui-même :
+    // ailleurs, ou avec `env:`, `file:`, `fd:`, `-pass` reste refusé comme dans
+    // la garde d'avant (`-p` suivi du mot de passe `ass`).
+    $reste = (string) preg_replace('/(\bopenssl\b[^|;&\n]*?)(?:\s\-pass(?:in|out)?\s+stdin(?![\w:]))+/', '$1', $reste);
+    $courtes = '(?:^|\s)(?:-a\s|-p\S)';
+    $openssl = '(?<![\w-])pass:';
     // `-p <valeur>` de la famille MySQL, refusé par prudence, d'une ligne de
     // shell comme d'une liste (dont les éléments se joignent par des retours
     // à la ligne).
@@ -915,6 +916,210 @@ FIN',
             1 => [
                 0 => 'CMD-SHELL',
                 1 => 'printf %s "$$MYSQL_ROOT_PASSWORD" | sed s/x/x/ | xargs -I{} mysqladmin ping -uroot -p{}',
+            ],
+        ],
+    ]],
+]);
+
+it('refuse les contournements de la quatrième passe : heredoc de Redis forgé, fonction, here-string, tube prolongé, -pass hors openssl', function (array $mutations): void {
+    expect(secretsEnArgumentDefautsDeLaComposition(secretsEnArgumentCompositionMutee($mutations)))->not->toBe([]);
+})->with([
+    'D1 marqueur entre guillemets doubles' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server --daemonize yes "<<FIN"
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D2 marqueur entre apostrophes' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server --daemonize yes \'<<FIN\'
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D3 marqueur derriere un commentaire' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server --daemonize yes # <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D4 here-string <<<FIN' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server --daemonize yes <<<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D5 redis-server redefini en fonction' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server() { sh; }
+redis-server - <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D6 & simple en fin de ligne' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server - <<FIN &
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D7 dollar triple Compose' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'exec redis-server - <<FIN
+requirepass "$$${REDIS_PASSWORD}"
+FIN',
+            ],
+        ],
+    ]],
+    'D8 defaut imbrique' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'exec redis-server - <<FIN
+requirepass "$${X:-${REDIS_PASSWORD}}"
+FIN',
+            ],
+        ],
+    ]],
+    'D9 continuation puis heredoc avec interpolation Compose' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'exec docker-entrypoint.sh redis-server - \\
+  --appendonly yes <<FIN
+requirepass "${REDIS_PASSWORD}"
+FIN',
+            ],
+        ],
+    ]],
+    'D10 chemin /usr/local/bin/redis-server' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'exec /usr/local/bin/redis-server - <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D11 redis-server-wrapper' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'exec redis-server-wrapper - <<FIN
+curl -u "u:$$REDIS_PASSWORD" http://h
+FIN',
+            ],
+        ],
+    ]],
+    'D12 heredoc marqueur cote redis' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'exec redis-server - <<\'FIN\'
+requirepass $$REDIS_PASSWORD
+FIN',
+            ],
+        ],
+    ]],
+    'D13 tube apres printf, continuation' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'printf %s "$$REDIS_PASSWORD" | sed s/a/b/ \\
+| xargs curl -u',
+            ],
+        ],
+    ]],
+    'D14 printf | cat puis ; curl' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'printf %s "$$REDIS_PASSWORD" | cat >/dev/null; curl -u "u:$$REDIS_PASSWORD" http://h',
+            ],
+        ],
+    ]],
+    'D15 mysqladmin -pass avec openssl ailleurs' => [[
+        0 => [
+            0 => 'services.db.healthcheck.test',
+            1 => [
+                0 => 'CMD-SHELL',
+                1 => 'openssl version && mysqladmin -uroot -pass stdin ping',
+            ],
+        ],
+    ]],
+    'D16 openssl -pass env:' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'openssl enc -aes256 -pass env:REDIS_PASSWORD -in /data/f',
+            ],
+        ],
+    ]],
+    'D17 heredoc redis puis commande apres FIN' => [[
+        0 => [
+            0 => 'services.redis.command',
+            1 => [
+                0 => 'sh',
+                1 => '-c',
+                2 => 'redis-server --daemonize yes <<FIN
+port 7000
+FIN
+curl -u "u:$$REDIS_PASSWORD" http://h',
             ],
         ],
     ]],
