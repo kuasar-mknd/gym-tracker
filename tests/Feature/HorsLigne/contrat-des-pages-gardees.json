@@ -1,5 +1,5 @@
 {
-    "version": 2,
+    "version": 3,
     "pages": {
         "Dashboard": {
             "props": {
@@ -561,26 +561,14 @@
                 "workouts.data[].user_id": "nombre",
                 "workouts.data[].workout_lines": "liste",
                 "workouts.data[].workout_lines[]": "objet",
-                "workouts.data[].workout_lines[].created_at": "texte",
                 "workouts.data[].workout_lines[].exercise": "objet",
-                "workouts.data[].workout_lines[].exercise.category": "texte",
-                "workouts.data[].workout_lines[].exercise.created_at": "texte",
-                "workouts.data[].workout_lines[].exercise.default_rest_time": "nombre|null",
                 "workouts.data[].workout_lines[].exercise.id": "nombre",
                 "workouts.data[].workout_lines[].exercise.name": "texte",
-                "workouts.data[].workout_lines[].exercise.type": "texte",
-                "workouts.data[].workout_lines[].exercise.updated_at": "texte",
-                "workouts.data[].workout_lines[].exercise.user_id": "nombre",
                 "workouts.data[].workout_lines[].exercise_id": "nombre",
                 "workouts.data[].workout_lines[].id": "nombre",
-                "workouts.data[].workout_lines[].idempotency_key": "null|texte",
-                "workouts.data[].workout_lines[].notes": "null|texte",
                 "workouts.data[].workout_lines[].order": "nombre",
                 "workouts.data[].workout_lines[].sets_count": "nombre",
-                "workouts.data[].workout_lines[].updated_at": "texte",
-                "workouts.data[].workout_lines[].user_id": "nombre",
                 "workouts.data[].workout_lines[].workout_id": "nombre",
-                "workouts.data[].workout_lines[].workout_started_at": "texte",
                 "workouts.data[].workout_volume": "nombre",
                 "workouts.first_page_url": "texte",
                 "workouts.from": "nombre",

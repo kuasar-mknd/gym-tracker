@@ -259,6 +259,8 @@ function projectionsLInventaire(): array
                     'app/Actions/CreateWorkoutFromTemplateAction.php' => ['createLinesAndSets'],
                 ],
             ],
+            dette: 'Un `insert()` en masse ne déclenche pas `saving` : la copie y est posée à la main, '
+                .'en double du modèle (.ai/rules/models.md, « Recopier le propriétaire »).',
         ),
         'la date de séance recopiée sur ses lignes' => projectionsDecrire(
             genre: 'colonne',
@@ -278,9 +280,6 @@ function projectionsLInventaire(): array
                  */
                 'la propagation quand la séance change de date' => [
                     'app/Models/Workout.php' => ['recopierLeDebutSurSesLignes'],
-                ],
-                'l’insertion en masse depuis un modèle de séance' => [
-                    'app/Actions/CreateWorkoutFromTemplateAction.php' => ['createLinesAndSets'],
                 ],
             ],
             dette: 'La copie se pose quand la ligne s’écrit et se propage quand la séance change de date : '

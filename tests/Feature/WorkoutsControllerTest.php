@@ -158,7 +158,7 @@ it('n’envoie de chaque ligne de la liste que ce que la carte lit', function ()
     }
 
     $reponse = actingAs($user)->get(route('workouts.index'))->assertOk();
-    /** @var array{props: array{workouts: array{data: list<array{workout_lines: list<array<string, mixed>>}>}}} $page */
+    /** @var array{props: array{workouts: array{data: list<array{workout_lines: list<array{exercise: array<string, mixed>}>}>}}} $page */
     $page = $reponse->viewData('page');
     $lignes = $page['props']['workouts']['data'][0]['workout_lines'];
 
