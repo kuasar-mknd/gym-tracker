@@ -329,7 +329,9 @@ final class FetchWorkoutsIndexAction
                  * doit accepter le type le plus large, un `HasMany` n'est pas
                  * contravariant avec lui. Ici c'est un WorkoutLine de Workout.
                  */
-                $query->with('exercise')->withCount('sets');
+                $query->select(['id', 'workout_id', 'exercise_id', 'order'])
+                    ->with('exercise:id,name')
+                    ->withCount('sets');
             },
         ])
             ->where('user_id', $user->id)

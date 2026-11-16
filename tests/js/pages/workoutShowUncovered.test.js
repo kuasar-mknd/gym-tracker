@@ -471,6 +471,24 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         }
     })
 
+    it("garde « Terminer » au-dessus de la carte du repos tant qu'elle est affichée (#2312)", async () => {
+        const wrapper = await mountPage()
+        const contenu = () => wrapper.get('[dusk="exercise-list"]').element.parentElement
+
+        expect(contenu().classList.contains('pb-main-safe')).toBe(true)
+        expect(contenu().classList.contains('pb-main-safe-repos')).toBe(false)
+
+        await click(wrapper, 'open-rest-timer')
+
+        expect(contenu().classList.contains('pb-main-safe-repos')).toBe(true)
+        expect(contenu().classList.contains('pb-main-safe')).toBe(false)
+
+        wrapper.findComponent(RestTimerStub).vm.$emit('close')
+        await flushPromises()
+
+        expect(contenu().classList.contains('pb-main-safe')).toBe(true)
+    })
+
     /*
      * Sur une copie hors ligne, le réglage du repos ne partirait pas (#2048,
      * partie E) : la page le dit au minuteur, qui désactive son interrupteur ;

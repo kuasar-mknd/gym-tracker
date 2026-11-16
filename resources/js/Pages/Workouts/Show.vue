@@ -294,7 +294,7 @@ onUnmounted(() => {
             </button>
         </template>
 
-        <div class="pb-main-safe">
+        <div :class="showTimer ? 'pb-main-safe-repos' : 'pb-main-safe'">
             <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" :seance="localWorkout" />
             <SeriesHorsDeLaCopie :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">

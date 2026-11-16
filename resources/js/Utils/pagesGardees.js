@@ -42,7 +42,7 @@
  * `tests/Feature/HorsLigne/contrat-des-pages-gardees.json` pour cette version :
  * une forme qui change sans que la version monte fait échouer la suite.
  */
-export const VERSION_DU_CONTRAT = 2
+export const VERSION_DU_CONTRAT = 3
 
 /**
  * Le volume que les copies d'un compte occupent au plus, chiffrées : 1,5 Mo.

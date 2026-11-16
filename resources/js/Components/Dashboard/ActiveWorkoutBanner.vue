@@ -13,6 +13,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { compte, entier } from '@/Utils/nombre'
 import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
+import { jourEtMois } from '@/Utils/date'
 
 const props = defineProps({
     workout: { type: Object, required: true },
@@ -46,6 +47,9 @@ const ouvrir = (evenement) => {
     emit('ouvrir', props.workout)
 }
 
+/** Au-delà, la séance est oubliée : une durée de plusieurs jours ne dit rien, la date de début si. */
+const DUREE_MAX_AFFICHEE = 12 * 3600
+
 const elapsed = ref('')
 let intervalId = null
 
@@ -54,6 +58,12 @@ const updateElapsed = () => {
     const now = new Date()
     // Une horloge décalée ou un fuseau changé ne donnent jamais une durée négative.
     const diff = Math.max(0, Math.floor((now - start) / 1000))
+    if (diff > DUREE_MAX_AFFICHEE) {
+        elapsed.value = `dès le ${jourEtMois(start)}`
+
+        return
+    }
+
     const h = Math.floor(diff / 3600)
     const m = Math.floor((diff % 3600) / 60)
     const s = diff % 60
