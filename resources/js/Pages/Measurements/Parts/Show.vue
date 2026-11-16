@@ -11,7 +11,6 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { nombre } from '@/Utils/nombre'
 import { courbeDansLUniteDuDernierReleve } from '@/Utils/mesuresEnUnite'
 
@@ -168,19 +167,8 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                 </form>
             </GlassCard>
 
-            <GlassEmptyState
-                v-if="history.length === 0"
-                icon="📏"
-                color="cyan"
-                title="Aucune mesure"
-                description="Enregistre une première mesure pour ouvrir la courbe."
-                action-label="Ajouter une mesure"
-                action-id="empty-state-measurement-part-show"
-                @action="showAddForm = true"
-            />
-
             <!-- List -->
-            <div v-else-if="history.length > 0" class="stagger-2 animate-slide-up space-y-2">
+            <div class="stagger-2 animate-slide-up space-y-2">
                 <GlassCard v-for="item in [...history].reverse()" :key="item.id" padding="p-4" class="group">
                     <div class="flex items-center justify-between">
                         <div>

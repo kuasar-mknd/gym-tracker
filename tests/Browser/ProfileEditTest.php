@@ -50,10 +50,10 @@ class ProfileEditTest extends DuskTestCase
                 ->script("document.querySelector('[dusk=\"save-profile-btn\"]').scrollIntoView({block: 'center'});");
 
             $browser->click('@save-profile-btn')
-                ->waitForText('Enregistré', 15)
+                ->waitForTextIn('@profile-status', 'Enregistré', 15)
                 ->assertInputValue('@profile-name-input', $newName);
 
-            // « Enregistré ✓ » est un message, pas une preuve. Sans cette
+            // « Enregistré » est un message, pas une preuve. Sans cette
             // vérification, un formulaire qui affiche le succès sans rien écrire
             // passait au vert.
             $this->waitForDatabase(

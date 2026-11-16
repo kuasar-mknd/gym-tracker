@@ -284,22 +284,11 @@ describe('Measurements/Parts/Show — la saisie sur téléphone (#2354)', () => 
         expect(bouton().text()).toMatch(/close\s*Annuler$/)
     })
 
-    it('propose d’ajouter une première mesure sur une partie vide, et ouvre le formulaire', async () => {
-        const wrapper = monterSurTelephone([])
-
-        expect(wrapper.text()).toContain('Aucune mesure')
-        expect(wrapper.find('[data-testid="empty-state-measurement-part-show"]').exists()).toBe(true)
-
-        await wrapper.get('[data-testid="empty-state-measurement-part-show"]').trigger('click')
-
-        expect(wrapper.find('form').exists()).toBe(true)
-    })
-
-    it('donne le focus à la valeur quand le formulaire s’ouvre, même depuis l’état vide', async () => {
+    it('donne le focus à la valeur quand le « + » de l’en-tête ouvre le formulaire', async () => {
         const defiler = vi.fn()
         Element.prototype.scrollIntoView = defiler
         const wrapper = mount(PartShow, {
-            props: { part: 'Biceps', history: [] },
+            props: { part: 'Biceps', history: structuredClone(historyFixture) },
             attachTo: document.body,
             global: {
                 mocks: { route },
@@ -308,7 +297,7 @@ describe('Measurements/Parts/Show — la saisie sur téléphone (#2354)', () => 
             },
         })
 
-        await wrapper.get('[data-testid="empty-state-measurement-part-show"]').trigger('click')
+        await wrapper.get('button[aria-label="Ajouter une mesure"]').trigger('click')
         await flushPromises()
 
         expect(document.activeElement).toBe(wrapper.get('input[type="number"]').element)
@@ -318,12 +307,17 @@ describe('Measurements/Parts/Show — la saisie sur téléphone (#2354)', () => 
         delete Element.prototype.scrollIntoView
     })
 
-    it('accepte deux décimales : 35,25 cm ne déclenche pas la bulle du navigateur', async () => {
+    it('laisse la valeur à deux décimales : le pas vaut 0.01 et 35,25 part au serveur', async () => {
         const { wrapper } = mountPart()
 
         await openAddForm(wrapper)
-
         expect(wrapper.get('input[type="number"]').attributes('step')).toBe('0.01')
+
+        await wrapper.get('input[type="number"]').setValue('35.25')
+        await wrapper.find('form').trigger('submit')
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(wrapper.vm.form.value).toBe('35.25')
     })
 })
 

@@ -217,7 +217,7 @@ const submit = () => {
                     Enregistrer
                 </GlassButton>
 
-                <div role="status">
+                <div role="status" dusk="profile-status">
                     <Transition
                         enter-active-class="transition ease-in-out"
                         enter-from-class="opacity-0"
