@@ -334,9 +334,11 @@ final class AppServiceProvider extends ServiceProvider
              * Une série cochée ou décochée dans une séance terminée la fait
              * devenir faite ou cesser de l'être : la série de jours se
              * reconstruit (#2171). Dans une séance en cours, où se cochent les
-             * séries, rien ne change pour elle et rien n'est lu.
+             * séries, rien ne change pour elle et rien n'est lu. La fin se relit en
+             * base : la séance en mémoire date d'avant l'écriture, et une fin
+             * arrivée entre-temps a déjà recalculé sans cette série.
              */
-            if ($set->workoutLine->workout->ended_at !== null && ($set->wasChanged('is_completed') || ($set->wasRecentlyCreated && $set->is_completed))) {
+            if (($set->wasChanged('is_completed') || ($set->wasRecentlyCreated && $set->is_completed)) && Workout::query()->whereKey($set->workoutLine->workout->getKey())->whereNotNull('ended_at')->exists()) {
                 app(StreakService::class)->recalculerPourLaSeance($set->workoutLine->workout);
             }
 

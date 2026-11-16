@@ -20,7 +20,7 @@ import {
     Title,
     Tooltip,
 } from 'chart.js'
-import { computed, useId } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 import { jeton } from '@/Utils/couleurs'
 import { optionsDAnneau } from '@/Utils/donut'
 import { fusionner, graduations, grille, infobulle as habillageInfobulle } from './chartConfig'
@@ -202,10 +202,16 @@ const axeY = (reglage) =>
 
 const animationReduite = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true
 
+// Chart.js dessine à la prochaine image : à l'impression, un canevas animé sortirait vide.
+const impression = ref(false)
+
 const chartOptions = computed(() => {
     const reglages = reglagesDuGraphique.value
 
-    return animationReduite() ? { ...reglages, animation: false } : reglages
+    // vue-chartjs fusionne les options sans jamais retirer une clé : l'animation se rend explicitement, par la valeur de Chart.js.
+    return impression.value || animationReduite()
+        ? { ...reglages, animation: false }
+        : { animation: ChartJS.defaults.animation, ...reglages }
 })
 
 const reglagesDuGraphique = computed(() => {
@@ -244,6 +250,56 @@ const reglagesDuGraphique = computed(() => {
     return fusionner(base, props.options)
 })
 
+/*
+ * Un canevas ne se construit que lorsqu'il approche de l'écran : sur une page
+ * de statistiques, la quarantaine de graphiques sous le pli instanciaient
+ * chacun Chart.js et jouaient leur animation sans que personne les voie
+ * (#2325). La boîte garde sa hauteur déclarée : rien ne saute à l'arrivée du
+ * tracé. Sans IntersectionObserver (vieux navigateur, jsdom), le tracé est
+ * immédiat, comme avant.
+ */
+const MARGE_D_APPROCHE = '200px'
+const boite = ref(null)
+const approche = ref(typeof IntersectionObserver === 'undefined')
+let observateur = null
+
+onMounted(() => {
+    if (approche.value || !boite.value) {
+        return
+    }
+
+    observateur = new IntersectionObserver(
+        (entrees) => {
+            if (entrees.some((entree) => entree.isIntersecting)) {
+                approche.value = true
+                observateur.disconnect()
+            }
+        },
+        { rootMargin: MARGE_D_APPROCHE },
+    )
+    observateur.observe(boite.value)
+})
+
+const avantImpression = () => {
+    impression.value = true
+    approche.value = true
+    observateur?.disconnect()
+}
+const apresImpression = () => {
+    impression.value = false
+}
+
+onMounted(() => {
+    window.addEventListener('beforeprint', avantImpression)
+    window.addEventListener('afterprint', apresImpression)
+})
+
+onBeforeUnmount(() => {
+    observateur?.disconnect()
+    window.removeEventListener('beforeprint', avantImpression)
+    window.removeEventListener('afterprint', apresImpression)
+})
+
 const style = computed(() =>
     props.lueur
         ? { '--lueur': `var(--color-${props.lueur})`, '--lueur-opacite': String(props.lueurOpacite) }
@@ -254,11 +310,12 @@ const style = computed(() =>
 <template>
     <div class="flex h-full w-full flex-col">
         <div
+            ref="boite"
             :class="['relative w-full', hauteur === 'h-full' ? 'min-h-0 flex-1' : hauteur, { 'avec-lueur': lueur }]"
             :style="style"
         >
             <slot v-if="vide" name="vide" />
-            <template v-else>
+            <template v-else-if="approche">
                 <component
                     :is="composant"
                     :data="chartData"
@@ -269,6 +326,7 @@ const style = computed(() =>
                 />
                 <slot name="surcouche" />
             </template>
+            <div v-else role="img" :aria-label="description" :aria-describedby="idDuResume" class="absolute inset-0" />
         </div>
         <p v-if="!vide" :id="idDuResume" class="sr-only">{{ resume }}</p>
         <ul v-if="legendeSousLAnneau.length" class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1">

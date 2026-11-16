@@ -119,7 +119,11 @@
                             <div class="col-span-1"></div>
                         </div>
 
-                        <div v-for="(step, index) in form.steps" :key="index" class="grid grid-cols-12 gap-2">
+                        <div
+                            v-for="(step, index) in form.steps"
+                            :key="cleDuPalier(step)"
+                            class="grid grid-cols-12 gap-2"
+                        >
                             <div class="col-span-3">
                                 <div class="relative">
                                     <input
@@ -221,6 +225,17 @@ const form = useForm(valeursDesPreferences())
 
 // Servie d'une copie hors ligne puis rechargée au retour du réseau, la page reprend les préférences du serveur (#2048).
 recalerApresLaCopie(form, valeursDesPreferences)
+
+// Un palier garde sa ligne quand un autre disparaît : la saisie et le focus ne glissent pas d'un rang.
+const clesDesPaliers = new WeakMap()
+let prochaineCle = 0
+const cleDuPalier = (palier) => {
+    if (!clesDesPaliers.has(palier)) {
+        clesDesPaliers.set(palier, (prochaineCle += 1))
+    }
+
+    return clesDesPaliers.get(palier)
+}
 
 const addStep = () => {
     form.steps.push({ percent: 50, reps: 5, label: '' })

@@ -87,11 +87,9 @@ class WorkoutController extends Controller
      */
     public function finish(WorkoutFinishRequest $request, TerminerLaSeanceAction $terminer): WorkoutResource
     {
-        /** @var Workout $seance un identifiant que la validation a trouvé parmi les séances du compte */
-        $seance = Workout::query()->findOrFail($request->validated('workout_id'));
-        $this->authorize('view', $seance);
-
-        $seance = $terminer->execute($seance, $request->ageDuGeste());
+        // Un identifiant que la validation a trouvé parmi les séances du compte ;
+        // l'action la lit sous le verrou, et vérifie le droit de la voir.
+        $seance = $terminer->terminerCelleDuCompte($this->user(), $request->integer('workout_id'), $request->ageDuGeste());
 
         return new WorkoutResource($seance)->additional([
             'meta' => ['proposer_les_notifications' => $this->user()->doitRecevoirLInvitationAuxNotifications()],

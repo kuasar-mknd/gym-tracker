@@ -10,6 +10,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Ajouté
 
 ### Modifié
+- **Un graphique ne se trace qu'à l'approche de l'écran, et un palier d'échauffement garde sa ligne** (#2325) : `BaseChart` construit son canevas quand sa boîte approche (marge de 200 px, hauteur gardée, tracé immédiat sans `IntersectionObserver`, nom accessible gardé avant le tracé, tout tracé sans animation à l'impression) ; retirer un palier du calculateur ne fait plus glisser la saisie d'une ligne à l'autre.
 - **Un champ amené dans la vue ne reste plus sous l'en-tête collant, et une boîte de dialogue ne fait plus défiler la page dessous** (#2304) : `scroll-padding-top` réserve la place de l'en-tête (WCAG 2.4.11) ; `overscroll-behavior: contain` sur la boîte et son fond, un enrichissement, le verrou de la page restant ce qui la retient sur les Safari d'avant la 16. Les champs de mot de passe et d'adresse des pages de connexion et du profil portent un `name` stable, que les gestionnaires de mots de passe reconnaissent.
 
 ### Corrigé

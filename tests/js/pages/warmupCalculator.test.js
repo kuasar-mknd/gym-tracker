@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { reactive, nextTick } from 'vue'
 
 const post = vi.fn()
 let form
@@ -11,7 +12,7 @@ vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<div />' },
     router: { delete: vi.fn() },
     useForm: (data) => {
-        form = { ...data, processing: false, errors: {}, post, reset: vi.fn() }
+        form = reactive({ ...data, processing: false, errors: {}, post, reset: vi.fn() })
 
         return form
     },
@@ -91,6 +92,17 @@ describe('editing the warm-up ladder', () => {
         wrapper.vm.removeStep(0)
 
         expect(form.steps).toHaveLength(1)
+    })
+
+    it('garde la ligne du palier restant quand un autre est retiré', async () => {
+        const wrapper = mountPage()
+        const champ = (rang) => wrapper.find(`input[aria-label="Répétitions, palier ${rang}"]`).element
+        const ligneDuSecond = champ(2)
+
+        wrapper.vm.removeStep(0)
+        await nextTick()
+
+        expect(champ(1)).toBe(ligneDuSecond)
     })
 
     it('removes the step that was asked for, not the last one', () => {
