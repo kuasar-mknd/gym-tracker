@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\NewPasswordRequest;
 use App\Models\User;
 use App\Support\DureeDesReponsesDAuthentification;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
 use Illuminate\Validation\ValidationException;
@@ -188,6 +190,8 @@ class NewPasswordController extends Controller
                 if ($user->estEnAttente()) {
                     self::reprendreLeCompteEnAttente($user);
                 }
+
+                RateLimiter::clear(LoginRequest::clefDeLAdresse($user->email));
 
                 event(new PasswordReset($user));
 
