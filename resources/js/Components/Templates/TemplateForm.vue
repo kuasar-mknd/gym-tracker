@@ -232,25 +232,27 @@ const submit = () => {
                                         <input
                                             v-model="set.reps"
                                             type="number"
+                                            inputmode="numeric"
                                             min="0"
                                             :max="bornesDUneSerie?.reps"
                                             :aria-invalid="
                                                 Boolean(form.errors[`exercises.${exIndex}.sets.${setIndex}.reps`])
                                             "
-                                            class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-10 w-20 rounded-lg border text-center text-base"
+                                            class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-11 w-20 rounded-lg border text-center text-base"
                                             placeholder="réps"
                                             :aria-label="`Répétitions, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                         />
                                         <input
                                             v-model="set.weight"
                                             type="number"
-                                            step="0.5"
+                                            inputmode="decimal"
+                                            step="any"
                                             min="0"
                                             :max="bornesDUneSerie?.weight"
                                             :aria-invalid="
                                                 Boolean(form.errors[`exercises.${exIndex}.sets.${setIndex}.weight`])
                                             "
-                                            class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-10 w-20 rounded-lg border text-center text-base"
+                                            class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-11 w-20 rounded-lg border text-center text-base"
                                             placeholder="kg"
                                             :aria-label="`Poids en kg, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                         />

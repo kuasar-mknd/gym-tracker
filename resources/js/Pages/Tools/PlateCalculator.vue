@@ -63,7 +63,7 @@
                                         width: '24px',
                                     }"
                                 >
-                                    <span class="-rotate-90 whitespace-nowrap">{{ nombre(plate.weight) }}</span>
+                                    <span class="-rotate-90 whitespace-nowrap">{{ nombre(plate.weight, 2) }}</span>
                                 </div>
                             </div>
 
@@ -79,7 +79,7 @@
                                         width: '24px',
                                     }"
                                 >
-                                    <span class="rotate-90 whitespace-nowrap">{{ nombre(plate.weight) }}</span>
+                                    <span class="rotate-90 whitespace-nowrap">{{ nombre(plate.weight, 2) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -177,7 +177,7 @@
                                     la meme chose, et un seul a ete repris.
                                 -->
                                 <div class="font-display text-3xl font-black">
-                                    {{ plate.weight }}
+                                    {{ nombre(plate.weight, 2) }}
                                 </div>
                                 <div class="mt-1 text-xs font-bold tracking-wider uppercase opacity-70">
                                     x {{ plate.quantity }}
@@ -254,7 +254,9 @@
         <ConfirmDialog
             :ouvert="suppressionDemandee"
             titre="Retirer ce disque de ton inventaire ?"
-            :description="disqueASupprimer?.weight ? `Le disque de ${disqueASupprimer.weight} kg sera retire.` : ''"
+            :description="
+                disqueASupprimer?.weight ? `Le disque de ${nombre(disqueASupprimer.weight, 2)} kg sera retiré.` : ''
+            "
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
         />

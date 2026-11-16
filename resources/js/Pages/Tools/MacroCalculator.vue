@@ -43,7 +43,14 @@
                             size="lg"
                         />
                         <!-- Weight -->
-                        <GlassInput type="number" v-model="form.weight" label="Poids (kg)" placeholder="70" size="lg" />
+                        <GlassInput
+                            type="number"
+                            inputmode="decimal"
+                            v-model="form.weight"
+                            label="Poids (kg)"
+                            placeholder="70"
+                            size="lg"
+                        />
                     </div>
 
                     <!-- Activity Level -->

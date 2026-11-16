@@ -183,7 +183,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
             titre="Supprimer cette mesure ?"
             :description="
                 mesureASupprimer
-                    ? `La mesure du ${formatMeasuredAt(mesureASupprimer.measured_at)} — ${mesureASupprimer.value} ${mesureASupprimer.unit} — sera effacée.`
+                    ? `La mesure du ${formatMeasuredAt(mesureASupprimer.measured_at)} — ${nombre(mesureASupprimer.value, 2)} ${mesureASupprimer.unit} — sera effacée.`
                     : ''
             "
             @confirmer="confirmerSuppression"

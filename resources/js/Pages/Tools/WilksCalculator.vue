@@ -61,6 +61,7 @@
                                     <input
                                         id="wilks-body-weight"
                                         type="number"
+                                        inputmode="decimal"
                                         v-model="form.body_weight"
                                         placeholder="80"
                                         step="0.1"
@@ -80,6 +81,7 @@
                                     <input
                                         id="wilks-lifted-weight"
                                         type="number"
+                                        inputmode="decimal"
                                         v-model="form.lifted_weight"
                                         placeholder="400"
                                         step="0.5"

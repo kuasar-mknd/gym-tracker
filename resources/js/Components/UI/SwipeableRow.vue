@@ -11,7 +11,7 @@
  * - Transparent backgrounds to allow GlassCard slots to shine.
  * - Dynamic opacity for actions to prevent bleed-through.
  */
-import { ref, computed, watch, useSlots } from 'vue'
+import { ref, computed, watch, useSlots, onBeforeUnmount } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 const slots = useSlots()
@@ -33,6 +33,7 @@ const lockDirection = ref(null) // null, 'horizontal', 'vertical'
 const containerWidth = ref(0)
 
 // Element refs for the actions layer, used to open the row on keyboard focus
+const racine = ref(null)
 const actionsLayer = ref(null)
 const leftAction = ref(null)
 const rightAction = ref(null)
@@ -225,11 +226,27 @@ function close() {
     offset.value = 0
 }
 
+function fermerSiDehors(event) {
+    if (!racine.value?.contains(event.target)) {
+        close()
+    }
+}
+
+watch(offset, (valeur, avant) => {
+    if (valeur !== 0 && avant === 0) {
+        document.addEventListener('pointerdown', fermerSiDehors, true)
+    } else if (valeur === 0 && avant !== 0) {
+        document.removeEventListener('pointerdown', fermerSiDehors, true)
+    }
+})
+
+onBeforeUnmount(() => document.removeEventListener('pointerdown', fermerSiDehors, true))
+
 defineExpose({ close })
 </script>
 
 <template>
-    <div class="relative overflow-hidden rounded-3xl">
+    <div ref="racine" class="relative overflow-hidden rounded-3xl">
         <!-- Background Actions Layer. Dropped entirely when the row is disabled:
              the gesture that reveals it is off, so leaving it mounted would only
              leave invisible buttons in the tab order. -->

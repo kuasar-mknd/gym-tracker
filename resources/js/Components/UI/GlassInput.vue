@@ -108,6 +108,15 @@ const inputType = computed(() => {
     return props.type
 })
 
+/** Le clavier d'un champ numérique : entiers sans virgule, sinon le pavé décimal. */
+const modeDeSaisie = computed(() => {
+    if (props.type !== 'number') {
+        return undefined
+    }
+
+    return attrs.step === undefined || Number.isInteger(Number(attrs.step)) ? 'numeric' : 'decimal'
+})
+
 // Clear button logic
 const hasClearButton = computed(() => {
     return ['text', 'search', 'email', 'url', 'tel'].includes(props.type)
@@ -195,6 +204,7 @@ defineExpose({
                 ref="input"
                 :id="inputId"
                 :type="inputType"
+                :inputmode="modeDeSaisie"
                 :value="modelValue"
                 :dusk="dusk"
                 @input="$emit('update:modelValue', $event.target.value)"

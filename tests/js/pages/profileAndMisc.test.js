@@ -292,6 +292,16 @@ describe('Measurements/Parts/Show — le nom de la partie', () => {
     })
 })
 
+describe('Measurements/Parts/Show — la confirmation de suppression', () => {
+    it('écrit la valeur en nombre français, pas la chaîne brute (#2320)', async () => {
+        const { wrapper } = mountPart([{ id: 9, value: 39.5, unit: 'cm', measured_at: '2026-03-15', notes: null }])
+
+        await wrapper.get('[aria-label^="Supprimer la mesure"]').trigger('click')
+
+        expect(dialogue(wrapper).props('description')).toContain('39,5 cm')
+    })
+})
+
 describe('Measurements/Parts/Show — the history list', () => {
     it('puts the most recent measurement at the top', () => {
         const { wrapper } = mountPart()

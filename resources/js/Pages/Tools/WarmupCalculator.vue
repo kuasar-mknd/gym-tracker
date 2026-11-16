@@ -124,6 +124,7 @@
                                 <div class="relative">
                                     <input
                                         type="number"
+                                        inputmode="numeric"
                                         v-model="step.percent"
                                         :aria-label="`Pourcentage, palier ${index + 1}`"
                                         class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border py-2 pr-6 pl-2 text-center text-base font-bold tabular-nums transition outline-none focus:ring-1"
@@ -136,6 +137,7 @@
                             <div class="col-span-3">
                                 <input
                                     type="number"
+                                    inputmode="numeric"
                                     v-model="step.reps"
                                     :aria-label="`Répétitions, palier ${index + 1}`"
                                     class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-2 py-2 text-center text-base font-bold tabular-nums transition outline-none focus:ring-1"
