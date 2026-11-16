@@ -205,7 +205,7 @@ const animationReduite = () => window.matchMedia?.('(prefers-reduced-motion: red
 const chartOptions = computed(() => {
     const reglages = reglagesDuGraphique.value
 
-    return animationReduite() ? { animation: false, ...reglages } : reglages
+    return animationReduite() ? { ...reglages, animation: false } : reglages
 })
 
 const reglagesDuGraphique = computed(() => {

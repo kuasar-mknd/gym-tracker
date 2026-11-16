@@ -246,7 +246,7 @@ const submit = () => {
                                             v-model="set.weight"
                                             type="number"
                                             inputmode="decimal"
-                                            step="any"
+                                            step="0.01"
                                             min="0"
                                             :max="bornesDUneSerie?.weight"
                                             :aria-invalid="

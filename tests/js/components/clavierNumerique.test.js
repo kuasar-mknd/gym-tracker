@@ -30,4 +30,12 @@ describe('GlassBigNumber — clavier', () => {
 
         expect(champ.attributes('inputmode')).toBe('decimal')
     })
+
+    it('donne le clavier des entiers à un pas entier, et laisse l’appelant imposer le sien', () => {
+        const champ = (attrs) => mount(GlassBigNumber, { props: { label: 'Réps' }, attrs }).get('input')
+
+        expect(champ({ step: '1' }).attributes('inputmode')).toBe('numeric')
+        expect(champ({ step: '0.5' }).attributes('inputmode')).toBe('decimal')
+        expect(champ({ inputmode: 'numeric' }).attributes('inputmode')).toBe('numeric')
+    })
 })

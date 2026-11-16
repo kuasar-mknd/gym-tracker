@@ -37,6 +37,7 @@
                         <!-- Height -->
                         <GlassInput
                             type="number"
+                            inputmode="decimal"
                             v-model="form.height"
                             label="Taille (cm)"
                             placeholder="175"

@@ -30,6 +30,15 @@ describe('BaseChart sous « réduire les animations »', () => {
         expect(chartOptionsOf(monter(type), composant).animation).toBe(false)
     })
 
+    it('l’emporte sur une animation demandée par la carte', () => {
+        reduire(true)
+        const wrapper = mount(BaseChart, {
+            props: { type: 'bar', datasets: [], options: { animation: { duration: 900 } } },
+        })
+
+        expect(chartOptionsOf(wrapper, 'Bar').animation).toBe(false)
+    })
+
     it('garde les animations de Chart.js sinon', () => {
         reduire(false)
 
