@@ -32,12 +32,15 @@ final class FilamentAdminPanel
      * and make the 'admin' panel current.
      *
      * @param  array<int, string>  $permissions  e.g. ['ViewAny:User', 'Create:User']
+     * @param  bool  $avecLaDoubleAuthentification  faux : l'administrateur qui n'a pas encore enrôlé son application (#2353)
      */
-    public static function admin(array $permissions = []): Admin
+    public static function admin(array $permissions = [], bool $avecLaDoubleAuthentification = true): Admin
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $admin = Admin::factory()->create();
+        $admin = $avecLaDoubleAuthentification
+            ? Admin::factory()->create()
+            : Admin::factory()->sansDoubleAuthentification()->create();
 
         foreach ($permissions as $permission) {
             Permission::findOrCreate($permission, 'admin');

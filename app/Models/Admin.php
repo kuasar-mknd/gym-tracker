@@ -82,6 +82,20 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
         return $this->hasRole(self::roleDuSuperAdministrateur());
     }
 
+    /**
+     * L'administrateur a-t-il enrôlé sa double authentification (#2353).
+     *
+     * Le panneau l'exige de chaque page (`isRequired`), mais Pulse, le lecteur
+     * de journaux et Horizon vivent hors de lui : leurs portes la demandent
+     * aussi, sans quoi un compte connecté par son seul mot de passe, avant son
+     * enrôlement, les ouvrirait. Lue sur le secret, pas sur le panneau courant :
+     * ces routes n'en ont pas.
+     */
+    public function aLaDoubleAuthentification(): bool
+    {
+        return filled($this->getAppAuthenticationSecret());
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

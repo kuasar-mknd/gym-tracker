@@ -36,7 +36,7 @@ beforeEach(function (): void {
  */
 function jetonsDeDiagnosticSuperAdministrateur(bool $avecLaDoubleAuthentification = true): array
 {
-    $admin = FilamentAdminPanel::admin(['view-diagnostic']);
+    $admin = FilamentAdminPanel::admin(['view-diagnostic'], avecLaDoubleAuthentification: false);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
     $secret = new Google2FA()->generateSecretKey();
 
@@ -254,7 +254,7 @@ it('révoque les jetons d’un administrateur dont la double authentification es
 });
 
 it('ne révoque rien quand la double authentification s’active ou se réenregistre à l’identique', function (): void {
-    $admin = Admin::factory()->create();
+    $admin = Admin::factory()->sansDoubleAuthentification()->create();
     $jeton = JetonDeDiagnostic::factory()->for($admin, 'createur')->create();
 
     $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();

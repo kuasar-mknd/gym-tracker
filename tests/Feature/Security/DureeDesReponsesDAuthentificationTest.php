@@ -423,7 +423,7 @@ it('rend la main sans attendre à une connexion réussie', function (): void {
  */
 it('fait attendre le plancher à chaque étape d’une connexion réussie au panneau', function (bool $doubleAuthentification): void {
     $duree = DureeSimulee::demarrer();
-    $admin = FilamentAdminPanel::admin(['ViewAny:User']);
+    $admin = FilamentAdminPanel::admin(['ViewAny:User'], avecLaDoubleAuthentification: false);
     $application = AppAuthentication::make();
 
     if ($doubleAuthentification) {

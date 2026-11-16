@@ -69,6 +69,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->taireLesAdressesDansLesErreursDEnvoi();
         $this->taireLesAdressesDansLeJournalDeDernierRecours();
         $this->neJamaisFaireRenaitreUneSessionDetruite();
+        $this->fermerLesOutilsAUnAdministrateurSansDoubleAuthentification();
 
         if (config('app.env') === 'testing') {
             config(['telescope.enabled' => false]);
@@ -569,6 +570,25 @@ final class AppServiceProvider extends ServiceProvider
                 $dumper->addExtraOption("--loose-ignore-table-data={$dumper->getDbName()}.{$table}");
             }
         });
+    }
+
+    /**
+     * Pulse, le lecteur de journaux et Horizon vivent hors du panneau, que sa
+     * double authentification obligatoire (#2353) ne couvre donc pas : un
+     * compte connecté par son seul mot de passe, avant son enrôlement, les
+     * ouvrirait. Leurs capacités se refusent à un administrateur qui n'a pas
+     * enrôlé son application.
+     *
+     * Posée à l'enregistrement, avant `Gate::before` de Spatie (posé au
+     * démarrage du paquet, qui répond vrai à qui tient la permission du même
+     * nom : une permission Shield `viewPulse` accordée à un autre rôle ouvrirait
+     * encore Pulse, la porte `Gate::define` d'en dessous n'étant jamais lue).
+     */
+    private function fermerLesOutilsAUnAdministrateurSansDoubleAuthentification(): void
+    {
+        Gate::before(static fn (?Authenticatable $utilisateur, string $capacite): ?bool => $utilisateur instanceof Admin
+            && in_array($capacite, ['viewPulse', 'view-outils', 'view-logs'], true)
+            && ! $utilisateur->aLaDoubleAuthentification() ? false : null);
     }
 
     /**

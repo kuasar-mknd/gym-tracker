@@ -45,7 +45,7 @@ beforeEach(function (): void {
  */
 function accesDeDiagnosticSuperAdministrateur(bool $avecLaDoubleAuthentification = true): array
 {
-    $administrateur = FilamentAdminPanel::admin(['view-diagnostic']);
+    $administrateur = FilamentAdminPanel::admin(['view-diagnostic'], avecLaDoubleAuthentification: false);
     $administrateur->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
     $secret = new Google2FA()->generateSecretKey();
 
@@ -100,7 +100,8 @@ it('s’ouvre au super administrateur doté de la double authentification, et le
 it('se refuse, invisible et en 403, sans double authentification', function (): void {
     accesDeDiagnosticSuperAdministrateur(avecLaDoubleAuthentification: false);
 
-    get(AccesDeDiagnostic::getUrl(panel: 'admin'))->assertForbidden();
+    // Le panneau conduit d'abord à l'enrôlement (#2353) ; la page, elle, reste refusée.
+    get(AccesDeDiagnostic::getUrl(panel: 'admin'))->assertRedirect(Filament::getSetUpRequiredMultiFactorAuthenticationUrl());
     Livewire::test(AccesDeDiagnostic::class)->assertForbidden();
 
     expect(AccesDeDiagnostic::canAccess())->toBeFalse()
