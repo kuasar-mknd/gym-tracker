@@ -46,7 +46,7 @@ function chiffreesPoser(bool $chiffrees): void
     }
 
     $gestionnaire = app('chiffrees.gestionnaire');
-    app('session')->extend('chiffrees-partage', static fn (): mixed => $gestionnaire);
+    app('session')->extend('chiffrees-partage', fn (): mixed => $gestionnaire);
     config(['session.driver' => 'chiffrees-partage', 'session.encrypt' => $chiffrees]);
 
     app('session')->forgetDrivers();
