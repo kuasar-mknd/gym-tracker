@@ -202,10 +202,13 @@ const axeY = (reglage) =>
 
 const animationReduite = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true
 
+// Chart.js dessine à la prochaine image : à l'impression, un canevas animé sortirait vide.
+const impression = ref(false)
+
 const chartOptions = computed(() => {
     const reglages = reglagesDuGraphique.value
 
-    return animationReduite() ? { ...reglages, animation: false } : reglages
+    return impression.value || animationReduite() ? { ...reglages, animation: false } : reglages
 })
 
 const reglagesDuGraphique = computed(() => {
@@ -274,7 +277,25 @@ onMounted(() => {
     observateur.observe(boite.value)
 })
 
-onBeforeUnmount(() => observateur?.disconnect())
+const avantImpression = () => {
+    impression.value = true
+    approche.value = true
+    observateur?.disconnect()
+}
+const apresImpression = () => {
+    impression.value = false
+}
+
+onMounted(() => {
+    window.addEventListener('beforeprint', avantImpression)
+    window.addEventListener('afterprint', apresImpression)
+})
+
+onBeforeUnmount(() => {
+    observateur?.disconnect()
+    window.removeEventListener('beforeprint', avantImpression)
+    window.removeEventListener('afterprint', apresImpression)
+})
 
 const style = computed(() =>
     props.lueur
@@ -302,6 +323,7 @@ const style = computed(() =>
                 />
                 <slot name="surcouche" />
             </template>
+            <div v-else role="img" :aria-label="description" :aria-describedby="idDuResume" class="absolute inset-0" />
         </div>
         <p v-if="!vide" :id="idDuResume" class="sr-only">{{ resume }}</p>
         <ul v-if="legendeSousLAnneau.length" class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1">

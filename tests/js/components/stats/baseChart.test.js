@@ -382,4 +382,35 @@ describe('BaseChart hors de l’écran', () => {
 
         expect(observateurs[0].disconnect).toHaveBeenCalled()
     })
+
+    it('garde son nom accessible avant d’être tracé', () => {
+        const wrapper = monter({ description: 'Poids par jour' })
+        const image = wrapper.find('[role="img"]')
+
+        expect(image.attributes('aria-label')).toBe('Poids par jour')
+        expect(image.attributes('aria-describedby')).toBe(wrapper.find('p.sr-only').attributes('id'))
+    })
+
+    it('trace tout, sans animation, à l’impression, puis rend l’animation après', async () => {
+        const wrapper = monter()
+
+        window.dispatchEvent(new Event('beforeprint'))
+        await nextTick()
+        expect(trace(wrapper).exists()).toBe(true)
+        expect(trace(wrapper).props('options').animation).toBe(false)
+        expect(observateurs[0].disconnect).toHaveBeenCalled()
+
+        window.dispatchEvent(new Event('afterprint'))
+        await nextTick()
+        expect(trace(wrapper).props('options').animation).toBeUndefined()
+    })
+
+    it('cesse d’écouter l’impression au démontage', () => {
+        const retrait = vi.spyOn(window, 'removeEventListener')
+
+        monter().unmount()
+
+        expect(retrait).toHaveBeenCalledWith('beforeprint', expect.any(Function))
+        expect(retrait).toHaveBeenCalledWith('afterprint', expect.any(Function))
+    })
 })
