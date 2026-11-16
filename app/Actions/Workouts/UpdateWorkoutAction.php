@@ -23,7 +23,7 @@ final class UpdateWorkoutAction
      *                                            (`UpdateWorkoutRequest::maintenant()`) : la fin le reprend
      *                                            (`.ai/rules/horloge.md`) ; lu ici sans lui
      *
-     * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou du compte reste pris plus de `DemarrerUneSeanceAction::ATTENTE_DU_VERROU` secondes.
+     * @throws \App\Exceptions\LeVerrouDesSeancesEstPris Si le verrou du compte reste pris plus de `DemarrerUneSeanceAction::ATTENTE_DU_VERROU` secondes.
      */
     public function execute(Workout $workout, array $data, ?CarbonInterface $maintenant = null): Workout
     {
@@ -34,13 +34,12 @@ final class UpdateWorkoutAction
         }
 
         /** @var Workout $close */
-        $close = DemarrerUneSeanceAction::verrouDuCompte($workout->user_id)
-            ->block(DemarrerUneSeanceAction::ATTENTE_DU_VERROU, function () use ($workout, $data, $maintenant): Workout {
-                // Relue sous le verrou : une autre fin a pu passer depuis la liaison de la séance.
-                $workout->refresh();
+        $close = DemarrerUneSeanceAction::sousLeVerrouDuCompte($workout->user_id, function () use ($workout, $data, $maintenant): Workout {
+            // Relue sous le verrou : une autre fin a pu passer depuis la liaison de la séance.
+            $workout->refresh();
 
-                return $this->enregistrer($workout, $data, $maintenant, true);
-            });
+            return $this->enregistrer($workout, $data, $maintenant, true);
+        });
 
         return $close;
     }

@@ -52,15 +52,22 @@ declare(strict_types=1);
  * sans purge, la table ne faisait que grossir (#1670). `--force` : la commande
  * demande confirmation en production et, lancée par le planificateur, sans
  * personne pour répondre, s'annulait à chaque passage.
+ *
+ * Toutes les purges à heure fixe tournent avant 01:50, comme les sauvegardes :
+ * une tâche réglée à 03:xx partait trois fois la nuit du passage à l'heure
+ * d'hiver (02:xx CEST, 02:xx CET, 03:xx CET, #2389), et celle de 02:xx, deux
+ * (#2332). Celle-ci, 00:30, ouvre la suite des purges de 00:xx, espacées de
+ * cinq minutes pour ne pas empiler leurs écritures sur le disque de production.
+ * `TachesPlanifieesAuChangementDHeureTest` rejoue les deux nuits.
  */
 \Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180, '--force'])
-    ->dailyAt('03:30');
+    ->dailyAt('00:30');
 
 /*
  * Un jeton de réinitialisation du mot de passe expire au bout de 60 minutes
  * (`config/auth.php`), mais sa ligne restait en base, sous l'adresse de
  * courriel, que le compte existe encore ou non (#1938). La commande ne demande
- * aucune confirmation en production. 01:45 : avant la sauvegarde de 02:30, et
+ * aucune confirmation en production. 01:45 : avant la sauvegarde de 01:55, et
  * hors de l'heure que les changements d'heure sautent ou répètent.
  */
 \Illuminate\Support\Facades\Schedule::command('auth:clear-resets')
@@ -75,7 +82,7 @@ declare(strict_types=1);
  * trente jours, comme les exceptions enregistrées ; Horizon, de son côté, ne
  * garde les siennes que sept jours (`config/horizon.php`). La commande ne
  * demande aucune confirmation en production. 01:30 : avant la sauvegarde de
- * 02:30, et hors de l'heure que les changements d'heure sautent ou répètent.
+ * 01:55, et hors de l'heure que les changements d'heure sautent ou répètent.
  */
 \Illuminate\Support\Facades\Schedule::command('queue:prune-failed', ['--hours' => 30 * 24])
     ->dailyAt('01:30');
@@ -116,7 +123,7 @@ declare(strict_types=1);
  * jour, ou plus de 5 500 Mo d'archives) passe par le moniteur des tâches, qui
  * met la santé au rouge et écrit à `HEALTH_TO_ADDRESS` ; « Archives des
  * sauvegardes », sur la page de santé, voit déjà une archive de plus de
- * vingt-six heures. Le nettoyage de 02:00 ramène les archives à 5 000 Mo au
+ * vingt-six heures. Le nettoyage de 01:50 ramène les archives à 5 000 Mo au
  * plus, pour que ce seuil de place ne sonne pas chaque matin
  * (`config/backup.php`).
  */
@@ -124,10 +131,10 @@ declare(strict_types=1);
     ->withoutOverlapping(expiresAt: 25 * 60)
     ->group(function (): void {
         \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications'])
-            ->dailyAt('02:00');
+            ->dailyAt('01:50');
 
         \Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db', '--disable-notifications'])
-            ->dailyAt('02:30');
+            ->dailyAt('01:55');
 
         \Illuminate\Support\Facades\Schedule::command('backup:monitor')
             ->dailyAt('08:00');
@@ -153,17 +160,17 @@ declare(strict_types=1);
     ->doNotMonitor();
 
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\Spatie\ScheduleMonitor\Models\MonitoredScheduledTaskLogItem::class]])
-    ->dailyAt('03:15');
+    ->dailyAt('00:35');
 
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\ErreurNavigateur::class]])
-    ->dailyAt('03:45');
+    ->dailyAt('00:40');
 
 /*
  * Un jeton de diagnostic survit `JetonDeDiagnostic::JOURS_DE_CONSERVATION` jours
  * à sa fin, expiré ou révoqué (#2032), puis s'efface.
  */
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\JetonDeDiagnostic::class]])
-    ->dailyAt('03:55');
+    ->dailyAt('00:45');
 
 /*
  * Un compte ouvert par l'inscription dont l'adresse n'a jamais été prouvée
@@ -172,7 +179,7 @@ declare(strict_types=1);
  * qui efface aussi les traces du compte (`EffaceSesTracesPolymorphes`).
  */
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\User::class]])
-    ->dailyAt('03:50');
+    ->dailyAt('00:50');
 
 /*
  * La page « Metrics » de Horizon ne lit que les instantanés que range

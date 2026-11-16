@@ -338,9 +338,9 @@ return [
              * règle à toutes les archives accumulées, celles lancées du
              * panneau comprises, et une archive effacée ne revient pas. C'est
              * le seuil de place de `backup:monitor` (plus haut) qui monte à
-             * 5 500 Mo, 500 Mo au-dessus : le nettoyage de 02:00 ramène les
+             * 5 500 Mo, 500 Mo au-dessus : le nettoyage de 01:50 ramène les
              * archives à 5 000 Mo au plus, et celles écrites avant le contrôle
-             * de 08:00 (la sauvegarde de 02:30, celles lancées du panneau) ont
+             * de 08:00 (la sauvegarde de 01:55, celles lancées du panneau) ont
              * cette marge. Avec un contrôle sous le nettoyage, comme les
              * 2 000 Mo d'avant, un jeu d'archives entre les deux seuils ferait
              * échouer le contrôle chaque matin sans que le nettoyage y change

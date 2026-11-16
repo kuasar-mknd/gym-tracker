@@ -246,6 +246,10 @@ function serieDeJoursEcritures(array $sql): array
  * notifications non lues, le dernier badge, la séance en cours), soit 3
  * requêtes au démarrage, 9 et 7 à la fin, 9 à la suppression. La fin par la
  * file, route de l'API, ne le calculait pas.
+ *
+ * Démarrer ne relit plus le compte pour mettre en file les recalculs des succès
+ * et des objectifs, que seule la fin d'une séance déclenche (#2351) : 2 requêtes
+ * (la séance en cours cherchée, puis insérée), une de moins.
  */
 it('démarre une séance sans lire ni écrire la série de jours', function (): void {
     $user = User::factory()->create();
@@ -256,7 +260,7 @@ it('démarre une séance sans lire ni écrire la série de jours', function (): 
     expect(serieDeJoursLectures($sql))->toBe([])
         ->and(serieDeJoursEcritures($sql))->toBe([])
         ->and(count($ecritures))->toBe(1, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(3, implode("\n", $sql));
+        ->and(count($sql))->toBe(2, implode("\n", $sql));
 });
 
 it('termine une séance faite en une lecture de ses séances faites et une écriture de la série', function (): void {

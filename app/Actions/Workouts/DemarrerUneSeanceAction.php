@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Actions\Workouts;
 
 use App\Actions\CreateWorkoutFromTemplateAction;
+use App\Exceptions\LeVerrouDesSeancesEstPris;
 use App\Exceptions\UneSeanceEstDejaEnCours;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\Lock;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Cache;
 
@@ -66,7 +68,7 @@ final readonly class DemarrerUneSeanceAction
 
     /**
      * Combien de secondes un démarrage ou une fin attend le verrou d'un autre
-     * avant d'abandonner par une `LockTimeoutException`.
+     * avant d'abandonner par une `LeVerrouDesSeancesEstPris`.
      */
     public const int ATTENTE_DU_VERROU = 10;
 
@@ -78,6 +80,35 @@ final readonly class DemarrerUneSeanceAction
     public static function verrouDuCompte(int $idDuCompte): Lock
     {
         return Cache::lock("seances-du-compte:{$idDuCompte}", self::VIE_DU_VERROU);
+    }
+
+    /**
+     * Exécute `$travail` sous le verrou du compte. Seule la prise du verrou
+     * se convertit : ce que `$travail` lève, un autre verrou compris, remonte
+     * tel quel.
+     *
+     * @template TResultat
+     *
+     * @param  \Closure(): TResultat  $travail
+     * @return TResultat
+     *
+     * @throws LeVerrouDesSeancesEstPris Si le verrou reste pris plus de `ATTENTE_DU_VERROU` secondes.
+     */
+    public static function sousLeVerrouDuCompte(int $idDuCompte, \Closure $travail): mixed
+    {
+        $verrou = self::verrouDuCompte($idDuCompte);
+
+        try {
+            $verrou->block(self::ATTENTE_DU_VERROU);
+        } catch (LockTimeoutException) {
+            throw new LeVerrouDesSeancesEstPris();
+        }
+
+        try {
+            return $travail();
+        } finally {
+            $verrou->release();
+        }
     }
 
     public function __construct(
@@ -97,7 +128,7 @@ final readonly class DemarrerUneSeanceAction
      * de l'appareil.
      *
      * @throws UneSeanceEstDejaEnCours Si une autre séance du compte est en cours.
-     * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou du compte reste pris plus de `ATTENTE_DU_VERROU` secondes.
+     * @throws \App\Exceptions\LeVerrouDesSeancesEstPris Si le verrou du compte reste pris plus de `ATTENTE_DU_VERROU` secondes.
      */
     public function execute(User $user, ?string $cle, ?WorkoutTemplate $modele = null, ?int $ageDuGeste = null, ?string $nom = null): Workout
     {
@@ -105,8 +136,7 @@ final readonly class DemarrerUneSeanceAction
         $debut = Workout::debutBorne($ageDuGeste, $maintenant);
 
         /** @var Workout $seance */
-        $seance = self::verrouDuCompte($user->id)
-            ->block(self::ATTENTE_DU_VERROU, fn (): Workout => $this->sousLeVerrou($user, $cle, $modele, $debut, $nom));
+        $seance = self::sousLeVerrouDuCompte($user->id, fn (): Workout => $this->sousLeVerrou($user, $cle, $modele, $debut, $nom));
 
         return $seance;
     }
