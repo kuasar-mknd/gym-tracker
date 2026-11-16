@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Security;
 
-use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Support\AppareilConnu;
+use App\Support\PlafondParAdresse;
+use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Testing\TestResponse;
@@ -35,16 +37,16 @@ class PlafondDEssaisParAdresseTest extends TestCase
 
     private function remplirLePlafond(string $adresse): void
     {
-        $clef = LoginRequest::clefDeLAdresse($adresse);
+        $clef = PlafondParAdresse::clef($adresse);
 
-        for ($i = 0; $i < LoginRequest::ECHECS_PAR_ADRESSE; $i++) {
-            RateLimiter::hit($clef, LoginRequest::SECONDES_DE_LA_FENETRE_PAR_ADRESSE);
+        for ($i = 0; $i < PlafondParAdresse::ECHECS; $i++) {
+            RateLimiter::hit($clef, PlafondParAdresse::SECONDES_DE_LA_FENETRE);
         }
     }
 
     private function echecsDe(string $adresse): int
     {
-        $essais = RateLimiter::attempts(LoginRequest::clefDeLAdresse($adresse));
+        $essais = RateLimiter::attempts(PlafondParAdresse::clef($adresse));
         $this->assertIsInt($essais);
 
         return $essais;
@@ -114,7 +116,7 @@ class PlafondDEssaisParAdresseTest extends TestCase
         $this->assertTrue($cookie->isHttpOnly());
         $this->assertSame('lax', $cookie->getSameSite());
         $this->assertSame('/', $cookie->getPath());
-        $this->assertEqualsWithDelta(now()->addMinutes(AppareilConnu::MINUTES_DE_VIE)->getTimestamp(), $cookie->getExpiresTime(), 5);
+        $this->assertEqualsWithDelta(now()->addHours(180 * 24)->getTimestamp(), $cookie->getExpiresTime(), 5);
     }
 
     public function test_un_echec_ne_pose_pas_le_cookie(): void
@@ -412,7 +414,7 @@ class PlafondDEssaisParAdresseTest extends TestCase
 
         $this->post('/login', ['email' => 'personne@example.org', 'password' => 'x']);
 
-        $this->assertSame(LoginRequest::ECHECS_PAR_ADRESSE, $this->echecsDe('personne@example.org'));
+        $this->assertSame(PlafondParAdresse::ECHECS, $this->echecsDe('personne@example.org'));
     }
 
     public function test_le_plafond_ne_touche_pas_une_autre_adresse(): void
@@ -471,11 +473,122 @@ class PlafondDEssaisParAdresseTest extends TestCase
         $compte = User::factory()->create();
         $this->remplirLePlafond($compte->email);
 
-        $this->travel(LoginRequest::SECONDES_DE_LA_FENETRE_PAR_ADRESSE + 1)->seconds();
+        $this->travel(PlafondParAdresse::SECONDES_DE_LA_FENETRE + 1)->seconds();
 
         $this->post('/login', ['email' => $compte->email, 'password' => 'password']);
 
         $this->assertAuthenticated();
+    }
+
+    /**
+     * Les valeurs sont écrites en dur : un test qui lirait les constantes de
+     * la classe suivrait n'importe quelle valeur qu'on leur donne.
+     */
+    private function echecsEnDur(string $adresse, int $nombre): void
+    {
+        for ($i = 0; $i < $nombre; $i++) {
+            RateLimiter::hit('echecs-de-connexion:'.$adresse, 3600);
+        }
+    }
+
+    public function test_dix_neuf_echecs_ne_bloquent_pas_la_connexion(): void
+    {
+        $compte = User::factory()->create(['email' => 'jean@example.org']);
+        $this->echecsEnDur('jean@example.org', 19);
+
+        $this->connecterDepuis($compte->email, null);
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_le_vingtieme_echec_bloque_meme_avec_le_bon_mot_de_passe(): void
+    {
+        $compte = User::factory()->create(['email' => 'jean@example.org']);
+        $this->echecsEnDur('jean@example.org', 20);
+
+        $this->connecterDepuis($compte->email, null)->assertSessionHasErrors(['email' => trans('auth.plafond')]);
+
+        $this->assertGuest();
+    }
+
+    public function test_un_echec_reel_ouvre_une_fenetre_d_une_heure_exactement(): void
+    {
+        $this->freezeTime();
+        $this->echouer('jean@example.org', '10.0.0.1');
+
+        $this->assertSame(3600, RateLimiter::availableIn('echecs-de-connexion:jean@example.org'));
+
+        $this->travel(3599)->seconds();
+        $this->assertSame(1, $this->echecsDe('jean@example.org'));
+
+        $this->travel(2)->seconds();
+        $this->assertSame(0, $this->echecsDe('jean@example.org'));
+    }
+
+    public function test_un_echec_de_moins_d_une_heure_compte_encore(): void
+    {
+        $this->freezeTime();
+        $compte = User::factory()->create(['email' => 'jean@example.org']);
+        $this->echecsEnDur('jean@example.org', 20);
+
+        $this->travel(3599)->seconds();
+
+        $this->connecterDepuis($compte->email, null)->assertSessionHasErrors(['email' => trans('auth.plafond')]);
+        $this->assertGuest();
+    }
+
+    public function test_un_echec_de_plus_d_une_heure_ne_compte_plus(): void
+    {
+        $this->freezeTime();
+        $compte = User::factory()->create(['email' => 'jean@example.org']);
+        $this->echecsEnDur('jean@example.org', 20);
+
+        $this->travel(3601)->seconds();
+
+        $this->connecterDepuis($compte->email, null);
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_le_cookie_dure_cent_quatre_vingts_jours_exactement(): void
+    {
+        $this->freezeTime();
+        $compte = User::factory()->create();
+
+        $cookie = $this->post('/login', ['email' => $compte->email, 'password' => 'password'])
+            ->getCookie(AppareilConnu::NOM, false);
+
+        $this->assertNotNull($cookie);
+        $this->assertSame(180 * 24 * 60 * 60, $cookie->getExpiresTime() - now()->getTimestamp());
+    }
+
+    public function test_l_empreinte_du_cookie_fait_trente_deux_caracteres(): void
+    {
+        $compte = User::factory()->create();
+
+        $valeur = $this->appareilApresUneConnexion($compte);
+
+        $this->assertSame((string) $compte->id, explode('|', $valeur, 2)[0]);
+        $this->assertSame(32, strlen(explode('|', $valeur, 2)[1]));
+    }
+
+    public function test_le_blocage_declenche_l_evenement_de_verrouillage(): void
+    {
+        Event::fake([Lockout::class]);
+        $this->echecsEnDur('jean@example.org', 20);
+
+        $this->echouer('jean@example.org', '10.0.0.1');
+
+        Event::assertDispatchedTimes(Lockout::class, 1);
+    }
+
+    public function test_un_echec_sous_le_plafond_ne_declenche_pas_l_evenement_de_verrouillage(): void
+    {
+        Event::fake([Lockout::class]);
+
+        $this->echouer('jean@example.org', '10.0.0.1');
+
+        Event::assertNotDispatched(Lockout::class);
     }
 
     public function test_reinitialiser_le_mot_de_passe_leve_le_plafond(): void

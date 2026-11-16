@@ -6,12 +6,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\NewPasswordRequest;
 use App\Models\User;
 use App\Support\AppareilConnu;
 use App\Support\DureeDesReponsesDAuthentification;
 use App\Support\LiensDesCourriels;
+use App\Support\PlafondParAdresse;
 use Closure;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
@@ -20,7 +20,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
 use Illuminate\Validation\ValidationException;
@@ -192,7 +191,7 @@ class NewPasswordController extends Controller
                     self::reprendreLeCompteEnAttente($user);
                 }
 
-                RateLimiter::clear(LoginRequest::clefDeLAdresse($user->email));
+                PlafondParAdresse::oublier($user->email);
                 AppareilConnu::poser($user);
 
                 event(new PasswordReset($user));

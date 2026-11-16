@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests\Auth;
 
 use App\Actions\Auth\ConnecterLeCompte;
-use App\Models\User;
 use App\Support\AdresseCanonique;
-use App\Support\AppareilConnu;
+use App\Support\PlafondParAdresse;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
@@ -16,15 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Les échecs qu'une adresse supporte, toutes adresses IP confondues, par
-     * fenêtre (#2310).
-     */
-    public const int ECHECS_PAR_ADRESSE = 20;
-
-    public const int SECONDES_DE_LA_FENETRE_PAR_ADRESSE = 3600;
-
-    private ?bool $appareilConnu = null;
+    private ?PlafondParAdresse $plafond = null;
 
     public function authorize(): bool
     {
@@ -69,9 +60,7 @@ class LoginRequest extends FormRequest
         if (! app(ConnecterLeCompte::class)->execute($identifiants, $this->boolean('remember'), $this->session())) {
             RateLimiter::hit($this->throttleKey());
 
-            if (! $this->appareilConnu()) {
-                RateLimiter::hit(self::clefDeLAdresse($this->adresseCanonique()), self::SECONDES_DE_LA_FENETRE_PAR_ADRESSE);
-            }
+            $this->plafond()->compterUnEchec();
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -80,9 +69,7 @@ class LoginRequest extends FormRequest
 
         RateLimiter::clear($this->throttleKey());
 
-        if ($this->appareilConnu()) {
-            RateLimiter::clear(self::clefDeLAdresse($this->adresseCanonique()));
-        }
+        $this->plafond()->remettreAZeroSiExempte();
     }
 
     /**
@@ -90,7 +77,7 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        $this->ensureAddressIsNotOverLimit();
+        $this->plafond()->refuserSiAtteint($this);
 
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
@@ -106,64 +93,6 @@ class LoginRequest extends FormRequest
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
-    }
-
-    /**
-     * Refuse d'emblée une adresse dont les échecs de la dernière heure, de
-     * toutes les adresses IP, passent le plafond (#2310), sauf à un appareil
-     * connu de ce compte. Même forme que le limiteur du couple : une erreur
-     * sur `email`, qui renvoie vers « mot de passe oublié », la sortie qui ne
-     * dépend que de la boîte. Le refus répond avant le plancher des réponses
-     * et ne dépend pas de l'existence du compte, l'adresse inconnue comptant
-     * comme l'autre. Un essai refusé ici ne compte pas.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    private function ensureAddressIsNotOverLimit(): void
-    {
-        if ($this->appareilConnu()) {
-            return;
-        }
-
-        if (! RateLimiter::tooManyAttempts(self::clefDeLAdresse($this->adresseCanonique()), self::ECHECS_PAR_ADRESSE)) {
-            return;
-        }
-
-        event(new Lockout($this));
-
-        throw ValidationException::withMessages([
-            'email' => trans('auth.plafond'),
-        ]);
-    }
-
-    /**
-     * Cet appareil porte-t-il le cookie du compte que désigne l'adresse
-     * saisie ? Le compte du cookie doit répondre à la même clef que l'adresse
-     * (casse, accents, forme du domaine), sinon le cookie vaut pour un autre.
-     */
-    private function appareilConnu(): bool
-    {
-        return $this->appareilConnu ??= $this->jugerLAppareil();
-    }
-
-    private function jugerLAppareil(): bool
-    {
-        $compte = AppareilConnu::compteDe($this);
-
-        return $compte instanceof User
-            && self::clefDeLAdresse($compte->email) === self::clefDeLAdresse($this->adresseCanonique())
-            && AppareilConnu::vautPour($this, $compte);
-    }
-
-    /**
-     * La clef des échecs d'une adresse, sans l'adresse IP : l'adresse sous sa
-     * forme canonique, en minuscules et translittérée, comme celle du
-     * limiteur par couple, pour que les saisies que la collation confond
-     * partagent un seul compteur.
-     */
-    public static function clefDeLAdresse(string $adresse): string
-    {
-        return 'echecs-de-connexion:'.Str::transliterate(Str::lower(AdresseCanonique::de($adresse)));
     }
 
     /**
@@ -183,5 +112,14 @@ class LoginRequest extends FormRequest
     private function adresseCanonique(): string
     {
         return AdresseCanonique::de($this->string('email')->value());
+    }
+
+    /**
+     * Le plafond des échecs de l'adresse saisie (#2310), jugé une fois pour
+     * l'appareil de cette requête.
+     */
+    private function plafond(): PlafondParAdresse
+    {
+        return $this->plafond ??= PlafondParAdresse::de($this, $this->adresseCanonique());
     }
 }

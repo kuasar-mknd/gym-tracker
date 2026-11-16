@@ -41,13 +41,7 @@ final class AppareilConnu
      */
     public static function vautPour(Request $request, User $compte): bool
     {
-        $valeur = $request->cookies->get(self::NOM);
-
-        if (! is_string($valeur) || ! str_contains($valeur, '|')) {
-            return false;
-        }
-
-        [$identifiant, $empreinte] = explode('|', $valeur, 2);
+        [$identifiant, $empreinte] = self::lire($request);
 
         return $identifiant === (string) $compte->id
             && hash_equals(self::empreinteDe($compte), $empreinte);
@@ -59,15 +53,9 @@ final class AppareilConnu
      */
     public static function compteDe(Request $request): ?User
     {
-        $valeur = $request->cookies->get(self::NOM);
+        $identifiant = self::lire($request)[0];
 
-        if (! is_string($valeur) || ! str_contains($valeur, '|')) {
-            return null;
-        }
-
-        $identifiant = explode('|', $valeur, 2)[0];
-
-        return User::query()->find((int) $identifiant);
+        return $identifiant === '' ? null : User::query()->find((int) $identifiant);
     }
 
     /**
@@ -87,6 +75,19 @@ final class AppareilConnu
             false,
             'lax',
         ));
+    }
+
+    /**
+     * L'identifiant et l'empreinte du cookie, vides quand il manque ou n'a pas
+     * la forme `identifiant|empreinte`.
+     *
+     * @return array{string, string}
+     */
+    private static function lire(Request $request): array
+    {
+        [$identifiant, $empreinte] = array_pad(explode('|', (string) $request->cookies->get(self::NOM), 2), 2, '');
+
+        return [$identifiant, $empreinte];
     }
 
     private static function empreinteDe(User $compte): string
