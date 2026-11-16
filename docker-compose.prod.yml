@@ -25,6 +25,10 @@ x-app-env: &app-env
     REDIS_CACHE_PORT: 6379
     CACHE_DURABLE_STORE: redis-durable
     SESSION_DRIVER: redis
+    # Les sessions s'écrivent chiffrées dans Redis (#2353) : elles portent la
+    # clé des copies hors ligne. `false` seulement pour revenir en arrière ;
+    # les sessions écrites dans l'autre format se lisent alors comme vides.
+    SESSION_ENCRYPT: ${SESSION_ENCRYPT:-true}
     CACHE_STORE: redis
     QUEUE_CONNECTION: redis
 
@@ -208,7 +212,12 @@ services:
                 limits:
                     memory: 1G
         healthcheck:
-            test: ['CMD', 'mysqladmin', 'ping', '-p${DB_PASSWORD}']
+            # Le mot de passe passe par MYSQL_PWD, que lit mysqladmin, et non
+            # par `-p` : un argument se lit dans `docker inspect` et `ps`
+            # (#2353). `ping` rend 0 tant que mysqld répond, accès refusé
+            # compris : la sonde dit que le serveur vit, pas que le mot de
+            # passe est bon.
+            test: ['CMD-SHELL', 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping -uroot']
             interval: 15s
             retries: 5
             timeout: 5s
@@ -229,15 +238,28 @@ services:
     redis:
         image: redis:8.10.3-alpine
         restart: always
-        command: >
-            redis-server
-            --requirepass ${REDIS_PASSWORD:?mot de passe de Redis}
-            --maxmemory 128mb
-            --maxmemory-policy noeviction
-            --appendonly yes
-            --appendfsync everysec
-            --save 60 1000
+        # Le mot de passe n'est plus un argument de `redis-server` (#2353) :
+        # il se lisait dans `docker inspect` et `ps`. Il entre par la
+        # configuration lue sur l'entrée standard (`-`), sous les guillemets
+        # que Redis demande (`\` et `"` protégés), et jamais dans une ligne de
+        # commande. `exec` garde Redis premier processus, comme avant : l'arrêt
+        # propre écrit l'AOF ; l'entrée standard de l'image lui rend son
+        # utilisateur. Le `:?` garde la variable obligatoire.
+        command:
+            - sh
+            - -c
+            - |
+              mot_de_passe=$$(printf %s "$$REDIS_PASSWORD" | sed 's/[\\"]/\\&/g')
+              exec docker-entrypoint.sh redis-server - \
+                  --maxmemory 128mb \
+                  --maxmemory-policy noeviction \
+                  --appendonly yes \
+                  --appendfsync everysec \
+                  --save 60 1000 <<CONFIGURATION
+              requirepass "$$mot_de_passe"
+              CONFIGURATION
         environment:
+            REDIS_PASSWORD: ${REDIS_PASSWORD:?mot de passe de Redis}
             REDISCLI_AUTH: ${REDIS_PASSWORD}
         volumes:
             - redis_data:/data
@@ -259,14 +281,22 @@ services:
     redis-cache:
         image: redis:8.10.3-alpine
         restart: always
-        command: >
-            redis-server
-            --requirepass ${REDIS_PASSWORD:?mot de passe de Redis}
-            --maxmemory 128mb
-            --maxmemory-policy allkeys-lru
-            --save ''
-            --appendonly no
+        # Le mot de passe entre comme pour `redis`, par la configuration lue
+        # sur l'entrée standard et non par un argument (#2353).
+        command:
+            - sh
+            - -c
+            - |
+              mot_de_passe=$$(printf %s "$$REDIS_PASSWORD" | sed 's/[\\"]/\\&/g')
+              exec docker-entrypoint.sh redis-server - \
+                  --maxmemory 128mb \
+                  --maxmemory-policy allkeys-lru \
+                  --save '' \
+                  --appendonly no <<CONFIGURATION
+              requirepass "$$mot_de_passe"
+              CONFIGURATION
         environment:
+            REDIS_PASSWORD: ${REDIS_PASSWORD:?mot de passe de Redis}
             REDISCLI_AUTH: ${REDIS_PASSWORD}
         deploy:
             resources:

@@ -137,7 +137,8 @@ function prechargementJetonEnregistre(SessionsEspionnees $espion, ?string $ident
         return null;
     }
 
-    $donnees = unserialize($brut, ['allowed_classes' => false]);
+    $clair = config()->boolean('session.encrypt') ? app('encrypter')->decrypt($brut) : $brut;
+    $donnees = is_string($clair) ? unserialize($clair, ['allowed_classes' => false]) : false;
 
     return is_array($donnees) && is_string($donnees['_token'] ?? null) ? $donnees['_token'] : null;
 }
