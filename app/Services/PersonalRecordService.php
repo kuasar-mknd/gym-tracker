@@ -147,7 +147,7 @@ final class PersonalRecordService
             select sets.id, sets.weight, sets.reps, workouts.started_at as obtenu,
                    workout_lines.workout_id,
                    row_number() over (order by sets.weight desc, sets.id asc) as rang_max_weight,
-                   row_number() over (order by (case when sets.reps <= 1 then sets.weight else sets.weight * (1 + sets.reps / 30e0) end) desc, sets.id asc) as rang_max_1rm,
+                   row_number() over (order by (case when sets.reps <= 1 then sets.weight else sets.weight * (1 + sets.reps / 30) end) desc, sets.id asc) as rang_max_1rm,
                    row_number() over (order by sets.weight * sets.reps desc, sets.id asc) as rang_max_volume_set
               from sets
               join workout_lines on workout_lines.id = sets.workout_line_id
