@@ -18,7 +18,7 @@ it('fetches only the workout templates for the given user', function (): void {
     WorkoutTemplate::factory()->count(3)->create(['user_id' => $user2->id]);
 
     $action = app(FetchWorkoutTemplatesAction::class);
-    $result = $action->execute($user1);
+    $result = $action->execute($user1)['templates'];
 
     expect($result)->toHaveCount(2);
     expect($result->pluck('user_id')->unique()->first())->toBe($user1->id);
@@ -43,7 +43,7 @@ it('orders workout templates chronologically by newest first', function (): void
     ]);
 
     $action = app(FetchWorkoutTemplatesAction::class);
-    $result = $action->execute($user);
+    $result = $action->execute($user)['templates'];
 
     expect($result)->toHaveCount(3);
 
@@ -76,7 +76,7 @@ it('loads the correct line counts and eager loads up to 3 exercises', function (
     }
 
     $action = app(FetchWorkoutTemplatesAction::class);
-    $result = $action->execute($user);
+    $result = $action->execute($user)['templates'];
 
     expect($result)->toHaveCount(1);
 
@@ -125,7 +125,7 @@ it('ne rend que les cent modèles les plus récents', function (): void {
         'updated_at' => now()->subMinutes($rang),
     ], range(0, 100)));
 
-    $noms = app(FetchWorkoutTemplatesAction::class)->execute($user)->pluck('name')->all();
+    $noms = app(FetchWorkoutTemplatesAction::class)->execute($user)['templates']->pluck('name')->all();
 
     expect($noms)->toBe(array_map(fn (int $rang): string => 'Modèle '.$rang, range(0, 99)));
 });
@@ -141,7 +141,7 @@ it('ne rend les lancements que des cent modèles les plus récents', function ()
         'updated_at' => now()->subMinutes($rang),
     ], range(0, 100)));
 
-    $noms = array_column(app(FetchWorkoutTemplatesAction::class)->lancements($user), 'name');
+    $noms = array_column(app(FetchWorkoutTemplatesAction::class)->execute($user)['lancements'], 'name');
 
     expect($noms)->toHaveCount(100)
         ->and($noms)->toContain('Modèle 0', 'Modèle 99')

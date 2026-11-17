@@ -281,7 +281,7 @@ it('lit les lancements en quatre requêtes, quel que soit le nombre de modèles'
     $compter = static function () use ($action, $compte): int {
         DB::flushQueryLog();
         DB::enableQueryLog();
-        $action->lancements($compte);
+        $action->execute($compte);
         $requetes = count(DB::getQueryLog());
         DB::disableQueryLog();
 

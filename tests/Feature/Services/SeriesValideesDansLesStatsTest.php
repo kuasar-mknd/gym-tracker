@@ -282,10 +282,11 @@ it('envoie à la page d’exercice chaque série avec ses drapeaux de validation
         ->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page
             ->component('Exercises/Show')
-            ->where('history.0.best_1rm', 116.67)
-            ->where('history.0.sets', [
-                ['weight' => 100, 'reps' => 5, 'one_rep_max' => 116.67, 'is_completed' => true, 'is_warmup' => false],
-                ['weight' => 40, 'reps' => 10, 'one_rep_max' => 53.33, 'is_completed' => true, 'is_warmup' => true],
-                ['weight' => 140, 'reps' => 5, 'one_rep_max' => 163.33, 'is_completed' => false, 'is_warmup' => false],
-            ]));
+            ->loadDeferredProps(fn (Assert $page): Assert => $page
+                ->where('history.0.best_1rm', 116.67)
+                ->where('history.0.sets', [
+                    ['weight' => 100, 'reps' => 5, 'one_rep_max' => 116.67, 'is_completed' => true, 'is_warmup' => false],
+                    ['weight' => 40, 'reps' => 10, 'one_rep_max' => 53.33, 'is_completed' => true, 'is_warmup' => true],
+                    ['weight' => 140, 'reps' => 5, 'one_rep_max' => 163.33, 'is_completed' => false, 'is_warmup' => false],
+                ])));
 });

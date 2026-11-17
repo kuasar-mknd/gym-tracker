@@ -7,6 +7,7 @@ namespace App\Actions\Tools;
 use App\Models\User;
 use App\Models\WaterLog;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 
 class FetchWaterHistoryAction
 {
@@ -17,15 +18,13 @@ class FetchWaterHistoryAction
      * dernière barre est alors le même jour que lui (#2033).
      *
      * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge.
+     * @param  Collection<int, WaterLog>|null  $prises  Les prises déjà lues par `prisesDeLaSemaine()` ; à défaut, une lecture.
      * @return array<int, array{date: string, day_name: string, total: float}>
      */
-    public function execute(User $user, ?Carbon $maintenant = null): array
+    public function execute(User $user, ?Carbon $maintenant = null, ?Collection $prises = null): array
     {
         $now = ($maintenant ?? Carbon::now())->copy();
-        $startDate = $now->copy()->subDays(6)->startOfDay();
-        $historyLogs = $user->waterLogs()
-            ->where('consumed_at', '>=', $startDate)
-            ->get();
+        $historyLogs = $prises ?? $this->prisesDeLaSemaine($user, $now);
 
         // Groupé une fois par date : filtrer la collection jour après jour
         // coûtait O(n×7), là où un groupement coûte O(n) puis sept lectures
@@ -60,5 +59,21 @@ class FetchWaterHistoryAction
         }
 
         return $historique;
+    }
+
+    /**
+     * Les prises des sept jours qui finissent à l'instant donné, la plus
+     * récente en tête : une seule lecture pour le compteur du jour
+     * (`FetchWaterTrackerAction`) et pour ce graphique, qui en lisaient chacun
+     * une (#2351).
+     *
+     * @return Collection<int, WaterLog>
+     */
+    public function prisesDeLaSemaine(User $user, Carbon $maintenant): Collection
+    {
+        return $user->waterLogs()
+            ->where('consumed_at', '>=', $maintenant->copy()->subDays(6)->startOfDay())
+            ->orderByDesc('consumed_at')
+            ->get();
     }
 }
