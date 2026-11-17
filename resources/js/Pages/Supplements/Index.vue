@@ -184,7 +184,7 @@ const formatDate = (dateString) => {
                     </div>
                     <div class="flex gap-2">
                         <GlassButton type="submit" variant="primary" class="flex-1" :loading="form.processing">
-                            Ajouter
+                            Créer
                         </GlassButton>
                         <GlassButton type="button" variant="secondary" @click="showAddForm = false">
                             Annuler

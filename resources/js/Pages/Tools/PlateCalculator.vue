@@ -246,7 +246,7 @@
                         :disabled="surUneCopie"
                         :aria-describedby="raisonDUneEcriture"
                         @click="savePlate"
-                        >Enregistrer</GlassButton
+                        >Créer</GlassButton
                     >
                 </div>
             </div>

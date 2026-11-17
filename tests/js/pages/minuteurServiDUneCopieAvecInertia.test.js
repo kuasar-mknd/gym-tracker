@@ -38,7 +38,7 @@ vi.mock('@/Layouts/AuthenticatedLayout.vue', async () => {
  * `router.reload` garde l'état de la page. « Modifier le minuteur », resté
  * ouvert sur la copie, remplissait le formulaire des valeurs du préréglage de
  * la copie ; le réseau revenu, la liste montrait le préréglage du serveur, et
- * « Mettre à jour » renvoyait pourtant celles de la copie, par-dessus lui.
+ * « Enregistrer » renvoyait pourtant celles de la copie, par-dessus lui.
  *
  * Le client d'Inertia ne démarre qu'une fois par fichier : un fichier, un test.
  */
