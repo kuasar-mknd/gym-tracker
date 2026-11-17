@@ -139,15 +139,22 @@ final class PersonalRecordService
      *
      * Trois requetes `ORDER BY … LIMIT 1` seraient trois balayages : aucun index
      * ne couvre un tri sur une expression, donc chacune relit tout. Les fonctions
-     * de fenetrage classent les trois criteres en une lecture et ne rendent que
-     * les lignes qui gagnent — trois au plus.
+     * de fenetrage classent les criteres en une lecture et ne rendent que les
+     * lignes qui gagnent.
+     *
+     * Le 1RM est preselectionne, pas classe (#2358) : `gagnantes()` departage
+     * en PHP, dont l'arrondi fait foi. `cle_1rm` vaut trente fois la valeur en
+     * centimes, sans division ; deux valeurs arrondies au centieme ne sont a
+     * egalite ou a l'envers que si les valeurs exactes different de moins de
+     * 30 unites (31 par prudence).
      */
     private const string CLASSEMENT = <<<'SQL'
         select * from (
             select sets.id, sets.weight, sets.reps, workouts.started_at as obtenu,
                    workout_lines.workout_id,
                    row_number() over (order by sets.weight desc, sets.id asc) as rang_max_weight,
-                   row_number() over (order by (case when sets.reps <= 1 then sets.weight else sets.weight * (1 + sets.reps / 30) end) desc, sets.id asc) as rang_max_1rm,
+                   sets.weight * 100 * (30 + case when sets.reps <= 1 then 0 else sets.reps end) as cle_1rm,
+                   max(sets.weight * 100 * (30 + case when sets.reps <= 1 then 0 else sets.reps end)) over () as cle_1rm_max,
                    row_number() over (order by sets.weight * sets.reps desc, sets.id asc) as rang_max_volume_set
               from sets
               join workout_lines on workout_lines.id = sets.workout_line_id
@@ -159,7 +166,7 @@ final class PersonalRecordService
                and sets.weight > 0
                and sets.reps > 0
         ) as classees
-        where rang_max_weight = 1 or rang_max_1rm = 1 or rang_max_volume_set = 1
+        where rang_max_weight = 1 or rang_max_volume_set = 1 or cle_1rm >= cle_1rm_max - 31
         SQL;
 
     /**
@@ -504,6 +511,10 @@ final class PersonalRecordService
     {
         $par = [];
 
+        /** @var array{id: int, poids: float, repetitions: int, seance: int, obtenu: string}|null $meilleur1rm */
+        $meilleur1rm = null;
+        $valeur1rm = 0.0;
+
         foreach (DB::select(self::CLASSEMENT, [$idUtilisateur, $idExercice]) as $workoutLine) {
             if (! is_object($workoutLine)) {
                 continue;
@@ -511,19 +522,33 @@ final class PersonalRecordService
 
             $champs = get_object_vars($workoutLine);
 
-            foreach (PersonalRecordType::SUIVIS as $type) {
-                if (self::entier($champs['rang_'.$type] ?? null) !== 1) {
-                    continue;
-                }
+            $serie = [
+                'id' => self::entier($champs['id'] ?? null),
+                'poids' => self::flottant($champs['weight'] ?? null),
+                'repetitions' => self::entier($champs['reps'] ?? null),
+                'seance' => self::entier($champs['workout_id'] ?? null),
+                'obtenu' => self::texte($champs['obtenu'] ?? null),
+            ];
 
-                $par[$type] = [
-                    'id' => self::entier($champs['id'] ?? null),
-                    'poids' => self::flottant($champs['weight'] ?? null),
-                    'repetitions' => self::entier($champs['reps'] ?? null),
-                    'seance' => self::entier($champs['workout_id'] ?? null),
-                    'obtenu' => self::texte($champs['obtenu'] ?? null),
-                ];
+            foreach (['max_weight', 'max_volume_set'] as $type) {
+                if (self::entier($champs['rang_'.$type] ?? null) === 1) {
+                    $par[$type] = $serie;
+                }
             }
+
+            // Le flottant PHP fait foi : valeur arrondie, puis l'identifiant
+            // le plus ancien, comme la synchronisation, qui garde la premiere
+            // serie d'une valeur et ne cede qu'a une valeur arrondie plus haute.
+            $valeur = round($this->calculate1RM($serie['poids'], $serie['repetitions']), 2);
+
+            if ($meilleur1rm === null || $valeur > $valeur1rm || ($valeur === $valeur1rm && $serie['id'] < $meilleur1rm['id'])) {
+                $meilleur1rm = $serie;
+                $valeur1rm = $valeur;
+            }
+        }
+
+        if ($meilleur1rm !== null) {
+            $par['max_1rm'] = $meilleur1rm;
         }
 
         return $par;
