@@ -24,6 +24,21 @@ export function seriesValidees(series) {
 }
 
 /**
+ * Les séries validées hors échauffement : ce que « Répétitions max », « Charge
+ * moyenne » et « Charge max » de la fiche exercice lisent (#2333). Un
+ * échauffement validé compte dans le volume, comme dans la séance, mais ni dans
+ * le record ni dans ces trois mesures : il gonflait la charge moyenne et
+ * n'avait rien d'un effort de travail. Une série au poids du corps (sans
+ * charge) reste comptée, ses répétitions sont un effort.
+ *
+ * @param {Array<{is_completed?: boolean, is_warmup?: boolean}>} series
+ * @returns {Array<Object>}
+ */
+export function seriesDeTravail(series) {
+    return seriesValidees(series).filter((serie) => serie.is_warmup !== true)
+}
+
+/**
  * La série peut établir un record : les conditions de `PersonalRecordService`
  * — validée, hors échauffement, avec un poids et des répétitions.
  *
