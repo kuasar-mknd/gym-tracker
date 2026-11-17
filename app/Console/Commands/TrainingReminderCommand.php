@@ -58,12 +58,7 @@ class TrainingReminderCommand extends Command
                     ->where('notification_preferences.is_enabled', '=', true);
             })
             // Une série de travail cochée aujourd'hui, séance terminée ou non (#2333) : le rappel se tait pendant l'entraînement.
-            ->withExists(['workouts as a_fait_sa_seance' => function (Builder $seances) use ($debutDeJournee): Builder {
-                /** @var Builder<Workout> $seances */
-                return $seances
-                    ->avecUneSerieDeTravailCochee()
-                    ->where('workouts.started_at', '>=', $debutDeJournee);
-            }])
+            ->withExists(['workouts as a_fait_sa_seance' => fn (Builder $seances): Builder => $this->faiteDepuis($seances, $debutDeJournee)])
             ->chunkById(100, function ($users) use (&$count, $jour): void {
                 foreach ($users as $user) {
                     $joursChoisis = $this->joursChoisis($user->getAttribute('pref_days'));
@@ -92,6 +87,19 @@ class TrainingReminderCommand extends Command
             }, 'users.id', 'id');
 
         $this->info("Sent {$count} training reminders.");
+    }
+
+    /**
+     * Les séances qui portent une série de travail cochée, commencées depuis l'instant donné.
+     *
+     * @param  Builder<Workout>  $seances
+     * @return Builder<Workout>
+     */
+    private function faiteDepuis(Builder $seances, CarbonImmutable $debut): Builder
+    {
+        return $seances
+            ->avecUneSerieDeTravailCochee()
+            ->where('workouts.started_at', '>=', $debut);
     }
 
     /**
