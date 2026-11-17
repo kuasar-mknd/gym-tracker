@@ -58,7 +58,7 @@ const parcourir = (e) => {
     const courant = liste.indexOf(document.activeElement)
     const cible = {
         ArrowDown: liste[(courant + 1) % liste.length],
-        ArrowUp: liste[(courant - 1 + liste.length) % liste.length],
+        ArrowUp: courant < 0 ? liste[liste.length - 1] : liste[(courant - 1 + liste.length) % liste.length],
         Home: liste[0],
         End: liste[liste.length - 1],
     }[e.key]
