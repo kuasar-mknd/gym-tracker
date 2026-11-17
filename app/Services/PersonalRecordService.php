@@ -140,7 +140,7 @@ final class PersonalRecordService
      * Trois requetes `ORDER BY … LIMIT 1` seraient trois balayages : aucun index
      * ne couvre un tri sur une expression, donc chacune relit tout. Les fonctions
      * de fenetrage classent les criteres en une lecture et ne rendent que les
-     * lignes qui gagnent.
+     * lignes qui gagnent, plus les ex aequo du 1RM.
      *
      * Le 1RM est preselectionne, pas classe (#2358) : `gagnantes()` departage
      * en PHP, dont l'arrondi fait foi. `cle_1rm` vaut trente fois la valeur en
