@@ -715,6 +715,24 @@ describe('Measurements/Parts/Index part picker', () => {
 })
 
 describe('Measurements/Parts/Index add form', () => {
+    it('affiche le refus du serveur sur l’unité, qui avait un champ sans voix (#2355)', async () => {
+        const wrapper = mount(BodyPartsIndex, {
+            props: structuredClone({ latestMeasurements: PARTS, commonParts: COMMON_PARTS }),
+            global: {
+                mocks: { route: globalThis.route },
+                directives: { press: {} },
+                stubs: { ...stubs, GlassSelect: { props: ['error'], template: '<p dusk="unite">{{ error }}</p>' } },
+            },
+        })
+
+        await flushPromises()
+        await click(wrapper, 'Ajouter')
+        wrapper.vm.form.errors = { unit: 'L’unité choisie est invalide.' }
+        await flushPromises()
+
+        expect(wrapper.get('[dusk="unite"]').text()).toBe('L’unité choisie est invalide.')
+    })
+
     const fillAndSubmit = async (wrapper) => {
         await click(wrapper, 'Ajouter')
         Object.assign(wrapper.vm.form, {

@@ -29,7 +29,7 @@
                         <GlassBigNumber
                             id="warmup-bar-weight"
                             v-model="form.bar_weight"
-                            label="Poids Barre"
+                            label="Poids barre"
                             unite="kg"
                             placeholder="20"
                         />

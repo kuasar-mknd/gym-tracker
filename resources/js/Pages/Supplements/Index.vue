@@ -151,20 +151,20 @@ const formatDate = (dateString) => {
                     <GlassInput
                         v-model="form.name"
                         label="Nom"
-                        placeholder="Ex: Whey Protein"
+                        placeholder="Ex. : Whey Protein"
                         :error="form.errors.name"
                     />
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput
                             v-model="form.brand"
-                            label="Marque (Optionnel)"
-                            placeholder="Ex: MyProtein"
+                            label="Marque (optionnel)"
+                            placeholder="Ex. : MyProtein"
                             :error="form.errors.brand"
                         />
                         <GlassInput
                             v-model="form.dosage"
-                            label="Dosage (Optionnel)"
-                            placeholder="Ex: 30g / scoop"
+                            label="Dosage (optionnel)"
+                            placeholder="Ex. : 30g / scoop"
                             :error="form.errors.dosage"
                         />
                     </div>
@@ -221,7 +221,7 @@ const formatDate = (dateString) => {
                         <GlassInput v-model="editForm.name" label="Nom" :error="editForm.errors.name" />
                         <GlassInput
                             v-model="editForm.brand"
-                            label="Marque (Optionnel)"
+                            label="Marque (optionnel)"
                             :error="editForm.errors.brand"
                         />
                         <div class="grid grid-cols-2 gap-2">
@@ -240,7 +240,7 @@ const formatDate = (dateString) => {
                         </div>
                         <GlassInput
                             v-model="editForm.dosage"
-                            label="Dosage (Optionnel)"
+                            label="Dosage (optionnel)"
                             :error="editForm.errors.dosage"
                         />
                         <div class="mt-2 flex gap-2">

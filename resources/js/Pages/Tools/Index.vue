@@ -195,7 +195,7 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
-                            <GlassIcon name="timer" size="lg" />
+                            <GlassIcon name="schedule" size="lg" />
                         </div>
                         <h3 class="titre-carte">Suivi de Jeûne</h3>
                         <p class="text-text-muted text-sm">

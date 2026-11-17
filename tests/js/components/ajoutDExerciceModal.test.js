@@ -286,6 +286,24 @@ describe('créer un exercice sur le champ', () => {
         wrapper.unmount()
     })
 
+    it('montre le refus du type et de la catégorie sous leur champ, et non nulle part (#2355)', async () => {
+        const wrapper = monter()
+
+        wrapper.vm.createExerciseForm.setError('type', 'Le type choisi est invalide.')
+        wrapper.vm.createExerciseForm.setError('category', 'La catégorie choisie est invalide.')
+        wrapper.vm.showCreateForm = true
+        await flushPromises()
+
+        const type = wrapper.get('[dusk="new-exercise-type"]')
+        const categorie = wrapper.get('[dusk="new-exercise-category"]')
+
+        expect(type.attributes('aria-invalid')).toBe('true')
+        expect(categorie.attributes('aria-invalid')).toBe('true')
+        expect(wrapper.text()).toContain('Le type choisi est invalide.')
+        expect(wrapper.text()).toContain('La catégorie choisie est invalide.')
+        wrapper.unmount()
+    })
+
     it('dit qu’un autre échec du serveur est passager, et qu’une panne réseau est une panne réseau', async () => {
         const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
         vi.spyOn(console, 'error').mockImplementation(() => {})

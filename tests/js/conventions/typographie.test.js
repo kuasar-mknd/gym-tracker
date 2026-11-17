@@ -46,3 +46,32 @@ it('ne compose un titre que par un rôle de la charte', () => {
 
     expect(fautifs, `un titre porte titre-page, titre-section, titre-carte ou sur-titre, et rien d'autre`).toEqual([])
 })
+
+/**
+ * La typographie des libellés et des exemples de champ (#2355) : « (optionnel) »
+ * en minuscules, « Ex. : » avec ses deux espaces, une virgule décimale dans un
+ * exemple de nombre (fr-CH, `Utils/nombre.js`) et le signe « × » pour une
+ * quantité, jamais un « x » de clavier.
+ */
+it('écrit les libellés et les exemples de champ à la française', () => {
+    const regles = [
+        [/\(Optionnel\)/, '« (optionnel) » prend une minuscule'],
+        [/placeholder="Ex:/, '« Ex. : » et non « Ex: »'],
+        [/placeholder="\d+\.\d+"/, 'un exemple de nombre prend la virgule'],
+        [/>\s*x \{\{/, 'une quantité s’écrit « × »'],
+    ]
+
+    const fautifs = collectSourceFiles({ extensions: ['.vue'] }).flatMap((fichier) => {
+        const source = readFileSync(fichier, 'utf8')
+
+        return regles.flatMap(([motif, raison]) =>
+            source
+                .split('\n')
+                .flatMap((ligne, index) =>
+                    motif.test(ligne) ? [`${fichier.replace(jsRoot, 'resources/js')}:${index + 1} — ${raison}`] : [],
+                ),
+        )
+    })
+
+    expect(fautifs).toEqual([])
+})
