@@ -109,7 +109,7 @@ const selectCommonPart = (part) => {
                             type="number"
                             step="0.01"
                             label="Valeur"
-                            placeholder="0.00"
+                            placeholder="0,00"
                             :error="form.errors.value"
                             inputmode="decimal"
                             required
@@ -118,6 +118,7 @@ const selectCommonPart = (part) => {
                             <GlassSelect
                                 v-model="form.unit"
                                 label="Unité"
+                                :error="form.errors.unit"
                                 :options="[
                                     { value: 'cm', label: 'cm' },
                                     { value: 'in', label: 'in' },

@@ -555,6 +555,24 @@ describe.each([
         expect(champs[3].element.value).toBe('100')
     })
 
+    it('borde les champs d’une série d’un trait lisible et porte un anneau de focus visible (#2355)', async () => {
+        const wrapper = mountPage()
+        await seed(wrapper, twoExercises)
+
+        const champs = wrapper.findAll('input[type="number"]')
+
+        expect(champs.length).toBeGreaterThan(0)
+        champs.forEach((champ) => {
+            // `border-border` (1,25:1) ne se voyait pas ; `text-muted` tient 4,96:1 sur la carte.
+            expect(champ.classes()).toContain('border-text-muted')
+            expect(champ.classes()).not.toContain('border-border')
+            expect(champ.classes()).toEqual(
+                expect.arrayContaining(['focus-visible:ring-2', 'focus-visible:ring-accent-primary']),
+            )
+        })
+        expect(wrapper.find('button[aria-pressed]').attributes('title')).toBe('Échauffement')
+    })
+
     it('écrit l’échauffement en français, et son initiale ouvre son nom', async () => {
         const wrapper = mountPage()
         await seed(wrapper, twoExercises)

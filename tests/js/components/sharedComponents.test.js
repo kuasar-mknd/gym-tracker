@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { h, reactive } from 'vue'
 
 /**
@@ -184,6 +184,70 @@ describe('Dropdown', () => {
         expect(panel(wrapper).isVisible()).toBe(false)
 
         wrapper.unmount()
+    })
+
+    describe('au clavier (#2355)', () => {
+        const mountMenu = () =>
+            mount(Dropdown, {
+                attachTo: document.body,
+                global,
+                slots: {
+                    trigger: () => h('button', { type: 'button', 'data-testid': 'trigger' }, 'Menu'),
+                    content: () => [
+                        h('a', { href: '/a', 'data-testid': 'a' }, 'A'),
+                        h('a', { href: '/b', 'data-testid': 'b' }, 'B'),
+                        h('button', { type: 'button', 'data-testid': 'c' }, 'C'),
+                    ],
+                },
+            })
+        const touche = async (wrapper, cible, key) => {
+            await wrapper.get(`[data-testid="${cible}"]`).trigger('keydown', { key })
+        }
+        const actif = () => document.activeElement?.getAttribute('data-testid')
+
+        it('donne le focus à la première entrée dès l’ouverture', async () => {
+            const wrapper = mountMenu()
+
+            await wrapper.get('[data-testid="trigger"]').trigger('click')
+            await flushPromises()
+
+            expect(actif()).toBe('a')
+            wrapper.unmount()
+        })
+
+        it('parcourt les entrées aux flèches, en boucle, et à Début et Fin', async () => {
+            const wrapper = mountMenu()
+
+            await wrapper.get('[data-testid="trigger"]').trigger('click')
+            await flushPromises()
+            await touche(wrapper, 'a', 'ArrowDown')
+            expect(actif()).toBe('b')
+            await touche(wrapper, 'b', 'End')
+            expect(actif()).toBe('c')
+            await touche(wrapper, 'c', 'ArrowDown')
+            expect(actif()).toBe('a')
+            await touche(wrapper, 'a', 'ArrowUp')
+            expect(actif()).toBe('c')
+            await touche(wrapper, 'c', 'Home')
+            expect(actif()).toBe('a')
+            wrapper.unmount()
+        })
+
+        it('s’ouvre à la flèche bas sur le déclencheur, et rend le focus au déclencheur à Échap', async () => {
+            const wrapper = mountMenu()
+
+            await touche(wrapper, 'trigger', 'ArrowDown')
+            await flushPromises()
+            expect(panel(wrapper).isVisible()).toBe(true)
+            expect(actif()).toBe('a')
+
+            pressEscape()
+            await flushPromises()
+
+            expect(panel(wrapper).isVisible()).toBe(false)
+            expect(actif()).toBe('trigger')
+            wrapper.unmount()
+        })
     })
 
     it('never opens the menu on Escape', async () => {
@@ -453,7 +517,7 @@ describe('GoalForm', () => {
         for (const type of ['weight', 'frequency', 'volume', 'measurement']) {
             const wrapper = mountGoalForm(goalForm({ type }))
 
-            expect(fieldLabels(wrapper)).toContain('Échéance (Optionnel)')
+            expect(fieldLabels(wrapper)).toContain('Échéance (optionnel)')
 
             wrapper.unmount()
         }
@@ -501,7 +565,7 @@ describe('GoalForm', () => {
 
         expect(isMarkedRequired(wrapper, 'Valeur Cible')).toBe(true)
         expect(isMarkedRequired(wrapper, 'Titre du défi')).toBe(true)
-        expect(isMarkedRequired(wrapper, 'Valeur de Départ')).toBe(false)
+        expect(isMarkedRequired(wrapper, 'Valeur de départ')).toBe(false)
         expect(isMarkedRequired(wrapper, 'Échéance')).toBe(false)
 
         wrapper.unmount()
@@ -524,7 +588,7 @@ describe('GoalForm', () => {
         expect(errorShownFor(wrapper, 'Mensuration')).toBe('Mesure inconnue')
         expect(errorShownFor(wrapper, 'Valeur Cible')).toBe('Cible obligatoire')
         expect(errorShownFor(wrapper, 'Titre du défi')).toBe('Titre obligatoire')
-        expect(errorShownFor(wrapper, 'Échéance (Optionnel)')).toBe('Date passée')
+        expect(errorShownFor(wrapper, 'Échéance (optionnel)')).toBe('Date passée')
 
         wrapper.unmount()
     })
@@ -695,7 +759,7 @@ describe('GoalForm', () => {
 
             expect(fieldLabels(wrapper)).toContain('Séances par semaine')
             expect(fieldLabels(wrapper)).not.toContain('Valeur Cible')
-            expect(fieldLabels(wrapper)).not.toContain('Valeur de Départ (Optionnel)')
+            expect(fieldLabels(wrapper)).not.toContain('Valeur de départ (optionnel)')
             expect(fieldNamed(wrapper, 'Séances par semaine').attributes('min')).toBe('1')
             expect(fieldNamed(wrapper, 'Séances par semaine').attributes('max')).toBe('14')
 
@@ -706,7 +770,7 @@ describe('GoalForm', () => {
             const wrapper = mountGoalForm(goalForm({ type: 'frequency', period: 'total' }))
 
             expect(fieldLabels(wrapper)).toContain('Valeur Cible')
-            expect(fieldLabels(wrapper)).toContain('Valeur de Départ (Optionnel)')
+            expect(fieldLabels(wrapper)).toContain('Valeur de départ (optionnel)')
 
             wrapper.unmount()
         })
@@ -914,7 +978,7 @@ describe('GoalForm', () => {
         await fieldNamed(wrapper, "Type d'objectif").setValue('weight')
         await fieldNamed(wrapper, 'Exercice').setValue('5')
         await fieldNamed(wrapper, 'Valeur Cible').setValue('120')
-        await fieldNamed(wrapper, 'Valeur de Départ').setValue('60')
+        await fieldNamed(wrapper, 'Valeur de départ').setValue('60')
         await fieldNamed(wrapper, 'Échéance').setValue('2026-12-25')
 
         expect(form.type).toBe('weight')
