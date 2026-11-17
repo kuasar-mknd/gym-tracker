@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 
 function seanceLeJour(User $user, string $jour): void
 {
-    Workout::factory()->create([
+    Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::parse($jour)->setTime(10, 0),
         'ended_at' => Carbon::parse($jour)->setTime(11, 0),

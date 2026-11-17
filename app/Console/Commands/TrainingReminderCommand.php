@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\TrainingReminder;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
 
 class TrainingReminderCommand extends Command
@@ -41,9 +42,9 @@ class TrainingReminderCommand extends Command
         $jour = $maintenant->isoWeekday();
         $debutDeJournee = $maintenant->startOfDay();
 
-        // 1. Join notification_preferences to fetch data directly, avoiding whereHas subqueries and eager load N+1 memory issues.
-        // 2. Use chunkById to process users in batches (memory efficient), specifying users.id due to the join.
-        // 3. Manually hydrate the relation in the loop to prevent notificationsPoussesActivees from triggering an N+1 query.
+        // 1. La jointure sur notification_preferences lit les données d'un coup, sans sous-requête whereHas ni chargement N+1.
+        // 2. chunkById traite les comptes par lots, avec users.id à cause de la jointure.
+        // 3. La relation est hydratée à la main dans la boucle, pour que notificationsPoussesActivees ne lance pas de requête N+1.
         User::query()
             ->select([
                 'users.*',
@@ -55,16 +56,15 @@ class TrainingReminderCommand extends Command
                     ->where('notification_preferences.type', '=', 'training_reminder')
                     ->where('notification_preferences.is_enabled', '=', true);
             })
-            ->addSelect(['last_workout_started_at' => \App\Models\Workout::select('started_at')
-                ->whereColumn('user_id', 'users.id')
-                ->orderByDesc('started_at')
-                ->limit(1),
+            // Une séance faite aujourd'hui (`User::seancesFaites()`, #2333), pas une séance démarrée.
+            ->withExists(['seancesFaites as a_fait_sa_seance' => fn (Builder $seances): Builder => $seances
+                ->where('workouts.started_at', '>=', $debutDeJournee),
             ])
-            ->chunkById(100, function ($users) use (&$count, $jour, $debutDeJournee): void {
+            ->chunkById(100, function ($users) use (&$count, $jour): void {
                 foreach ($users as $user) {
                     $joursChoisis = $this->joursChoisis($user->getAttribute('pref_days'));
 
-                    // Manually hydrate the relation to prevent N+1 in notify() -> notificationsPoussesActivees()
+                    // Relation hydratée à la main : pas de requête N+1 dans notify() -> notificationsPoussesActivees().
                     $preference = new NotificationPreference([
                         'type' => 'training_reminder',
                         'is_enabled' => true,
@@ -78,15 +78,7 @@ class TrainingReminderCommand extends Command
                         continue;
                     }
 
-                    // Le garde de nullite reste vivant, lui : un compte sans
-                    // aucune seance n'a pas de date. C'est `strtotime()` qui part,
-                    // avec le faux qu'il ne pouvait pas rendre sur une date valide.
-                    $lastWorkoutStartedAtStr = $user->getAttribute('last_workout_started_at');
-                    $derniereSeance = is_string($lastWorkoutStartedAtStr)
-                        ? CarbonImmutable::parse($lastWorkoutStartedAtStr)
-                        : null;
-
-                    if ($derniereSeance !== null && $derniereSeance->greaterThanOrEqualTo($debutDeJournee)) {
+                    if ((bool) $user->getAttribute('a_fait_sa_seance')) {
                         continue;
                     }
 

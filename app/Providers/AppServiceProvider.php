@@ -341,6 +341,7 @@ final class AppServiceProvider extends ServiceProvider
              */
             if (($set->wasChanged('is_completed') || ($set->wasRecentlyCreated && $set->is_completed)) && Workout::query()->whereKey($set->workoutLine->workout->getKey())->whereNotNull('ended_at')->exists()) {
                 app(StreakService::class)->recalculerPourLaSeance($set->workoutLine->workout);
+                self::oublierLesStatsDeSeancesApresLaTransaction((int) $user->id);
             }
 
             /*
@@ -390,6 +391,7 @@ final class AppServiceProvider extends ServiceProvider
                 // retirer sa place dans la série de jours (#2171).
                 if ($set->is_completed && $seance?->ended_at !== null) {
                     app(StreakService::class)->recalculerPourLaSeance($seance);
+                    self::oublierLesStatsDeSeancesApresLaTransaction((int) $user->id);
                 }
 
                 \App\Jobs\SyncUserGoals::dispatch($user);
@@ -419,12 +421,27 @@ final class AppServiceProvider extends ServiceProvider
                 // séance terminée sa place dans la série de jours (#2171).
                 if ($line->workout?->ended_at !== null) {
                     app(StreakService::class)->recalculerPourLaSeance($line->workout);
+                    self::oublierLesStatsDeSeancesApresLaTransaction((int) $user->id);
                 }
 
                 // Après les records, que lit l'objectif de charge (#1953).
                 \App\Jobs\SyncUserGoals::dispatch($user);
             }
         });
+    }
+
+    /**
+     * Une séance qui devient faite ou cesse de l'être (série cochée, série ou
+     * ligne supprimée dans une séance terminée) change ce que comptent les
+     * statistiques de séances (#2333) : leur version se renouvelle après la
+     * validation de la transaction de l'écrivain, ou son annulation.
+     */
+    private static function oublierLesStatsDeSeancesApresLaTransaction(int $idUtilisateur): void
+    {
+        $renouveler = static fn () => \App\Services\Stats\ClesDeStats::invaliderSeancesDuCompte($idUtilisateur);
+
+        \Illuminate\Support\Facades\DB::afterCommit($renouveler);
+        \Illuminate\Support\Facades\DB::afterRollBack($renouveler);
     }
 
     private function registerWorkoutEvents(): void

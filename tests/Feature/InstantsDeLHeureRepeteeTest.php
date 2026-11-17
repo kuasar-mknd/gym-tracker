@@ -125,7 +125,7 @@ function heureRepeteeJeuneServi(User $compte, string $chemin): mixed
  */
 function heureRepeteeSeanceFaite(User $compte, string $debut = '2026-10-25T00:30:00Z', string $fin = '2026-10-25T01:10:00Z'): Workout
 {
-    return Workout::withoutEvents(fn (): Workout => Workout::factory()->create([
+    return Workout::withoutEvents(fn (): Workout => Workout::factory()->faite()->create([
         'user_id' => $compte->id,
         'started_at' => heureRepeteeInstant($debut),
         'ended_at' => heureRepeteeInstant($fin),

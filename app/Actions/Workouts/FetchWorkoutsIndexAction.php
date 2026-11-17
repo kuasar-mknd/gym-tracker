@@ -241,11 +241,10 @@ final class FetchWorkoutsIndexAction
     ): Collection {
         // ⚡ Bolt Optimization: Group and count directly in SQL to reduce memory usage and CPU cycles in PHP.
         // Also uses toBase() to avoid Eloquent model hydration.
-        $results = Workout::query()
+        $results = $user->seancesFaites()
             ->toBase()
-            ->where('user_id', $user->id)
-            ->where('started_at', '>=', $startDate)
-            ->selectRaw("DATE_FORMAT(started_at, '%Y-%m') as month, COUNT(*) as count")
+            ->where('workouts.started_at', '>=', $startDate)
+            ->selectRaw("DATE_FORMAT(workouts.started_at, '%Y-%m') as month, COUNT(*) as count")
             ->groupBy('month')
             ->orderBy('month')
             ->get()
@@ -289,11 +288,10 @@ final class FetchWorkoutsIndexAction
          * sous-titres l'annoncent. Chacune lisait l'horloge : quand le mois
          * changeait entre les deux lectures, elles divergeaient encore (#2033).
          */
-        $results = Workout::query()
+        $results = $user->seancesFaites()
             ->toBase()
-            ->where('user_id', $user->id)
-            ->where('started_at', '>=', $debut)
-            ->selectRaw('DAYOFWEEK(started_at) as day_of_week, COUNT(*) as count')
+            ->where('workouts.started_at', '>=', $debut)
+            ->selectRaw('DAYOFWEEK(workouts.started_at) as day_of_week, COUNT(*) as count')
             ->groupBy('day_of_week')
             ->get()
             ->keyBy('day_of_week');
