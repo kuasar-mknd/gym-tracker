@@ -359,7 +359,7 @@ it('déplace le début d une séance en cours sans lire la série de jours', fun
  * séance vaut quand elle est terminée (#2333) : la série de jours se relit, et
  * s'écrit si elle change. Dans une séance en cours, rien n'est lu pour elle.
  */
-it('bascule l\'échauffement d\'une série cochée d\'une séance en cours en deux écritures, sans lire la série de jours', function (): void {
+it('bascule l\'échauffement d\'une série cochée d\'une séance en cours en une écriture, sans lire la série de jours', function (): void {
     [$user, , $line] = seanceOuvertePourLesEcritures();
     $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
 
@@ -378,7 +378,7 @@ it('bascule l\'échauffement de la seule série de travail cochée d\'une séanc
     Workout::withoutEvents(fn (): bool => $workout->update(['ended_at' => $workout->started_at->copy()->addHour()]));
     DB::table('users')->where('id', $user->id)->update(['last_workout_at' => $workout->started_at, 'current_streak' => 1, 'longest_streak' => 1]);
 
-    // Le panneau d'administration est la seule voie qui modifie une série d'une séance terminée.
+    // L'API refuse de modifier une série d'une séance terminée : la bascule passe ici par le modèle.
     $mesure = ecrituresPendant(fn () => Set::query()->findOrFail($set->id)->update(['is_warmup' => true]));
 
     expect(serieDeJoursLectures($mesure['toutes']))->toHaveCount(1)
