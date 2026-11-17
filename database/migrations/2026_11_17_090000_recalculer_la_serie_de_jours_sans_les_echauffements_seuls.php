@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\GoalService;
+use App\Services\Stats\ClesDeStats;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Migrations\Migration;
@@ -55,6 +56,7 @@ return new class() extends Migration
                     if ($compte instanceof User) {
                         $series->recalculerDepuisLesFaits($compte);
                         $objectifs->syncGoals($compte);
+                        ClesDeStats::invaliderSeancesDuCompte((int) $compte->id);
                     }
                 }
             });
