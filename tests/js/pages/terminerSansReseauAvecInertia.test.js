@@ -69,6 +69,8 @@ beforeAll(async () => {
         series: [{ id: 3, workout_line_id: 1, weight: 80, reps: 5, is_completed: true }],
     })
     reseau.serveur.lignes.set(1, { id: 1, workout_id: 5, exercise_id: 7 })
+    // Ouverte depuis une heure au geste : « Terminer » ne propose pas d'heure (#2319).
+    reseau.serveur.debutDeLaSeance = new Date(HEURE_DU_GESTE.getTime() - 3_600_000).toISOString()
 
     ;({ sync, visites, visiter } = await ouvrirLaListeDesSeances({
         serveur: reseau.serveur,

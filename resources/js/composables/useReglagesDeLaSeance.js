@@ -122,7 +122,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
      * (`EtatDeLaSeanceEnAttente.vue`). La personne reste sur elle : l'accueil
      * peut ne pas avoir de copie sur l'appareil.
      *
-     * @param {string} fin l'heure du geste
+     * @param {string} fin l'heure de la fin : celle du geste, ou l'heure choisie
      * @param {string} queueId l'entrée de file de la fin
      */
     const montrerLaFinEnAttente = (fin, queueId) => {
@@ -140,7 +140,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
      * n'en pose aucune dans la session.
      *
      * @param {object|undefined} reponse
-     * @param {string} fin l'heure du geste
+     * @param {string} fin l'heure de la fin : celle du geste, ou l'heure choisie
      */
     const apresLaFin = (reponse, fin) => {
         localWorkout.value.ended_at = reponse?.data?.data?.ended_at ?? fin
@@ -184,12 +184,19 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
      *    (`PATCH /api/v1/workouts/finish`), cinq secondes au plus
      *    (`DELAI_AVANT_UNE_COPIE_MS`) avant de tomber en file.
      *
+     * Une séance oubliée (#2319) se clôt à l'heure que la personne a choisie
+     * dans la modale (`finChoisie`, un instant ISO) : elle part dans la charge
+     * sous `fin_choisie`, une heure absolue que le serveur juge (jamais avant le
+     * début, jamais après maintenant) et que la file rejoue telle quelle. La
+     * fin du geste (`ended_at`) la suit toujours ; une séance de moins de douze
+     * heures n'en reçoit pas.
+     *
      * Acceptée, l'accueil ; en file, la séance close sur place ; refusée, un
      * toast, et la séance reste ouverte. La session expirée (401, 419), la fin
      * attend en file, à l'heure du geste, et la page se redemande au serveur,
      * qui mène à la connexion : la fin repart après elle.
      */
-    const confirmFinishWorkout = async () => {
+    const confirmFinishWorkout = async (finChoisie) => {
         if (clotureEnCours.value || localWorkout.value.ended_at) {
             return
         }
@@ -247,9 +254,16 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
 
             cloturePartie = true
 
+            const choisie = typeof finChoisie === 'string' && !isNaN(new Date(finChoisie).getTime())
+            const heureDeLaFin = choisie ? new Date(finChoisie).toISOString() : fin
+
             const ecriture = {
                 url: route('api.v1.workouts.finish'),
-                data: { workout_id: realWorkoutId, ended_at: fin },
+                data: {
+                    workout_id: realWorkoutId,
+                    ended_at: fin,
+                    ...(choisie ? { fin_choisie: heureDeLaFin } : {}),
+                },
             }
 
             if (sansServeur || typeof realWorkoutId === 'object' || SyncService.enAttente() > 0) {
@@ -262,7 +276,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
                     return
                 }
 
-                montrerLaFinEnAttente(fin, queueId)
+                montrerLaFinEnAttente(heureDeLaFin, queueId)
 
                 return
             }
@@ -275,7 +289,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
                 })
             } catch (erreur) {
                 if (erreur?.isOffline) {
-                    montrerLaFinEnAttente(fin, erreur.queueId)
+                    montrerLaFinEnAttente(heureDeLaFin, erreur.queueId)
 
                     return
                 }
@@ -295,7 +309,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
                     if (queueId === null) {
                         showFinishModal.value = false
                     } else {
-                        montrerLaFinEnAttente(fin, queueId)
+                        montrerLaFinEnAttente(heureDeLaFin, queueId)
                     }
 
                     router.visit(page.url)
@@ -309,7 +323,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
                 return
             }
 
-            apresLaFin(reponse, fin)
+            apresLaFin(reponse, heureDeLaFin)
         } finally {
             cloturePartie = false
 

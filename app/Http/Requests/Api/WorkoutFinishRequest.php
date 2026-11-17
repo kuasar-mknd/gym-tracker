@@ -6,7 +6,11 @@ namespace App\Http\Requests\Api;
 
 use App\Http\Requests\Concerns\MesureLAgeDuGeste;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
+use App\Models\Workout;
 use App\Rules\DateQueSaColonneTient;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -21,6 +25,9 @@ class WorkoutFinishRequest extends FormRequest
 {
     use MesureLAgeDuGeste;
     use RameneLesDatesAuFuseauDeLApplication;
+
+    /** L'instant de la requête, lu une fois (`maintenant()`) : il juge `fin_choisie`. */
+    private ?CarbonInterface $maintenant = null;
 
     /**
      * La requête ne vérifie que la connexion ; l'autorisation vit dans le
@@ -41,6 +48,12 @@ class WorkoutFinishRequest extends FormRequest
      * l'action place sur sa lecture de l'horloge et borne entre le début et
      * maintenant (`Workout::finBornee()`) ; sa colonne est un `DATETIME`.
      *
+     * `fin_choisie` est l'heure que la personne a choisie en terminant une
+     * séance oubliée (#2319) : une heure absolue, comme le réglage du début,
+     * que l'horloge de l'appareil ne date pas. Elle ne précède pas le début
+     * de la séance et ne passe pas maintenant ; absente, la fin est celle du
+     * geste.
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -55,7 +68,55 @@ class WorkoutFinishRequest extends FormRequest
                 }),
             ],
             'ended_at' => ['bail', 'sometimes', 'required', 'date', DateQueSaColonneTient::date()],
+            'fin_choisie' => [
+                'bail',
+                'nullable',
+                'date',
+                DateQueSaColonneTient::date(),
+                'before_or_equal:'.$this->maintenant()->toIso8601String(),
+                $this->nePrecedePasLeDebut(...),
+            ],
         ];
+    }
+
+    /**
+     * L'instant de la requête, lu une fois : le refus d'une fin future le juge.
+     */
+    public function maintenant(): CarbonInterface
+    {
+        return $this->maintenant ??= now();
+    }
+
+    /**
+     * L'heure choisie, comme un instant, ou null quand la fin est celle du geste.
+     */
+    public function finChoisie(): ?CarbonImmutable
+    {
+        $valeur = $this->validated('fin_choisie');
+
+        return is_string($valeur) ? CarbonImmutable::parse($valeur) : null;
+    }
+
+    /**
+     * Une fin d'avant le début donnerait une durée négative. La séance se lit
+     * parmi celles du compte ; une référence qui n'en est pas une est refusée
+     * par `workout_id`, pas ici.
+     *
+     * @param  Closure(string): \Illuminate\Translation\PotentiallyTranslatedString  $echec
+     */
+    private function nePrecedePasLeDebut(string $attribut, mixed $valeur, Closure $echec): void
+    {
+        $identifiant = $this->input('workout_id');
+
+        if (! is_int($identifiant) && ! (is_string($identifiant) && ctype_digit($identifiant))) {
+            return;
+        }
+
+        $debut = Workout::query()->where('user_id', $this->user()?->id)->whereKey((int) $identifiant)->first()?->started_at;
+
+        if ($debut !== null && is_string($valeur) && CarbonImmutable::parse($valeur)->lessThan($debut)) {
+            $echec('La fin de la séance ne peut pas précéder son début.');
+        }
     }
 
     /**
@@ -68,5 +129,6 @@ class WorkoutFinishRequest extends FormRequest
     {
         $this->mesurerLAgeDuGeste('ended_at');
         $this->ramenerLesInstantsAuFuseauDeLApplication(['ended_at']);
+        $this->ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage(['fin_choisie']);
     }
 }

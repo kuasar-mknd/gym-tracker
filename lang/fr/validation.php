@@ -165,6 +165,7 @@ return [
         'name' => 'nom',
         'username' => 'nom d\'utilisateur',
         'email' => 'adresse e-mail',
+        'fin_choisie' => 'fin de séance',
         'first_name' => 'prénom',
         'last_name' => 'nom',
         'password' => 'mot de passe',
@@ -231,6 +232,7 @@ return [
         'exercises.*.sets.*.is_warmup' => 'échauffement',
         'exercises.*.sets.*.reps' => 'répétitions',
         'exercises.*.sets.*.weight' => 'poids',
+        'fin_choisie' => 'heure de fin choisie',
         'goal' => 'objectif',
         'goal_times_per_week' => 'objectif par semaine',
         'height' => 'taille',
@@ -323,6 +325,9 @@ return [
         ],
         'started_at' => [
             'before_or_equal' => 'Le début de la séance ne peut pas être dans le futur.',
+        ],
+        'fin_choisie' => [
+            'before_or_equal' => 'La fin de la séance ne peut pas être dans le futur.',
         ],
     ],
 ];

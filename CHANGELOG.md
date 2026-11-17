@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Ajouté
+- **Terminer une séance oubliée propose l'heure de la dernière série saisie** (#2319) : au-delà de 12 h, la question « Terminer la séance ? » propose « Terminer à l'heure de la dernière série saisie » (à défaut, le début), ou une heure choisie, jamais avant le début ni dans le futur ; la séance se clôt avec cette heure et une durée cohérente, au lieu de « 1 947 h ». `PATCH /api/v1/workouts/finish` accepte `fin_choisie`, une heure absolue (comme le réglage du début) que le serveur juge (≥ début, ≤ maintenant, 422 sinon) et borne encore à l'écriture (`Workout::finChoisieBornee()`) ; la file hors ligne la rejoue telle quelle. Une séance de moins de 12 h garde la fin du geste.
 - **Une adresse ne supporte plus que 20 échecs de connexion par heure, toutes adresses IP confondues, sauf pour l'appareil qui a déjà ouvert le compte** (#2310) : au-delà, la connexion refuse sur le champ « adresse » (renvoi vers « mot de passe oublié »), sans attente ; seuls les échecs comptent, sur l'adresse canonique, comptes inconnus compris. Un cookie d'appareil connu (chiffré, 180 jours, posé à la connexion, à la déconnexion et à la réinitialisation, révoqué par un changement de mot de passe) exempte son appareil, pour que le plafond n'enferme pas le titulaire. Les limiteurs existants sont inchangés.
 
 ### Modifié

@@ -1,7 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import { formatToLocalISO } from '@/Utils/date'
+import { estUneSeanceOubliee, finProposeeDUneSeance, jourEtHeure } from '@/Utils/seanceOubliee'
 
 /**
  * La question « Terminer la séance ? » (#1961, #2049).
@@ -10,6 +14,11 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
  * close sur sa page : la modale n'a rien à dire d'une fin non confirmée. Elle
  * ne dit que ce qui empêche de terminer : une modification encore en route
  * vers le serveur, qui arriverait sinon après la fin et serait refusée.
+ *
+ * Une séance oubliée, ouverte depuis plus de douze heures (#2319), propose « Terminer à l'heure de la dernière série saisie », ou une
+ * heure choisie, jamais avant le début ni dans le futur. La confirmation
+ * porte alors l'heure retenue (un instant ISO) ; sans proposition, elle ne
+ * porte rien, et la fin est celle du geste.
  */
 const props = defineProps({
     show: { type: Boolean, required: true },
@@ -20,9 +29,88 @@ const props = defineProps({
      * « Annuler », le fond ou Échap l'abandonnent (`close`) : la séance reste ouverte.
      */
     enCours: { type: Boolean, default: false },
+    /** La séance qu'on termine : son début et ses séries disent si elle est oubliée, et à quelle heure la clore. */
+    seance: { type: Object, default: null },
 })
 
 const emit = defineEmits(['close', 'confirm'])
+
+/** Le début de la séance (instant ISO) : la fin choisie ne le précède pas. */
+const debut = ref(null)
+
+/**
+ * Pour une séance oubliée : l'heure de sa dernière série saisie (instant ISO),
+ * ou son début. Null sinon. Lue à l'ouverture de la question, pas à chaque rendu.
+ */
+const finProposee = ref(null)
+
+const oubliee = computed(() => finProposee.value !== null)
+
+const CHOIX = [
+    { value: 'derniere', label: 'Dernière série saisie' },
+    { value: 'autre', label: 'Autre heure' },
+]
+
+const choix = ref('derniere')
+const heureChoisie = ref('')
+
+/** Maintenant, à l'ouverture : la borne haute du champ. */
+const maintenant = ref(new Date())
+
+watch(
+    () => props.show,
+    (ouverte) => {
+        if (!ouverte) {
+            return
+        }
+
+        choix.value = 'derniere'
+        maintenant.value = new Date()
+        debut.value = props.seance?.started_at ?? null
+        finProposee.value = estUneSeanceOubliee(debut.value, maintenant.value)
+            ? finProposeeDUneSeance(props.seance, maintenant.value)
+            : null
+        heureChoisie.value = finProposee.value === null ? '' : formatToLocalISO(finProposee.value)
+    },
+    { immediate: true },
+)
+
+const minimum = computed(() => formatToLocalISO(debut.value))
+const maximum = computed(() => formatToLocalISO(maintenant.value))
+
+/** L'heure choisie à la main, quand elle ne tient pas entre le début et maintenant. */
+const erreurDeLHeure = computed(() => {
+    if (!oubliee.value || choix.value !== 'autre') {
+        return ''
+    }
+
+    const heure = new Date(heureChoisie.value)
+
+    if (heureChoisie.value === '' || isNaN(heure.getTime())) {
+        return 'Choisis une date et une heure.'
+    }
+
+    if (heure < new Date(minimum.value)) {
+        return 'La fin ne peut pas précéder le début de la séance.'
+    }
+
+    // Comparée à l'instant où l'on confirme, pas à celui de l'ouverture.
+    return heure > new Date() ? 'La fin ne peut pas être dans le futur.' : ''
+})
+
+const confirmer = () => {
+    if (!oubliee.value) {
+        emit('confirm')
+
+        return
+    }
+
+    if (erreurDeLHeure.value !== '') {
+        return
+    }
+
+    emit('confirm', new Date(choix.value === 'derniere' ? finProposee.value : heureChoisie.value).toISOString())
+}
 
 const avisDAttente = computed(() =>
     props.enAttente > 1
@@ -53,6 +141,29 @@ const avisDAttente = computed(() =>
             >
                 {{ avisDAttente }}
             </p>
+            <div v-if="oubliee" class="mb-6 space-y-4 text-left" dusk="finish-workout-forgotten">
+                <p class="text-text-muted text-sm font-medium">
+                    Cette séance est ouverte depuis le {{ jourEtHeure(debut) }}.
+                </p>
+                <GlassSegmented v-model="choix" :options="CHOIX" label="Heure de fin" bloc />
+                <p
+                    v-if="choix === 'derniere'"
+                    class="text-text-main text-sm font-medium"
+                    dusk="finish-workout-proposed"
+                >
+                    Terminer à l'heure de la dernière série saisie : {{ jourEtHeure(finProposee) }}.
+                </p>
+                <GlassInput
+                    v-else
+                    v-model="heureChoisie"
+                    type="datetime-local"
+                    label="Heure de fin"
+                    :min="minimum"
+                    :max="maximum"
+                    :error="erreurDeLHeure"
+                    dusk="finish-workout-end-input"
+                />
+            </div>
             <div class="flex gap-3">
                 <GlassButton variant="secondary" @click="emit('close')" class="flex-1"> Annuler </GlassButton>
                 <GlassButton
@@ -60,7 +171,8 @@ const avisDAttente = computed(() =>
                     id="confirm-finish-button"
                     dusk="confirm-finish-button"
                     :loading="enCours"
-                    @click="emit('confirm')"
+                    :disabled="erreurDeLHeure !== ''"
+                    @click="confirmer"
                     class="flex-1"
                 >
                     Confirmer
