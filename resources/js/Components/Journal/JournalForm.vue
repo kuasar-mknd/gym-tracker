@@ -150,7 +150,7 @@ const emit = defineEmits(['close', 'submit'])
             <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <GlassButton type="button" variant="secondary" block @click="emit('close')"> Annuler </GlassButton>
                 <GlassButton type="submit" variant="primary" block :loading="form.processing">
-                    Enregistrer
+                    {{ editingJournal ? 'Enregistrer' : 'Créer' }}
                 </GlassButton>
             </div>
         </form>

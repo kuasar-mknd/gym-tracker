@@ -264,7 +264,7 @@ describe('IntervalTimer presets', () => {
 
         await openPresets(wrapper)
 
-        expect(wrapper.text()).toContain('2x 3s Travail / 2s Repos')
+        expect(wrapper.text()).toContain('2 × 3s Travail / 2s Repos')
     })
 
     /*
@@ -322,7 +322,7 @@ describe('IntervalTimer — sur une copie hors ligne', () => {
         pageDInertia.props = {}
     })
 
-    const enregistrer = (wrapper) => wrapper.findAll('button').find((bouton) => bouton.text() === 'Enregistrer')
+    const enregistrer = (wrapper) => wrapper.findAll('button').find((bouton) => bouton.text() === 'Créer')
 
     it('n’enregistre, ne modifie ni ne supprime un préréglage, et dit pourquoi', async () => {
         pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }

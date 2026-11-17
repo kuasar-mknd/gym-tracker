@@ -160,7 +160,7 @@ const goalDistribution = computed(() => {
                                     :form="form"
                                     :exercises="exercises"
                                     :measurement-types="measurementTypes"
-                                    submit-label="Créer l'objectif"
+                                    submit-label="Créer"
                                     auto-title
                                     @submit="submit"
                                     @cancel="showCreateForm = false"

@@ -74,7 +74,7 @@ const submit = () => {
                     data-testid="submit-exercise-button"
                     dusk="submit-exercise-btn"
                 >
-                    Créer l'exercice
+                    Créer
                 </GlassButton>
             </form>
         </div>

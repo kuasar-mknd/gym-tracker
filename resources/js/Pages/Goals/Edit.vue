@@ -69,7 +69,6 @@ const cancel = () => {
                         :form="form"
                         :exercises="exercises"
                         :measurement-types="measurementTypes"
-                        submit-label="Enregistrer les modifications"
                         @submit="submit"
                         @cancel="cancel"
                     />

@@ -292,7 +292,7 @@ const previewFromForm = () => {
                                 :disabled="surUneCopie"
                                 :aria-describedby="raisonDUneEcriture"
                             >
-                                {{ isEditing ? 'Mettre à jour' : 'Enregistrer' }}
+                                {{ isEditing ? 'Enregistrer' : 'Créer' }}
                             </GlassButton>
                         </div>
                     </form>
@@ -325,7 +325,7 @@ const previewFromForm = () => {
                                 {{ timer.name }}
                             </span>
                             <span class="text-text-muted block text-xs">
-                                {{ timer.rounds }}x {{ timer.work_seconds }}s Travail / {{ timer.rest_seconds }}s Repos
+                                {{ timer.rounds }} × {{ timer.work_seconds }}s Travail / {{ timer.rest_seconds }}s Repos
                             </span>
                         </button>
                         <div class="relative z-10 flex items-center gap-2">
