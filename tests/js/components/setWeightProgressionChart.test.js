@@ -104,4 +104,18 @@ describe('SetWeightProgressionChart', () => {
 
         expect(chart.datasets.map((dataset) => dataset.data[0])).toEqual([80, 75])
     })
+
+    /*
+     * Les trois premières séries d'une séance sont souvent des échauffements :
+     * la « Série 1 » est la première série de travail (#2333).
+     */
+    it('ne trace pas les échauffements validés', () => {
+        const seance = session('12/05/2026', [40, 60, 100, 95])
+        seance.sets[0].is_warmup = true
+        seance.sets[1].is_warmup = true
+
+        const chart = chartDataOf(mountChart([seance]), 'Line')
+
+        expect(chart.datasets.map((dataset) => dataset.data[0])).toEqual([100, 95])
+    })
 })

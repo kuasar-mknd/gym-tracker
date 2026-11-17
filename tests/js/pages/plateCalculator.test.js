@@ -208,7 +208,7 @@ describe('PlateCalculator — sur une copie hors ligne', () => {
     const boutonDisant = (wrapper, texte) => wrapper.findAll('button').find((bouton) => bouton.text().includes(texte))
     const boutonsDEcriture = (wrapper) => [
         boutonDisant(wrapper, 'Ajouter'),
-        boutonDisant(wrapper, 'Enregistrer'),
+        boutonDisant(wrapper, 'Créer'),
         wrapper.get('[aria-label="Supprimer la plaque"]'),
     ]
 

@@ -8,7 +8,7 @@ import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import HistoriqueEnAttente from '@/Components/Stats/HistoriqueEnAttente.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
-import { peutEtablirUnRecord, seriesDeTravail, seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
+import { peutEtablirUnRecord, seriesDeTravail, volumeDesSeriesDeTravail } from '@/Utils/seriesValidees'
 
 const OneRepMaxChart = graphiqueAsynchrone(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const VolumeTrendChart = graphiqueAsynchrone(() => import('@/Components/Stats/VolumeTrendChart.vue'))
@@ -52,9 +52,9 @@ const props = defineProps({
  * Les séances de la plus ancienne à la plus récente, avec les séries que
  * chaque graphique a le droit de lire.
  *
- * Les graphiques ne comptent que les séries validées (#1956) : le volume avec
- * les mêmes règles que celui de la séance, échauffements validés compris ; la
- * charge max avec celles du record. Une séance sans série qui compte n'a pas
+ * Les graphiques ne comptent que les séries de travail validées (#1956,
+ * #2333) : ni série jamais cochée, ni échauffement, donc un volume plus petit
+ * que celui de la séance ; la charge max suit en plus les règles du record. Une séance sans série qui compte n'a pas
  * de meilleure valeur : son point vaut null, que Chart.js ne trace pas, plutôt
  * qu'un zéro qui creuserait la courbe.
  */
@@ -63,7 +63,6 @@ const seances = computed(() => {
     // History is desc, so reverse for chart
     return [...props.history].reverse().map((session) => ({
         date: session.formatted_date.split('/').slice(0, 2).join('/'), // Just dd/mm
-        series: seriesValidees(session.sets),
         seriesDeTravail: seriesDeTravail(session.sets),
         seriesDuRecord: session.sets.filter(peutEtablirUnRecord),
         meilleur1rm: session.best_1rm ?? null,
@@ -73,7 +72,7 @@ const seances = computed(() => {
 const volumeData = computed(() =>
     seances.value.map((session) => ({
         date: session.date,
-        volume: volumeDesSeriesValidees(session.series),
+        volume: volumeDesSeriesDeTravail(session.seriesDeTravail),
     })),
 )
 
@@ -87,14 +86,14 @@ const maxRepsData = computed(() =>
 const totalRepsData = computed(() =>
     seances.value.map((session) => ({
         date: session.date,
-        reps: session.series.reduce((sum, s) => sum + (parseInt(s.reps) || 0), 0),
+        reps: session.seriesDeTravail.reduce((sum, s) => sum + (parseInt(s.reps) || 0), 0),
     })),
 )
 
 const setsPerSessionData = computed(() =>
     seances.value.map((session) => ({
         date: session.date,
-        sets: session.series.length,
+        sets: session.seriesDeTravail.length,
     })),
 )
 
@@ -127,7 +126,7 @@ const estimated1rmData = computed(() =>
 )
 
 const weightDistributionData = computed(() => {
-    const allSets = seances.value.flatMap((s) => s.series)
+    const allSets = seances.value.flatMap((s) => s.seriesDeTravail)
     if (allSets.length === 0) return []
 
     const weights = allSets.map((s) => parseFloat(s.weight))
@@ -156,7 +155,7 @@ const weightDistributionData = computed(() => {
 
 const scatterData = computed(() => {
     return seances.value
-        .flatMap((s) => s.series)
+        .flatMap((s) => s.seriesDeTravail)
         .filter((s) => parseFloat(s.weight) > 0 && parseInt(s.reps) > 0)
         .map((s) => ({
             x: parseFloat(s.weight),
@@ -307,7 +306,7 @@ const scatterData = computed(() => {
                     <GlassCard>
                         <div class="mb-4">
                             <h3 class="titre-carte">Poids vs Reps</h3>
-                            <p class="text-text-muted text-xs font-semibold">Répartition de toutes les séries</p>
+                            <p class="text-text-muted text-xs font-semibold">Répartition des séries de travail</p>
                         </div>
                         <div class="h-64">
                             <WeightRepsScatterChart :data="scatterData" />
@@ -318,7 +317,7 @@ const scatterData = computed(() => {
                         <div class="mb-4">
                             <h3 class="titre-carte">Progression par Série</h3>
                             <p class="text-text-muted text-xs font-semibold">
-                                Poids des 3 premières séries dans le temps
+                                Poids des 3 premières séries de travail dans le temps
                             </p>
                         </div>
                         <div class="h-64">

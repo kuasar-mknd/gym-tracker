@@ -345,7 +345,7 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.scatterData).toEqual([{ x: 100, y: 5 }])
     })
 
-    it('counts a ticked warm-up in the volume, as the session does, but not in the Charge Max', async () => {
+    it('leaves a ticked warm-up out of the Volume card too, unlike the session volume (#2333)', async () => {
         const wrapper = await mountPage([
             session('13/06/2026', [
                 { weight: 100, reps: 5 },
@@ -353,8 +353,32 @@ describe('only the sets that were done', () => {
             ]),
         ])
 
-        expect(wrapper.vm.volumeData[0].volume).toBe(740)
+        expect(wrapper.vm.volumeData[0].volume).toBe(500)
         expect(wrapper.vm.maxWeightData[0].weight).toBe(100)
+    })
+
+    it('leaves a ticked warm-up out of Volume (Reps), Séries, Charges and Poids vs Reps (#2333)', async () => {
+        const wrapper = await mountPage([
+            session('13/06/2026', [
+                { weight: 100, reps: 5 },
+                { weight: 20, reps: 15, is_warmup: true },
+                { weight: 60, reps: 12, is_warmup: true },
+            ]),
+        ])
+
+        expect(wrapper.vm.totalRepsData[0].reps).toBe(5)
+        expect(wrapper.vm.setsPerSessionData[0].sets).toBe(1)
+        expect(wrapper.vm.weightDistributionData).toEqual([{ label: '100', count: 1 }])
+        expect(wrapper.vm.scatterData).toEqual([{ x: 100, y: 5 }])
+    })
+
+    it('draws nothing in the distribution and the scatter for a session made only of warm-ups (#2333)', async () => {
+        const wrapper = await mountPage([session('13/06/2026', [{ weight: 40, reps: 10, is_warmup: true }])])
+
+        expect(wrapper.vm.weightDistributionData).toEqual([])
+        expect(wrapper.vm.scatterData).toEqual([])
+        expect(wrapper.vm.setsPerSessionData[0].sets).toBe(0)
+        expect(wrapper.vm.volumeData[0].volume).toBe(0)
     })
 
     it('leaves a ticked warm-up out of Répétitions max and Charge moyenne, as out of the records (#2333)', async () => {
