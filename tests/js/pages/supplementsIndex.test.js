@@ -311,10 +311,10 @@ describe('editing a supplement', () => {
 
         expect(champs.map((champ) => [...champ.labels].map((libelle) => libelle.textContent.trim()))).toEqual([
             ['Nom'],
-            ['Marque (optionnel)'],
+            ['Marque (facultatif)'],
             ['Doses restantes'],
             ['Alerte stock bas'],
-            ['Dosage (optionnel)'],
+            ['Dosage (facultatif)'],
         ])
         expect(champs.map((champ) => champ.value)).toEqual([
             'Créatine',

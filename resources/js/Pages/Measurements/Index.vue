@@ -245,7 +245,7 @@ const latestBodyFat = computed(() => {
                     </div>
                     <GlassInput
                         v-model="form.notes"
-                        label="Notes (optionnel)"
+                        label="Notes (facultatif)"
                         placeholder="Matin, à jeun..."
                         :error="form.errors.notes"
                     />
@@ -333,7 +333,7 @@ const latestBodyFat = computed(() => {
                                     <span
                                         v-if="measurement.body_fat"
                                         class="bg-accent-secondary/15 text-accent-secondary-deep rounded-full px-2 py-0.5 text-xs font-bold"
-                                        >{{ pourcentage(measurement.body_fat) }} BF</span
+                                        >{{ pourcentage(measurement.body_fat) }} MG</span
                                     >
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">

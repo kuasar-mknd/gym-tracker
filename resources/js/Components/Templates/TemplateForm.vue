@@ -172,7 +172,7 @@ const submit = () => {
                     <div>
                         <GlassTextarea
                             v-model="form.description"
-                            label="Description (optionnel)"
+                            label="Description (facultatif)"
                             :rows="2"
                             :maxlength="1000"
                             placeholder="Détails de la séance..."
@@ -353,7 +353,7 @@ const submit = () => {
                     Le modèle n’a pas été enregistré : corrige les champs signalés.
                 </p>
                 <GlassButton variant="primary" size="lg" class="w-full" :loading="form.processing" type="submit">
-                    {{ template ? 'Mettre à jour le modèle' : 'Enregistrer le modèle' }}
+                    {{ template ? 'Enregistrer' : 'Créer' }}
                 </GlassButton>
             </div>
         </form>

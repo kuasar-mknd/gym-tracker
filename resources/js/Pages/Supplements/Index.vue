@@ -157,13 +157,13 @@ const formatDate = (dateString) => {
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput
                             v-model="form.brand"
-                            label="Marque (optionnel)"
+                            label="Marque (facultatif)"
                             placeholder="Ex. : MyProtein"
                             :error="form.errors.brand"
                         />
                         <GlassInput
                             v-model="form.dosage"
-                            label="Dosage (optionnel)"
+                            label="Dosage (facultatif)"
                             placeholder="Ex. : 30g / scoop"
                             :error="form.errors.dosage"
                         />
@@ -221,7 +221,7 @@ const formatDate = (dateString) => {
                         <GlassInput v-model="editForm.name" label="Nom" :error="editForm.errors.name" />
                         <GlassInput
                             v-model="editForm.brand"
-                            label="Marque (optionnel)"
+                            label="Marque (facultatif)"
                             :error="editForm.errors.brand"
                         />
                         <div class="grid grid-cols-2 gap-2">
@@ -240,7 +240,7 @@ const formatDate = (dateString) => {
                         </div>
                         <GlassInput
                             v-model="editForm.dosage"
-                            label="Dosage (optionnel)"
+                            label="Dosage (facultatif)"
                             :error="editForm.errors.dosage"
                         />
                         <div class="mt-2 flex gap-2">
