@@ -80,6 +80,8 @@ beforeAll(async () => {
     })
     reseau.serveur.lignes.set(1, { id: 1, workout_id: 5, exercise_id: 7 })
     reseau.serveur.proposerLesNotifications = true
+    // Ouverte depuis une heure quand la question s'ouvre (l'horloge réelle) : « Terminer » ne propose pas d'heure (#2319).
+    reseau.serveur.debutDeLaSeance = new Date(Date.now() - 3_600_000).toISOString()
 
     ;({ visites, visiter } = await ouvrirLaListeDesSeances({
         serveur: reseau.serveur,

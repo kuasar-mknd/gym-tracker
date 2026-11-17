@@ -214,6 +214,7 @@ function bornesBaseDates(): array
         // de la colonne du début, comme la fin (#2049).
         [WorkoutStoreRequest::class, 'started_at', ['workouts.started_at']],
         [WorkoutFinishRequest::class, 'ended_at', ['workouts.ended_at']],
+        [WorkoutFinishRequest::class, 'fin_choisie', ['workouts.ended_at']],
         [DailyJournalStoreRequest::class, 'date', ['daily_journals.date']],
         [ToggleHabitRequest::class, 'date', ['habit_logs.date']],
         [BodyMeasurementStoreRequest::class, 'measured_at', ['body_measurements.measured_at']],
