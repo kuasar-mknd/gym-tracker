@@ -353,3 +353,36 @@ it('déplace le début d une séance en cours sans lire la série de jours', fun
         ->and(serieDeJoursLectures($sql))->toBe([])
         ->and(serieDeJoursEcritures($sql))->toBe([]);
 });
+
+/*
+ * Une série cochée qui devient échauffement, ou l'inverse, change ce que la
+ * séance vaut quand elle est terminée (#2333) : la série de jours se relit, et
+ * s'écrit si elle change. Dans une séance en cours, rien n'est lu pour elle.
+ */
+it('bascule l\'échauffement d\'une série cochée d\'une séance en cours en deux écritures, sans lire la série de jours', function (): void {
+    [$user, , $line] = seanceOuvertePourLesEcritures();
+    $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
+
+    $mesure = ecrituresPendant(fn () => actingAs($user, 'sanctum')
+        ->patchJson(route('api.v1.sets.update', $set), ['is_warmup' => true])
+        ->assertOk());
+
+    expect($mesure['ecritures'])->toBe(1, implode("\n", $mesure['sql']))
+        ->and(serieDeJoursLectures($mesure['toutes']))->toBe([])
+        ->and($mesure['requetes'])->toBe(9, implode("\n", $mesure['toutes']));
+});
+
+it('bascule l\'échauffement de la seule série de travail cochée d\'une séance terminée en une lecture de ses séances faites et une écriture de la série', function (): void {
+    [$user, $workout, $line] = seanceOuvertePourLesEcritures();
+    $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
+    Workout::withoutEvents(fn (): bool => $workout->update(['ended_at' => $workout->started_at->copy()->addHour()]));
+    DB::table('users')->where('id', $user->id)->update(['last_workout_at' => $workout->started_at, 'current_streak' => 1, 'longest_streak' => 1]);
+
+    // Le panneau d'administration est la seule voie qui modifie une série d'une séance terminée.
+    $mesure = ecrituresPendant(fn () => Set::query()->findOrFail($set->id)->update(['is_warmup' => true]));
+
+    expect(serieDeJoursLectures($mesure['toutes']))->toHaveCount(1)
+        ->and(serieDeJoursEcritures($mesure['toutes']))->toHaveCount(1)
+        ->and($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
+        ->and($mesure['requetes'])->toBe(13, implode("\n", $mesure['toutes']));
+});

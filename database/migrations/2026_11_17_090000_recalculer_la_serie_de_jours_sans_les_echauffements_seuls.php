@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\GoalService;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Migrations\Migration;
@@ -16,9 +17,10 @@ use Illuminate\Database\Query\Builder;
  * (`User::seancesFaites()`). La série stockée d'un compte qui en porte une
  * compterait encore son jour : elle est refaite par l'écrivain
  * (`StreakService::recalculerDepuisLesFaits()`), seul, pour ces comptes seuls,
- * et une série qui ne change pas ne s'écrit pas. Les succès déjà débloqués ne
- * sont pas retirés, et les objectifs de fréquence se corrigent à leur
- * prochain recalcul, comme ceux de #2132.
+ * et une série qui ne change pas ne s'écrit pas. Leurs objectifs se recalculent
+ * par leur écrivain (`GoalService::syncGoals()`), que le contrôle nocturne
+ * compare à l'avancement stocké. Les succès déjà débloqués ne sont pas
+ * retirés : le service ne retire jamais un succès.
  *
  * Rejouable : un second passage ne trouve rien à écrire.
  */
@@ -27,6 +29,7 @@ return new class() extends Migration
     public function up(): void
     {
         $series = app(StreakService::class);
+        $objectifs = app(GoalService::class);
 
         User::query()
             ->whereIn('id', fn (Builder $seances): Builder => $seances
@@ -47,10 +50,11 @@ return new class() extends Migration
                     ->whereColumn('workout_lines.workout_id', 'workouts.id')
                     ->where('sets.is_completed', true)
                     ->where('sets.is_warmup', false)))
-            ->chunkById(200, function (Collection $comptes) use ($series): void {
+            ->chunkById(200, function (Collection $comptes) use ($series, $objectifs): void {
                 foreach ($comptes as $compte) {
                     if ($compte instanceof User) {
                         $series->recalculerDepuisLesFaits($compte);
+                        $objectifs->syncGoals($compte);
                     }
                 }
             });

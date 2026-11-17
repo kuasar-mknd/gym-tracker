@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\GoalType;
+use App\Models\Goal;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -109,4 +111,34 @@ it('se rejoue sans rien changer', function (): void {
 
     expect($apres)->toBe([null, 0, 0])
         ->and(echauffementSeulStockee($compte))->toBe($apres);
+});
+
+it('recalcule les objectifs de fréquence des comptes touchés, et laisse ceux des autres', function (): void {
+    $objectifDe = fn (User $compte): Goal => Goal::factory()->create([
+        'user_id' => $compte->id,
+        'type' => GoalType::Frequency,
+        'exercise_id' => null,
+        'start_value' => 0,
+        'current_value' => 3,
+        'target_value' => 10,
+        'completed_at' => null,
+    ]);
+
+    $touche = User::factory()->create();
+    echauffementSeulSeance($touche, '2026-10-05 10:00:00', [false]);
+    echauffementSeulSeance($touche, '2026-10-06 10:00:00', [true]);
+    echauffementSeulSeance($touche, '2026-10-07 10:00:00', [true]);
+    $objectifTouche = $objectifDe($touche);
+
+    $intact = User::factory()->create();
+    echauffementSeulSeance($intact, '2026-10-05 10:00:00', [false]);
+    $objectifIntact = $objectifDe($intact);
+
+    // L'avancement d'avant, que le compte tenait en base.
+    DB::table('goals')->update(['current_value' => 3]);
+
+    echauffementSeulMigrer();
+
+    expect($objectifTouche->refresh()->current_value)->toBe(1.0)
+        ->and($objectifIntact->refresh()->current_value)->toBe(3.0);
 });
