@@ -113,7 +113,7 @@ class NotificationTest extends TestCase
             'days' => [1],
         ]);
 
-        Workout::factory()->create([
+        Workout::factory()->faite()->create([
             'user_id' => $user->id,
             'started_at' => '2026-09-07 09:00:00',
         ]);
