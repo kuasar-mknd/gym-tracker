@@ -125,6 +125,23 @@ it('garde la première fin d’une séance déjà close, même avec une autre he
     expect($seance->refresh()->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-10-18 12:30:00');
 });
 
+it('juge aussi la fin choisie quand l’identifiant de la séance arrive en texte', function (): void {
+    $compte = User::factory()->create();
+    $seance = finOublieeSeance($compte);
+
+    finOubliee($compte, ['workout_id' => (string) $seance->id, 'fin_choisie' => '2026-10-18T06:59:59Z'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.fin_choisie.0', 'La fin de la séance ne peut pas précéder son début.');
+});
+
+it('ne refuse qu’une seule fois une fin choisie à venir', function (): void {
+    $compte = User::factory()->create();
+    $seance = finOublieeSeance($compte);
+
+    finOubliee($compte, ['workout_id' => $seance->id, 'fin_choisie' => '2026-10-19T10:00:01Z'])
+        ->assertJsonCount(1, 'errors.fin_choisie');
+});
+
 it('ne juge pas la fin choisie contre la séance d’un autre compte', function (): void {
     $compte = User::factory()->create();
     $autre = finOublieeSeance(User::factory()->create());

@@ -46,20 +46,17 @@ final readonly class FinChoisieDansLaSeance implements ValidationRule
 
         if ($fin->greaterThan(($this->maintenant)())) {
             $fail('La fin de la séance ne peut pas être dans le futur.');
-
-            return;
-        }
-
-        $identifiant = is_string($this->seanceId) && ctype_digit($this->seanceId) ? (int) $this->seanceId : $this->seanceId;
-
-        if (! is_int($identifiant)) {
-            return;
-        }
-
-        $debut = Workout::query()->where('user_id', $this->compteId)->whereKey($identifiant)->first()?->started_at;
-
-        if ($debut !== null && $fin->lessThan($debut)) {
+        } elseif ($this->debut()?->greaterThan($fin) === true) {
             $fail('La fin de la séance ne peut pas précéder son début.');
         }
+    }
+
+    private function debut(): ?CarbonInterface
+    {
+        if (! is_int($this->seanceId) && ! (is_string($this->seanceId) && ctype_digit($this->seanceId))) {
+            return null;
+        }
+
+        return Workout::query()->where('user_id', $this->compteId)->whereKey($this->seanceId)->first()?->started_at;
     }
 }
