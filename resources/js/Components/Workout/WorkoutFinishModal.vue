@@ -15,8 +15,9 @@ import { estUneSeanceOubliee, finProposeeDUneSeance, jourEtHeure } from '@/Utils
  * ne dit que ce qui empêche de terminer : une modification encore en route
  * vers le serveur, qui arriverait sinon après la fin et serait refusée.
  *
- * Une séance oubliée, ouverte depuis plus de douze heures (#2319), propose « Terminer à l'heure de la dernière série saisie », ou une
- * heure choisie, jamais avant le début ni dans le futur. La confirmation
+ * Une séance oubliée, ouverte depuis plus de douze heures (#2319), propose
+ * « Terminer à l'heure de la dernière série saisie » (à défaut, celle de son
+ * démarrage), ou une heure choisie, jamais avant le début ni dans le futur. La confirmation
  * porte alors l'heure retenue (un instant ISO) ; sans proposition, elle ne
  * porte rien, et la fin est celle du geste.
  */
@@ -44,12 +45,15 @@ const debut = ref(null)
  */
 const finProposee = ref(null)
 
+/** La proposition vient d'une série saisie ; faux, c'est l'heure de démarrage de la séance. */
+const depuisUneSerie = ref(true)
+
 const oubliee = computed(() => finProposee.value !== null)
 
-const CHOIX = [
-    { value: 'derniere', label: 'Dernière série saisie' },
+const choixPossibles = computed(() => [
+    { value: 'derniere', label: depuisUneSerie.value ? 'Dernière série saisie' : 'Heure de démarrage' },
     { value: 'autre', label: 'Autre heure' },
-]
+])
 
 const choix = ref('derniere')
 const heureChoisie = ref('')
@@ -67,9 +71,12 @@ watch(
         choix.value = 'derniere'
         maintenant.value = new Date()
         debut.value = props.seance?.started_at ?? null
-        finProposee.value = estUneSeanceOubliee(debut.value, maintenant.value)
+        const proposition = estUneSeanceOubliee(debut.value, maintenant.value)
             ? finProposeeDUneSeance(props.seance, maintenant.value)
             : null
+
+        finProposee.value = proposition?.instant ?? null
+        depuisUneSerie.value = proposition?.serie ?? true
         heureChoisie.value = finProposee.value === null ? '' : formatToLocalISO(finProposee.value)
     },
     { immediate: true },
@@ -109,7 +116,15 @@ const confirmer = () => {
         return
     }
 
-    emit('confirm', new Date(choix.value === 'derniere' ? finProposee.value : heureChoisie.value).toISOString())
+    /*
+     * Le champ ne garde que la minute : choisir la minute du début, qui a des
+     * secondes, donnerait une fin d'avant lui, que le serveur refuse. La fin
+     * ne précède jamais le début.
+     */
+    const heure = new Date(choix.value === 'derniere' ? finProposee.value : heureChoisie.value)
+    const premiere = new Date(debut.value)
+
+    emit('confirm', (heure < premiere ? premiere : heure).toISOString())
 }
 
 const avisDAttente = computed(() =>
@@ -145,13 +160,14 @@ const avisDAttente = computed(() =>
                 <p class="text-text-muted text-sm font-medium">
                     Cette séance est ouverte depuis le {{ jourEtHeure(debut) }}.
                 </p>
-                <GlassSegmented v-model="choix" :options="CHOIX" label="Heure de fin" bloc />
+                <GlassSegmented v-model="choix" :options="choixPossibles" label="Heure de fin" bloc />
                 <p
                     v-if="choix === 'derniere'"
                     class="text-text-main text-sm font-medium"
                     dusk="finish-workout-proposed"
                 >
-                    Terminer à l'heure de la dernière série saisie : {{ jourEtHeure(finProposee) }}.
+                    Terminer à l'heure {{ depuisUneSerie ? 'de la dernière série saisie' : 'de démarrage' }} :
+                    {{ jourEtHeure(finProposee) }}.
                 </p>
                 <GlassInput
                     v-else

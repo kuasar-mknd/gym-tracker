@@ -42,12 +42,15 @@ describe('finProposeeDUneSeance', () => {
             ],
         }
 
-        expect(finProposeeDUneSeance(seance, MAINTENANT)).toBe(ilYA(26 * 3600))
+        expect(finProposeeDUneSeance(seance, MAINTENANT)).toEqual({ instant: ilYA(26 * 3600), serie: true })
     })
 
     it('est le début d’une séance sans série', () => {
-        expect(finProposeeDUneSeance({ started_at: debut, workout_lines: [] }, MAINTENANT)).toBe(debut)
-        expect(finProposeeDUneSeance({ started_at: debut }, MAINTENANT)).toBe(debut)
+        expect(finProposeeDUneSeance({ started_at: debut, workout_lines: [] }, MAINTENANT)).toEqual({
+            instant: debut,
+            serie: false,
+        })
+        expect(finProposeeDUneSeance({ started_at: debut }, MAINTENANT)).toEqual({ instant: debut, serie: false })
     })
 
     it('laisse de côté une série d’avant le début, à venir ou sans heure lisible', () => {
@@ -65,7 +68,7 @@ describe('finProposeeDUneSeance', () => {
             ],
         }
 
-        expect(finProposeeDUneSeance(seance, MAINTENANT)).toBe(debut)
+        expect(finProposeeDUneSeance(seance, MAINTENANT)).toEqual({ instant: debut, serie: false })
     })
 })
 

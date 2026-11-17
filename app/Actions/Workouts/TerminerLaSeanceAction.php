@@ -46,14 +46,15 @@ final readonly class TerminerLaSeanceAction
      * se lit une fois, en tête, avant l'attente du verrou (`.ai/rules/horloge.md`).
      *
      * @param  CarbonInterface|null  $finChoisie  l'heure choisie pour une séance oubliée, ou null pour la fin du geste
+     * @param  CarbonInterface|null  $maintenant  l'instant que la requête a lu pour juger la fin choisie (`WorkoutFinishRequest::instantLu()`) : la borne le reprend ; lu ici sans lui
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Si la séance n'existe pas.
      * @throws \Illuminate\Auth\Access\AuthorizationException Si le compte n'a pas le droit de la voir.
      * @throws \App\Exceptions\LeVerrouDesSeancesEstPris Si le verrou du compte reste pris trop longtemps.
      */
-    public function terminerCelleDuCompte(User $compte, int $seanceId, ?int $ageDuGeste, ?CarbonInterface $finChoisie = null): Workout
+    public function terminerCelleDuCompte(User $compte, int $seanceId, ?int $ageDuGeste, ?CarbonInterface $finChoisie = null, ?CarbonInterface $maintenant = null): Workout
     {
-        $maintenant = now();
+        $maintenant ??= now();
 
         /** @var Workout $close */
         $close = DemarrerUneSeanceAction::sousLeVerrouDuCompte($compte->id, function () use ($compte, $seanceId, $ageDuGeste, $maintenant, $finChoisie): Workout {

@@ -73,12 +73,27 @@ describe('une séance oubliée', () => {
         expect(wrapper.emitted('confirm')).toEqual([[DERNIERE_SERIE]])
     })
 
-    it('propose le début de la séance quand aucune série n’a été saisie', async () => {
+    it('propose l’heure de démarrage, et le dit, quand aucune série n’a été saisie', async () => {
         const wrapper = monter({ seance: { started_at: DEBUT, workout_lines: [] } })
+
+        expect(wrapper.get('[dusk="finish-workout-proposed"]').text()).toContain("Terminer à l'heure de démarrage")
+        expect(wrapper.text()).not.toContain('dernière série')
 
         await confirmer(wrapper)
 
         expect(wrapper.emitted('confirm')).toEqual([[DEBUT]])
+    })
+
+    it('ne précède jamais le début quand la minute choisie est celle du début, qui a des secondes', async () => {
+        const debutAvecSecondes = '2026-10-18T07:00:42.000Z'
+        const wrapper = monter({ seance: { started_at: debutAvecSecondes, workout_lines: [] } })
+        await choisirUneAutreHeure(wrapper)
+
+        // La minute du début, sans ses secondes : ce que le champ sait écrire.
+        await wrapper.get('[dusk="finish-workout-end-input"]').setValue(formatToLocalISO(debutAvecSecondes))
+        await confirmer(wrapper)
+
+        expect(wrapper.emitted('confirm')).toEqual([[debutAvecSecondes]])
     })
 
     it('laisse choisir l’heure à la main, entre le début et maintenant, et confirme avec elle', async () => {

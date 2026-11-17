@@ -326,8 +326,5 @@ return [
         'started_at' => [
             'before_or_equal' => 'Le début de la séance ne peut pas être dans le futur.',
         ],
-        'fin_choisie' => [
-            'before_or_equal' => 'La fin de la séance ne peut pas être dans le futur.',
-        ],
     ],
 ];

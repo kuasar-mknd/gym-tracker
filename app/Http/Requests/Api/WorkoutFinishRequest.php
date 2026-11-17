@@ -6,11 +6,10 @@ namespace App\Http\Requests\Api;
 
 use App\Http\Requests\Concerns\MesureLAgeDuGeste;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
-use App\Models\Workout;
 use App\Rules\DateQueSaColonneTient;
+use App\Rules\FinChoisieDansLaSeance;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Closure;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +25,7 @@ class WorkoutFinishRequest extends FormRequest
     use MesureLAgeDuGeste;
     use RameneLesDatesAuFuseauDeLApplication;
 
-    /** L'instant de la requête, lu une fois (`maintenant()`) : il juge `fin_choisie`. */
+    /** L'instant de la requête, lu une fois, et seulement quand `fin_choisie` est jugée (`maintenant()`). */
     private ?CarbonInterface $maintenant = null;
 
     /**
@@ -73,18 +72,28 @@ class WorkoutFinishRequest extends FormRequest
                 'nullable',
                 'date',
                 DateQueSaColonneTient::date(),
-                'before_or_equal:'.$this->maintenant()->toIso8601String(),
-                $this->nePrecedePasLeDebut(...),
+                new FinChoisieDansLaSeance($this->input('workout_id'), $this->user()?->id, $this->maintenant(...)),
             ],
         ];
     }
 
     /**
-     * L'instant de la requête, lu une fois : le refus d'une fin future le juge.
+     * L'instant de la requête, lu une fois, et seulement quand la fin choisie
+     * est jugée (`FinChoisieDansLaSeance`) : l'action le reprend pour la borner
+     * (`instantLu()`).
      */
     public function maintenant(): CarbonInterface
     {
         return $this->maintenant ??= now();
+    }
+
+    /**
+     * L'instant que la validation a lu, ou null quand elle n'a rien jugé contre
+     * maintenant : l'action lit alors l'horloge elle-même, une seule fois.
+     */
+    public function instantLu(): ?CarbonInterface
+    {
+        return $this->maintenant;
     }
 
     /**
@@ -95,28 +104,6 @@ class WorkoutFinishRequest extends FormRequest
         $valeur = $this->validated('fin_choisie');
 
         return is_string($valeur) ? CarbonImmutable::parse($valeur) : null;
-    }
-
-    /**
-     * Une fin d'avant le début donnerait une durée négative. La séance se lit
-     * parmi celles du compte ; une référence qui n'en est pas une est refusée
-     * par `workout_id`, pas ici.
-     *
-     * @param  Closure(string): \Illuminate\Translation\PotentiallyTranslatedString  $echec
-     */
-    private function nePrecedePasLeDebut(string $attribut, mixed $valeur, Closure $echec): void
-    {
-        $identifiant = $this->input('workout_id');
-
-        if (! is_int($identifiant) && ! (is_string($identifiant) && ctype_digit($identifiant))) {
-            return;
-        }
-
-        $debut = Workout::query()->where('user_id', $this->user()?->id)->whereKey((int) $identifiant)->first()?->started_at;
-
-        if ($debut !== null && is_string($valeur) && CarbonImmutable::parse($valeur)->lessThan($debut)) {
-            $echec('La fin de la séance ne peut pas précéder son début.');
-        }
     }
 
     /**

@@ -35,11 +35,12 @@ export const estUneSeanceOubliee = (debut, maintenant = new Date()) => {
  *
  * @param {{started_at: string, workout_lines?: Array<{sets?: Array<{updated_at?: string|null, created_at?: string|null}>}>}} seance
  * @param {Date} [maintenant]
- * @returns {string} un instant ISO (`toISOString()`)
+ * @returns {{instant: string, serie: boolean}} l'instant (`toISOString()`), et s'il vient d'une série ; faux : c'est le début de la séance
  */
 export const finProposeeDUneSeance = (seance, maintenant = new Date()) => {
     const debut = new Date(seance.started_at)
     let derniere = debut
+    let depuisUneSerie = false
 
     for (const ligne of seance.workout_lines ?? []) {
         for (const serie of ligne.sets ?? []) {
@@ -47,11 +48,12 @@ export const finProposeeDUneSeance = (seance, maintenant = new Date()) => {
 
             if (!isNaN(instant.getTime()) && instant > derniere && instant <= maintenant) {
                 derniere = instant
+                depuisUneSerie = true
             }
         }
     }
 
-    return derniere.toISOString()
+    return { instant: derniere.toISOString(), serie: depuisUneSerie }
 }
 
 /**
