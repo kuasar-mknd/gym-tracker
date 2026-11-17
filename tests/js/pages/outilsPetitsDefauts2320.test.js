@@ -90,6 +90,6 @@ describe('PlateCalculator — un disque de 1,25 kg', () => {
 
         await wrapper.get('[aria-label="Supprimer la plaque"]').trigger('click')
 
-        expect(wrapper.get('.dialogue').text()).toBe('Le disque de 1,25 kg sera retiré.')
+        expect(wrapper.get('.dialogue').text()).toBe('La plaque de 1,25 kg sera retirée.')
     })
 })

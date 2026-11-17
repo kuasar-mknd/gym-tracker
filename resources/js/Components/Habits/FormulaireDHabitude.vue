@@ -172,7 +172,7 @@ const submit = () => {
                 <GlassInput
                     v-model="form.name"
                     label="Nom"
-                    placeholder="Ex: Boire 2L d'eau"
+                    placeholder="Ex. : Boire 2L d'eau"
                     :error="form.errors.name"
                     required
                 />
