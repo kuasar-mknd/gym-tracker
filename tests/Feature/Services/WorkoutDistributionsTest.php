@@ -44,7 +44,7 @@ function seanceDe(User $user, int $minutes, int $heure = 10): Workout
 {
     $debut = now()->subDays(2)->setTime($heure, 0);
 
-    return Workout::factory()->create([
+    return Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => $debut,
         'ended_at' => $debut->copy()->addMinutes($minutes),
@@ -202,7 +202,7 @@ it('mesure une séance qui franchit minuit', function (): void {
 
     $debut = now()->subDays(2)->setTime(23, 30);
 
-    Workout::factory()->create([
+    Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => $debut,
         'ended_at' => $debut->copy()->addMinutes(60),
@@ -234,7 +234,7 @@ it('compte la meme duree que la courbe voisine, secondes comprises', function ()
 
     $debut = now()->subDays(2)->setTime(10, 0, 30);
 
-    Workout::factory()->create([
+    Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => $debut,
         'ended_at' => $debut->copy()->setTime(10, 30, 0),

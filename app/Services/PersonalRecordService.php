@@ -550,7 +550,7 @@ final class PersonalRecordService
 
         // Le flottant PHP fait foi : la valeur arrondie la plus haute, et à
         // valeur égale la série la plus ancienne, comme la synchronisation, qui
-        // ne cède qu'à une valeur arrondie plus haute.
+        // cède à une valeur arrondie plus haute, et à valeur égale à la plus ancienne.
         ksort($candidats);
         $valeur1rm = -INF;
 

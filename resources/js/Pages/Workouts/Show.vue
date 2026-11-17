@@ -372,6 +372,7 @@ onUnmounted(() => {
             :show="showFinishModal"
             :en-attente="ecrituresEnAttente"
             :en-cours="clotureEnCours"
+            :seance="localWorkout"
             @close="annulerLaCloture"
             @confirm="confirmFinishWorkout"
         />

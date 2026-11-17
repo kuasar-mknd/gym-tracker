@@ -110,6 +110,19 @@ class Workout extends Model
     }
 
     /**
+     * La fin que la personne a choisie en terminant une séance oubliée
+     * (#2319) : une heure absolue, que la requête a déjà jugée, et que
+     * l'instant de l'opération borne encore, au plus tard maintenant, au plus
+     * tôt le début. Comparée en instants, comme `finBornee()`.
+     */
+    public function finChoisieBornee(CarbonInterface $fin, CarbonInterface $maintenant): Carbon
+    {
+        $borne = $fin->greaterThan($maintenant) ? $maintenant : $fin;
+
+        return Carbon::instance($borne->lessThan($this->started_at) ? $this->started_at : $borne);
+    }
+
+    /**
      * Les exercices dont les records devront etre recalcules apres la cascade.
      *
      * Releves pendant `deleting`, consommes pendant `deleted` : entre les deux,

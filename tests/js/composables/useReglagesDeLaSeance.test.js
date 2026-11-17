@@ -398,3 +398,72 @@ describe('la fin en file, suivie par la page', () => {
         expect(reglages.localWorkout.value._finEnAttente).toBe('qF')
     })
 })
+
+/*
+ * Une séance oubliée (#2319) : la modale propose l'heure de la dernière série
+ * saisie (`workoutFinishModal.test.js`), et la fin part avec l'heure choisie,
+ * une heure absolue que la file rejoue telle quelle.
+ */
+describe('une séance oubliée', () => {
+    const DEBUT = '2026-10-18T07:00:00.000Z'
+    const DERNIERE_SERIE = '2026-10-18T09:30:00.000Z'
+    const AVEC_SERIES = {
+        started_at: DEBUT,
+        workout_lines: [
+            { id: 1, sets: [{ id: 1, updated_at: '2026-10-18T08:00:00.000Z' }] },
+            { id: 2, sets: [{ id: 2, created_at: '2026-10-18T09:00:00.000Z', updated_at: DERNIERE_SERIE }] },
+        ],
+    }
+    const CHARGE = { workout_id: 5, ended_at: HEURE_DU_GESTE.toISOString() }
+
+    it('clôt la séance avec l’heure choisie, et garde l’heure du geste à côté', async () => {
+        const reglages = monter({ seance: AVEC_SERIES })
+        reglages.finishWorkout()
+        file.patch.mockResolvedValue({
+            data: { data: { id: 5, ended_at: DERNIERE_SERIE }, meta: { proposer_les_notifications: false } },
+        })
+
+        await reglages.confirmFinishWorkout(DERNIERE_SERIE)
+
+        expect(file.patch).toHaveBeenCalledWith(
+            '/api.v1.workouts.finish/',
+            { ...CHARGE, fin_choisie: DERNIERE_SERIE },
+            { delaiDeLaTentative: 5000 },
+        )
+        expect(reglages.localWorkout.value.ended_at).toBe(DERNIERE_SERIE)
+    })
+
+    it('met en file la fin avec la même heure choisie quand rien ne répond, et la montre close à cette heure', async () => {
+        noterQueLeServeurNeRepondPas()
+        const reglages = monter({ seance: AVEC_SERIES })
+        reglages.finishWorkout()
+
+        await reglages.confirmFinishWorkout(DERNIERE_SERIE)
+
+        expect(file.patch).not.toHaveBeenCalled()
+        expect(file.mettreEnFile).toHaveBeenCalledWith({
+            method: 'patch',
+            url: '/api.v1.workouts.finish/',
+            data: { ...CHARGE, fin_choisie: DERNIERE_SERIE },
+        })
+        expect(reglages.localWorkout.value.ended_at).toBe(DERNIERE_SERIE)
+    })
+
+    it('n’envoie pas d’heure choisie quand la confirmation n’en porte pas (séance de moins de douze heures)', async () => {
+        const reglages = monter({ seance: { started_at: '2026-10-19T08:00:00.000Z' } })
+        reglages.finishWorkout()
+
+        await reglages.confirmFinishWorkout()
+
+        expect(file.patch.mock.calls[0][1]).toEqual(CHARGE)
+    })
+
+    it('ignore ce qui n’est pas une heure (l’évènement d’un clic)', async () => {
+        const reglages = monter({ seance: AVEC_SERIES })
+        reglages.finishWorkout()
+
+        await reglages.confirmFinishWorkout({ type: 'click' })
+
+        expect(file.patch.mock.calls[0][1]).toEqual(CHARGE)
+    })
+})
