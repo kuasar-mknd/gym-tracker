@@ -58,6 +58,14 @@ describe('RecentPRs', () => {
         expect(cards(wrapper)).toHaveLength(0)
     })
 
+    it('ne se soulève ni ne se comprime au toucher : la section n’ouvre rien (#2355)', async () => {
+        const wrapper = await mountSection([{ id: 1, type: 'max_weight', value: 120, exercise: { name: 'Squat' } }])
+        const classes = wrapper.find('section').classes()
+
+        expect(classes.filter((classe) => /^(hover|active):/.test(classe))).toEqual([])
+        expect(wrapper.find('section a, section button').exists()).toBe(false)
+    })
+
     it('survives a record whose exercise was deleted under it', async () => {
         const wrapper = await mountSection([{ id: 4, type: 'max_weight', value: 60, exercise: null }])
 
