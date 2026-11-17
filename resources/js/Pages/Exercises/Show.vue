@@ -317,7 +317,7 @@ const scatterData = computed(() => {
                         <div class="mb-4">
                             <h3 class="titre-carte">Progression par Série</h3>
                             <p class="text-text-muted text-xs font-semibold">
-                                Poids des 3 premières séries dans le temps
+                                Poids des 3 premières séries de travail dans le temps
                             </p>
                         </div>
                         <div class="h-64">

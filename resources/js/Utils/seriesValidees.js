@@ -62,8 +62,9 @@ export function volumeDesSeriesValidees(series) {
 
 /**
  * Le volume de travail : celui de la fiche exercice, sans les échauffements
- * validés que `volumeDesSeriesValidees()` (la séance, les objectifs, les
- * statistiques globales) garde.
+ * validés que `volumeDesSeriesValidees()` garde, comme
+ * `Workout::recalculerLeVolume()`, dont le volume de la séance, des objectifs
+ * et des statistiques globales est tiré côté serveur.
  *
  * @param {Array<{is_completed?: boolean, is_warmup?: boolean, weight?: number|null, reps?: number|null}>} series
  * @returns {number}
