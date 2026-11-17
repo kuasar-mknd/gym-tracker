@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Actions\Tools;
 
 use App\Models\User;
+use App\Models\WaterLog;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 
 class FetchWaterTrackerAction
 {
@@ -18,18 +20,25 @@ class FetchWaterTrackerAction
      * La page Hydratation passe le même instant au graphique de la semaine
      * (#2033).
      *
+     * Avec `$prises`, les prises de la semaine que `FetchWaterHistoryAction::prisesDeLaSemaine()`
+     * a lues pour le même instant, le jour s'en tire sans relire la base (#2351).
+     *
      * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge.
-     * @return array{logs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\WaterLog>, todayTotal: float|int}
+     * @param  Collection<int, WaterLog>|null  $prises  Les prises de la semaine, la plus récente en tête.
+     * @return array{logs: Collection<int, WaterLog>, todayTotal: float|int}
      */
-    public function execute(User $user, ?Carbon $maintenant = null): array
+    public function execute(User $user, ?Carbon $maintenant = null, ?Collection $prises = null): array
     {
         $debutDuJour = ($maintenant ?? Carbon::now())->copy()->startOfDay();
+        $finDuJour = $debutDuJour->copy()->endOfDay();
 
-        $todayLogs = $user->waterLogs()
+        $todayLogs = $prises?->filter(
+            static fn (WaterLog $prise): bool => $prise->consumed_at->betweenIncluded($debutDuJour, $finDuJour)
+        )->values() ?? $user->waterLogs()
             // Un intervalle plutot que `whereDate()`, qui rendait inutilisable
             // `water_logs(user_id, consumed_at)`. Meme forme que
             // `WaterLog::scopeConsumedAtBetween`.
-            ->whereBetween('consumed_at', [$debutDuJour, $debutDuJour->copy()->endOfDay()])
+            ->whereBetween('consumed_at', [$debutDuJour, $finDuJour])
             ->orderByDesc('consumed_at')
             ->get();
 

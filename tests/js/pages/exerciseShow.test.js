@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 
 vi.mock('@/Components/Stats/AverageWeightChart.vue', () => ({
     __esModule: true,
@@ -58,10 +58,32 @@ vi.mock('@/Components/Stats/WeightRepsScatterChart.vue', () => ({
 }))
 import { mount, flushPromises } from '@vue/test-utils'
 
-vi.mock('@inertiajs/vue3', () => ({
-    Head: { template: '<div />' },
-    Link: { template: '<a><slot /></a>' },
-}))
+/*
+ * `<Deferred>` montre son créneau `#fallback` tant que la prop n'est pas
+ * arrivée, puis son contenu : `historique.arrive` joue ces deux temps sans
+ * réseau (le vrai composant lit la page d'Inertia).
+ */
+const historique = vi.hoisted(() => ({ arrive: true }))
+
+vi.mock('@inertiajs/vue3', async () => {
+    const { h } = await import('vue')
+
+    return {
+        Head: { template: '<div />' },
+        Link: { template: '<a><slot /></a>' },
+        Deferred: {
+            props: ['data'],
+            setup:
+                (props, { slots }) =>
+                () =>
+                    h(
+                        'div',
+                        { 'data-deferred': props.data },
+                        historique.arrive ? slots.default?.() : slots.fallback?.(),
+                    ),
+        },
+    }
+})
 
 /*
  * The fourteen charts are not loaded at all here.
@@ -127,6 +149,37 @@ const mountPage = async (history = []) => {
 
     return wrapper
 }
+
+describe('l’historique différé (#2351)', () => {
+    afterEach(() => {
+        historique.arrive = true
+    })
+
+    it('montre un squelette qui pulse, sans graphique ni état vide, tant que l’historique n’est pas arrivé', async () => {
+        historique.arrive = false
+        const wrapper = await mountPage(null)
+
+        expect(wrapper.find('[data-deferred="history"]').exists()).toBe(true)
+        expect(wrapper.find('[data-historique-en-attente]').exists()).toBe(true)
+        expect(wrapper.findAll('[data-historique-en-attente] .animate-pulse')).toHaveLength(13)
+        expect(wrapper.text()).not.toContain('Pas assez de données pour afficher les statistiques')
+        expect(wrapper.vm.volumeData).toEqual([])
+    })
+
+    it('remplace le squelette par les graphiques quand l’historique est arrivé', async () => {
+        const wrapper = await mountPage([session('03/02/2026', [{ weight: 100, reps: 5 }])])
+
+        expect(wrapper.find('[data-historique-en-attente]').exists()).toBe(false)
+        expect(wrapper.text()).toContain('Volume total par séance')
+    })
+
+    it('dit que les statistiques manquent quand l’historique arrivé est vide', async () => {
+        const wrapper = await mountPage([])
+
+        expect(wrapper.find('[data-historique-en-attente]').exists()).toBe(false)
+        expect(wrapper.text()).toContain('Pas assez de données pour afficher les statistiques')
+    })
+})
 
 describe('the series feeding the charts', () => {
     it('reads oldest first, whichever way the server sent it', async () => {
