@@ -31,11 +31,12 @@ class WaterController extends Controller
         $user = $this->user();
         $maintenant = now();
 
-        $trackerData = $fetchWaterTracker->execute($user, $maintenant);
+        $prises = $fetchWaterHistory->prisesDeLaSemaine($user, $maintenant);
+        $trackerData = $fetchWaterTracker->execute($user, $maintenant, $prises);
 
         return Inertia::render('Tools/WaterTracker', [
             ...$trackerData,
-            'history' => $fetchWaterHistory->execute($user, $maintenant),
+            'history' => $fetchWaterHistory->execute($user, $maintenant, $prises),
             'goal' => 2500, // Objectif figé, faute d'un réglage par utilisateur
         ]);
     }
