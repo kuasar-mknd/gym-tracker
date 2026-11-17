@@ -511,9 +511,8 @@ final class PersonalRecordService
     {
         $par = [];
 
-        /** @var array{id: int, poids: float, repetitions: int, seance: int, obtenu: string}|null $meilleur1rm */
-        $meilleur1rm = null;
-        $valeur1rm = 0.0;
+        /** @var array<int, array{0: array{id: int, poids: float, repetitions: int, seance: int, obtenu: string}, 1: float}> $candidats */
+        $candidats = [];
 
         foreach (DB::select(self::CLASSEMENT, [$idUtilisateur, $idExercice]) as $workoutLine) {
             if (! is_object($workoutLine)) {
@@ -536,19 +535,20 @@ final class PersonalRecordService
                 }
             }
 
-            // Le flottant PHP fait foi : valeur arrondie, puis l'identifiant
-            // le plus ancien, comme la synchronisation, qui garde la premiere
-            // serie d'une valeur et ne cede qu'a une valeur arrondie plus haute.
-            $valeur = round($this->calculate1RM($serie['poids'], $serie['repetitions']), 2);
-
-            if ($meilleur1rm === null || $valeur > $valeur1rm || ($valeur === $valeur1rm && $serie['id'] < $meilleur1rm['id'])) {
-                $meilleur1rm = $serie;
-                $valeur1rm = $valeur;
-            }
+            $candidats[$serie['id']] = [$serie, round($this->calculate1RM($serie['poids'], $serie['repetitions']), 2)];
         }
 
-        if ($meilleur1rm !== null) {
-            $par['max_1rm'] = $meilleur1rm;
+        // Le flottant PHP fait foi : la valeur arrondie la plus haute, et à
+        // valeur égale la série la plus ancienne, comme la synchronisation, qui
+        // ne cède qu'à une valeur arrondie plus haute.
+        ksort($candidats);
+        $valeur1rm = -INF;
+
+        foreach ($candidats as [$serie, $valeur]) {
+            if ($valeur > $valeur1rm) {
+                $par['max_1rm'] = $serie;
+                $valeur1rm = $valeur;
+            }
         }
 
         return $par;
