@@ -221,7 +221,7 @@ const latestBodyFat = computed(() => {
                             type="number"
                             step="0.1"
                             label="Poids (kg)"
-                            placeholder="75.5"
+                            placeholder="75,5"
                             :error="form.errors.weight"
                             inputmode="decimal"
                             required
@@ -231,7 +231,7 @@ const latestBodyFat = computed(() => {
                             type="number"
                             step="0.1"
                             label="Gras (%)"
-                            placeholder="15.0"
+                            placeholder="15,0"
                             :error="form.errors.body_fat"
                             inputmode="decimal"
                         />

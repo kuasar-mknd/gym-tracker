@@ -158,7 +158,7 @@ describe('PlateCalculator inventory', () => {
     it('shows how many of each plate are owned', () => {
         const wrapper = mountCalculator([{ id: 1, weight: '20', quantity: 4 }])
 
-        expect(wrapper.text()).toContain('x 4')
+        expect(wrapper.text()).toContain('× 4')
     })
 
     it('says the inventory is empty rather than showing a bare grid', () => {

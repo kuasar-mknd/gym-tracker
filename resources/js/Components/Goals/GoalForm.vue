@@ -178,7 +178,7 @@ watch(
                 -->
                 <GlassInput
                     v-model="form.deadline"
-                    label="Échéance (Optionnel)"
+                    label="Échéance (optionnel)"
                     type="date"
                     :min="echeanceMinimale"
                     :error="form.errors.deadline"
@@ -199,7 +199,7 @@ watch(
                 <GlassInput
                     v-if="!estHebdomadaire"
                     v-model="form.start_value"
-                    label="Valeur de Départ (Optionnel)"
+                    label="Valeur de départ (optionnel)"
                     type="number"
                     step="0.01"
                     placeholder="0"
@@ -208,7 +208,7 @@ watch(
                 <GlassInput
                     v-model="form.title"
                     label="Titre du défi"
-                    placeholder="Ex: Bench Press 100kg"
+                    placeholder="Ex. : Bench Press 100kg"
                     required
                     :error="form.errors.title"
                     @input="titleTouched = true"
