@@ -10,6 +10,7 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\PersonalRecordService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Pose chaque série dans sa séance, la plus ancienne d'abord, et rend leurs
@@ -117,3 +118,38 @@ it('lit les records en une requête, avec ou sans égalité à départager', fun
     'avec égalité exacte' => [[[250.75, 27], [280.25, 21]], 476.43],
     'avec la meilleure série répétée' => [[[100.0, 6], [100.0, 6], [100.0, 6]], 120.0],
 ]);
+
+it('garde pour la reconstruction le détenteur posé par la synchronisation, même si la série la plus récente est synchronisée la première', function (float $poidsA, int $repsA, float $poidsB, int $repsB): void {
+    [$user, $exercice, $ids] = departageDuUnRmScene([[$poidsA, $repsA], [$poidsB, $repsB]], false);
+    $service = app(PersonalRecordService::class);
+
+    foreach (array_reverse($ids) as $id) {
+        $service->synchroniserLesRecordsDeLaSerie(Set::query()->findOrFail($id), $user);
+    }
+
+    $parSynchronisation = departageDuUnRmDetenteur($user);
+    $valeur = (float) PersonalRecord::query()->where('user_id', $user->id)->where('type', 'max_1rm')->firstOrFail()->value;
+
+    $service->recompute($user, $exercice->id);
+
+    expect(departageDuUnRmDetenteur($user))->toBe($parSynchronisation)
+        ->and((float) PersonalRecord::query()->where('user_id', $user->id)->where('type', 'max_1rm')->firstOrFail()->value)->toBe($valeur);
+})->with([
+    '60×10 puis 72,73×3' => [60.0, 10, 72.73, 3],
+    '250,75×27 puis 280,25×21' => [250.75, 27, 280.25, 21],
+    '100×6 puis 100×6' => [100.0, 6, 100.0, 6],
+    '44×6 puis 48×3' => [44.0, 6, 48.0, 3],
+]);
+
+it('ne notifie pas un record quand une série plus ancienne reprend le détenteur à valeur égale', function (): void {
+    Notification::fake();
+    [$user, , $ids] = departageDuUnRmScene([[100.0, 6], [100.0, 6]], false);
+    $service = app(PersonalRecordService::class);
+
+    $service->synchroniserLesRecordsDeLaSerie(Set::query()->findOrFail($ids[1]), $user);
+    Notification::fake();
+    $service->synchroniserLesRecordsDeLaSerie(Set::query()->findOrFail($ids[0]), $user);
+
+    expect(departageDuUnRmDetenteur($user))->toBe($ids[0]);
+    Notification::assertNothingSent();
+});

@@ -100,14 +100,22 @@ final class PersonalRecordService
      */
     protected function update(User $user, int $idExercice, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): ?PersonalRecord
     {
-        if ($pr !== null && round($value, 2) <= round((float) $pr->value, 2)) {
+        /*
+         * À valeur arrondie égale, le 1RM revient à la série la plus ancienne
+         * (plus petit identifiant), comme la reconstruction : le détenteur ne
+         * dépend alors pas de l'ordre dans lequel les séries arrivent. Ce
+         * changement de détenteur n'est pas un record battu : rien n'est annoncé.
+         */
+        $cede = $pr !== null && $type === 'max_1rm' && round($value, 2) === round((float) $pr->value, 2) && $set->id < (int) $pr->set_id;
+
+        if ($pr !== null && ! $cede && round($value, 2) <= round((float) $pr->value, 2)) {
             return null;
         }
 
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => $set->workoutLine->workout->debutALHeureMurale()])->save();
 
-        return $pr;
+        return $cede ? null : $pr;
     }
 
     /**
