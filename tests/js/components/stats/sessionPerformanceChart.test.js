@@ -100,7 +100,7 @@ describe('SessionPerformanceChart', () => {
         expect(courbe.spanGaps).toBe(true)
     })
 
-    it('laisse hors du volume la série jamais cochée, comme le volume de la séance', () => {
+    it('laisse hors du volume la série jamais cochée et l’échauffement (#2333)', () => {
         const chart = chartOf([
             session({
                 best_1rm: 116.67,
@@ -112,7 +112,7 @@ describe('SessionPerformanceChart', () => {
             }),
         ])
 
-        expect(seriesOf(chart, 'Volume total')).toEqual([900])
+        expect(seriesOf(chart, 'Volume total')).toEqual([500])
         expect(seriesOf(chart, 'Meilleur 1RM (kg)')).toEqual([116.67])
     })
 
