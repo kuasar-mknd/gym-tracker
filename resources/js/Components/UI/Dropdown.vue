@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps({
     align: {
@@ -21,9 +21,59 @@ const props = defineProps({
     },
 })
 
+const open = ref(false)
+const declencheur = ref(null)
+const contenu = ref(null)
+
+/** Les entrées du menu, dans l'ordre où le clavier les parcourt. */
+const entrees = () => [...(contenu.value?.querySelectorAll('a[href], button:not([disabled])') ?? [])]
+
+/** Le premier contrôle du déclencheur : c'est lui qui reprend le focus à la fermeture au clavier. */
+const controleDuDeclencheur = () => declencheur.value?.querySelector('button, a[href], [tabindex]')
+
 const closeOnEscape = (e) => {
     if (open.value && e.key === 'Escape') {
         open.value = false
+        controleDuDeclencheur()?.focus()
+    }
+}
+
+/**
+ * Un menu qui s'ouvre sans prendre le focus laisse un clavier sur le
+ * déclencheur, derrière un panneau qu'il ne peut pas atteindre sans traverser
+ * le reste de la page (#2355). Ouvert, le focus va à la première entrée, et les
+ * flèches, Début et Fin parcourent le menu.
+ */
+watch(open, async (ouvert) => {
+    if (!ouvert) {
+        return
+    }
+
+    await nextTick()
+    entrees()[0]?.focus()
+})
+
+const parcourir = (e) => {
+    const liste = entrees()
+    const courant = liste.indexOf(document.activeElement)
+    const cible = {
+        ArrowDown: liste[(courant + 1) % liste.length],
+        ArrowUp: liste[(courant - 1 + liste.length) % liste.length],
+        Home: liste[0],
+        End: liste[liste.length - 1],
+    }[e.key]
+
+    if (cible) {
+        e.preventDefault()
+        cible.focus()
+    }
+}
+
+/** Flèche bas sur le déclencheur : ouvre le menu, comme un bouton de menu. */
+const ouvrirAuClavier = (e) => {
+    if (e.key === 'ArrowDown' && !open.value) {
+        e.preventDefault()
+        open.value = true
     }
 }
 
@@ -45,13 +95,11 @@ const alignmentClasses = computed(() => {
         return 'origin-top'
     }
 })
-
-const open = ref(false)
 </script>
 
 <template>
     <div class="relative">
-        <div @click="open = !open">
+        <div ref="declencheur" @click="open = !open" @keydown="ouvrirAuClavier">
             <slot name="trigger" :open="open" />
         </div>
 
@@ -68,9 +116,11 @@ const open = ref(false)
         >
             <div
                 v-show="open"
+                ref="contenu"
                 class="z-modale absolute mt-2 rounded-2xl"
                 :class="[widthClass, alignmentClasses]"
                 @click="open = false"
+                @keydown="parcourir"
             >
                 <!--
                     Ni `style="display: none"` ni `shadow-lg` ici : `v-show`
