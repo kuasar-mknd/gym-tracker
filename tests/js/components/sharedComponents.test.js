@@ -517,7 +517,7 @@ describe('GoalForm', () => {
         for (const type of ['weight', 'frequency', 'volume', 'measurement']) {
             const wrapper = mountGoalForm(goalForm({ type }))
 
-            expect(fieldLabels(wrapper)).toContain('Échéance (optionnel)')
+            expect(fieldLabels(wrapper)).toContain('Échéance (facultatif)')
 
             wrapper.unmount()
         }
@@ -563,7 +563,7 @@ describe('GoalForm', () => {
     it('demands a target and a title, and lets the starting value be left out', () => {
         const wrapper = mountGoalForm(goalForm())
 
-        expect(isMarkedRequired(wrapper, 'Valeur Cible')).toBe(true)
+        expect(isMarkedRequired(wrapper, 'Valeur cible')).toBe(true)
         expect(isMarkedRequired(wrapper, 'Titre du défi')).toBe(true)
         expect(isMarkedRequired(wrapper, 'Valeur de départ')).toBe(false)
         expect(isMarkedRequired(wrapper, 'Échéance')).toBe(false)
@@ -586,9 +586,9 @@ describe('GoalForm', () => {
 
         expect(errorShownFor(wrapper, "Type d'objectif")).toBe('Type inconnu')
         expect(errorShownFor(wrapper, 'Mensuration')).toBe('Mesure inconnue')
-        expect(errorShownFor(wrapper, 'Valeur Cible')).toBe('Cible obligatoire')
+        expect(errorShownFor(wrapper, 'Valeur cible')).toBe('Cible obligatoire')
         expect(errorShownFor(wrapper, 'Titre du défi')).toBe('Titre obligatoire')
-        expect(errorShownFor(wrapper, 'Échéance (optionnel)')).toBe('Date passée')
+        expect(errorShownFor(wrapper, 'Échéance (facultatif)')).toBe('Date passée')
 
         wrapper.unmount()
     })
@@ -758,8 +758,8 @@ describe('GoalForm', () => {
             const wrapper = mountGoalForm(goalForm({ type: 'frequency', period: 'week' }))
 
             expect(fieldLabels(wrapper)).toContain('Séances par semaine')
-            expect(fieldLabels(wrapper)).not.toContain('Valeur Cible')
-            expect(fieldLabels(wrapper)).not.toContain('Valeur de départ (optionnel)')
+            expect(fieldLabels(wrapper)).not.toContain('Valeur cible')
+            expect(fieldLabels(wrapper)).not.toContain('Valeur de départ (facultatif)')
             expect(fieldNamed(wrapper, 'Séances par semaine').attributes('min')).toBe('1')
             expect(fieldNamed(wrapper, 'Séances par semaine').attributes('max')).toBe('14')
 
@@ -769,8 +769,8 @@ describe('GoalForm', () => {
         it('garde le départ et la cible décimale d’un objectif au total', () => {
             const wrapper = mountGoalForm(goalForm({ type: 'frequency', period: 'total' }))
 
-            expect(fieldLabels(wrapper)).toContain('Valeur Cible')
-            expect(fieldLabels(wrapper)).toContain('Valeur de départ (optionnel)')
+            expect(fieldLabels(wrapper)).toContain('Valeur cible')
+            expect(fieldLabels(wrapper)).toContain('Valeur de départ (facultatif)')
 
             wrapper.unmount()
         })
@@ -977,7 +977,7 @@ describe('GoalForm', () => {
 
         await fieldNamed(wrapper, "Type d'objectif").setValue('weight')
         await fieldNamed(wrapper, 'Exercice').setValue('5')
-        await fieldNamed(wrapper, 'Valeur Cible').setValue('120')
+        await fieldNamed(wrapper, 'Valeur cible').setValue('120')
         await fieldNamed(wrapper, 'Valeur de départ').setValue('60')
         await fieldNamed(wrapper, 'Échéance').setValue('2026-12-25')
 

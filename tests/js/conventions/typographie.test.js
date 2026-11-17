@@ -48,14 +48,21 @@ it('ne compose un titre que par un rôle de la charte', () => {
 })
 
 /**
- * La typographie des libellés et des exemples de champ (#2355) : « (optionnel) »
- * en minuscules, « Ex. : » avec ses deux espaces, une virgule décimale dans un
+ * La typographie des libellés et des exemples de champ (#2355) : « (facultatif) », « Ex. : » avec ses deux espaces, une virgule décimale dans un
  * exemple de nombre (fr-CH, `Utils/nombre.js`) et le signe « × » pour une
  * quantité, jamais un « x » de clavier.
  */
 it('écrit les libellés et les exemples de champ à la française', () => {
     const regles = [
-        [/\(Optionnel\)/, '« (optionnel) » prend une minuscule'],
+        [/\([Oo]ptionnel\)/, 'un champ qu’on peut laisser vide se dit « (facultatif) »'],
+        [
+            /Enregistrer les modifications|Mettre à jour le modèle|Enregistrer le modèle|Créer l['’](?:objectif|exercice)/,
+            'la même action se dit « Enregistrer » (édition) ou « Créer » (création)',
+        ],
+        [/:label="[^"]*'[A-ZÉ][a-zéèêàâ]+ [A-ZÉ][a-zéèêàâ]+'/, 'un libellé dynamique s’écrit en casse de phrase'],
+        [/\}\}x\b/, 'une quantité s’écrit « × »'],
+        [/\bBF\b/, 'la masse grasse se dit « MG »'],
+        [/\bProgrammes?\b/, 'un modèle de séance se dit « Modèle », pas « Programme »'],
         [/placeholder="Ex:/, '« Ex. : » et non « Ex: »'],
         [/placeholder="\d+\.\d+"/, 'un exemple de nombre prend la virgule'],
         [/>\s*x \{\{/, 'une quantité s’écrit « × »'],

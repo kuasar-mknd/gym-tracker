@@ -594,12 +594,9 @@ describe('Goals/Edit', () => {
         expect(form.props('measurementTypes')).toEqual(measurementTypes)
     })
 
-    it('annonce qu’on modifie, pas qu’on crée', () => {
-        // The same GoalForm serves the create screen; the label is the only
-        // thing telling the two apart on screen.
-        expect(mountEdit().findComponent({ name: 'GoalForm' }).props('submitLabel')).toBe(
-            'Enregistrer les modifications',
-        )
+    it('garde le libellé « Enregistrer » du formulaire, sans variante « Enregistrer les modifications »', () => {
+        // La page de création passe « Créer » ; l'édition ne passe rien : GoalForm dit « Enregistrer » (#2355).
+        expect(mountEdit().findComponent({ name: 'GoalForm' }).props('submitLabel')).toBeUndefined()
     })
 
     it('enregistre par PUT sur l’objectif édité, pas sur la collection', () => {
