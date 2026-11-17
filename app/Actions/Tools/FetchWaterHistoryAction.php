@@ -74,6 +74,7 @@ class FetchWaterHistoryAction
         return $user->waterLogs()
             ->where('consumed_at', '>=', $maintenant->copy()->subDays(6)->startOfDay())
             ->orderByDesc('consumed_at')
+            ->orderByDesc('id')
             ->get();
     }
 }

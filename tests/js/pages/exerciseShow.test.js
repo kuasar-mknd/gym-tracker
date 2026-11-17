@@ -161,7 +161,7 @@ describe('l’historique différé (#2351)', () => {
 
         expect(wrapper.find('[data-deferred="history"]').exists()).toBe(true)
         expect(wrapper.find('[data-historique-en-attente]').exists()).toBe(true)
-        expect(wrapper.findAll('[data-historique-en-attente] .animate-pulse')).toHaveLength(7)
+        expect(wrapper.findAll('[data-historique-en-attente] .animate-pulse')).toHaveLength(13)
         expect(wrapper.text()).not.toContain('Pas assez de données pour afficher les statistiques')
         expect(wrapper.vm.volumeData).toEqual([])
     })

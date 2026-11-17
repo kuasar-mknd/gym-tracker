@@ -178,7 +178,7 @@ it('tient la fenêtre de 365 jours à la seconde près, comme la jointure', func
         ->and($apres->all())->toEqual($avant->all());
 });
 
-it('départage deux lignes de la même séance par la clef primaire croissante, comme la jointure', function (): void {
+it('départage deux lignes de la même séance par la clef primaire croissante, un ordre déterministe', function (): void {
     Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
 
     $compte = User::factory()->create();
@@ -189,8 +189,7 @@ it('départage deux lignes de la même séance par la clef primaire croissante, 
 
     $ids = app(FetchExerciseHistoryAction::class)->execute($compte, $exercice)->pluck('id')->all();
 
-    expect($ids)->toBe([$premiere->id, $seconde->id])
-        ->and(historiqueDAvantLaLectureDenormalisee($compte, $exercice)->pluck('id')->all())->toBe($ids);
+    expect($ids)->toBe([$premiere->id, $seconde->id]);
 });
 
 it('lit l’historique en trois requêtes, sans jointure sur workouts ni tri en PHP', function (): void {
@@ -242,4 +241,20 @@ it('ne lit pas l’historique dans la page, seulement dans la prop différée', 
 
     expect($lecturesDeLignes($page))->toBe([])
         ->and($lecturesDeLignes($differee))->toHaveCount(1);
+});
+
+it('secourt la prop différée quand la lecture échoue, au lieu de répondre 500', function (): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $this->mock(FetchExerciseHistoryAction::class)->shouldReceive('execute')->andThrow(new RuntimeException('lecture impossible'));
+
+    $reponse = actingAs($compte)->get(route('exercises.show', $exercice), [
+        'X-Inertia' => 'true',
+        'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
+        'X-Inertia-Partial-Component' => 'Exercises/Show',
+        'X-Inertia-Partial-Data' => 'history',
+    ]);
+
+    $reponse->assertOk();
+    expect($reponse->json('rescuedProps'))->toBe(['history']);
 });

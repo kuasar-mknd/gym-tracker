@@ -136,3 +136,18 @@ it('sert la page Hydratation d’une seule lecture des prises', function (): voi
         ->and($reponse->inertiaProps('todayTotal'))->toBe(400)
         ->and($reponse->inertiaProps('history.6.total'))->toBe(400);
 });
+
+it('départage deux prises de la même seconde par l’identifiant décroissant', function (): void {
+    $maintenant = Carbon::parse('2026-06-15 12:00:00');
+    Carbon::setTestNow($maintenant);
+
+    $compte = User::factory()->create();
+    $premiere = WaterLog::factory()->create(['user_id' => $compte->id, 'consumed_at' => Carbon::parse('2026-06-15 09:00:00'), 'amount' => 200]);
+    $seconde = WaterLog::factory()->create(['user_id' => $compte->id, 'consumed_at' => Carbon::parse('2026-06-15 09:00:00'), 'amount' => 300]);
+
+    $prises = app(FetchWaterHistoryAction::class)->prisesDeLaSemaine($compte, $maintenant);
+    $compteur = app(FetchWaterTrackerAction::class)->execute($compte, $maintenant, $prises);
+
+    expect($prises->pluck('id')->all())->toBe([$seconde->id, $premiere->id])
+        ->and($compteur['logs']->pluck('id')->all())->toBe([$seconde->id, $premiere->id]);
+});

@@ -44,10 +44,10 @@ class FetchExerciseHistoryAction
          * `workout_started_at`), sans jointure sur `workouts` : le filtre et
          * l'ordre tiennent dans l'index `(user_id, exercise_id,
          * workout_started_at)`. Une séance sans début a une date nulle, que
-         * `>=` écarte. À date égale (deux lignes du même exercice dans une
-         * séance), la clef primaire croissante, l'ordre que le tri stable en
-         * PHP laissait sur des lignes lues par l'index de l'exercice : sur
-         * une fenêtre d'un an d'un seul exercice, le tri en SQL ne coûte rien.
+         * `>=` écarte. À date égale, la clef primaire croissante : l'ordre
+         * est désormais déterministe. L'ancienne jointure entrait par
+         * `workouts_user_id_started_at_index`, et l'ordre des égalités venait
+         * de l'id de séance, que rien ne garantissait.
          * La même fenêtre que `getExercise1RMProgress`.
          */
         return WorkoutLine::query()

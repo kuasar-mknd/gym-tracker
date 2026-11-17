@@ -34,7 +34,7 @@ class ExerciseController extends Controller
         return Inertia::render('Exercises/Show', [
             'exercise' => $exercise,
             'progress' => fn (): array => $exerciseStats->getExercise1RMProgress($user, $exercise->id, 365),
-            'history' => Inertia::defer(fn (): Collection => $fetchExerciseHistory->execute($user, $exercise)),
+            'history' => Inertia::defer(fn (): Collection => $fetchExerciseHistory->execute($user, $exercise), rescue: true),
         ]);
     }
 
