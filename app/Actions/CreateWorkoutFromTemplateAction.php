@@ -60,7 +60,7 @@ final readonly class CreateWorkoutFromTemplateAction
      * et chaque série avec son rang, ses valeurs et sa clé.
      *
      * Une seule source pour la séance que crée l'action et pour celle que la
-     * file rejoue sans réseau (`FetchWorkoutTemplatesAction::lancements()`,
+     * file rejoue sans réseau (`FetchWorkoutTemplatesAction::execute()`,
      * #2049) : les mêmes clés, les mêmes valeurs. Les répétitions et le poids
      * sont ramenés sous les plafonds d'une série (`Set::ramenerALaBorne()`) :
      * un modèle enregistré avant ces plafonds peut les dépasser, et la page

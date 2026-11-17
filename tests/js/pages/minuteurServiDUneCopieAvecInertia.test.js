@@ -212,7 +212,7 @@ it('un préréglage ne s’ouvre pas en modification sur la copie, et la mise à
     })
 
     try {
-        bouton('Mettre à jour').click()
+        bouton('Enregistrer').click()
         await vi.waitUntil(() => envoye, { timeout: 3000 })
     } finally {
         arreter()

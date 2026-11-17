@@ -231,6 +231,7 @@ return [
         'exercises.*.sets.*.is_warmup' => 'échauffement',
         'exercises.*.sets.*.reps' => 'répétitions',
         'exercises.*.sets.*.weight' => 'poids',
+        'fin_choisie' => 'heure de fin choisie',
         'goal' => 'objectif',
         'goal_times_per_week' => 'objectif par semaine',
         'height' => 'taille',

@@ -603,6 +603,19 @@ describe('la fin d’une séance en file', () => {
     const fin = (workoutId, endedAt = '2026-10-19T18:42:00.000Z') =>
         entree('patch', '/api/v1/workouts/finish', { workout_id: workoutId, ended_at: endedAt })
 
+    it('clôt une séance oubliée à l’heure choisie (#2319), pas à l’heure du geste', () => {
+        const laFin = entree('patch', '/api/v1/workouts/finish', {
+            workout_id: 5,
+            ended_at: '2026-10-19T18:42:00.000Z',
+            fin_choisie: '2026-10-18T09:30:00.000Z',
+        })
+
+        const copie = superposerLaFile(seance(), [laFin])
+
+        expect(copie.ended_at).toBe('2026-10-18T09:30:00.000Z')
+        expect(copie._finEnAttente).toBe(laFin.id)
+    })
+
     it('clôt la séance qu’elle nomme, à l’heure du geste, et dit quelle entrée l’attend', () => {
         const laFin = fin(5)
 

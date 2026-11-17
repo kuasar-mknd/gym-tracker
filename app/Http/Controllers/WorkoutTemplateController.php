@@ -26,10 +26,7 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
-        return Inertia::render('Workouts/Templates/Index', [
-            'templates' => $fetchWorkoutTemplatesAction->execute($this->user()),
-            'lancements' => $fetchWorkoutTemplatesAction->lancements($this->user()),
-        ]);
+        return Inertia::render('Workouts/Templates/Index', $fetchWorkoutTemplatesAction->execute($this->user()));
     }
 
     public function create(): \Inertia\Response

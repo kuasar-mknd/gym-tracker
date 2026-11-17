@@ -60,7 +60,8 @@ const seanceDuServeur = (serveur, id = 5) => ({
         ? {
               id: 5,
               name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
-              started_at: '2026-10-12T17:00:00.000000Z',
+              // Ouverte depuis longtemps, sauf quand le test pose `debutDeLaSeance` : au-delà de douze heures, « Terminer » propose une heure (#2319).
+              started_at: serveur.debutDeLaSeance ?? '2026-10-12T17:00:00.000000Z',
               // Close par l'API (#2049) : la fin que le faux serveur a gardée.
               ended_at: serveur.fins?.get(5) ?? null,
               notes: serveur.reglagesDeLaSeance?.notes ?? null,

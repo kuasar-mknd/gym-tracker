@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\Gate;
  * (`App\Support\HeureDeLAppareil`), placé sur la lecture unique de
  * l'horloge du serveur et borné (`Workout::finBornee()`) : jamais après
  * maintenant, jamais avant le début.
+ * Une séance oubliée se termine à l'heure que la personne a choisie
+ * (`$finChoisie`, #2319), une heure absolue que l'âge du geste ne remplace pas :
+ * bornée de même, jamais après maintenant ni avant le début.
  * Une séance déjà close se rend telle quelle, sa première fin gardée : un
  * rejeu ne déplace pas la fin, même avec une autre heure.
  *
@@ -42,32 +45,37 @@ final readonly class TerminerLaSeanceAction
      * fois, sous le verrou : l'appelant n'a pas à la charger avant. L'horloge
      * se lit une fois, en tête, avant l'attente du verrou (`.ai/rules/horloge.md`).
      *
+     * @param  CarbonInterface|null  $finChoisie  l'heure choisie pour une séance oubliée, ou null pour la fin du geste
+     * @param  CarbonInterface|null  $maintenant  l'instant que la requête a lu pour juger la fin choisie (`WorkoutFinishRequest::instantLu()`) : la borne le reprend ; lu ici sans lui
+     *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Si la séance n'existe pas.
      * @throws \Illuminate\Auth\Access\AuthorizationException Si le compte n'a pas le droit de la voir.
      * @throws \App\Exceptions\LeVerrouDesSeancesEstPris Si le verrou du compte reste pris trop longtemps.
      */
-    public function terminerCelleDuCompte(User $compte, int $seanceId, ?int $ageDuGeste): Workout
+    public function terminerCelleDuCompte(User $compte, int $seanceId, ?int $ageDuGeste, ?CarbonInterface $finChoisie = null, ?CarbonInterface $maintenant = null): Workout
     {
-        $maintenant = now();
+        $maintenant ??= now();
 
         /** @var Workout $close */
-        $close = DemarrerUneSeanceAction::sousLeVerrouDuCompte($compte->id, function () use ($compte, $seanceId, $ageDuGeste, $maintenant): Workout {
+        $close = DemarrerUneSeanceAction::sousLeVerrouDuCompte($compte->id, function () use ($compte, $seanceId, $ageDuGeste, $maintenant, $finChoisie): Workout {
             $seance = Workout::query()->findOrFail($seanceId);
             Gate::forUser($compte)->authorize('view', $seance);
 
-            return $this->ecrireLaFin($seance, $ageDuGeste, $maintenant);
+            return $this->ecrireLaFin($seance, $ageDuGeste, $maintenant, $finChoisie);
         });
 
         return $close;
     }
 
-    private function ecrireLaFin(Workout $seance, ?int $ageDuGeste, CarbonInterface $maintenant): Workout
+    private function ecrireLaFin(Workout $seance, ?int $ageDuGeste, CarbonInterface $maintenant, ?CarbonInterface $finChoisie): Workout
     {
         if ($seance->ended_at !== null) {
             return $seance;
         }
 
-        $seance->ended_at = $seance->finBornee($ageDuGeste, $maintenant);
+        $seance->ended_at = $finChoisie !== null
+            ? $seance->finChoisieBornee($finChoisie, $maintenant)
+            : $seance->finBornee($ageDuGeste, $maintenant);
         // Les évènements de la séance oublient la séance en cours du cache, et
         // envoient les travaux des succès et des objectifs.
         $seance->save();

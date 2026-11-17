@@ -178,7 +178,7 @@ watch(
                 -->
                 <GlassInput
                     v-model="form.deadline"
-                    label="Échéance (optionnel)"
+                    label="Échéance (facultatif)"
                     type="date"
                     :min="echeanceMinimale"
                     :error="form.errors.deadline"
@@ -188,7 +188,7 @@ watch(
             <div class="space-y-4">
                 <GlassInput
                     v-model="form.target_value"
-                    :label="estHebdomadaire ? 'Séances par semaine' : 'Valeur Cible'"
+                    :label="estHebdomadaire ? 'Séances par semaine' : 'Valeur cible'"
                     type="number"
                     :step="estHebdomadaire ? 1 : 0.01"
                     :min="estHebdomadaire ? 1 : undefined"
@@ -199,7 +199,7 @@ watch(
                 <GlassInput
                     v-if="!estHebdomadaire"
                     v-model="form.start_value"
-                    label="Valeur de départ (optionnel)"
+                    label="Valeur de départ (facultatif)"
                     type="number"
                     step="0.01"
                     placeholder="0"

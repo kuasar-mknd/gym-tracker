@@ -115,7 +115,7 @@
                         >
                             <div class="col-span-3">Pourcentage</div>
                             <div class="col-span-3">Répétitions</div>
-                            <div class="col-span-5">Label (optionnel)</div>
+                            <div class="col-span-5">Label (facultatif)</div>
                             <div class="col-span-1"></div>
                         </div>
 
