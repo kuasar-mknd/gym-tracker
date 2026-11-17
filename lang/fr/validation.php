@@ -165,7 +165,6 @@ return [
         'name' => 'nom',
         'username' => 'nom d\'utilisateur',
         'email' => 'adresse e-mail',
-        'fin_choisie' => 'fin de séance',
         'first_name' => 'prénom',
         'last_name' => 'nom',
         'password' => 'mot de passe',
