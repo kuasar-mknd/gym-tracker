@@ -59,7 +59,7 @@ const isEditing = computed(() => !!form.id)
  * se supprime (#2048) : ces boutons le disent d'avance. Le minuteur, lui,
  * tourne, et un préréglage s'y charge. « Modifier le minuteur » remplirait le
  * formulaire des valeurs de la copie, que la page garde quand elle se recharge
- * au retour du réseau (elle n'est pas remontée) : « Mettre à jour » les aurait
+ * au retour du réseau (elle n'est pas remontée) : « Enregistrer » les aurait
  * renvoyées par-dessus le préréglage du serveur, que la liste montre alors.
  */
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
