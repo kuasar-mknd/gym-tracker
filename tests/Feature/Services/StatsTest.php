@@ -245,7 +245,7 @@ test('stats page provides duration history', function (): void {
     $user = User::factory()->create();
 
     // Create a workout with duration
-    $workout = Workout::factory()->create([
+    $workout = Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => now()->subHours(2),
         'ended_at' => now()->subHour(), // 60 minutes duration

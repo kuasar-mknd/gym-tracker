@@ -32,13 +32,13 @@ function seanceSansNom(): array
 {
     $user = User::factory()->create();
 
-    $workout = Workout::factory()->create([
+    $workout = Workout::withoutEvents(fn (): Workout => Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'name' => null,
         'started_at' => now()->subDay()->setTime(10, 0),
         'ended_at' => now()->subDay()->setTime(11, 0),
         'workout_volume' => 1000,
-    ]);
+    ]));
 
     return [$user, $workout];
 }

@@ -332,14 +332,15 @@ final class AppServiceProvider extends ServiceProvider
             app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $user->id);
 
             /*
-             * Une série cochée ou décochée dans une séance terminée la fait
-             * devenir faite ou cesser de l'être : la série de jours se
+             * Une série cochée ou décochée, ou qui devient échauffement ou
+             * série de travail, dans une séance terminée la fait devenir
+             * faite ou cesser de l'être (#2333) : la série de jours se
              * reconstruit (#2171). Dans une séance en cours, où se cochent les
              * séries, rien ne change pour elle et rien n'est lu. La fin se relit en
              * base : la séance en mémoire date d'avant l'écriture, et une fin
              * arrivée entre-temps a déjà recalculé sans cette série.
              */
-            if (($set->wasChanged('is_completed') || ($set->wasRecentlyCreated && $set->is_completed)) && Workout::query()->whereKey($set->workoutLine->workout->getKey())->whereNotNull('ended_at')->exists()) {
+            if (($set->wasChanged(['is_completed', 'is_warmup']) || ($set->wasRecentlyCreated && $set->is_completed)) && Workout::query()->whereKey($set->workoutLine->workout->getKey())->whereNotNull('ended_at')->exists()) {
                 app(StreakService::class)->recalculerPourLaSeance($set->workoutLine->workout);
                 self::oublierLesStatsDeSeancesApresLaTransaction((int) $user->id);
             }

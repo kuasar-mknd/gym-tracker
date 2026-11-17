@@ -66,12 +66,12 @@ function seancesFaitesCompteMele(): User
 {
     $compte = User::factory()->create();
 
-    // Faites.
+    // Faites (l'échauffement coché seul ne l'est plus, #2333).
     seanceFaiteOuNon($compte, terminee: true, series: [true]);
     seanceFaiteOuNon($compte, terminee: true, series: [false, true]);
-    seanceFaiteOuNon($compte, terminee: true, series: [true], echauffement: true);
 
     // Pas faites.
+    seanceFaiteOuNon($compte, terminee: true, series: [true], echauffement: true);
     seanceFaiteOuNon($compte, terminee: false, series: [true]);
     seanceFaiteOuNon($compte, terminee: true, series: []);
     seanceFaiteOuNon($compte, terminee: true, series: [], lignesVides: 2);
@@ -83,11 +83,11 @@ function seancesFaitesCompteMele(): User
     return $compte;
 }
 
-it('compte trois séances faites, par la relation comme par withCount', function (): void {
+it('compte deux séances faites, par la relation comme par withCount', function (): void {
     $compte = seancesFaitesCompteMele();
 
-    expect($compte->seancesFaites()->count())->toBe(3)
-        ->and(User::query()->withCount('seancesFaites')->findOrFail($compte->id)->seances_faites_count)->toBe(3)
+    expect($compte->seancesFaites()->count())->toBe(2)
+        ->and(User::query()->withCount('seancesFaites')->findOrFail($compte->id)->seances_faites_count)->toBe(2)
         ->and($compte->workouts()->count())->toBe(7);
 });
 
@@ -95,8 +95,8 @@ it('débloque un succès de séances au seuil des séances faites, pas au-delà'
     Notification::fake();
     $compte = seancesFaitesCompteMele();
 
-    $atteint = Achievement::factory()->create(['type' => 'count', 'threshold' => 3, 'slug' => 'trois-faites']);
-    $manque = Achievement::factory()->create(['type' => 'count', 'threshold' => 4, 'slug' => 'quatre-faites']);
+    $atteint = Achievement::factory()->create(['type' => 'count', 'threshold' => 2, 'slug' => 'deux-faites']);
+    $manque = Achievement::factory()->create(['type' => 'count', 'threshold' => 3, 'slug' => 'trois-faites']);
 
     app(AchievementService::class)->syncAchievements($compte);
 
@@ -113,7 +113,7 @@ it('compte les mêmes séances faites par le lot des objectifs et par le chemin 
         'exercise_id' => null,
         'start_value' => 0,
         'current_value' => 0,
-        'target_value' => 3,
+        'target_value' => 2,
         'completed_at' => null,
     ]);
 
@@ -125,17 +125,17 @@ it('compte les mêmes séances faites par le lot des objectifs et par le chemin 
         'exercise_id' => null,
         'start_value' => 0,
         'current_value' => 0,
-        'target_value' => 4,
+        'target_value' => 3,
     ]);
 
     app(GoalService::class)->updateGoalProgress($seul);
 
     $parLeLot->refresh();
 
-    expect($parLeLot->current_value)->toBe(3.0)
+    expect($parLeLot->current_value)->toBe(2.0)
         ->and($parLeLot->completed_at)->not->toBeNull()
-        ->and($seul->current_value)->toBe(3.0)
-        ->and($seul->progress_pct)->toBe(75.0)
+        ->and($seul->current_value)->toBe(2.0)
+        ->and($seul->progress_pct)->toEqualWithDelta(66.67, 0.01)
         ->and($seul->completed_at)->toBeNull();
 });
 
@@ -146,7 +146,7 @@ it('compte les mêmes jours faits pour la série de jours, son succès et le con
     $compte = User::factory()->create();
     $jour = fn (int $recul): Carbon => Carbon::parse('2026-10-07 10:00:00')->subDays($recul);
 
-    // Sept jours de suite, chacun avec une sorte de séance : trois sont faits.
+    // Sept jours de suite, chacun avec une sorte de séance : deux sont faits.
     seanceFaiteOuNon($compte, terminee: true, series: [true], debut: $jour(6));
     seanceFaiteOuNon($compte, terminee: true, series: [true], echauffement: true, debut: $jour(5));
     seanceFaiteOuNon($compte, terminee: false, series: [true], debut: $jour(4));
@@ -159,16 +159,16 @@ it('compte les mêmes jours faits pour la série de jours, son succès et le con
     $autre = User::factory()->create();
     seanceFaiteOuNon($autre, terminee: true, series: [true], debut: $jour(3));
 
-    $deux = Achievement::factory()->create(['type' => 'streak', 'threshold' => 2, 'slug' => 'deux-jours-faits']);
-    Achievement::factory()->create(['type' => 'streak', 'threshold' => 3, 'slug' => 'trois-jours-faits']);
+    $un = Achievement::factory()->create(['type' => 'streak', 'threshold' => 1, 'slug' => 'un-jour-fait']);
+    Achievement::factory()->create(['type' => 'streak', 'threshold' => 2, 'slug' => 'deux-jours-faits']);
 
     $series = app(StreakService::class);
     $series->recalculerDepuisLesFaits($compte);
     $series->recalculerDepuisLesFaits($autre);
     app(AchievementService::class)->syncAchievements($compte);
 
-    expect($series->serieDepuisLesFaits($compte))->toBe(['derniere' => '2026-10-07 10:00:00', 'enCours' => 1, 'plusLongue' => 2])
-        ->and($compte->achievements()->pluck('achievements.id')->all())->toBe([$deux->id]);
+    expect($series->serieDepuisLesFaits($compte))->toBe(['derniere' => '2026-10-07 10:00:00', 'enCours' => 1, 'plusLongue' => 1])
+        ->and($compte->achievements()->pluck('achievements.id')->all())->toBe([$un->id]);
 
     test()->artisan('app:verify-data-coherence')
         ->expectsOutputToContain('OK date de dernière séance')

@@ -50,10 +50,8 @@ final class WorkoutStatsService
              *
              * @return array<int, DurationHistoryPoint>
              */
-            fn (): array => Workout::query()
+            fn (): array => $user->seancesFaites()
                 ->select(['name', 'started_at', 'started_at_offset', 'ended_at', 'ended_at_offset'])
-                ->where('user_id', $user->id)
-                ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
