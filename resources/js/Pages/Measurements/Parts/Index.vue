@@ -118,6 +118,7 @@ const selectCommonPart = (part) => {
                             <GlassSelect
                                 v-model="form.unit"
                                 label="Unité"
+                                :error="form.errors.unit"
                                 :options="[
                                     { value: 'cm', label: 'cm' },
                                     { value: 'in', label: 'in' },
