@@ -6,7 +6,7 @@ import { Head, Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
-import { peutEtablirUnRecord, seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
+import { peutEtablirUnRecord, seriesDeTravail, seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
 
 const OneRepMaxChart = graphiqueAsynchrone(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const VolumeTrendChart = graphiqueAsynchrone(() => import('@/Components/Stats/VolumeTrendChart.vue'))
@@ -72,6 +72,7 @@ const seances = computed(() => {
     return [...props.history].reverse().map((session) => ({
         date: session.formatted_date.split('/').slice(0, 2).join('/'), // Just dd/mm
         series: seriesValidees(session.sets),
+        seriesDeTravail: seriesDeTravail(session.sets),
         seriesDuRecord: session.sets.filter(peutEtablirUnRecord),
         meilleur1rm: session.best_1rm ?? null,
     }))
@@ -87,7 +88,7 @@ const volumeData = computed(() =>
 const maxRepsData = computed(() =>
     seances.value.map((session) => ({
         date: session.date,
-        reps: session.series.length > 0 ? Math.max(...session.series.map((s) => s.reps || 0)) : null,
+        reps: session.seriesDeTravail.length > 0 ? Math.max(...session.seriesDeTravail.map((s) => s.reps || 0)) : null,
     })),
 )
 
@@ -117,7 +118,7 @@ const maxWeightData = computed(() =>
 
 const averageWeightData = computed(() =>
     seances.value.map((session) => {
-        const setsWithWeight = session.series.filter((s) => parseFloat(s.weight) > 0)
+        const setsWithWeight = session.seriesDeTravail.filter((s) => parseFloat(s.weight) > 0)
         const totalWeight = setsWithWeight.reduce((sum, s) => sum + parseFloat(s.weight), 0)
         return {
             date: session.date,

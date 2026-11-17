@@ -304,6 +304,32 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.maxWeightData[0].weight).toBe(100)
     })
 
+    it('leaves a ticked warm-up out of Répétitions max and Charge moyenne, as out of the records (#2333)', async () => {
+        const wrapper = await mountPage([
+            session('13/06/2026', [
+                { weight: 100, reps: 5 },
+                { weight: 20, reps: 15, is_warmup: true },
+                { weight: 60, reps: 12, is_warmup: true },
+            ]),
+            session('11/06/2026', [{ weight: 40, reps: 20, is_warmup: true }]),
+        ])
+
+        expect(wrapper.vm.maxRepsData.map((point) => point.reps)).toEqual([null, 5])
+        expect(wrapper.vm.averageWeightData.map((point) => point.weight)).toEqual([null, 100])
+        expect(wrapper.vm.maxWeightData.map((point) => point.weight)).toEqual([null, 100])
+    })
+
+    it('keeps a bodyweight working set in Répétitions max', async () => {
+        const wrapper = await mountPage([
+            session('13/06/2026', [
+                { weight: 0, reps: 15 },
+                { weight: 80, reps: 5 },
+            ]),
+        ])
+
+        expect(wrapper.vm.maxRepsData[0].reps).toBe(15)
+    })
+
     it('draws no point at 0 kg for a session abandoned before its first set', async () => {
         const wrapper = await mountPage([
             session('15/06/2026', [{ weight: 100, reps: 5 }], 116.67),
