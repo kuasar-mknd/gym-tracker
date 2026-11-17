@@ -535,7 +535,7 @@ final class PersonalRecordService
                 }
             }
 
-            $candidats[$serie['id']] = [$serie, round($this->calculate1RM($serie['poids'], $serie['repetitions']), 2)];
+            $candidats[$serie['id']] = [$serie, $this->calculate1RM($serie['poids'], $serie['repetitions'])];
         }
 
         // Le flottant PHP fait foi : la valeur arrondie la plus haute, et à
