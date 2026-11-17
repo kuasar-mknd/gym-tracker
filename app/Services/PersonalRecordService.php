@@ -106,16 +106,18 @@ final class PersonalRecordService
          * dépend alors pas de l'ordre dans lequel les séries arrivent. Ce
          * changement de détenteur n'est pas un record battu : rien n'est annoncé.
          */
-        $cede = $pr !== null && $type === 'max_1rm' && round($value, 2) === round((float) $pr->value, 2) && $set->id < (int) $pr->set_id;
+        $parLAnciennete = (int) ($type === 'max_1rm');
 
-        if ($pr !== null && ! $cede && round($value, 2) <= round((float) $pr->value, 2)) {
+        if ($pr !== null && [round($value, 2), -$set->id * $parLAnciennete] <= [round((float) $pr->value, 2), -(int) $pr->set_id * $parLAnciennete]) {
             return null;
         }
+
+        $battu = round($value, 2) > round((float) $pr?->value, 2);
 
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => $set->workoutLine->workout->debutALHeureMurale()])->save();
 
-        return $cede ? null : $pr;
+        return $battu ? $pr : null;
     }
 
     /**
