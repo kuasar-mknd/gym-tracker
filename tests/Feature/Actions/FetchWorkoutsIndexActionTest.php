@@ -148,7 +148,7 @@ it('borne les deux historiques aux vingt memes dernieres seances, de la plus anc
 
     // Vingt-et-une : une de plus que la borne, sinon la borne ne se voit pas.
     for ($jour = 1; $jour <= 21; $jour++) {
-        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour));
+        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour), faite: true);
     }
 
     $charts = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
@@ -179,7 +179,7 @@ it('aligne le volume par seance sur la duree, seance pour seance', function (): 
     $user = User::factory()->create();
 
     for ($jour = 1; $jour <= 30; $jour++) {
-        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour));
+        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour), faite: true);
     }
 
     $charts = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];

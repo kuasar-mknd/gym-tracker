@@ -144,7 +144,7 @@ final class VolumeStatsService
      * Le volume des dernières séances terminées, une par point, de la plus
      * ancienne à la plus récente.
      *
-     * Les vingt DERNIÈRES, comme l'historique des durées qui lui fait face :
+     * Les vingt DERNIÈRES (comme l'historique des durées, qui lit pourtant les séances faites : celui-ci lit les séances terminées, ended_at seul, et compte les échauffements dans le volume) :
      * le tri croissant suivi de la limite rendait les vingt premières du
      * compte, et le graphique ne bougeait plus après la vingtième séance
      * (#1957).

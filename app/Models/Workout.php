@@ -169,6 +169,26 @@ class Workout extends Model
     }
 
     /**
+     * Les séances qui portent une série de travail cochée : ni l'échauffement
+     * ni une série décochée ne comptent (#2333). La définition vit ici, pour
+     * `User::seancesFaites()` (qui y ajoute la fin) et le rappel du soir (qui
+     * n'attend pas la fin).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $requete
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeAvecUneSerieDeTravailCochee(\Illuminate\Database\Eloquent\Builder $requete): \Illuminate\Database\Eloquent\Builder
+    {
+        return $requete->whereExists(fn (\Illuminate\Database\Query\Builder $seriesCochees): \Illuminate\Database\Query\Builder => $seriesCochees
+            ->selectRaw('1')
+            ->from('workout_lines')
+            ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->whereColumn('workout_lines.workout_id', 'workouts.id')
+            ->where('sets.is_completed', true)
+            ->where('sets.is_warmup', false));
+    }
+
+    /**
      * Le décalage du début et de la fin ne sort pas du modèle : l'instant
      * qu'il sert (`…Z`) le porte déjà.
      *
