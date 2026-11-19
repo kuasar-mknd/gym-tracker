@@ -3415,6 +3415,16 @@ describe('SyncService le compte d’une écriture directe', () => {
         expect(request.mock.calls[0][0].headers['X-Compte-De-L-Ecriture']).toBe(COMPTE)
     })
 
+    it('ne l’envoie pas sans compte connecté', async () => {
+        request.mockResolvedValue({ data: {} })
+        const service = await freshService({ compte: null })
+        await service.pending
+
+        await service.patch('/api/v1/sets/5', { reps: 8 }).catch(() => {})
+
+        expect(request.mock.calls.at(-1)?.[0].headers?.['X-Compte-De-L-Ecriture']).toBeUndefined()
+    })
+
     it('ne l’envoie pas avec une lecture', async () => {
         request.mockResolvedValue({ data: {} })
         const service = await chargé()

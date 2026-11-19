@@ -161,14 +161,6 @@ const ENTETE_DU_COMPTE = 'X-Compte-De-L-Ecriture'
  */
 export const ENTETE_DE_L_HEURE_DE_L_APPAREIL = 'X-Heure-De-L-Appareil'
 
-/**
- * La requête telle qu'elle part maintenant : avec l'heure de l'appareil à son
- * départ (`ENTETE_DE_L_HEURE_DE_L_APPAREIL`).
- *
- * @template {{ headers?: Record<string, string> }} Requete
- * @param {Requete} requete
- * @returns {Requete}
- */
 const ENTETES_REJOUABLES = ['idempotency-key', ENTETE_DE_L_HEURE_DE_L_APPAREIL.toLowerCase()]
 
 /** Vrai quand l'adresse d'une entrée mène hors de l'origine de la page, ou n'est pas une adresse. */
@@ -184,6 +176,14 @@ const sortDeLOrigine = (url) => {
 const entetesRejouables = (entetes) =>
     Object.fromEntries(Object.entries(entetes ?? {}).filter(([nom]) => ENTETES_REJOUABLES.includes(nom.toLowerCase())))
 
+/**
+ * La requête telle qu'elle part maintenant : avec l'heure de l'appareil à son
+ * départ (`ENTETE_DE_L_HEURE_DE_L_APPAREIL`).
+ *
+ * @template {{ headers?: Record<string, string> }} Requete
+ * @param {Requete} requete
+ * @returns {Requete}
+ */
 const auDepart = (requete) => ({
     ...requete,
     headers: { ...requete.headers, [ENTETE_DE_L_HEURE_DE_L_APPAREIL]: new Date().toISOString() },

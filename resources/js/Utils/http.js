@@ -52,6 +52,14 @@ export class ErreurReseau extends Error {
     }
 }
 
+/** Une adresse qui sort de l'origine de la page : refusée, ni réseau absent ni réponse du serveur, donc jamais mise en file. */
+export class ErreurHorsOrigine extends Error {
+    constructor(url) {
+        super(`La requête ${url} sort de l'origine de la page.`)
+        this.name = 'ErreurHorsOrigine'
+    }
+}
+
 const lireLeCorps = async (reponse) => {
     if (reponse.status === 204) {
         return null
@@ -83,7 +91,7 @@ export const http = async (config) => {
 
     // Le jeton CSRF ne part jamais hors de l'origine de la page : une adresse venue du stockage n'est pas sûre.
     if (sortDeLOrigine(url)) {
-        throw new ErreurReseau(url, new Error('Adresse hors de l’origine de la page'))
+        throw new ErreurHorsOrigine(url)
     }
 
     const jeton = jetonCsrf()

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { http, ErreurHttp, ErreurReseau } from '@/Utils/http'
+import { http, ErreurHttp, ErreurReseau, ErreurHorsOrigine } from '@/Utils/http'
 import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 const reponse = (corps, { status = 200, type = 'application/json', entetes = {} } = {}) => ({
@@ -181,14 +181,25 @@ describe('http et l’état du réseau', () => {
 })
 
 describe('http hors de l’origine de la page', () => {
-    it.each(['https://autre.example/api/v1/sets', '//autre.example/api/v1/sets'])(
-        'n’envoie rien, jeton CSRF compris, à %s',
-        async (url) => {
-            await expect(http({ method: 'post', url, data: {} })).rejects.toBeInstanceOf(ErreurReseau)
+    it.each([
+        'https://evil.example',
+        '//evil.example',
+        '/\\evil.example',
+        'user:pass@evil.example',
+        'https://autre.example/api/v1/sets',
+    ])('n’envoie rien, jeton CSRF compris, à %s', async (url) => {
+        await expect(http({ method: 'post', url, data: {} })).rejects.toBeInstanceOf(ErreurHorsOrigine)
 
-            expect(globalThis.fetch).not.toHaveBeenCalled()
-        },
-    )
+        expect(globalThis.fetch).not.toHaveBeenCalled()
+    })
+
+    it('lit « 127.0.0.1:9 » comme un chemin de sa propre origine', async () => {
+        globalThis.fetch.mockResolvedValue(reponse(null, { status: 204 }))
+
+        await http({ method: 'post', url: '127.0.0.1:9', data: {} })
+
+        expect(new URL(dernierAppel()[0], window.location.href).origin).toBe(window.location.origin)
+    })
 
     it('envoie à une adresse absolue de sa propre origine', async () => {
         globalThis.fetch.mockResolvedValue(reponse(null, { status: 204 }))
