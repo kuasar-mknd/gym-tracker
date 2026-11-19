@@ -114,8 +114,6 @@ services:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
             - journaux:/app/storage/logs
         restart: always
-        security_opt:
-            - no-new-privileges:true
         cap_drop:
             - ALL
         cap_add:

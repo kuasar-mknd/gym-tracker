@@ -11,7 +11,7 @@ use Symfony\Component\Yaml\Yaml;
  * production transmet les anciennes clés, aucun fichier suivi par les clients
  * MCP ne porte un chemin de poste, et la CI ne publie l'image qu'après ses
  * contrôles, ne pousse `latest` que par la règle de metadata-action et lance
- * aussi le digest arm64, celui de la production.
+ * aussi le digest arm64, que `build` publie.
  */
 
 it('épingle chaque image externe du Dockerfile par étiquette et digest', function (): void {
@@ -48,7 +48,9 @@ it('ne lance aucune image de Sail sans étiquette ni sur latest', function (): v
 it('transmet APP_PREVIOUS_KEYS à app, worker et scheduler', function (): void {
     $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
 
-    expect(data_get($composition, 'x-app-env.APP_PREVIOUS_KEYS'))->toBe('${APP_PREVIOUS_KEYS:-}');
+    foreach (['app', 'worker', 'scheduler'] as $service) {
+        expect(data_get($composition, "services.{$service}.environment.APP_PREVIOUS_KEYS"))->toBe('${APP_PREVIOUS_KEYS:-}', $service);
+    }
 });
 
 it('ne suit aucun chemin de poste dans la configuration des clients MCP', function (string $fichier): void {
@@ -70,7 +72,7 @@ it('ne pousse latest que par la règle enable de metadata-action, ni en dur ni p
         ->and($ci)->toContain("type=raw,value=latest,enable=\${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}");
 });
 
-it('lance l’image démarrée aussi sur arm64, la plateforme de la production', function (): void {
+it('lance l’image démarrée aussi sur arm64, l’autre architecture publiée', function (): void {
     $demarrage = (array) data_get(Yaml::parseFile(base_path('.github/workflows/ci.yml')), 'jobs.demarrage');
 
     expect(data_get($demarrage, 'strategy.matrix.arch'))->toBe(['amd64', 'arm64'])
@@ -78,7 +80,7 @@ it('lance l’image démarrée aussi sur arm64, la plateforme de la production',
         ->and((string) json_encode($demarrage['steps']))->toContain('digests-${{ matrix.arch }}');
 });
 
-it('ferme les privilèges de chaque service de production et ne rend que les capacités éprouvées', function (): void {
+it('ferme les privilèges de chaque service de production (no-new-privileges sauf app, dont le port 80 tient à la capacité du binaire) et ne rend que les capacités éprouvées', function (): void {
     $services = (array) data_get(Yaml::parseFile(base_path('docker-compose.prod.yml')), 'services');
     $permises = [
         'app' => ['NET_BIND_SERVICE'],
@@ -94,7 +96,7 @@ it('ferme les privilèges de chaque service de production et ne rend que les cap
     foreach ($services as $nom => $service) {
         $service = (array) $service;
 
-        expect($service['security_opt'] ?? [])->toContain('no-new-privileges:true')
+        expect(in_array('no-new-privileges:true', (array) ($service['security_opt'] ?? []), true))->toBe($nom !== 'app', $nom)
             ->and($service['cap_drop'] ?? [])->toBe(['ALL'], $nom)
             ->and($service['cap_add'] ?? [])->toEqualCanonicalizing($permises[$nom], $nom);
     }
