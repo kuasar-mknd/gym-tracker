@@ -51,7 +51,7 @@ it('ne cite jamais la clé dans le message', function (): void {
     $message = CleDeLApplicationCheck::new()->run()->getNotificationMessage();
 
     expect($message)->not->toContain($brut)
-        ->and($message)->toContain('APP_PREVIOUS_KEYS');
+        ->and($message)->toContain('retirer la clé publiée');
 });
 
 it('ne juge rien hors production', function (): void {
@@ -59,4 +59,15 @@ it('ne juge rien hors production', function (): void {
     Config::set('app.cles_publiees', [hash('sha256', 'base64:'.base64_encode('x'))]);
 
     expect((string) CleDeLApplicationCheck::new()->run()->status->value)->toBe('ok');
+});
+
+it('échoue quand la clé publiée traîne dans les anciennes clés', function (): void {
+    $brut = base64_encode(str_repeat('d', 32));
+    Config::set('app.previous_keys', ['base64:'.$brut]);
+
+    expect(cleDeLApplicationEnProduction('base64:'.base64_encode(str_repeat('e', 32)), [hash('sha256', $brut)]))->toBe('failed');
+});
+
+it('ne plante pas quand la clé est absente', function (): void {
+    expect(cleDeLApplicationEnProduction('', [hash('sha256', 'autre')]))->toBe('ok');
 });

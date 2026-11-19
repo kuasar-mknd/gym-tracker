@@ -8,7 +8,7 @@ use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
 
 /**
- * Rouge en production quand la clé de l'application est l'une de celles dont
+ * Rouge en production quand la clé de l'application, ou l'une des anciennes, est l'une de celles dont
  * `config('app.cles_publiees')` garde l'empreinte SHA-256 : une clé lisible dans
  * l'historique du dépôt permet de forger un lien signé. La comparaison se fait
  * sur l'empreinte, en temps constant, pour la clé telle quelle et sans son
@@ -17,7 +17,7 @@ use Spatie\Health\Checks\Result;
  */
 final class CleDeLApplicationCheck extends Check
 {
-    private const string CONSEIL = 'Faire tourner APP_KEY (php artisan key:generate), en plaçant l\'ancienne dans APP_PREVIOUS_KEYS si les liens déjà émis doivent survivre. Toutes les sessions se fermeront.';
+    private const string CONSEIL = 'Générer une nouvelle APP_KEY (php artisan key:generate --show) et retirer la clé publiée de APP_KEY comme de APP_PREVIOUS_KEYS : une clé laissée dans APP_PREVIOUS_KEYS valide encore les liens signés forgés avec elle. Les liens déjà envoyés et toutes les sessions seront invalidés.';
 
     /**
      * Le libellé de la page « Santé » et du courriel d'alerte, qui
@@ -40,7 +40,7 @@ final class CleDeLApplicationCheck extends Check
                 ->ok('Ce contrôle ne juge que la production.');
         }
 
-        if ($this->estPubliee(config()->string('app.key', ''))) {
+        if (array_any($this->clesEnService(), $this->estPubliee(...))) {
             return Result::make()
                 ->shortSummary('Clé publiée')
                 ->failed('La clé de l\'application figure dans l\'historique du dépôt. '.self::CONSEIL);
@@ -49,6 +49,16 @@ final class CleDeLApplicationCheck extends Check
         return Result::make()
             ->shortSummary('Clé non publiée')
             ->ok('La clé de l\'application n\'est pas l\'une des clés publiées.');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function clesEnService(): array
+    {
+        $anciennes = array_filter((array) config('app.previous_keys'), is_string(...));
+
+        return array_values([...$anciennes, (string) config('app.key')]);
     }
 
     private function estPubliee(string $cle): bool
