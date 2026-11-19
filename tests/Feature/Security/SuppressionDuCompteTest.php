@@ -924,7 +924,14 @@ it('efface du volume `journaux` ce que le canal `daily` y garde au-delà de quat
     $dossier = sys_get_temp_dir().'/journaux-du-jour-'.bin2hex(random_bytes(6));
     $aujourdhui = new DateTimeImmutable();
     $exploitation = (string) preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('docs/exploitation.md')));
-    $toutesLesDocs = (string) preg_replace('/\s+/', ' ', implode(' ', array_map(file_get_contents(...), [base_path('README.md'), ...glob(base_path('docs/*.md')) ?: []])));
+    $documents = glob(base_path('docs/*.md'));
+    $toutesLesDocs = (string) file_get_contents(base_path('README.md'));
+
+    foreach ($documents === false ? [] : $documents as $document) {
+        $toutesLesDocs .= ' '.file_get_contents($document);
+    }
+
+    $toutesLesDocs = (string) preg_replace('/\s+/', ' ', $toutesLesDocs);
 
     try {
         File::ensureDirectoryExists($dossier.'/peu');
