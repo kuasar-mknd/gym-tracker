@@ -43,6 +43,32 @@ it('ne suit aucune redirection d’un point d’accès push', function (): void 
     expect($client->getConfig('allow_redirects'))->toBeFalse();
 });
 
+it('rend la main à un pair muet avant la fin du délai de la tâche', function (): void {
+    [, $client] = webPushDuCanal();
+
+    $serveur = stream_socket_server('tcp://127.0.0.1:0', $codeErreur, $messageErreur);
+
+    if ($serveur === false) {
+        throw new RuntimeException('Le pair muet n’a pas pu écouter : '.$messageErreur);
+    }
+
+    $adresse = stream_socket_get_name($serveur, false);
+
+    $debut = microtime(true);
+
+    try {
+        $client->post('http://'.$adresse.'/push', ['body' => 'x']);
+        $leve = false;
+    } catch (GuzzleHttp\Exception\NetworkTimeoutException) {
+        $leve = true;
+    } finally {
+        fclose($serveur);
+    }
+
+    expect($leve)->toBeTrue()
+        ->and(microtime(true) - $debut)->toBeLessThan(15.0);
+});
+
 it('garde l’authentification VAPID de la configuration', function (): void {
     $cles = VAPID::createVapidKeys();
 
