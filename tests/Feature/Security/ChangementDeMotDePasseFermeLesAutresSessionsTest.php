@@ -372,7 +372,7 @@ it('ferme toutes les sessions quand le panneau donne un nouveau mot de passe au 
  * L'empreinte que la session porte, comme celle du cookie « se souvenir de
  * moi », est un HMAC dont la clé est `APP_KEY` seule : `APP_PREVIOUS_KEYS`
  * garde lisibles les cookies chiffrés, pas l'empreinte. Une rotation de la clé
- * ferme donc toutes les sessions, ce que le README annonce.
+ * ferme donc toutes les sessions, ce que docs/variables-d-environnement.md annonce.
  */
 it('ferme toutes les sessions quand APP_KEY change, même avec l’ancienne dans APP_PREVIOUS_KEYS', function (): void {
     $utilisateur = User::factory()->create();

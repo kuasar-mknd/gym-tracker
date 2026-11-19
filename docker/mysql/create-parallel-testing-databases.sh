@@ -15,7 +15,7 @@
 # sur laquelle Paratest se connecte pour créer les siennes.
 #
 # `gym_tracker_dusk` est la base des parcours navigateur, que `.env.dusk.local`
-# désigne sous Sail (README) : les parcours la vident, et la garde de
+# désigne sous Sail (docs/developpement.md) : les parcours la vident, et la garde de
 # tests/DuskTestCase.php refuse toute base dont le nom ne finit pas par `_dusk`
 # (#1909). Sur un volume déjà initialisé, ce script se rejoue sans risque :
 #   ./vendor/bin/sail exec mysql bash /docker-entrypoint-initdb.d/20-create-parallel-testing-databases.sh
