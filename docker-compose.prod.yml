@@ -83,7 +83,7 @@ x-app-env: &app-env
     # L'en-tête `Server-Timing` (#1315, #2148) : durée de l'application, de ses
     # étapes, des requêtes SQL et des lectures du cache, sur les réponses d'un
     # utilisateur connecté ou d'un administrateur seulement. Coupé par défaut ;
-    # `true` le temps d'un relevé (README, « Relevé des temps »).
+    # `true` le temps d'un relevé (docs/releve-des-temps.md).
     SERVER_TIMING_ENABLED: ${SERVER_TIMING_ENABLED:-false}
 
 # La copie des journaux que lit `docker logs`, pour app, worker et scheduler.

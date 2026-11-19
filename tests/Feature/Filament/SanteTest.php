@@ -186,14 +186,14 @@ it('donne à chaque contrôle un libellé français, jamais celui que le paquet 
 });
 
 /**
- * Le README nomme les contrôles comme la page et le courriel : un libellé
+ * La référence des variables nomme les contrôles comme la page et le courriel : un libellé
  * changé dans le provider se change aussi là-bas.
  */
-it('nomme dans le README chaque contrôle par son libellé', function (): void {
-    $readme = (string) file_get_contents(base_path('README.md'));
+it('nomme dans la référence des variables chaque contrôle par son libellé', function (): void {
+    $reference = (string) file_get_contents(base_path('docs/variables-d-environnement.md'));
 
     foreach (Health::registeredChecks() as $controle) {
-        expect($readme)->toContain('« '.$controle->getLabel().' »');
+        expect($reference)->toContain('« '.$controle->getLabel().' »');
     }
 });
 

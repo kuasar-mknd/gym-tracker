@@ -14,14 +14,15 @@ use Symfony\Component\Yaml\Yaml;
  *
  * Une variable se documente là où on la cherche, et la documentation ne dit
  * que ce qui est vrai : ces gardes refusent une variable que la production,
- * le gabarit ou la CI lisent sans que le README la nomme entre accents
- * graves, et une variable présentée comme réglable en production que
- * `docker-compose.prod.yml` ne transmet pas.
+ * le gabarit ou la CI lisent sans que la référence des variables
+ * (`docs/variables-d-environnement.md`) la nomme entre accents graves, et une
+ * variable présentée comme réglable en production que `docker-compose.prod.yml`
+ * ne transmet pas.
  */
 
-function readmeContenu(): string
+function documentationContenu(): string
 {
-    return (string) file_get_contents(base_path('README.md'));
+    return (string) file_get_contents(base_path('docs/variables-d-environnement.md'));
 }
 
 /**
@@ -29,7 +30,7 @@ function readmeContenu(): string
  *
  * @return list<string>
  */
-function readmeVariablesCiteesDans(string $texte): array
+function documentationVariablesCiteesDans(string $texte): array
 {
     preg_match_all('/`([A-Z][A-Z0-9_]*)(?:=[^`]*)?`/', $texte, $correspondances);
 
@@ -42,7 +43,7 @@ function readmeVariablesCiteesDans(string $texte): array
  *
  * @return list<string>
  */
-function readmeVariablesInterpoleesEnProduction(): array
+function documentationVariablesInterpoleesEnProduction(): array
 {
     $composition = (string) file_get_contents(base_path('docker-compose.prod.yml'));
 
@@ -57,7 +58,7 @@ function readmeVariablesInterpoleesEnProduction(): array
  *
  * @return list<string>
  */
-function readmeVariablesDesConteneursDeLApplication(): array
+function documentationVariablesDesConteneursDeLApplication(): array
 {
     $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
     $services = is_array($composition) ? ($composition['services'] ?? []) : [];
@@ -83,7 +84,7 @@ function readmeVariablesDesConteneursDeLApplication(): array
  *
  * @return list<string>
  */
-function readmeVariablesDeLImage(): array
+function documentationVariablesDeLImage(): array
 {
     $dockerfile = (string) file_get_contents(base_path('Dockerfile'));
 
@@ -97,7 +98,7 @@ function readmeVariablesDeLImage(): array
  *
  * @return list<string>
  */
-function readmeVariablesDuGabarit(): array
+function documentationVariablesDuGabarit(): array
 {
     $gabarit = (string) file_get_contents(base_path('.env.example'));
 
@@ -111,7 +112,7 @@ function readmeVariablesDuGabarit(): array
  *
  * @return list<string>
  */
-function readmeSecretsDeLaCi(): array
+function documentationSecretsDeLaCi(): array
 {
     $secrets = [];
     $workflows = glob(base_path('.github/workflows/*.yml'));
@@ -125,14 +126,14 @@ function readmeSecretsDeLaCi(): array
 }
 
 /**
- * Les variables de la première colonne du tableau « Production » du README :
+ * Les variables de la première colonne du tableau « Production » de la référence :
  * celles que le lecteur est invité à poser dans la pile.
  *
  * @return list<string>
  */
-function readmeVariablesReglablesEnProduction(): array
+function documentationVariablesReglablesEnProduction(): array
 {
-    if (preg_match('/^### Production\b.*?(?=^#{1,3} )/ms', readmeContenu(), $section) !== 1) {
+    if (preg_match('/^## Production\b.*?(?=^#{1,2} )/ms', documentationContenu(), $section) !== 1) {
         return [];
     }
 
@@ -143,7 +144,7 @@ function readmeVariablesReglablesEnProduction(): array
             continue;
         }
 
-        $variables = [...$variables, ...readmeVariablesCiteesDans(explode('|', $ligne)[1])];
+        $variables = [...$variables, ...documentationVariablesCiteesDans(explode('|', $ligne)[1])];
     }
 
     return array_values(array_unique($variables));
@@ -153,61 +154,61 @@ function readmeVariablesReglablesEnProduction(): array
  * @param  list<string>  $variables
  * @return list<string>
  */
-function readmeVariablesAbsentesDuReadme(array $variables): array
+function documentationVariablesAbsentesDuReadme(array $variables): array
 {
-    return array_values(array_diff($variables, readmeVariablesCiteesDans(readmeContenu())));
+    return array_values(array_diff($variables, documentationVariablesCiteesDans(documentationContenu())));
 }
 
-it('nomme dans le README chaque variable que la production lit', function (): void {
+it('nomme dans la référence des variables chaque variable que la production lit', function (): void {
     $variables = array_values(array_unique([
-        ...readmeVariablesInterpoleesEnProduction(),
-        ...readmeVariablesDesConteneursDeLApplication(),
+        ...documentationVariablesInterpoleesEnProduction(),
+        ...documentationVariablesDesConteneursDeLApplication(),
     ]));
 
     expect($variables)->toContain('APP_KEY', 'DB_ROOT_PASSWORD', 'BACKUP_ARCHIVE_PASSWORD', 'OCTANE_SERVER')
-        ->and(readmeVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
-            "docker-compose.prod.yml transmet ces variables, que la section « Variables d'environnement » du README ne nomme pas :\n- %s",
-            implode("\n- ", readmeVariablesAbsentesDuReadme($variables)),
+        ->and(documentationVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
+            "docker-compose.prod.yml transmet ces variables, que docs/variables-d-environnement.md ne nomme pas :\n- %s",
+            implode("\n- ", documentationVariablesAbsentesDuReadme($variables)),
         ));
 });
 
-it('nomme dans le README chaque variable que pose l’image', function (): void {
-    $variables = readmeVariablesDeLImage();
+it('nomme dans la référence des variables chaque variable que pose l’image', function (): void {
+    $variables = documentationVariablesDeLImage();
 
     expect($variables)->toContain('APP_ENV', 'APP_DEBUG')
-        ->and(readmeVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
-            "Le Dockerfile pose ces variables dans l'image, que le README ne nomme pas :\n- %s",
-            implode("\n- ", readmeVariablesAbsentesDuReadme($variables)),
+        ->and(documentationVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
+            "Le Dockerfile pose ces variables dans l'image, que docs/variables-d-environnement.md ne nomme pas :\n- %s",
+            implode("\n- ", documentationVariablesAbsentesDuReadme($variables)),
         ));
 });
 
-it('nomme dans le README chaque variable du gabarit .env.example', function (): void {
-    $variables = readmeVariablesDuGabarit();
+it('nomme dans la référence des variables chaque variable du gabarit .env.example', function (): void {
+    $variables = documentationVariablesDuGabarit();
 
     expect($variables)->toContain('APP_KEY', 'DB_PASSWORD', 'VAPID_PUBLIC_KEY')
-        ->and(readmeVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
-            "Le gabarit .env.example déclare ces variables, que le README ne nomme pas :\n- %s",
-            implode("\n- ", readmeVariablesAbsentesDuReadme($variables)),
+        ->and(documentationVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
+            "Le gabarit .env.example déclare ces variables, que docs/variables-d-environnement.md ne nomme pas :\n- %s",
+            implode("\n- ", documentationVariablesAbsentesDuReadme($variables)),
         ));
 });
 
-it('nomme dans le README chaque secret que la CI lit', function (): void {
-    $secrets = readmeSecretsDeLaCi();
+it('nomme dans la référence des variables chaque secret que la CI lit', function (): void {
+    $secrets = documentationSecretsDeLaCi();
 
     expect($secrets)->toContain('GITHUB_TOKEN')
-        ->and(readmeVariablesAbsentesDuReadme($secrets))->toBe([], sprintf(
-            "Les workflows lisent ces secrets de dépôt, que le README ne nomme pas :\n- %s",
-            implode("\n- ", readmeVariablesAbsentesDuReadme($secrets)),
+        ->and(documentationVariablesAbsentesDuReadme($secrets))->toBe([], sprintf(
+            "Les workflows lisent ces secrets de dépôt, que docs/variables-d-environnement.md ne nomme pas :\n- %s",
+            implode("\n- ", documentationVariablesAbsentesDuReadme($secrets)),
         ));
 });
 
 it('ne présente comme réglable en production que ce que la composition transmet', function (): void {
-    $reglables = readmeVariablesReglablesEnProduction();
-    $intransmises = array_values(array_diff($reglables, readmeVariablesInterpoleesEnProduction()));
+    $reglables = documentationVariablesReglablesEnProduction();
+    $intransmises = array_values(array_diff($reglables, documentationVariablesInterpoleesEnProduction()));
 
     expect($reglables)->toContain('APP_KEY', 'HORIZON_ALLOWED_EMAILS')
         ->and($intransmises)->toBe([], sprintf(
-            'Le tableau « Production » du README invite à poser ces variables dans la pile, mais docker-compose.prod.yml '
+            'Le tableau « Production » de docs/variables-d-environnement.md invite à poser ces variables dans la pile, mais docker-compose.prod.yml '
             ."ne les transmet à aucun conteneur : posées, elles ne feraient rien.\n- %s",
             implode("\n- ", $intransmises),
         ));

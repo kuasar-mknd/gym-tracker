@@ -20,7 +20,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Models/**, app/Support/TexteSansJeton.php, app/Support/AdmissionDesExceptions.php | .ai/rules/models.md |
 | app/Actions/**, app/Services/**, app/Policies/** | .ai/rules/mutation.md |
 | app/Providers/**, routes/console.php, config/backup.php, lang/vendor/health/**, resources/views/vendor/health/**, app/Console/Commands/PurgerLesJournaux.php, app/Support/FichiersDuJour.php, app/Support/Courriels/**, app/Support/TexteSansAdresse.php, app/Support/Sante/**, app/Console/Commands/ReleverLesCompteursDeRedis.php | .ai/rules/providers.md |
-| README.md, .env.example, docker-compose.prod.yml, compose.yaml, Dockerfile, entrypoint.sh, docker/**, config/**, app/Support/Journaux/** | .ai/rules/readme.md |
+| README.md, docs/*.md, .env.example, docker-compose.prod.yml, compose.yaml, Dockerfile, entrypoint.sh, docker/**, config/**, app/Support/Journaux/** | .ai/rules/readme.md |
 | app/Http/Requests/**, app/Rules/**, app/Support/AdresseCanonique.php, app/Support/AppareilConnu.php, app/Support/AppareilConnuDeLAdresse.php, app/Support/PlafondParAdresse.php, lang/fr.json, lang/fr/** | .ai/rules/requests.md |
 | routes/web.php, app/Support/IdentifiantsDesRoutes.php, app/Http/Controllers/ErreurNavigateurController.php, app/Http/Requests/ErreurNavigateurStoreRequest.php, app/Models/ErreurNavigateur.php | .ai/rules/routes.md |
 | app/Services/** | .ai/rules/services.md |
