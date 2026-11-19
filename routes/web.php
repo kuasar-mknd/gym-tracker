@@ -137,10 +137,10 @@ Route::middleware('auth')->group(function (): void {
 
 // Social Login
 Route::get('/auth/{provider}/redirect', [\App\Http\Controllers\Auth\SocialAuthController::class, 'redirect'])
-    ->middleware('guest')
+    ->middleware(['guest', 'throttle:20,1,connexion-sociale'])
     ->name('social.redirect');
 Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])
-    ->middleware('guest')
+    ->middleware(['guest', 'throttle:20,1,connexion-sociale'])
     ->name('social.callback');
 
 /**
@@ -156,7 +156,7 @@ Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthCo
  */
 Route::post('/auth/apple/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])
     ->defaults('provider', 'apple')
-    ->middleware('guest')
+    ->middleware(['guest', 'throttle:20,1,connexion-sociale'])
     ->name('social.callback.apple');
 
 /**

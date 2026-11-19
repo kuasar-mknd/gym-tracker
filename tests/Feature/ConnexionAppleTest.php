@@ -81,12 +81,12 @@ function connexionAppleDepart(): array
  *
  * @return TestResponse<Response>
  */
-function connexionAppleRetour(AppleSimule $apple, ?string $cookieDuNonce, string $nonceSigne): TestResponse
+function connexionAppleRetour(AppleSimule $apple, ?string $cookieDuNonce, string $nonceSigne, string $utilisateur = '{"name":{"firstName":"Alex","lastName":"Martin"}}'): TestResponse
 {
     $apple->repondraParLeJeton($apple->jetonDIdentite($nonceSigne));
     $apple->nouvelleRequete();
 
-    $formulaire = ['code' => 'code-d-autorisation-de-test', 'user' => '{"name":{"firstName":"Alex","lastName":"Martin"}}'];
+    $formulaire = ['code' => 'code-d-autorisation-de-test', 'user' => $utilisateur];
     $enTetes = ['Sec-Fetch-Site' => 'cross-site', 'Origin' => 'https://appleid.apple.com'];
 
     if ($cookieDuNonce === null) {
@@ -293,3 +293,76 @@ it('n’ouvre le rappel en POST qu’à Apple', function (string $fournisseur): 
 
     assertGuest();
 })->with(['google', 'github']);
+
+it('ne plante pas sur un champ user qui n’est pas du JSON, et connecte sans nom du formulaire', function (): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+
+    ['nonce' => $nonce, 'cookie' => $cookie] = connexionAppleDepart();
+
+    connexionAppleRetour($apple, $cookie, $nonce, '{pas du json')->assertRedirect(route('dashboard'));
+
+    assertAuthenticated();
+});
+
+it('ne plante pas sur un nom du formulaire qui n’est pas du texte', function (): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+
+    ['nonce' => $nonce, 'cookie' => $cookie] = connexionAppleDepart();
+
+    connexionAppleRetour($apple, $cookie, $nonce, '{"name":{"firstName":["x"],"lastName":{"a":1}}}')->assertRedirect(route('dashboard'));
+
+    assertAuthenticated();
+});
+
+it('borne le nom du formulaire à 255 caractères et en retire les caractères de contrôle', function (): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+
+    ['nonce' => $nonce, 'cookie' => $cookie] = connexionAppleDepart();
+    $formulaire = json_encode(['name' => ['firstName' => "Al\x00ex\n".str_repeat('a', 400), 'lastName' => str_repeat('é', 400)]]);
+
+    connexionAppleRetour($apple, $cookie, $nonce, (string) $formulaire)->assertRedirect(route('dashboard'));
+
+    $nom = User::query()->where('provider', 'apple')->firstOrFail()->name;
+
+    expect(mb_strlen($nom))->toBeLessThanOrEqual(255)
+        ->and($nom)->toStartWith('Alexaaa')
+        ->and($nom)->not->toMatch('/[\p{C}]/u');
+});
+
+it('ne plante pas non plus sur un rappel en GET dont le champ user n’est pas du JSON', function (): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+
+    ['nonce' => $nonce, 'cookie' => $cookie] = connexionAppleDepart();
+    $apple->repondraParLeJeton($apple->jetonDIdentite($nonce));
+    $apple->nouvelleRequete();
+
+    withUnencryptedCookie(FournisseurApple::COOKIE_DU_NONCE, $cookie)
+        ->get(route('social.callback', ['provider' => 'apple', 'code' => 'code-de-test', 'user' => '{pas du json']))
+        ->assertRedirect(route('dashboard'));
+});
+
+it('oublie le cookie du nonce dans la réponse du rappel, réussi ou refusé', function (): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+
+    ['nonce' => $nonce, 'cookie' => $cookie] = connexionAppleDepart();
+    $reussi = connexionAppleRetour($apple, $cookie, $nonce);
+    $oubli = $reussi->getCookie(FournisseurApple::COOKIE_DU_NONCE, decrypt: false);
+
+    expect($oubli)->not->toBeNull()
+        ->and($oubli?->getValue())->toBe('')
+        ->and($oubli?->getExpiresTime())->toBe(1)
+        ->and($oubli?->isSecure())->toBeTrue()
+        ->and($oubli?->getSameSite())->toBe('none');
+
+    auth()->logout();
+    ['nonce' => $nonce, 'cookie' => $cookie] = connexionAppleDepart();
+    $refuse = connexionAppleRetour($apple, $cookie, 'un-autre-nonce');
+
+    $refuse->assertRedirect(route('login'));
+    expect($refuse->getCookie(FournisseurApple::COOKIE_DU_NONCE, decrypt: false)?->getExpiresTime())->toBe(1);
+});

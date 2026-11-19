@@ -199,3 +199,26 @@ it('refuse le démarrage et la fin d’une séance rejoués pour un autre compte
     expect(Workout::query()->whereIn('user_id', [$compteA->id, $compteB->id])->count())->toBe(1)
         ->and($seanceDeB->refresh()->ended_at)->toBeNull();
 });
+
+it('refuse l’écriture directe d’un onglet périmé, file vide, et laisse passer celle du compte de la session', function (): void {
+    $compteA = User::factory()->create();
+    $compteB = User::factory()->create();
+    $ligneDeB = ligneEnCoursDuCompte($compteB);
+    $serieDeB = Set::factory()->create(['workout_line_id' => $ligneDeB->id, 'reps' => 5, 'is_completed' => false]);
+
+    actingAs($compteB);
+
+    assertRefusPourUnAutreCompte(patchJson(
+        route('api.v1.sets.update', ['set' => $serieDeB->id]),
+        ['reps' => 9],
+        [...enteteDuCompteDeLEcriture($compteA), 'Idempotency-Key' => 'cle-directe'],
+    ));
+    assertDatabaseHas(Set::class, ['id' => $serieDeB->id, 'reps' => 5]);
+
+    patchJson(
+        route('api.v1.sets.update', ['set' => $serieDeB->id]),
+        ['reps' => 9],
+        enteteDuCompteDeLEcriture($compteB),
+    )->assertSuccessful();
+    assertDatabaseHas(Set::class, ['id' => $serieDeB->id, 'reps' => 9]);
+});

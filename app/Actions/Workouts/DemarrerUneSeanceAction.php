@@ -163,6 +163,14 @@ final readonly class DemarrerUneSeanceAction
             throw new UneSeanceEstDejaEnCours($enCours);
         }
 
+        return $this->creer($user, $cle, $modele, $debut, $nom);
+    }
+
+    /**
+     * La création, ou la gagnante de la clé quand l'index refuse.
+     */
+    private function creer(User $user, ?string $cle, ?WorkoutTemplate $modele, CarbonInterface $debut, ?string $nom): Workout
+    {
         try {
             return $modele instanceof WorkoutTemplate
                 ? $this->lancerUnModele->execute($user, $modele, $debut, $cle)

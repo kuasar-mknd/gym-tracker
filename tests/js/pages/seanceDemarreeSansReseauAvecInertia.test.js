@@ -341,6 +341,7 @@ describe('démarrer une séance en ligne', () => {
                 data: { started_at: '2026-10-19T05:15:00.000Z' },
                 headers: {
                     'Idempotency-Key': expect.stringMatching(/^[0-9A-Za-z-]{1,64}$/),
+                    'X-Compte-De-L-Ecriture': expect.any(String),
                     'X-Heure-De-L-Appareil': expect.stringMatching(/^2026-10-19T05:15:\d{2}\.\d{3}Z$/),
                 },
             },

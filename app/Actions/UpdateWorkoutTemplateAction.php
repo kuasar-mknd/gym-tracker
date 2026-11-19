@@ -58,18 +58,17 @@ final class UpdateWorkoutTemplateAction
 
         $now = now()->toDateTimeString();
 
-        $linesData = [];
-        foreach ($exercises as $index => $ex) {
-            $linesData[] = [
+        \App\Models\WorkoutTemplateLine::insert(array_map(
+            fn (array $ex, int $index): array => [
                 'workout_template_id' => $template->id,
                 'exercise_id' => $ex['id'],
                 'order' => $index,
                 'created_at' => $now,
                 'updated_at' => $now,
-            ];
-        }
-
-        \App\Models\WorkoutTemplateLine::insert($linesData);
+            ],
+            $exercises,
+            array_keys($exercises),
+        ));
 
         // Fetch the generated lines to get their IDs
         $lines = \App\Models\WorkoutTemplateLine::where('workout_template_id', $template->id)
@@ -78,13 +77,8 @@ final class UpdateWorkoutTemplateAction
 
         $donneesDesSeries = [];
         foreach ($exercises as $index => $ex) {
-            if (isset($ex['sets'])) {
-                /** @var \App\Models\WorkoutTemplateLine $line */
-                $line = $lines[$index] ?? null;
-
-                if ($line !== null) {
-                    $this->appendSetsData($donneesDesSeries, $ex['sets'], $line->id, $now);
-                }
+            if (isset($ex['sets'], $lines[$index])) {
+                $this->appendSetsData($donneesDesSeries, $ex['sets'], $lines[$index]->id, $now);
             }
         }
 
