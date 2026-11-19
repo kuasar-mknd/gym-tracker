@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Connexion\ConnexionDuPanneau;
 use App\Filament\Sauvegardes\PageDesSauvegardes;
 use App\Http\Middleware\CleDesCopiesHorsLigne;
 use App\Http\Middleware\ConditionalCspHeaders;
@@ -116,7 +117,7 @@ final class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->default()
             ->path('backoffice')
-            ->login()
+            ->login(ConnexionDuPanneau::class)
             ->profile()
             ->brandName('GymTracker')
             /*

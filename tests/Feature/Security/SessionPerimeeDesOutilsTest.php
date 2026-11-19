@@ -53,6 +53,7 @@ function sessionPerimeeOuverteAuPanneau(bool $motDePasseChangeDepuis): void
     withSession([
         $garde->getName() => $superAdministrateur->getAuthIdentifier(),
         'password_hash_admin' => $garde->hashPasswordForCookie($superAdministrateur->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($superAdministrateur),
     ]);
 
     if ($motDePasseChangeDepuis) {

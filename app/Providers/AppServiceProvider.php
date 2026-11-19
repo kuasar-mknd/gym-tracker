@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Middleware\IpWhitelist;
 use App\Http\Middleware\OuvreLaSession;
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
@@ -65,6 +66,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\AchievementService::class);
         $this->app->singleton(\App\Services\NotificationService::class);
         $this->app->singleton(\App\Services\PersonalRecordService::class);
+        $this->refuserLesEnvoisDeFichiersDeLivewire();
         $this->taireLesValeursCiteesParLeServeurDeBase();
         $this->taireLesAdressesDansLesErreursDEnvoi();
         $this->taireLesAdressesDansLeJournalDeDernierRecours();
@@ -654,6 +656,33 @@ final class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(ErreurNavigateur::RAPPORTS_PAR_MINUTE)->by('minute|'.$cle)->response($sansRienEcrire),
                 Limit::perDay(ErreurNavigateur::RAPPORTS_PAR_JOUR)->by('jour|'.$cle)->response($sansRienEcrire),
             ];
+        });
+    }
+
+    /**
+     * Livewire n'envoie de fichier qu'à un composant qui en a déclaré un : le
+     * panneau n'en déclare aucun, et un appel `_startUpload`, `_finishUpload`,
+     * `_removeUpload` ou `_uploadErrored` sur un autre composant, celui des
+     * notifications de la page de connexion compris, répondait 500 ou, sur
+     * une page du panneau, signait une adresse d'envoi (audit 6.3, 6.7). Il se
+     * refuse en 403 avant tout traitement de Livewire, et la route d'envoi
+     * elle-même ne sert qu'un administrateur connecté, depuis une adresse
+     * admise.
+     */
+    private function refuserLesEnvoisDeFichiersDeLivewire(): void
+    {
+        config(['livewire.temporary_file_upload.middleware' => [IpWhitelist::class, 'auth:admin', 'throttle:60,1']]);
+
+        \Livewire\on('call', static function (object $composant, string $methode, array $parametres): void {
+            if (! in_array($methode, ['_startUpload', '_finishUpload', '_removeUpload', '_uploadErrored'], true)) {
+                return;
+            }
+
+            abort_unless(
+                method_exists($composant, 'isFileUploadForSchemaComponent')
+                    && $composant->isFileUploadForSchemaComponent($parametres[0] ?? '') === true,
+                403,
+            );
         });
     }
 

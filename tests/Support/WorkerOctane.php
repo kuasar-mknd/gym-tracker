@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 use App\Models\Admin;
+use App\Support\AssuranceDuSecondFacteur;
 use Closure;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Database\Eloquent\Model;
@@ -139,6 +140,7 @@ final class WorkerOctane
 
         $garde->setUser($administrateur);
         $garde->getSession()->put('password_hash_admin', $garde->hashPasswordForCookie($administrateur->getAuthPassword()));
+        $garde->getSession()->put(AssuranceDuSecondFacteur::CLE, AssuranceDuSecondFacteur::empreinte($administrateur));
     }
 
     /**
