@@ -22,7 +22,6 @@ const WeightRepsScatterChart = graphiqueAsynchrone(() => import('@/Components/St
 const SetWeightProgressionChart = graphiqueAsynchrone(() => import('@/Components/Stats/SetWeightProgressionChart.vue'))
 const Estimated1RMHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/Estimated1RMHistoryChart.vue'))
 const SessionPerformanceChart = graphiqueAsynchrone(() => import('@/Components/Stats/SessionPerformanceChart.vue'))
-const SessionVolumeLineChart = graphiqueAsynchrone(() => import('@/Components/Stats/SessionVolumeLineChart.vue'))
 const HistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/HistoryChart.vue'))
 
 /**
@@ -348,26 +347,6 @@ const scatterData = computed(() => {
                             v-else
                             taille="ligne"
                             icon="bar_chart"
-                            title="Pas assez de données pour afficher le graphique"
-                            class="h-64"
-                        />
-                    </GlassCard>
-                </div>
-
-                <!-- Session Volume Line Chart -->
-                <div class="stagger-4 animate-slide-up">
-                    <GlassCard>
-                        <div class="mb-4">
-                            <h3 class="titre-carte">Évolution du Volume</h3>
-                            <p class="text-text-muted text-xs font-semibold">Volume total par séance</p>
-                        </div>
-                        <div v-if="volumeData.length > 0" class="h-64">
-                            <SessionVolumeLineChart :data="volumeData" />
-                        </div>
-                        <GlassEmptyState
-                            v-else
-                            taille="ligne"
-                            icon="show_chart"
                             title="Pas assez de données pour afficher le graphique"
                             class="h-64"
                         />

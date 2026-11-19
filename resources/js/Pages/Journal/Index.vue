@@ -155,7 +155,7 @@ const journalsByMonth = computed(() => {
 <template>
     <Head title="Journal" />
 
-    <AuthenticatedLayout page-title="Journal">
+    <AuthenticatedLayout show-back back-route="profile.index" page-title="Journal">
         <template #header-actions>
             <GlassButton variant="primary" size="sm" aria-label="Nouvelle entrée" @click="openAddForm">
                 <GlassIcon name="add" size="xs" />

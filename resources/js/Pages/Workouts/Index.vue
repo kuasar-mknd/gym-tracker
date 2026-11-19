@@ -149,6 +149,20 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         </template>
 
         <div class="space-y-6">
+            <!-- Les actions de l'en-tête de bureau, qui ne se montre qu'à partir de 1 024 px. -->
+            <div class="bureau:hidden flex items-center gap-2">
+                <GlassButton variant="primary" class="flex-1" :loading="demarrageEnCours" @click="createWorkout">
+                    <GlassIcon name="add" size="sm" class="mr-2" />
+                    Démarrer une séance
+                </GlassButton>
+                <GlassButton :href="route('templates.index')" class="min-w-touch" aria-label="Modèles">
+                    <GlassIcon name="inventory_2" size="sm" />
+                </GlassButton>
+                <GlassButton :href="route('calendar.index')" class="min-w-touch" aria-label="Calendrier">
+                    <GlassIcon name="calendar_month" size="sm" />
+                </GlassButton>
+            </div>
+
             <!-- Stats Row -->
             <div v-if="workoutList.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
