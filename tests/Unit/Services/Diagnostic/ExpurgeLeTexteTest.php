@@ -599,3 +599,25 @@ it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $ad
     'des ligatures que NFKC allonge, séparées par des points' => [str_repeat("\u{FDFA}.", 2_048)],
     'des ligatures que NFKC allonge, dans une clé en double' => ['SQLSTATE[23000]: x: 1062 Duplicate entry \''.str_repeat("\u{FDFA}", 2_731)],
 ]);
+
+it('masque les identifiants du schéma Basic et ceux de curl -u', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'un en-tête' => ['Authorization: Basic '.base64_encode('jean:hunter2'), 'Authorization: Basic [secret]'],
+    'un en-tête de mandataire' => ['Proxy-Authorization: Basic '.base64_encode('a:b'), 'Proxy-Authorization: Basic [secret]'],
+    'un en-tête en JSON' => ['{"Authorization":"Basic '.base64_encode('jean:hunter2').'"}', '{"Authorization":"Basic [secret]"}'],
+    'une valeur seule' => ['reçu Basic '.base64_encode('jean:hunter').' fin', 'reçu Basic [secret] fin'],
+    'curl -u' => ['curl -s -u jean:hunter2 https://[hôte]/x', 'curl -s -u [secret] https://[hôte]/x'],
+    'curl --user entre guillemets' => ['curl --user "jean:mot de passe" -X GET', 'curl --user [secret] -X GET'],
+    'un -u hors de curl' => ['sort -u fichier', 'sort -u fichier'],
+    'le mot Basic dans une phrase' => ['Basic information sur la séance', 'Basic information sur la séance'],
+]);
+
+it('masque un hôte d’un seul label derrière host ou hôte', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'host avec un tiret et un chiffre' => ['user victime ip 198.51.100.23 host db-prod-1', 'user victime ip [adresse IP] host [hôte]'],
+    'host=' => ['dsn host=base;dbname=x', 'dsn host=[hôte];dbname=x'],
+    'host: avec un port' => ['host: cache:6379 refusé', 'host: [hôte] refusé'],
+    'un mot ordinaire après host' => ['host unreachable', 'host unreachable'],
+]);

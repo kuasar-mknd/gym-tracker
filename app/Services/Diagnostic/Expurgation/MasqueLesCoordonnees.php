@@ -33,6 +33,10 @@ namespace App\Services\Diagnostic\Expurgation;
  * `jquery.min.js` et `Connection.php` restent), et un label peut porter des
  * lettres accentuées.
  *
+ * Un hôte d'un seul label se reconnaît à ce qui le précède : `host=`, `host:`, `hôte :`, ou, après
+ * « host » et « hôte » suivis d'un blanc, quand il porte un tiret ou un
+ * chiffre (`db-prod-1`) : « host unreachable » reste.
+ *
  * Une chaîne de requête ou un fragment ne se reconnaissent qu'accrochés à un
  * mot ou à un chemin (`/seances?note=…`) : le `?` d'une requête SQL
  * (`values (?, ?)`) et le `#0` d'une pile restent. Chaque répétition est
@@ -68,6 +72,8 @@ final class MasqueLesCoordonnees
         '/(?<![\w.@-])(?:'.self::LABEL.'\.){1,8}(?!'.self::EXTENSIONS_DE_FICHIER.'(?![\w-]))'.self::DERNIER_LABEL_CONNU.self::FIN_DE_L_HOTE.'/iu' => '[hôte]',
         '/(?<![\w.@-])(?:'.self::LABEL.'\.){2,8}(?!'.self::EXTENSIONS_DE_FICHIER.'(?![\w-]))\p{L}{2,24}'.self::FIN_DE_L_HOTE.'/iu' => '[hôte]',
         '/(?<=\/\/|@|host |host=|host:|host: |hôte |hôte : )'.self::LABEL.'\.(?!'.self::EXTENSIONS_DE_FICHIER.'(?![\w-]))\p{L}{2,24}'.self::FIN_DE_L_HOTE.'/iu' => '[hôte]',
+        '/(?<=host=|host:|host: |hôte : )[\p{L}\p{N}][\p{L}\p{N}-]{0,62}(?![\w.-])(?::\d{1,5}(?!\d))?/iu' => '[hôte]',
+        '/(?<=host |hôte )(?=[\p{L}\p{N}]*[-\d])[\p{L}\p{N}][\p{L}\p{N}-]{0,62}(?![\w.-])(?::\d{1,5}(?!\d))?/iu' => '[hôte]',
         '/(?<=[\w\/\]])\?[^\s#\'"<>]{1,2048}/' => '?[requête]',
         '/(?<=[\w\/\]])#[^\s\'"<>]{1,2048}/' => '#[fragment]',
     ];
