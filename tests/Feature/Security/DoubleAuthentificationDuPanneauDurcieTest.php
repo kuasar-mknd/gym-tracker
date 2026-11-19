@@ -54,6 +54,21 @@ describe('la régénération des codes de récupération (5.0)', function (): vo
         expect($administrateur->refresh()->getAppAuthenticationRecoveryCodes())->toBe($anciens);
     });
 
+    it('refuse le code de l’application seul, sans le mot de passe', function (): void {
+        $administrateur = administrateurDuSecondFacteur();
+        $anciens = $administrateur->getAppAuthenticationRecoveryCodes();
+        Filament::setCurrentPanel('admin');
+        $this->actingAs($administrateur, 'admin');
+
+        Livewire::test(EditProfile::class)
+            ->callAction(TestAction::make('regenerateAppAuthenticationRecoveryCodes')->schemaComponent('app', schema: 'content'), [
+                'code' => AppAuthentication::make()->getCurrentCode($administrateur),
+            ])
+            ->assertHasActionErrors(['password' => 'required']);
+
+        expect($administrateur->refresh()->getAppAuthenticationRecoveryCodes())->toBe($anciens);
+    });
+
     it('régénère avec le mot de passe et le code', function (): void {
         $administrateur = administrateurDuSecondFacteur();
         $anciens = $administrateur->getAppAuthenticationRecoveryCodes();
