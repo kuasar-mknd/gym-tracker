@@ -59,18 +59,18 @@ it('ne pose aucun cookie sur le 419 d\'un POST arrivé sans cookie de session', 
     expect(interSitesCookiesPoses($reponse))->not->toContain('XSRF-TOKEN');
 });
 
-it('garde le cookie du compte connecté face à un POST inter-sites', function (): void {
+it('garde la session du compte quand le POST inter-sites en porte le cookie', function (): void {
     $compte = User::factory()->create();
     $appareil = new Appareil();
     $appareil->envoyer('POST', '/login', ['email' => $compte->email, 'password' => 'password'])
         ->assertRedirect(route('dashboard'));
     interSitesProtegerCommeEnProduction();
 
-    $appareil->oublierLeCookie(config()->string('session.cookie'));
     $reponse = $appareil->envoyer('POST', '/logout', [], ['Sec-Fetch-Site' => 'cross-site']);
 
     $reponse->assertStatus(419);
-    expect(interSitesCookiesPoses($reponse))->not->toContain(config()->string('session.cookie'));
+    expect(interSitesCookiesPoses($reponse))->toContain(config()->string('session.cookie'));
+    $appareil->envoyer('GET', '/dashboard')->assertOk();
 });
 
 it('pose toujours le cookie de session sur une page vue sans cookie', function (): void {
@@ -78,17 +78,4 @@ it('pose toujours le cookie de session sur une page vue sans cookie', function (
 
     expect(interSitesCookiesPoses($reponse))->toContain(config()->string('session.cookie'));
     expect(interSitesCookiesPoses($reponse))->toContain('XSRF-TOKEN');
-});
-
-it('garde le comportement ordinaire d\'un 419 qui arrive avec un cookie de session', function (): void {
-    $compte = User::factory()->create();
-    $appareil = new Appareil();
-    $appareil->envoyer('POST', '/login', ['email' => $compte->email, 'password' => 'password'])
-        ->assertRedirect(route('dashboard'));
-    interSitesProtegerCommeEnProduction();
-
-    $reponse = $appareil->envoyer('POST', '/logout', [], ['Sec-Fetch-Site' => 'cross-site']);
-
-    $reponse->assertStatus(419);
-    expect(interSitesCookiesPoses($reponse))->toContain(config()->string('session.cookie'));
 });
