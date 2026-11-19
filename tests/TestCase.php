@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Models\Admin;
 use App\Services\ResolveurDns;
+use App\Support\AssuranceDuSecondFacteur;
+use Illuminate\Contracts\Auth\Authenticatable as UserContract;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Tests\Support\RedisReel;
 
@@ -89,5 +92,25 @@ abstract class TestCase extends BaseTestCase
         });
 
         return $traits;
+    }
+
+    /**
+     * Un administrateur connecté au panneau par `actingAs()` arrive avec la
+     * preuve de son second facteur en session, comme celui qui a passé le défi
+     * (`AssuranceDuSecondFacteur`) : un test qui veut le contraire la remplace.
+     *
+     * @param  string|null  $guard
+     * @return $this
+     */
+    #[\Override]
+    public function be(UserContract $user, $guard = null)
+    {
+        parent::be($user, $guard);
+
+        if ($guard === 'admin' && $user instanceof Admin) {
+            $this->withSession([AssuranceDuSecondFacteur::CLE => AssuranceDuSecondFacteur::empreinte($user)]);
+        }
+
+        return $this;
     }
 }

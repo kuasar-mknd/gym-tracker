@@ -422,6 +422,7 @@ it("garde la session de l'administrateur qui porte l'identifiant du compte suppr
     $this->withSession([
         $garde->getName() => $administrateur->getAuthIdentifier(),
         'password_hash_admin' => $garde->hashPasswordForCookie($administrateur->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($administrateur),
     ])->get('/backoffice')->assertOk();
 
     expect(DB::table('sessions')->where('user_id', $identifiant)->count())->toBe(1);

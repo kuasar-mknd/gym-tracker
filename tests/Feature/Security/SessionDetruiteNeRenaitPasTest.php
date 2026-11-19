@@ -303,6 +303,7 @@ it('ne fait pas renaître une session détruite pendant une page du panneau, et 
     UneAutreRequete::ajouteALaSession($ancienne, [
         $gardeDuPanneau->getName() => $administrateur->getAuthIdentifier(),
         'password_hash_admin' => $gardeDuPanneau->hashPasswordForCookie($administrateur->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($administrateur),
     ]);
     $appareil->envoyer('GET', '/backoffice')->assertOk();
 

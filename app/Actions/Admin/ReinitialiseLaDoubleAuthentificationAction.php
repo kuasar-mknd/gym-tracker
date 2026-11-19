@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Admin;
 
 use App\Models\Admin;
+use App\Support\AssuranceDuSecondFacteur;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -15,8 +16,9 @@ use Illuminate\Support\Facades\Log;
  * a perdu son application et ses codes de récupération, depuis la console.
  *
  * Retirer le secret révoque aussi les jetons de diagnostic qu'il avait créés
- * (`RevoqueLesJetonsDeDiagnostic`). Les sessions déjà ouvertes ne sont pas
- * fermées : changer le mot de passe le fait.
+ * (`RevoqueLesJetonsDeDiagnostic`). Les sessions déjà ouvertes perdent la preuve
+ * de leur second facteur (`AssuranceDuSecondFacteur`) : le panneau les ferme à
+ * leur prochaine requête.
  */
 final readonly class ReinitialiseLaDoubleAuthentificationAction
 {
@@ -31,6 +33,8 @@ final readonly class ReinitialiseLaDoubleAuthentificationAction
             'app_authentication_secret' => null,
             'app_authentication_recovery_codes' => null,
         ])->save();
+
+        AssuranceDuSecondFacteur::fermerLesSessions($admin);
 
         if ($enAvait) {
             Log::notice('Double authentification d\'un administrateur réinitialisée.', ['admin_id' => $admin->id]);

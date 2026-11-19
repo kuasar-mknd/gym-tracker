@@ -90,6 +90,7 @@ function liensDuMenuNouvelleRequeteOctane(Admin $admin): void
     Facade::clearResolvedInstances();
     config(['auth.defaults.guard' => 'web']);
     auth()->guard('admin')->setUser($admin);
+    test()->withSession([\App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($admin)]);
     RateLimiter::clear('admin-panel:127.0.0.1');
 }
 

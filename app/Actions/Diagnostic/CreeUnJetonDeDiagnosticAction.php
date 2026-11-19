@@ -8,8 +8,8 @@ use App\Enums\PorteeDeDiagnostic;
 use App\Models\Admin;
 use App\Models\JetonDeDiagnostic;
 use App\Support\AlertesDeDiagnostic;
+use App\Support\AuthentificationParApplication;
 use Carbon\CarbonInterface;
-use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -163,7 +163,7 @@ final readonly class CreeUnJetonDeDiagnosticAction
 
         RateLimiter::hit($cle, 60);
 
-        if (! AppAuthentication::make()->verifyCode($codeTotp, $secretTotp, shouldPreventCodeReuse: true)) {
+        if (! AuthentificationParApplication::make()->verifyCode($codeTotp, $secretTotp, shouldPreventCodeReuse: true)) {
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::CODE_REFUSE);
         }
     }
