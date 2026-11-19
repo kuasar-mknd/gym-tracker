@@ -61,7 +61,7 @@ const formatDate = (date) => {
 <template>
     <Head title="Notifications" />
 
-    <AuthenticatedLayout page-title="Notifications">
+    <AuthenticatedLayout show-back back-route="dashboard" page-title="Notifications">
         <!--
             Le jumeau de « Tout marquer comme lu » pour l'en-tête mobile : celui
             de l'en-tête de page ne se montre qu'avec la barre de bureau, et un

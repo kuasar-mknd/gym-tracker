@@ -107,7 +107,7 @@ const getProgressPercent = (habit) => {
 <template>
     <Head title="Habitudes" />
 
-    <AuthenticatedLayout page-title="Habitudes">
+    <AuthenticatedLayout show-back back-route="profile.index" page-title="Habitudes">
         <template #header-actions>
             <GlassButton
                 variant="primary"

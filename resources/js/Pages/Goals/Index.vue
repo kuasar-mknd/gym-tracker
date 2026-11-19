@@ -99,7 +99,7 @@ const goalDistribution = computed(() => {
 <template>
     <Head title="Mes Objectifs" />
 
-    <AuthenticatedLayout page-title="Mes Objectifs">
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Mes Objectifs">
         <!-- The #header slot is desktop-only (hidden bureau:block in the layout), so the
              create action has to be mirrored here or it is unreachable on phones. -->
         <template #header-actions>

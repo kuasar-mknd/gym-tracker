@@ -28,10 +28,6 @@ vi.mock('@/Components/Stats/SessionPerformanceChart.vue', () => ({
     __esModule: true,
     default: { name: 'SessionPerformanceChart', props: ['data'], template: '<div />' },
 }))
-vi.mock('@/Components/Stats/SessionVolumeLineChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'SessionVolumeLineChart', props: ['data'], template: '<div />' },
-}))
 vi.mock('@/Components/Stats/SetWeightProgressionChart.vue', () => ({
     __esModule: true,
     default: { name: 'SetWeightProgressionChart', props: ['data'], template: '<div />' },

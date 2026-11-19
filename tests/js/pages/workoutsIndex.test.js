@@ -684,6 +684,8 @@ describe('Workouts/Index — sur une copie hors ligne', () => {
  * « Calendrier » et « Modèles », dans l'en-tête de bureau, se posaient dans un
  * `Link` autour d'un `GlassButton` : un bouton dans un lien, deux arrêts de
  * tabulation pour un seul geste (#2117). Le vrai `GlassButton` les rend ici.
+ * Le segment mobile (`nav` « Séances »), jumeau de ces commandes sous 1 024 px,
+ * est écarté de la recherche : il a ses propres cas plus bas.
  */
 describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
     it.each([
@@ -705,6 +707,7 @@ describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
         })
         const commandes = wrapper
             .findAll('a[href], button:not([disabled])')
+            .filter((commande) => commande.element.closest('nav[aria-label="Séances"]') === null)
             .filter((commande) => commande.text().replace(/\s+/g, ' ').trim() === nom)
 
         expect(wrapper.findAll('a button')).toHaveLength(0)
@@ -713,5 +716,21 @@ describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
         ])
 
         wrapper.unmount()
+    })
+})
+
+describe('Workouts/Index — le segment mobile', () => {
+    it('propose Historique, Modèles et Calendrier, chacun par un seul lien sauf la page courante', () => {
+        const wrapper = mountPage()
+        const segment = wrapper.get('nav[aria-label="Séances"]')
+
+        expect(segment.text().replace(/\s+/g, ' ')).toBe('Historique Modèles Calendrier')
+        expect(segment.get('[aria-current="page"]').text()).toBe('Historique')
+        expect(segment.findAll('a').map((lien) => [lien.text(), lien.attributes('href')])).toEqual([
+            ['Modèles', globalThis.route('templates.index')],
+            ['Calendrier', globalThis.route('calendar.index')],
+        ])
+        expect(segment.findAll('button')).toHaveLength(0)
+        expect(wrapper.text()).toContain('Démarrer une séance')
     })
 })
