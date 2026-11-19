@@ -55,10 +55,10 @@ it('laisse les deux tuiles sans compte à un administrateur sans la capacité de
     test()->actingAs(FilamentAdminPanel::admin(), 'admin');
 
     expect(StatsOverview::canView())->toBeTrue()
-        ->and(tuilesDeStatsVuesPar(FilamentAdminPanel::admin()))->toBe(['Séances du jour', 'Exercices communs']);
+        ->and(tuilesDeStatsVuesPar(FilamentAdminPanel::admin(['ViewAny:Workout', 'ViewAny:Exercise'])))->toBe(['Séances du jour', 'Exercices communs']);
 });
 
 it('ajoute les tuiles de comptes à qui peut lister les utilisateurs', function (): void {
-    expect(tuilesDeStatsVuesPar(FilamentAdminPanel::admin(['ViewAny:User'])))
+    expect(tuilesDeStatsVuesPar(FilamentAdminPanel::admin(['ViewAny:User', 'ViewAny:Workout', 'ViewAny:Exercise'])))
         ->toBe(['Comptes', 'Nouveaux comptes (7 j)', 'Séances du jour', 'Exercices communs']);
 });

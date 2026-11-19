@@ -27,15 +27,23 @@ final readonly class PrevenirLeTitulaireDeLAdresse
     public const int SECONDES_ENTRE_DEUX_AVIS = 3600;
 
     /**
+     * La clef du créneau d'un compte.
+     */
+    public static function clefDuCompte(int $identifiant): string
+    {
+        return 'avis-sur-l-adresse:'.$identifiant;
+    }
+
+    /**
      * Rend vrai quand l'avis part, faux quand la borne le retient.
      */
     public function execute(User $titulaire, MotifDeLaTentative $motif): bool
     {
         return RateLimiter::attempt(
-            'avis-sur-l-adresse:'.$titulaire->id,
+            self::clefDuCompte($titulaire->id),
             1,
             static function () use ($titulaire, $motif): void {
-                $titulaire->notify(new TentativeSurTonAdresse($motif));
+                $titulaire->notify(new TentativeSurTonAdresse($motif, $titulaire->id));
             },
             self::SECONDES_ENTRE_DEUX_AVIS,
         ) !== false;

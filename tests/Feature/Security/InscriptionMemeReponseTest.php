@@ -302,6 +302,15 @@ it('prévient le titulaire quand une inscription concurrente prend l’adresse j
         }
 
         $concurrente = User::factory()->enAttente()->createQuietly(['email' => 'disputee@example.org']);
+
+        /*
+         * L'inscription concurrente tient sa propre transaction, validée : le
+         * rejet de celle-ci ne l'efface pas. Sur une seule connexion, on la
+         * réécrit au retour en arrière.
+         */
+        DB::afterRollBack(static function () use (&$concurrente): void {
+            $concurrente = User::factory()->enAttente()->createQuietly(['email' => 'disputee@example.org']);
+        });
     });
 
     app()->call(new TraiterUneInscription('disputee@example.org', 'Second', Hash::make('Un-mot-de-passe-solide-42!'), 'fr')->handle(...));
