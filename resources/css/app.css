@@ -111,7 +111,7 @@
      * La meme surface, plus dense. Trois vues ecrivaient `bg-glass-strong`, une
      * classe que rien ne declarait : le navigateur n'applique alors RIEN, et le
      * survol de ces cartes ne faisait rien du tout. Le jeton existait pourtant,
-     * sous le nom `--glass-bg-strong` d'un ancien bloc (`verre-epais` le lit), que Tailwind ne lit
+     * sous le nom `--glass-bg-strong` d'un ancien bloc (`verre-epais` lit ce jeton), que Tailwind ne lit
      * pas pour fabriquer des utilitaires.
      */
     --color-surface-glass-strong: rgb(from var(--color-surface-card) r g b / 0.85);

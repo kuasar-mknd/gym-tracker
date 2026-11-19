@@ -72,7 +72,7 @@ const isActiveRoute = (itemRoute) => {
                 <button
                     v-press
                     @click="handleFabClick"
-                    class="glass-nav-fab accent-fill verre-plein focus-visible:ring-accent-primary focus-visible:ring-2 focus-visible:outline-none"
+                    class="glass-nav-fab accent-fill verre-plein focus-visible:ring-accent-primary focus-visible:ring-offset-surface-page focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     :aria-label="fabConfig.name"
                     :disabled="creationEnCours"
                     :aria-busy="creationEnCours"
