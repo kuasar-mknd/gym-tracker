@@ -8,7 +8,7 @@ use Symfony\Component\Yaml\Yaml;
  * Le proxy inverse est sur le même hôte que le conteneur et vise le port
  * publié par `app`. Publié sur toutes les interfaces, ce port laissait un
  * appareil du réseau local, ou un autre conteneur, forger `X-Forwarded-For`
- * (les plages privées sont des proxys de confiance par défaut) : liste
+ * (les ponts Docker sont des proxys de confiance par défaut) : liste
  * blanche du panneau ouverte, limiteurs par adresse contournés (#2309).
  * La garde vaut pour tous les services : la base et Redis ne se publient pas
  * davantage.

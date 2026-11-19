@@ -6,7 +6,7 @@ use App\Support\Sante\ProxysDeConfianceCheck;
 use Illuminate\Support\Facades\Config;
 
 /*
- * Le défaut de `TRUSTED_PROXIES` accepte trois plages privées entières : un
+ * Le défaut de `TRUSTED_PROXIES` accepte la plage entière des ponts Docker : un
  * pair de l'une d'elles peut annoncer n'importe quelle adresse cliente. Le
  * contrôle juge la liste résolue, pas la variable, et seulement en
  * production : le défaut reste, et la page dit qu'il est large.

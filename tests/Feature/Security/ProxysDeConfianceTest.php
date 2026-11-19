@@ -110,7 +110,7 @@ it('lit dans TRUSTED_PROXIES des adresses et des sous-réseaux séparés par des
 });
 
 /*
- * Le comportement par défaut ne change pas : un pair des plages privées reste
+ * Le défaut croit la boucle locale et les ponts Docker : un pair de ces plages reste
  * cru, d'où la recommandation de régler la variable en production.
  */
 it('croit, sans réglage, la passerelle d’un pont Docker', function (): void {
@@ -141,7 +141,7 @@ it('lit derrière le proxy déclaré HTTPS et l’adresse que le proxy ajoute', 
 });
 
 /*
- * Un client des plages privées, à travers le proxy déclaré, ne passe plus
+ * Un client d'un pont Docker, à travers le proxy déclaré, ne passe plus
  * pour un proxy : l'adresse qu'il annonce est ignorée, la sienne est lue.
  */
 it('lit l’adresse privée d’un client à travers le proxy déclaré, pas celle qu’il annonce', function (): void {
@@ -150,8 +150,8 @@ it('lit l’adresse privée d’un client à travers le proxy déclaré, pas cel
 
     config(['trustedproxy.proxies' => ['172.18.0.2']]);
 
-    proxysDeConfianceLireDepuis('172.18.0.2', ['X-Forwarded-For' => '198.51.100.9, 192.168.1.20'])
-        ->assertJson(['adresse' => '192.168.1.20']);
+    proxysDeConfianceLireDepuis('172.18.0.2', ['X-Forwarded-For' => '198.51.100.9, 172.20.0.5'])
+        ->assertJson(['adresse' => '172.20.0.5']);
 });
 
 it('lit un client à adresse publique sous sa vraie adresse, réglage ou non', function (): void {
