@@ -16,7 +16,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 
 S'y ajoutent plus de quarante **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur, variables d'environnement documentées.
 
-Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](docs/charte.html). La feuille de route vit dans les issues GitHub et le journal des modifications, pas dans un document qui vieillit.
+Voir aussi les [décisions d'architecture](adr/) et la [charte graphique](charte.html). La feuille de route vit dans les issues GitHub et le journal des modifications, pas dans un document qui vieillit.
 
 ## Pile technique
 
@@ -34,7 +34,7 @@ Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](d
 Toutes les couleurs de l'application vivent dans **`resources/css/app.css`**, et nulle part ailleurs.
 Un composant y nomme un **rôle** — un accent, un danger, une catégorie — jamais une couleur.
 
-📄 **[docs/charte.html](docs/charte.html)** — les jetons, les surfaces appariées et leurs contrastes mesurés.
+📄 **[charte.html](charte.html)** — les jetons, les surfaces appariées et leurs contrastes mesurés.
 La page est générée : `php artisan charte:publier`.
 
 Deux règles valent d'être connues avant de toucher au style :
@@ -131,4 +131,4 @@ Les contributions sont les bienvenues !
 1. Assure-toi que les tests passent : `./vendor/bin/sail artisan test`
 2. Vérifie la qualité aux seuils de la CI : `./vendor/bin/sail php vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90`
 3. Formate ton code : `./vendor/bin/sail bin pint`
-4. Voir le [Guide de Contribution](CONTRIBUTING.md) pour plus de détails.
+4. Voir le [Guide de Contribution](../CONTRIBUTING.md) pour plus de détails.

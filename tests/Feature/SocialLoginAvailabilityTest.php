@@ -212,7 +212,7 @@ it('garde la clé privée d\'Apple écrite sur plusieurs lignes, et tient une va
  * tombait en 500 (TypeError dans la signature) ; sans identifiant de clé, il
  * présentait à Apple un jeton sans `kid`, refusé en `invalid_client`. La clé
  * ne lui parvient donc qu'avec le trio complet ; incomplet, c'est le secret
- * posé qui part, comme le README le promet.
+ * posé qui part, comme docs/variables-d-environnement.md le promet.
  */
 it('ne transmet la clé privée d\'Apple qu\'avec l\'équipe et l\'identifiant de sa clé', function (array $variables): void {
     $configuration = ConfigurationDesServicesRelue::avec([
