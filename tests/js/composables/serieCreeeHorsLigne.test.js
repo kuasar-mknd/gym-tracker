@@ -321,6 +321,28 @@ describe('une série créée hors ligne', () => {
             expect([...reseau.serveur.series.keys()]).toEqual([3])
         })
 
+        it('rétablit la coche sur le serveur quand on annule après le retour du réseau', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+            await leReseauRevient(page)
+            page.annulerLaSuppression()
+            await vi.waitFor(() => expect(reseau.serveur.series.get(100)?.is_completed).toBe(true))
+
+            expect(page.ligne().sets.map(({ id, is_completed }) => [id, is_completed])).toEqual([
+                [3, true],
+                [100, true],
+            ])
+            expect([...reseau.serveur.series.values()].map((s) => [s.id, s.is_completed])).toEqual([
+                [3, true],
+                [100, true],
+            ])
+        })
+
         it('met la suppression d’une série du serveur en file durable quand la page part, et un rechargement ne la ramène pas', async () => {
             const page = await monterLaSeance(seance())
 

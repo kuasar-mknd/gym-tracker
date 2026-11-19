@@ -150,7 +150,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div ref="racine" class="z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80">
+    <div
+        id="colonne-des-toasts"
+        ref="racine"
+        class="z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80"
+    >
         <div v-for="(cfg, type) in toasts" :key="type" class="contents">
             <Transition
                 enter-active-class="transition ease-out duration-300"

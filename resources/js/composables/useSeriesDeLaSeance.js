@@ -98,6 +98,7 @@ export const useSeriesDeLaSeance = ({
             rowKey,
             fieldWrites,
             deleteSet,
+            patchSet,
             oublierLesRafales,
             oublierLaSerie,
             markUnsynced,

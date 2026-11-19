@@ -32,6 +32,7 @@ const memeValeur = (a, b) =>
  *   rowKey: (rangee: object) => string|number,
  *   fieldWrites: { forget: (cle: string) => void },
  *   deleteSet: (setId: unknown) => Promise<unknown>,
+ *   patchSet?: (set: object, payload: object) => Promise<unknown>,
  *   oublierLesRafales: (setId: unknown) => void,
  *   oublierLaSerie: (setId: unknown) => void,
  *   markUnsynced: (setId: unknown) => void,
@@ -49,6 +50,7 @@ export const useAjoutEtRetraitDeSerie = ({
     rowKey,
     fieldWrites,
     deleteSet,
+    patchSet = () => Promise.resolve(),
     oublierLesRafales,
     oublierLaSerie,
     markUnsynced,
@@ -618,8 +620,21 @@ export const useAjoutEtRetraitDeSerie = ({
                 enAttente = null
                 remettre()
 
-                if (fileDeLaSerie !== null) {
-                    SyncService.modifierEnFile(fileDeLaSerie, { is_completed: serie.is_completed })
+                /*
+                 * Partie ou en vol depuis, la création n'est plus dans la file :
+                 * la coche retirée au clic est rétablie par l'identifiant réel,
+                 * une fois la création retombée.
+                 */
+                if (
+                    fileDeLaSerie !== null &&
+                    !SyncService.modifierEnFile(fileDeLaSerie, { is_completed: serie.is_completed }) &&
+                    serie.is_completed
+                ) {
+                    patchSet(serie, { is_completed: true }).catch((err) => {
+                        if (!err.isOffline) {
+                            reportSyncFailure('La coche n’a pas pu être rétablie. Réessaie.')
+                        }
+                    })
                 }
             },
         })
