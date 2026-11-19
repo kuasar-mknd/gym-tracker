@@ -26,35 +26,43 @@ final class RevoquerLesJetonsDeDiagnostic extends Command
 {
     public function handle(RevoqueLesJetonsDeDiagnosticAction $revocation): int
     {
-        $identifiant = $this->option('identifiant');
-        $aUnIdentifiant = is_string($identifiant) && $identifiant !== '';
+        $designations = $this->designations();
 
-        $designations = array_filter([$this->option('si-coupe') === true, $this->option('tous') === true, $aUnIdentifiant]);
-
-        if (count($designations) > 1) {
-            $this->components->error('Choisis une seule désignation : --tous, --identifiant= ou --si-coupe.');
-
-            return self::INVALID;
-        }
-
-        if ($this->option('si-coupe') === true) {
-            if (config('app.diagnostic_enabled') === true) {
-                return self::SUCCESS;
-            }
-
-            $revoques = $revocation->execute(RaisonDeRevocationDuJeton::Interrupteur);
-        } elseif ($this->option('tous') === true) {
-            $revoques = $revocation->execute(RaisonDeRevocationDuJeton::Manuelle);
-        } elseif ($aUnIdentifiant) {
-            $revoques = $revocation->execute(RaisonDeRevocationDuJeton::Manuelle, null, $identifiant);
-        } else {
-            $this->components->error('Désigne ce qui se révoque : --tous ou --identifiant=.');
+        if (count($designations) !== 1) {
+            $this->components->error(match (count($designations)) {
+                0 => 'Désigne ce qui se révoque : --tous ou --identifiant=.',
+                default => 'Choisis une seule désignation : --tous, --identifiant= ou --si-coupe.',
+            });
 
             return self::INVALID;
         }
+
+        if ($designations === ['si-coupe'] && config('app.diagnostic_enabled') === true) {
+            return self::SUCCESS;
+        }
+
+        $revoques = match ($designations[0]) {
+            'si-coupe' => $revocation->execute(RaisonDeRevocationDuJeton::Interrupteur),
+            'tous' => $revocation->execute(RaisonDeRevocationDuJeton::Manuelle),
+            default => $revocation->execute(RaisonDeRevocationDuJeton::Manuelle, null, (string) $this->option('identifiant')),
+        };
 
         $this->components->info(sprintf('%d jeton(s) révoqué(s).', count($revoques)));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function designations(): array
+    {
+        $identifiant = $this->option('identifiant');
+
+        return array_keys(array_filter([
+            'si-coupe' => $this->option('si-coupe') === true,
+            'tous' => $this->option('tous') === true,
+            'identifiant' => is_string($identifiant) && $identifiant !== '',
+        ]));
     }
 }
