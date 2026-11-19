@@ -20,15 +20,18 @@ use App\Support\Courriels\GestionnaireDesCourriels;
 use App\Support\Journaux\GestionnaireDesJournaux;
 use App\Support\LiensDesCourriels;
 use App\Support\Sessions\GestionnaireDesSessions;
+use App\Support\VerificateurDeMotsDePasseDivulgues;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Log\LogManager;
@@ -69,6 +72,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->taireLesAdressesDansLesErreursDEnvoi();
         $this->taireLesAdressesDansLeJournalDeDernierRecours();
         $this->neJamaisFaireRenaitreUneSessionDetruite();
+        $this->bornerLaRechercheDesMotsDePasseDivulgues();
         $this->fermerLesOutilsAUnAdministrateurSansDoubleAuthentification();
 
         if (config('app.env') === 'testing') {
@@ -118,7 +122,7 @@ final class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(config('app.env') !== 'production');
 
         Password::defaults(function () {
-            $rule = Password::min(8);
+            $rule = Password::min(8)->max(255);
 
             return config('app.env') === 'production'
                 ? $rule->mixedCase()->uncompromised()
@@ -182,6 +186,21 @@ final class AppServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(StartSession::class, OuvreLaSession::class);
+    }
+
+    /**
+     * Par `extend()` : le fournisseur de la validation est différé et
+     * écraserait une liaison posée ici.
+     */
+    private function bornerLaRechercheDesMotsDePasseDivulgues(): void
+    {
+        $this->app->extend(
+            UncompromisedVerifier::class,
+            static fn (UncompromisedVerifier $_verificateur, Application $application): VerificateurDeMotsDePasseDivulgues => new VerificateurDeMotsDePasseDivulgues(
+                $application->make(HttpFactory::class),
+                VerificateurDeMotsDePasseDivulgues::DELAI_EN_SECONDES,
+            ),
+        );
     }
 
     /**

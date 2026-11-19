@@ -10,10 +10,12 @@ use Closure;
 use Illuminate\Contracts\Cache\Factory as FabriqueDesCaches;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Cookie\CookieJar;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -71,6 +73,9 @@ use Symfony\Component\HttpFoundation\Response;
  * toucher, échouerait en 419 à son premier envoi. Elle ne prolonge rien,
  * puisqu'elle est neuve.
  *
+ * Une session neuve (invité sans cookie, session expirée) se compte par
+ * adresse et se refuse en 429 au-delà du plafond (`plafonnerLesSessionsNeuves()`).
+ *
  * Branché à la place de `StartSession` dans le groupe `web`
  * (bootstrap/app.php, `web(replace:)`) : l'ordre de priorité de Laravel le
  * classe à la même place, par sa classe parente. Le panneau le nomme dans sa
@@ -121,6 +126,8 @@ final class OuvreLaSession extends StartSession
             return $this->sansRienPoser($next($request));
         }
 
+        $this->plafonnerLesSessionsNeuves($request, $session);
+
         $this->collectGarbage($session);
 
         $reponse = $next($request);
@@ -136,6 +143,38 @@ final class OuvreLaSession extends StartSession
         }
 
         return $reponse;
+    }
+
+    /**
+     * Les sessions neuves se comptent par adresse, `session.invites_par_minute`
+     * par minute ; au-delà, un 429 avant toute écriture.
+     *
+     * @throws ThrottleRequestsException
+     */
+    private function plafonnerLesSessionsNeuves(Request $request, Session $session): void
+    {
+        if ($request->isPrecognitive() || ! $session instanceof SessionQuiNeRenaitPas || $session->aEteLueAuMagasin()) {
+            return;
+        }
+
+        $clef = 'sessions-neuves:'.self::partitionDeLAdresse((string) $request->ip());
+        $plafond = config()->integer('session.invites_par_minute');
+
+        if (RateLimiter::tooManyAttempts($clef, $plafond)) {
+            throw new ThrottleRequestsException('Too Many Attempts.', null, ['Retry-After' => RateLimiter::availableIn($clef)]);
+        }
+
+        RateLimiter::hit($clef, 60);
+    }
+
+    /**
+     * Une adresse IPv6 compte par son préfixe de 64 bits.
+     */
+    private static function partitionDeLAdresse(string $adresse): string
+    {
+        $binaire = str_contains($adresse, ':') ? inet_pton($adresse) : false;
+
+        return $binaire === false ? $adresse : bin2hex(substr($binaire, 0, 8));
     }
 
     /**
