@@ -113,7 +113,15 @@ export const renouvelerLAbonnement = async (evenement, { pushManager, envoyer = 
     const nouveau = await abonnementDeRemplacement(evenement, pushManager).catch(() => null)
 
     if (nouveau) {
-        await tenter(() => envoyer(URL_D_ENREGISTREMENT, nouveau.toJSON()))
+        // L'ancienne adresse part avec le nouvel abonnement : la session peut
+        // être celle d'un autre compte que le propriétaire de l'ancienne, et le
+        // serveur la retire de tout compte.
+        const corps =
+            ancien && ancien.endpoint !== nouveau.endpoint
+                ? { ...nouveau.toJSON(), ancien_endpoint: ancien.endpoint }
+                : nouveau.toJSON()
+
+        await tenter(() => envoyer(URL_D_ENREGISTREMENT, corps))
     }
 
     if (ancien && ancien.endpoint !== nouveau?.endpoint) {

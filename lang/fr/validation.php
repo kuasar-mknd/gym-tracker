@@ -202,6 +202,7 @@ return [
         'adresse' => 'adresse du lien',
         'agent' => 'navigateur',
         'amount' => 'quantité',
+        'ancien_endpoint' => 'ancienne adresse de l\'abonnement',
         'archived' => 'archivage',
         'auto_rest_timer' => 'minuteur de repos automatique',
         'bar_weight' => 'poids de la barre',
