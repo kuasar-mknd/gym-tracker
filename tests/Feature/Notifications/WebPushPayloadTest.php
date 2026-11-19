@@ -49,7 +49,7 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
         expect($payload)->toEqual([
             'title' => 'Nouveau record ! 🏆',
             'actions' => [
-                ['title' => 'Voir mes stats', 'action' => url('/stats')],
+                ['title' => 'Voir mes stats', 'action' => '/stats'],
             ],
             'body' => "Félicitations ! Tu as battu ton record de poids maximum sur l'exercice Développé Couché avec 102,5\u{00A0}kg.",
             'icon' => '/pwa-192x192.png',
@@ -101,8 +101,7 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
         $actions = new PersonalRecordAchieved($record)->toWebPush($record->user, null)->toArray()['actions'];
 
         expect($actions)->toHaveCount(1)
-            ->and($actions[0]['action'])->toBe(url('/stats'))
-            ->and($actions[0]['action'])->toEndWith('/stats')
+            ->and($actions[0]['action'])->toBe('/stats')
             ->and($actions[0]['title'])->toBe('Voir mes stats');
     });
 });
@@ -117,7 +116,7 @@ describe('AchievementUnlocked::toWebPush', function (): void {
         expect($payload)->toEqual([
             'title' => 'Badge débloqué ! 🏆',
             'actions' => [
-                ['title' => 'Voir mes badges', 'action' => url('/achievements')],
+                ['title' => 'Voir mes badges', 'action' => '/achievements'],
             ],
             'body' => 'Félicitations ! Tu as débloqué le badge : Marathonien du Fer.',
             'icon' => '/pwa-192x192.png',
@@ -145,7 +144,7 @@ describe('TrainingReminder::toWebPush', function (): void {
         expect($payload)->toEqual([
             'title' => 'Prêt pour ta séance ? 💪',
             'actions' => [
-                ['title' => 'Ouvrir Gym Tracker', 'action' => url('/dashboard')],
+                ['title' => 'Ouvrir Gym Tracker', 'action' => '/dashboard'],
             ],
             'body' => "C'est le moment de s'entraîner ! 💪",
             'icon' => '/pwa-192x192.png',
@@ -257,7 +256,7 @@ describe('end-to-end delivery through the real WebPushChannel', function (): voi
         expect($decoded)->toEqual([
             'title' => 'Nouveau record ! 🏆',
             'actions' => [
-                ['title' => 'Voir mes stats', 'action' => url('/stats')],
+                ['title' => 'Voir mes stats', 'action' => '/stats'],
             ],
             'body' => "Félicitations ! Tu as battu ton record de poids maximum sur l'exercice Développé Couché avec 102,5\u{00A0}kg.",
             'icon' => '/pwa-192x192.png',

@@ -176,13 +176,16 @@ final class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Les abonnements dont l'hôte est un service push de navigateur, les
-     * autres déjà stockés étant ignorés à l'envoi.
+     * autres déjà stockés étant ignorés à l'envoi, du plus récent au plus
+     * ancien : le budget de temps de l'envoi (`WebPushBorne`) coupe les
+     * derniers, et un pair muet, jamais retiré, retient chaque envoi.
      *
      * @return Collection<array-key, \NotificationChannels\WebPush\PushSubscription>
      */
     public function routeNotificationForWebPush(): Collection
     {
         return $this->pushSubscriptions
+            ->sortByDesc('id')
             ->filter(static fn ($abonnement): bool => PublicPushEndpoint::accepteLHoteDe($abonnement->endpoint))
             ->values();
     }

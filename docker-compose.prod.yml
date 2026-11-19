@@ -101,9 +101,17 @@ x-app-logging: &app-logging
         max-size: '10m'
         max-file: '3'
 
+# `dns_get_record()` n'a pas de délai propre : il prend celui du `resolv.conf`
+# du conteneur. Mesuré avec un serveur DNS muet : 10 s par défaut, 4 s avec
+# ces deux options (LaResolutionDnsDeLApplicationEstBorneeTest).
+x-app-dns-opt: &app-dns-opt
+    - timeout:2
+    - attempts:2
+
 services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        dns_opt: *app-dns-opt
         # Un conteneur garde l'image avec laquelle il a été créé : retélécharger
         # `:v1` ne met à jour aucun conteneur existant, et le scheduler de
         # production a ainsi tourné des semaines sur une vieille image (#1813). Toute mise à
@@ -343,6 +351,7 @@ services:
 
     worker:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        dns_opt: *app-dns-opt
         pull_policy: always
         restart: always
         security_opt:
@@ -410,6 +419,7 @@ services:
     # minimal du moteur de conteneurs les récolte.
     scheduler:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        dns_opt: *app-dns-opt
         pull_policy: always
         init: true
         volumes:

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\Admin;
+use App\Support\AssuranceDuSecondFacteur;
 use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
@@ -22,6 +23,10 @@ use Symfony\Component\HttpFoundation\Response;
  * d'enrôlement, que celui de Filament exempte en n'y étant pas posé, en est
  * exemptée ici, sans quoi l'enrôlement bouclerait. La connexion n'a pas
  * d'administrateur : rien à exiger d'elle.
+ *
+ * La session doit aussi porter la preuve du second facteur
+ * (`AssuranceDuSecondFacteur`) : sans elle, ou périmée par une
+ * réinitialisation, l'administrateur est déconnecté et renvoyé à la connexion.
  */
 final class ExigeLaDoubleAuthentificationDuPanneau
 {
@@ -32,7 +37,18 @@ final class ExigeLaDoubleAuthentificationDuPanneau
     {
         $administrateur = Filament::auth()->user();
 
-        if (! $administrateur instanceof Admin || $administrateur->aLaDoubleAuthentification()) {
+        if (! $administrateur instanceof Admin) {
+            return $next($request);
+        }
+
+        if (! AssuranceDuSecondFacteur::estPortee($administrateur)) {
+            Filament::auth()->logout();
+            $request->session()->forget(AssuranceDuSecondFacteur::CLE);
+
+            return redirect()->to(Filament::getLoginUrl() ?? '/');
+        }
+
+        if ($administrateur->aLaDoubleAuthentification()) {
             return $next($request);
         }
 
