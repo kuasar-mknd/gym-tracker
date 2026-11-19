@@ -32,7 +32,7 @@ const { joignable } = useEtatDuReseau()
         aria-live="polite"
         dusk="bandeau-mise-a-jour"
     >
-        <div class="glass-panel-light flex items-center gap-3 rounded-2xl p-4 shadow-lg backdrop-blur-xl">
+        <div class="verre-regulier flex items-center gap-3 rounded-2xl p-4 shadow-lg backdrop-blur-xl">
             <div class="flex-1 space-y-1">
                 <p class="text-text-main text-sm font-bold">
                     Nouvelle version prête. Elle s'ouvrira à la prochaine page.

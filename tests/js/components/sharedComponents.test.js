@@ -139,13 +139,13 @@ describe('Dropdown', () => {
      * Sa valeur par defaut etait `bg-surface-card/10` — du blanc a 10 % sur le fond
      * clair de l'application, c'est-a-dire un fantome (#1314). Le test vise la
      * classe de surface plutot qu'une couleur precise : c'est
-     * `glass-panel-strong` qui porte le jeton, et lui seul suit le theme.
+     * `verre-epais` qui porte le jeton, et lui seul suit le theme.
      */
     it('pose une surface opaque sous le menu, pas un voile', () => {
         const wrapper = mountDropdown()
         const classes = panel(wrapper).find('div').classes()
 
-        expect(classes).toContain('glass-panel-strong')
+        expect(classes).toContain('verre-epais')
         expect(classes.join(' ')).not.toMatch(/bg-surface-card\/(?:5|10|20|30|40)\b/)
 
         wrapper.unmount()

@@ -67,7 +67,7 @@ const installationProposee = ref(false)
 <template>
     <Head title="Accueil" />
 
-    <AuthenticatedLayout page-title="Accueil">
+    <AuthenticatedLayout page-title="Accueil" titre-plat>
         <div class="space-y-6">
             <DashboardHeader
                 :user="$page.props.auth.user"
@@ -127,13 +127,12 @@ const installationProposee = ref(false)
             <GlassCard
                 v-if="activeGoals && activeGoals.length > 0"
                 as="section"
+                variant="fin"
                 class="stagger-6 animate-slide-up relative overflow-hidden"
             >
-                <div class="relative z-10 mb-6">
-                    <h3 class="text-accent-primary-deep sur-titre mb-1">Visualisation</h3>
-                    <p class="font-display text-text-main text-2xl font-black uppercase italic">
-                        Progression des Objectifs
-                    </p>
+                <div class="relative z-10 mb-5">
+                    <p class="etiquette">Visualisation</p>
+                    <h3 class="titre-plat">Progression des objectifs</h3>
                 </div>
                 <div class="relative -mx-2 mt-2 h-48 w-auto">
                     <ActiveGoalsChart :data="activeGoals" />

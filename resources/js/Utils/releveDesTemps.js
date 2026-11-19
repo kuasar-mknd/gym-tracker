@@ -400,7 +400,7 @@ const monterLePanneau = (fenetre, { tableau, fermer, deplie }) => {
 
     panneau.id = 'releve-des-temps'
     panneau.className =
-        'z-flottant top-sure-20 right-sure-4 left-sure-4 sm:left-sure-6 glass-panel-light text-text-main fixed rounded-2xl px-3 py-1 text-xs shadow-lg sm:right-auto sm:w-96'
+        'z-flottant top-sure-20 right-sure-4 left-sure-4 sm:left-sure-6 verre-regulier text-text-main fixed rounded-2xl px-3 py-1 text-xs shadow-lg sm:right-auto sm:w-96'
     titre.className = 'min-h-touch flex cursor-pointer items-center font-bold'
     corps.className = 'hauteur-sure-60 flex flex-col gap-2 pb-2'
     contenu.className = 'min-h-0 flex-1 overflow-auto whitespace-pre font-mono'

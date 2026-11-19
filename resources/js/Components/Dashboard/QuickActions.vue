@@ -14,67 +14,35 @@ const emit = defineEmits(['startWorkout'])
 </script>
 
 <template>
-    <section class="stagger-2 animate-slide-up grid grid-cols-2 gap-4">
-        <!-- Start Workout -->
+    <section class="stagger-2 animate-slide-up grid grid-cols-2 gap-3">
+        <!-- Démarrer une séance : l'action principale, seul aplat orange de l'écran. -->
         <button
             v-press
             @click="emit('startWorkout')"
             :disabled="processing"
             :aria-busy="processing"
-            aria-label="Démarrer une nouvelle séance d'entraînement"
             id="start-workout-button"
             dusk="start-workout-button"
-            class="hover:shadow-glow-orange/70 group shadow-glow-orange focus-visible:ring-accent-primary relative h-52 overflow-hidden rounded-3xl transition duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            class="accent-fill verre-plein rounded-carte focus-visible:ring-accent-primary flex min-h-28 flex-col items-start justify-between p-4 text-left text-base leading-tight font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             :class="{ 'cursor-wait': processing }"
         >
-            <div class="bg-surface-card/60 absolute inset-0 z-0 backdrop-blur-md"></div>
-            <div
-                class="from-accent-primary/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            ></div>
-            <div
-                class="border-accent-primary/20 group-hover:border-accent-primary/60 absolute inset-0 z-10 rounded-3xl border-2 transition-colors"
-            ></div>
-            <div class="relative z-20 flex h-full flex-col items-center justify-center gap-3 p-4">
-                <div
-                    class="accent-fill shadow-accent-primary/30 flex size-16 items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-110"
-                >
-                    <GlassIcon v-if="processing" name="autorenew" size="xl" class="animate-spin" />
-                    <GlassIcon v-else name="fitness_center" size="xl" />
-                </div>
-                <span
-                    class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
-                >
-                    Démarrer<br />Séance
-                </span>
-            </div>
+            <span class="bg-surface-card/20 rounded-icone flex size-10 items-center justify-center">
+                <GlassIcon v-if="processing" name="autorenew" size="lg" class="animate-spin" />
+                <GlassIcon v-else name="fitness_center" size="lg" />
+            </span>
+            Démarrer une séance
         </button>
 
-        <!-- Templates -->
+        <!-- Modèles -->
         <Link
             v-press
             :href="route('templates.index')"
-            aria-label="Voir mes modèles d'entraînement"
-            class="hover:shadow-glow-violet/70 group shadow-glow-violet focus-visible:ring-accent-primary relative h-52 overflow-hidden rounded-3xl transition duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            class="verre-regulier rounded-carte text-text-main focus-visible:ring-accent-primary flex min-h-28 flex-col items-start justify-between p-4 text-base leading-tight font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-            <div class="bg-surface-card/60 absolute inset-0 z-0 backdrop-blur-md"></div>
-            <div
-                class="from-accent-tertiary/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            ></div>
-            <div
-                class="border-accent-tertiary/20 group-hover:border-accent-tertiary/60 absolute inset-0 z-10 rounded-3xl border-2 transition-colors"
-            ></div>
-            <div class="relative z-20 flex h-full flex-col items-center justify-center gap-3 p-4">
-                <div
-                    class="tertiary-fill shadow-accent-tertiary/30 flex size-16 items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-110"
-                >
-                    <GlassIcon name="assignment_add" size="xl" />
-                </div>
-                <span
-                    class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
-                >
-                    Mes<br />Modèles
-                </span>
-            </div>
+            <span class="bg-surface-glass-strong rounded-icone flex size-10 items-center justify-center">
+                <GlassIcon name="assignment_add" size="lg" />
+            </span>
+            Mes modèles
         </Link>
     </section>
 </template>

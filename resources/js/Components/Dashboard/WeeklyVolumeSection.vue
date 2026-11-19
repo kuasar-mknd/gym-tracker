@@ -25,18 +25,14 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
 </script>
 
 <template>
-    <section
-        class="stagger-3 animate-slide-up border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-6 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
-    >
-        <div class="relative z-10 mb-6 flex items-start justify-between">
+    <section class="stagger-3 animate-slide-up verre-fin rounded-carte relative overflow-hidden p-5 sm:p-6">
+        <div class="relative z-10 mb-5 flex items-start justify-between">
             <div>
-                <h3 class="text-accent-primary-deep sur-titre mb-1">Aperçu</h3>
-                <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Hebdo</p>
+                <p class="etiquette">Aperçu</p>
+                <h3 class="titre-plat">Volume hebdo</h3>
             </div>
             <div class="text-right">
-                <p
-                    class="from-accent-primary to-accent-tertiary font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
-                >
+                <p class="text-text-main text-3xl leading-none font-medium tabular-nums">
                     {{ nombre(weeklyVolumeStats?.current_week_volume ?? 0, 0) }}
                 </p>
                 <!--
@@ -53,14 +49,13 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
                 <p
                     v-if="comparison !== null"
                     :class="[
-                        'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
+                        'mt-1 flex items-center justify-end gap-1 text-xs tabular-nums',
                         comparison > 0 ? 'text-trend-up' : comparison < 0 ? 'text-trend-down' : 'text-text-muted',
                     ]"
                 >
                     <GlassIcon
                         :name="comparison > 0 ? 'trending_up' : comparison < 0 ? 'trending_down' : 'trending_flat'"
                         size="xs"
-                        class="font-bold"
                     />
                     <template v-if="comparison === 0">Stable vs sem. passée</template>
                     <template v-else>{{ variation(comparison, '%') }} vs sem. passée</template>

@@ -27,7 +27,7 @@ const mountSection = async (props) => {
 const chartOf = (wrapper) => wrapper.findComponent({ name: 'WeeklyVolumeChart' })
 
 /** The big number, read the way the user reads it. */
-const volumeText = (wrapper) => wrapper.get('p.text-4xl').text()
+const volumeText = (wrapper) => wrapper.get('p.text-3xl').text()
 
 /** The "+12% vs sem. passée" line, absent altogether when the weeks tie. */
 const comparisonOf = (wrapper) => wrapper.get('p.justify-end')

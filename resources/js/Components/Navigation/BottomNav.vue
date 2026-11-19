@@ -72,12 +72,12 @@ const isActiveRoute = (itemRoute) => {
                 <button
                     v-press
                     @click="handleFabClick"
-                    class="glass-nav-fab"
+                    class="glass-nav-fab accent-fill verre-plein focus-visible:ring-accent-primary focus-visible:ring-2 focus-visible:outline-none"
                     :aria-label="fabConfig.name"
                     :disabled="creationEnCours"
                     :aria-busy="creationEnCours"
                 >
-                    <GlassIcon :name="fabConfig.icon" size="xl" class="font-black" />
+                    <GlassIcon :name="fabConfig.icon" size="xl" />
                 </button>
             </div>
 
@@ -87,19 +87,14 @@ const isActiveRoute = (itemRoute) => {
                 v-press
                 :href="route(item.route)"
                 :class="[
-                    'glass-nav-item group focus-visible:ring-accent-primary rounded-xl transition focus-visible:ring-2 focus-visible:outline-none',
+                    'glass-nav-item focus-visible:ring-accent-primary transition focus-visible:ring-2 focus-visible:outline-none',
                     { active: isActiveRoute(item.route) },
                 ]"
                 :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
                 :dusk="'nav-' + item.route.split('.')[0]"
             >
-                <GlassIcon
-                    :name="item.icon"
-                    size="lg"
-                    :fill="isActiveRoute(item.route)"
-                    class="group-hover:drop-shadow-glow-primary transition"
-                />
-                <span class="text-2xs font-bold">{{ item.name }}</span>
+                <GlassIcon :name="item.icon" size="lg" :fill="isActiveRoute(item.route)" />
+                <span class="text-2xs font-medium">{{ item.name }}</span>
             </Link>
         </template>
     </nav>

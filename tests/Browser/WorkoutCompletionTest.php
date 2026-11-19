@@ -51,7 +51,7 @@ class WorkoutCompletionTest extends DuskTestCase
 
             $browser->visit('/dashboard')
                 ->waitFor('#dashboard-header', 30)
-                ->assertSee('RETOUR')
+                ->assertSee('Bon retour')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('completion-failure-'.$sizeMacro);

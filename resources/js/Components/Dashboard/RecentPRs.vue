@@ -15,11 +15,11 @@ defineProps({
     <!-- Recent PRs -->
     <section
         v-if="recentPRs.length > 0"
-        class="stagger-6 animate-slide-up border-surface-card/20 bg-surface-card/10 relative overflow-hidden rounded-3xl border p-6 backdrop-blur-md"
+        class="stagger-6 animate-slide-up verre-fin rounded-carte relative overflow-hidden p-5 sm:p-6"
     >
-        <div class="relative z-10 mb-6">
-            <h3 class="text-accent-primary-deep sur-titre mb-1">Réussites</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic">Records personnels</p>
+        <div class="relative z-10 mb-5">
+            <p class="etiquette">Réussites</p>
+            <h3 class="titre-plat">Records personnels</h3>
         </div>
 
         <!-- PR Bar Chart -->
@@ -28,16 +28,16 @@ defineProps({
         </div>
 
         <div class="space-y-3">
-            <GlassCard v-for="pr in recentPRs" :key="pr.id" padding="p-4">
+            <GlassCard v-for="pr in recentPRs" :key="pr.id" variant="fin" padding="p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex min-w-0 items-center gap-3">
                         <div
-                            class="from-accent-warning to-accent-primary flex size-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br shadow-lg"
+                            class="bg-surface-glass-strong text-text-main rounded-icone flex size-11 shrink-0 items-center justify-center"
                         >
-                            <GlassIcon name="star" class="text-text-on-accent" />
+                            <GlassIcon name="star" />
                         </div>
                         <div class="min-w-0">
-                            <div class="text-text-main truncate font-bold" :title="pr.exercise?.name">
+                            <div class="text-text-main truncate font-medium" :title="pr.exercise?.name">
                                 {{ pr.exercise?.name }}
                             </div>
                             <div class="text-text-muted text-xs">
@@ -52,7 +52,7 @@ defineProps({
                         </div>
                     </div>
                     <div class="shrink-0 text-right">
-                        <div class="font-display text-accent-primary-deep text-2xl font-black whitespace-nowrap">
+                        <div class="text-text-main text-xl font-medium whitespace-nowrap tabular-nums">
                             {{ pr.type === 'max_volume_set' ? volume(pr.value) : poids(pr.value) }}
                         </div>
                     </div>

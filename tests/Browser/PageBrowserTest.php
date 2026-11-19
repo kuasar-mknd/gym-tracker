@@ -25,7 +25,7 @@ class PageBrowserTest extends DuskTestCase
                 ->{$sizeMacro}();
 
             $pages = [
-                '/dashboard' => 'RETOUR',
+                '/dashboard' => 'Bon retour',
                 '/workouts' => 'SÉANCES',
                 '/calendar' => 'CALENDRIER',
                 '/exercises' => 'BIBLIOTHÈQUE',
