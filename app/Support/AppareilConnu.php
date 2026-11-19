@@ -18,7 +18,7 @@ use LogicException;
  * (`PlafondParAdresse::ECHECS`), que d'autres adresses IP peuvent
  * remplir sans rien savoir du mot de passe.
  *
- * Il porte l'identifiant du compte et une empreinte de son mot de passe, comme
+ * Il porte l'identifiant du compte et une empreinte de son identifiant et de son mot de passe, comme
  * le cookie « se souvenir de moi » (`RappelDeLAppareil`), et jamais son jeton
  * de rappel : la déconnexion le fait tourner, et le cookie mourrait avec elle.
  * Seul un changement de mot de passe le révoque. L'empreinte est un HMAC à clef
@@ -99,6 +99,6 @@ final class AppareilConnu
             throw new LogicException('La garde des comptes tient sa connexion en session.');
         }
 
-        return substr($garde->hashPasswordForCookie($compte->getAuthPassword()), 0, self::LONGUEUR_DE_L_EMPREINTE);
+        return substr($garde->hashPasswordForCookie($compte->id.'|'.$compte->getAuthPassword()), 0, self::LONGUEUR_DE_L_EMPREINTE);
     }
 }

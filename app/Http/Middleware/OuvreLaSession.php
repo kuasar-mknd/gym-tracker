@@ -125,6 +125,10 @@ final class OuvreLaSession extends StartSession
 
         $reponse = $next($request);
 
+        if ($reponse instanceof Response && $reponse->getStatusCode() === 419 && ! $request->hasCookie($session->getName())) {
+            return $this->sansRienPoser($reponse);
+        }
+
         $this->storeCurrentUrl($request, $session);
 
         if (! $this->enregistrer($request, $session)) {
