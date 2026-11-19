@@ -9,7 +9,7 @@ defineProps({
 
 <template>
     <div class="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <!-- Default: Orange / Violet -->
+        <!-- Default: orange / bleu -->
         <template v-if="variant === 'default'">
             <div class="liquid-bg-1"></div>
             <div class="liquid-bg-2"></div>

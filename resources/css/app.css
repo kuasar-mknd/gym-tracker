@@ -111,7 +111,7 @@
      * La meme surface, plus dense. Trois vues ecrivaient `bg-glass-strong`, une
      * classe que rien ne declarait : le navigateur n'applique alors RIEN, et le
      * survol de ces cartes ne faisait rien du tout. Le jeton existait pourtant,
-     * sous le nom `--verre-epais-fond` du bloc historique, que Tailwind ne lit
+     * sous le nom `--glass-bg-strong` d'un ancien bloc (`verre-epais` le lit), que Tailwind ne lit
      * pas pour fabriquer des utilitaires.
      */
     --color-surface-glass-strong: rgb(from var(--color-surface-card) r g b / 0.85);
@@ -441,7 +441,7 @@
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;
 
-    /* Arrondis par rôle : md détail dans une carte, lg petit contrôle, xl contrôle et champ, 2xl tuile et modale, 3xl carte, full pilule. */
+    /* Arrondis par rôle : md détail dans une carte, lg petit contrôle, xl contrôle et champ, 2xl tuile et modale, 3xl grande carte, full pilule. Le verre a ses propres rôles, plus bas. */
     --radius: 0.5rem;
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
@@ -503,9 +503,6 @@
     --shadow-glow-orange:
         0 0 20px rgb(from var(--color-accent-primary) r g b / 0.25),
         0 10px 40px rgb(from var(--color-accent-primary) r g b / 0.15);
-    --shadow-glow-violet:
-        0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.25),
-        0 10px 40px rgb(from var(--color-accent-tertiary) r g b / 0.15);
     --shadow-glow-pink:
         0 0 20px rgb(from var(--color-accent-secondary) r g b / 0.25),
         0 10px 40px rgb(from var(--color-accent-secondary) r g b / 0.15);
@@ -524,7 +521,6 @@
     --shadow-glow-tertiary-sharp: 0 0 4px rgb(from var(--color-accent-tertiary) r g b / 0.8);
     --shadow-glow-state-sharp: 0 0 4px rgb(from var(--color-accent-state) r g b / 0.8);
     --shadow-glow-card: 0 0 15px rgb(from var(--color-surface-card) r g b / 0.1);
-    --drop-shadow-glow-primary: 0 0 8px rgb(from var(--color-accent-primary) r g b / 0.5);
 
     /*
      * Les degrades ne portent plus d'hexadecimal : ils citent les jetons.
@@ -884,7 +880,7 @@
 }
 
 @utility verre-regulier {
-    background: var(--verre-regulier-fond);
+    background: var(--color-surface-glass);
     backdrop-filter: blur(var(--verre-regulier-flou)) saturate(var(--verre-saturation));
     -webkit-backdrop-filter: blur(var(--verre-regulier-flou)) saturate(var(--verre-saturation));
     border: 1px solid var(--verre-lisere);
@@ -892,7 +888,7 @@
 }
 
 @utility verre-epais {
-    background: var(--verre-epais-fond);
+    background: var(--color-surface-glass-strong);
     backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
     -webkit-backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
     border: 1px solid var(--verre-lisere);
@@ -992,8 +988,8 @@
     min-height: var(--touch-min);
     padding: 0.75rem 1.5rem;
     background: rgb(from var(--color-surface-card) r g b / 0.8);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--backdrop-blur-glass));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur-glass));
     border: 1px solid rgb(from var(--color-surface-card) r g b / 0.9);
     border-radius: 1rem;
     font-family: 'Archivo', sans-serif;
@@ -1305,7 +1301,7 @@
     bottom: calc(1rem + var(--safe-area-bottom));
     left: calc(1rem + var(--safe-area-left));
     right: calc(1rem + var(--safe-area-right));
-    background: var(--verre-regulier-fond);
+    background: var(--color-surface-glass);
     backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
     -webkit-backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
     border: 1px solid var(--verre-lisere);
@@ -1328,7 +1324,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.125rem;
-    padding: 0.4375rem 0.75rem;
+    padding: 0.4375rem 0.5rem;
     border-radius: var(--radius-capsule);
     color: var(--color-text-muted);
     transition:
@@ -1342,7 +1338,7 @@
 
     &.active {
         color: var(--color-accent-primary-deep);
-        background: var(--verre-epais-fond);
+        background: var(--color-surface-glass-strong);
         box-shadow:
             var(--verre-reflet),
             0 2px 8px rgb(from var(--color-shadow-ambient) r g b / 0.12);
@@ -1379,8 +1375,8 @@
 
 @utility glass-modal {
     background: rgb(from var(--color-surface-card) r g b / 0.95);
-    backdrop-filter: blur(var(--glass-blur-strong));
-    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+    backdrop-filter: blur(var(--backdrop-blur-glass-strong));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur-glass-strong));
     border: 1px solid var(--verre-lisere);
     border-radius: 2rem;
     /* Sa hauteur se borne dans Modal.vue, par `hauteur-sure-*` : la zone sûre, pas 85vh (#2043). */
@@ -1570,11 +1566,6 @@
     }
 }
 
-@utility glow-orange {
-    /* Glow effects */
-    box-shadow: 0 0 20px rgb(from var(--color-accent-primary) r g b / 0.4);
-}
-
 /* ===================================
    LIQUID GLASS LIGHT DESIGN SYSTEM
    Mobile-First Gym Tracker UI (Rework 2026)
@@ -1584,11 +1575,9 @@
     :root {
         /* Les matériaux du verre : lus par `verre-fin`, `verre-regulier`, `verre-epais` et `glass-nav`. */
         --verre-fin-fond: rgb(from var(--color-surface-card) r g b / 0.42);
-        --verre-regulier-fond: rgb(from var(--color-surface-card) r g b / 0.65);
-        --verre-epais-fond: rgb(from var(--color-surface-card) r g b / 0.85);
         --verre-fin-flou: 16px;
-        --verre-regulier-flou: 22px;
-        --verre-epais-flou: 28px;
+        --verre-regulier-flou: var(--backdrop-blur-glass);
+        --verre-epais-flou: var(--backdrop-blur-glass-strong);
         --verre-saturation: 1.6;
         --verre-lisere: rgb(from var(--color-border) r g b / 0.5);
         --verre-reflet:
@@ -1596,8 +1585,6 @@
             inset 0 0 0 0.5px rgb(from var(--color-surface-card) r g b / 0.25);
         --verre-ombre: 0 8px 24px rgb(from var(--color-shadow-ambient) r g b / 0.12);
         --verre-ombre-flottante: 0 12px 32px rgb(from var(--color-shadow-ambient) r g b / 0.18);
-        --glass-blur: 20px;
-        --glass-blur-strong: 24px;
 
         /* Spacing for mobile touch */
         --touch-min: 44px;
