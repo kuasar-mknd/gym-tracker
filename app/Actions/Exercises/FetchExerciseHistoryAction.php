@@ -116,7 +116,6 @@ class FetchExerciseHistoryAction
      */
     private static function aUnPoidsEtDesRepetitions(Set $set): bool
     {
-        return $set->weight !== null && $set->weight > 0.0
-            && $set->reps !== null && $set->reps > 0;
+        return ($set->weight ?? 0.0) > 0.0 && ($set->reps ?? 0) > 0;
     }
 }
