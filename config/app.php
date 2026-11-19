@@ -149,6 +149,14 @@ return [
 
     'key' => env('APP_KEY'),
 
+    /*
+     * Les empreintes SHA-256 des clés d'application publiées dans l'historique
+     * du dépôt, avec et sans le préfixe `base64:`. Jamais les clés.
+     *
+     * @var list<string>
+     */
+    'cles_publiees' => [],
+
     'previous_keys' => [
         ...array_filter(
             explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
