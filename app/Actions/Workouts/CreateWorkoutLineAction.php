@@ -24,7 +24,7 @@ class CreateWorkoutLineAction
         }
 
         $maxOrder = $workout->workoutLines()->max('order');
-        $order = $data['order'] ?? (is_null($maxOrder) ? 0 : (int) $maxOrder + 1); // @phpstan-ignore cast.int
+        $order = $data['order'] ?? (int) ($maxOrder ?? -1) + 1; // @phpstan-ignore cast.int
 
         /** @var array<string, mixed> $attributs */
         $attributs = array_merge(Arr::except($data, ['workout_id', 'idempotency_key']), ['order' => $order]);
