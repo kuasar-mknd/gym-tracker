@@ -52,14 +52,7 @@ final class VersionsDesConteneursCheck extends Check
                 ->ok('Ce contrôle ne juge que la production : ailleurs, aucun conteneur n\'exécute une image construite par la CI, et app, servi sans Octane, ne s\'annonce pas à son démarrage.');
         }
 
-        // Lues à chaque passage : une annonce lue au démarrage du processus
-        // resterait celle d'avant la mise à jour.
-        $annonces = [];
-
-        foreach (AnnonceDeVersion::CONTENEURS as $conteneur) {
-            $annonces[$conteneur] = AnnonceDeVersion::lue($conteneur);
-        }
-
+        $annonces = $this->annonces();
         $presentes = array_filter($annonces);
         $absents = array_keys(array_diff_key($annonces, $presentes));
         $reference = $this->derniereImageDeployee($presentes);
@@ -72,36 +65,75 @@ final class VersionsDesConteneursCheck extends Check
             ->meta(['annonces' => $presentes, 'en_retard' => $enRetard, 'absents' => $absents])
             ->shortSummary($this->resume($annonces, $reference, $enRetard, $absents));
 
-        $messages = [];
-
-        if ($reference !== null && $enRetard !== []) {
-            $messages[] = $this->ecart($presentes, $reference, $enRetard);
-        }
-
-        if ($absents !== []) {
-            $messages[] = sprintf(
-                '%s ne %s jamais annoncé%s : arrêté, ou sur une image antérieure à ce contrôle.',
-                $this->enumerer($absents),
-                count($absents) > 1 ? 'se sont' : 's\'est',
-                count($absents) > 1 ? 's' : '',
-            );
-        }
+        $messages = array_filter([
+            $this->messageDEcart($presentes, $reference, $enRetard),
+            $this->messageDAbsents($absents),
+        ], is_string(...));
 
         if ($messages === []) {
             return $result->ok();
         }
 
-        $message = implode(' ', $messages).' '.self::QUOI_FAIRE;
+        return $this->juger($result, implode(' ', $messages).' '.self::QUOI_FAIRE, $reference, $enRetard);
+    }
 
-        if ($enRetard !== [] && $reference !== null && ! $this->miseAJourEnCours($reference)) {
+    /**
+     * Lues à chaque passage : une annonce lue au démarrage du processus
+     * resterait celle d'avant la mise à jour.
+     *
+     * @return array<string, array{version: string, revision: string, depuis: string, le: string}|null>
+     */
+    private function annonces(): array
+    {
+        return array_combine(AnnonceDeVersion::CONTENEURS, array_map(AnnonceDeVersion::lue(...), AnnonceDeVersion::CONTENEURS));
+    }
+
+    /**
+     * @param  array<string, array{version: string, revision: string, depuis: string, le: string}>  $presentes
+     * @param  array{version: string, revision: string, depuis: string, le: string}|null  $reference
+     * @param  list<string>  $enRetard
+     */
+    private function messageDEcart(array $presentes, ?array $reference, array $enRetard): ?string
+    {
+        if ($reference === null || $enRetard === []) {
+            return null;
+        }
+
+        return $this->ecart($presentes, $reference, $enRetard);
+    }
+
+    /**
+     * @param  list<string>  $absents
+     */
+    private function messageDAbsents(array $absents): ?string
+    {
+        if ($absents === []) {
+            return null;
+        }
+
+        return sprintf(
+            '%s ne %s jamais annoncé%s : arrêté, ou sur une image antérieure à ce contrôle.',
+            $this->enumerer($absents),
+            count($absents) > 1 ? 'se sont' : 's\'est',
+            count($absents) > 1 ? 's' : '',
+        );
+    }
+
+    /**
+     * @param  array{version: string, revision: string, depuis: string, le: string}|null  $reference
+     * @param  list<string>  $enRetard
+     */
+    private function juger(Result $result, string $message, ?array $reference, array $enRetard): Result
+    {
+        if ($enRetard === []) {
+            return $result->warning($message);
+        }
+
+        if ($reference !== null && ! $this->miseAJourEnCours($reference)) {
             return $result->failed($message);
         }
 
-        if ($enRetard !== []) {
-            return $result->warning('Peut-être une mise à jour en cours : '.$message);
-        }
-
-        return $result->warning($message);
+        return $result->warning('Peut-être une mise à jour en cours : '.$message);
     }
 
     /**
@@ -114,6 +146,23 @@ final class VersionsDesConteneursCheck extends Check
      */
     private function derniereImageDeployee(array $presentes): ?array
     {
+        $reference = $this->laPlusRecente($presentes);
+
+        if ($reference === null) {
+            return null;
+        }
+
+        $reference['depuis'] = $this->premiereAnnonceDeLImage($presentes, $reference);
+
+        return $reference;
+    }
+
+    /**
+     * @param  array<string, array{version: string, revision: string, depuis: string, le: string}>  $presentes
+     * @return array{version: string, revision: string, depuis: string, le: string}|null
+     */
+    private function laPlusRecente(array $presentes): ?array
+    {
         $reference = null;
 
         foreach ($presentes as $annonce) {
@@ -122,17 +171,24 @@ final class VersionsDesConteneursCheck extends Check
             }
         }
 
-        if ($reference === null) {
-            return null;
-        }
+        return $reference;
+    }
+
+    /**
+     * @param  array<string, array{version: string, revision: string, depuis: string, le: string}>  $presentes
+     * @param  array{version: string, revision: string, depuis: string, le: string}  $reference
+     */
+    private function premiereAnnonceDeLImage(array $presentes, array $reference): string
+    {
+        $depuis = $reference['depuis'];
 
         foreach ($presentes as $memeImage) {
-            if ($this->identite($memeImage) === $this->identite($reference) && Carbon::parse($memeImage['depuis'])->lessThan(Carbon::parse($reference['depuis']))) {
-                $reference['depuis'] = $memeImage['depuis'];
+            if ($this->identite($memeImage) === $this->identite($reference) && Carbon::parse($memeImage['depuis'])->lessThan(Carbon::parse($depuis))) {
+                $depuis = $memeImage['depuis'];
             }
         }
 
-        return $reference;
+        return $depuis;
     }
 
     /**
@@ -206,17 +262,19 @@ final class VersionsDesConteneursCheck extends Check
      */
     private function resume(array $annonces, ?array $reference, array $enRetard, array $absents): string
     {
-        if ($reference !== null && $enRetard === [] && $absents === []) {
+        if ($reference !== null && array_merge($enRetard, $absents) === []) {
             return $this->libelle($reference).' partout';
         }
 
-        $parConteneur = [];
+        return implode(' · ', array_map($this->libelleDuConteneur(...), array_keys($annonces), $annonces));
+    }
 
-        foreach ($annonces as $conteneur => $annonce) {
-            $parConteneur[] = $conteneur.' '.($annonce === null ? '?' : $this->libelle($annonce));
-        }
-
-        return implode(' · ', $parConteneur);
+    /**
+     * @param  array{version: string, revision: string, depuis: string, le: string}|null  $annonce
+     */
+    private function libelleDuConteneur(string $conteneur, ?array $annonce): string
+    {
+        return $conteneur.' '.($annonce === null ? '?' : $this->libelle($annonce));
     }
 
     /**
