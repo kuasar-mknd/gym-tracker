@@ -65,9 +65,9 @@ function signalementDuRougeLeScript(): string
     return $script;
 }
 
-it('se lance pour un run annulé comme pour un run en échec, sans autre condition', function (): void {
+it('se lance pour un run annulé comme pour un run en échec, du même dépôt et hors pull_request', function (): void {
     expect(signalementDuRougeLeJob()['if'] ?? null)
-        ->toBe("github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled'")
+        ->toBe("github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.event != 'pull_request' && (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled')")
         ->and(signalementDuRougeLEtape())->not->toHaveKey('if');
 });
 
