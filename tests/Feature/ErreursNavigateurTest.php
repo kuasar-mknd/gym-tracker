@@ -67,6 +67,25 @@ it('garde une pile plus longue que sa colonne, coupée à ce qu’elle tient', f
     'une pile qui tient, entière' => ["\u{1F600}", ErreurNavigateur::PILE_MAX_CARACTERES, ErreurNavigateur::PILE_MAX_CARACTERES],
 ]);
 
+it('ne garde de l’adresse de la page ni la requête ni le fragment', function (string $envoyee, string $gardee): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('erreurs-navigateur.store'), [
+            'type' => 'error',
+            'message' => 'Boum',
+            'url' => $envoyee,
+        ])
+        ->assertNoContent();
+
+    expect(ErreurNavigateur::query()->sole()->url)->toBe($gardee);
+})->with([
+    'requête' => ['https://gym.example/mot-de-passe/reinitialiser?token=abc&email=a@b.c', 'https://gym.example/mot-de-passe/reinitialiser'],
+    'fragment' => ['https://gym.example/seances#access_token=abc', 'https://gym.example/seances'],
+    'les deux' => ['https://gym.example/seances?x=1#y', 'https://gym.example/seances'],
+    'rien à retirer' => ['https://gym.example/seances/3', 'https://gym.example/seances/3'],
+]);
+
 it('refuse un visiteur et une charge qui ne dit pas ce qu’elle est', function (): void {
     $this->postJson(route('erreurs-navigateur.store'), ['type' => 'error', 'message' => 'x', 'url' => '/'])
         ->assertUnauthorized();

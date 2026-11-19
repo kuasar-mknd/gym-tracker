@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
+import { ErreurHorsOrigine } from '@/Utils/http'
 import { classifySyncError, SYNC_AUTH, SYNC_OFFLINE, SYNC_PERMANENT, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const setOnline = (value) => {
@@ -75,5 +76,11 @@ describe('classifySyncError', () => {
 describe('classifySyncError, session expirée', () => {
     it.each([401, 419])('traite %i comme une porte fermée, pas comme un refus', (status) => {
         expect(classifySyncError({ response: { status } })).toBe(SYNC_AUTH)
+    })
+})
+
+describe('classifySyncError, adresse hors origine', () => {
+    it('la traite comme un refus définitif, pas comme un échec passager', () => {
+        expect(classifySyncError(new ErreurHorsOrigine('https://evil.example'))).toBe(SYNC_PERMANENT)
     })
 })

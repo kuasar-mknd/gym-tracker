@@ -206,7 +206,7 @@ it('rend de la liste exactement ces clés, et aucune clé non_fiable', function 
     expect(routeExceptionsLesCles(routeExceptionsTableau($reponse->json())))->toBe([
         'donnees', 'donnees.exceptions', 'donnees.exceptions.groupes', 'donnees.exceptions.groupes.*',
         'donnees.exceptions.groupes.*.type', 'donnees.exceptions.groupes.*.fichier', 'donnees.exceptions.groupes.*.ligne',
-        'donnees.exceptions.groupes.*.nombre', 'donnees.exceptions.groupes.*.premiere_le', 'donnees.exceptions.groupes.*.derniere_le',
+        'donnees.exceptions.groupes.*.occurrences', 'donnees.exceptions.groupes.*.nombre', 'donnees.exceptions.groupes.*.premiere_le', 'donnees.exceptions.groupes.*.derniere_le',
         'donnees.exceptions.groupes.*.dernier_id', 'donnees.exceptions.groupes.*.route',
         'donnees.exceptions.lignes_lues', 'donnees.exceptions.echantillon', 'donnees.exceptions.tronque',
         'suivant', 'tronque', 'echantillon', 'genere_le', 'note',
@@ -216,8 +216,19 @@ it('rend de la liste exactement ces clés, et aucune clé non_fiable', function 
         'fichier' => 'app/Models/User.php',
         'ligne' => 12,
         'nombre' => 1,
+        'occurrences' => 1,
         'route' => 'workouts.show',
     ])->and((string) $reponse->getContent())->not->toContain('"non_fiable":');
+});
+
+it('somme les occurrences que les lignes d’un groupe portent', function (): void {
+    routeExceptionsPlanter(['occurrences' => 1_000]);
+    routeExceptionsPlanter(['occurrences' => 5]);
+    $cree = routeExceptionsUnJeton(['exceptions']);
+
+    $reponse = routeExceptionsAppeler('/diagnostic/v1/exceptions', $cree['entete'])->assertOk();
+
+    expect($reponse->json('donnees.exceptions.groupes.0'))->toMatchArray(['nombre' => 2, 'occurrences' => 1_005]);
 });
 
 it('rend du détail exactement ces clés sans TexteBrut : la clé non_fiable n’existe pas', function (): void {

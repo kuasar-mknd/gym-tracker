@@ -41,6 +41,8 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
+    'invites_par_minute' => env('APP_ENV') === 'production' ? 30 : 1000,
+
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*

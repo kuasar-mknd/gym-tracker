@@ -52,6 +52,14 @@ export class ErreurReseau extends Error {
     }
 }
 
+/** Une adresse qui sort de l'origine de la page : refusée, ni réseau absent ni réponse du serveur, donc jamais mise en file. */
+export class ErreurHorsOrigine extends Error {
+    constructor(url) {
+        super(`La requête ${url} sort de l'origine de la page.`)
+        this.name = 'ErreurHorsOrigine'
+    }
+}
+
 const lireLeCorps = async (reponse) => {
     if (reponse.status === 204) {
         return null
@@ -66,12 +74,26 @@ const lireLeCorps = async (reponse) => {
     return reponse.text().catch(() => null)
 }
 
+const sortDeLOrigine = (url) => {
+    try {
+        return new URL(String(url), window.location.href).origin !== window.location.origin
+    } catch {
+        return true
+    }
+}
+
 /**
  * @param {{method?: string, url: string, data?: unknown, headers?: Record<string, string>, signal?: AbortSignal, timeout?: number}} config
  * @returns {Promise<{data: unknown, status: number}>}
  */
 export const http = async (config) => {
     const { method = 'get', url, data, headers = {}, signal, timeout } = config
+
+    // Le jeton CSRF ne part jamais hors de l'origine de la page : une adresse venue du stockage n'est pas sûre.
+    if (sortDeLOrigine(url)) {
+        throw new ErreurHorsOrigine(url)
+    }
+
     const jeton = jetonCsrf()
     const envoieUnCorps = data !== undefined && data !== null
 

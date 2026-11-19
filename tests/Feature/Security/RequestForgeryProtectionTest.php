@@ -52,14 +52,14 @@ final class RequestForgeryProtectionTest extends TestCase
      * jeton ni `Sec-Fetch-Site: same-origin`. Le nonce par cookie de
      * `FournisseurApple` le protège à la place (ConnexionAppleTest).
      */
-    public function test_seuls_dusk_et_le_rappel_d_apple_echappent_a_la_verification(): void
+    public function test_seul_le_rappel_d_apple_echappe_a_la_verification(): void
     {
         $except = new ReflectionClass(PreventRequestForgery::class)
             ->getProperty('neverVerify')
             ->getValue();
 
         $this->assertEqualsCanonicalizing(
-            ['_dusk/*', 'auth/apple/callback'],
+            ['auth/apple/callback'],
             $except,
             'Widening this list removes forgery protection from real routes. The api/* exemption left with the REST API (#1673): the seven remaining routes are session-authenticated, so they verify the token like any web route. The Apple callback is exempt by its exact path only (#1911): its nonce cookie stands in for the token.'
         );

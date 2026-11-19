@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Auth;
 use App\Actions\HandleSocialCallbackAction;
 use App\Exceptions\SocialAuthException;
 use App\Http\Controllers\Controller;
+use App\Support\ConnexionSociale\FournisseurApple;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -37,11 +39,23 @@ class SocialAuthController extends Controller
         try {
             $user = $action->execute($fournisseur);
         } catch (SocialAuthException $e) {
-            return redirect()->route('login')->with('status', $e->getMessage());
+            return $this->oublierLeNonce($fournisseur, redirect()->route('login')->with('status', $e->getMessage()));
         }
 
         Auth::login($user);
 
-        return redirect()->intended(route('dashboard'));
+        return $this->oublierLeNonce($fournisseur, redirect()->intended(route('dashboard')));
+    }
+
+    /**
+     * Le nonce d'Apple a servi : le navigateur ne le garde pas.
+     */
+    private function oublierLeNonce(string $fournisseur, RedirectResponse $reponse): RedirectResponse
+    {
+        if ($fournisseur === 'apple') {
+            $reponse->headers->setCookie(FournisseurApple::cookieDuNonceOublie());
+        }
+
+        return $reponse;
     }
 }
