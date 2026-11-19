@@ -501,3 +501,21 @@ it('n’écrit aucun mot de passe ni secret d’administrateur par une mise à j
 
     expect($fichiers)->toBe([]);
 });
+
+it('refuse un nom qui est vide une fois nettoyé, sans consommer le code', function (string $nom): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+
+    try {
+        resolve(CreeUnJetonDeDiagnosticAction::class)->execute($admin, $nom, [PorteeDeDiagnostic::Sante], 7, new Google2FA()->getCurrentOtp($secretTotp));
+        $motif = null;
+    } catch (CreationDeJetonRefusee $refus) {
+        $motif = $refus->motif;
+    }
+
+    expect($motif)->toBe(CreationDeJetonRefusee::NOM_INVALIDE)
+        ->and(JetonDeDiagnostic::query()->count())->toBe(0);
+})->with([
+    'seulement U+2028 et U+2029' => ["\u{2028}\u{2029}"],
+    'seulement des contrôles' => ["\n\t\r"],
+    'un texte qui n’est pas de l’UTF-8' => ["\xFF\xFE"],
+]);

@@ -31,6 +31,8 @@ final class CreationDeJetonRefusee extends RuntimeException
 
     public const string PORTEES_INVALIDES = 'portees-invalides';
 
+    public const string NOM_INVALIDE = 'nom-invalide';
+
     public function __construct(public readonly string $motif)
     {
         parent::__construct('Création du jeton de diagnostic refusée : '.$motif);

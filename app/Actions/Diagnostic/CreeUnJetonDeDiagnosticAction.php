@@ -73,6 +73,9 @@ final readonly class CreeUnJetonDeDiagnosticAction
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE);
         }
 
+        $nom = trim($this->sansCaracteresDeControle($nom));
+        throw_if($nom === '', new CreationDeJetonRefusee(CreationDeJetonRefusee::NOM_INVALIDE));
+
         $this->verifierLaDemande($portees, $jours);
 
         $instant = now();
@@ -108,7 +111,7 @@ final readonly class CreeUnJetonDeDiagnosticAction
         $jeton = JetonDeDiagnostic::query()->create([
             'identifiant' => $identifiant,
             'empreinte' => JetonDeDiagnostic::empreinteDe($secret),
-            'nom' => Str::limit(trim($this->sansCaracteresDeControle($nom)), 80, ''),
+            'nom' => Str::limit($nom, 80, ''),
             'portees' => array_map(static fn (PorteeDeDiagnostic $portee): string => $portee->value, $portees),
             'cree_par_admin_id' => $createur->id,
             'expire_le' => $instant->copy()->addDays($jours),
