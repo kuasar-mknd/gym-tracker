@@ -168,13 +168,14 @@ final class OuvreLaSession extends StartSession
     }
 
     /**
-     * Une adresse IPv6 compte par son préfixe de 64 bits.
+     * Une IPv4 mappée compte comme son IPv4 ; une adresse IPv6 par son
+     * préfixe de 64 bits.
      */
     private static function partitionDeLAdresse(string $adresse): string
     {
-        $binaire = str_contains($adresse, ':') ? inet_pton($adresse) : false;
+        $adresse = preg_replace('/^::ffff:(?=\d+\.)/i', '', $adresse) ?? $adresse;
 
-        return $binaire === false ? $adresse : bin2hex(substr($binaire, 0, 8));
+        return str_contains($adresse, ':') ? bin2hex(substr((string) inet_pton($adresse), 0, 8)) : $adresse;
     }
 
     /**

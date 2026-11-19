@@ -36,6 +36,24 @@ it('ne compte pas la requête qui porte une session que le magasin tient', funct
     }
 });
 
+it('compte une IPv4 mappée comme la même IPv4 pointée, et deux IPv4 mappées à part', function (): void {
+    $this->withServerVariables(['REMOTE_ADDR' => '::ffff:203.0.113.8'])->get(route('login'))->assertOk();
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.8'])->get(route('login'))->assertOk();
+    $this->withServerVariables(['REMOTE_ADDR' => '::ffff:203.0.113.9'])->get(route('login'))->assertOk();
+
+    expect(RateLimiter::attempts('sessions-neuves:203.0.113.8'))->toBe(2)
+        ->and(RateLimiter::attempts('sessions-neuves:203.0.113.9'))->toBe(1);
+
+    RateLimiter::clear('sessions-neuves:203.0.113.8');
+    RateLimiter::clear('sessions-neuves:203.0.113.9');
+});
+
+it('compte l’adresse locale sous la clé que le test efface', function (): void {
+    get(route('login'))->assertOk();
+
+    expect(RateLimiter::attempts('sessions-neuves:127.0.0.1'))->toBe(1);
+});
+
 it('plafonne aussi les routes de connexion sociale sans cookie', function (): void {
     foreach (range(1, 3) as $_) {
         get(route('social.redirect', 'github'))->assertRedirect();
