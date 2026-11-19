@@ -45,6 +45,9 @@ class Workout extends Model
      */
     public const int JOURS_EN_FILE_AU_PLUS = 30;
 
+    /** Combien de temps après sa fin une séance se rouvre (« Reprendre » du bilan, #2434). */
+    public const int DELAI_DE_REOUVERTURE_MINUTES = 15;
+
     /**
      * Le début d'une séance que l'appareil a démarrée : maintenant, moins
      * l'âge du geste, s'il a entre zéro et `JOURS_EN_FILE_AU_PLUS` jours ;

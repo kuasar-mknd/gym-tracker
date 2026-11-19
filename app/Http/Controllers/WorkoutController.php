@@ -8,6 +8,7 @@ use App\Actions\Workouts\CreateSetAction;
 use App\Actions\Workouts\DemarrerUneSeanceAction;
 use App\Actions\Workouts\FetchWorkoutShowAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
+use App\Actions\Workouts\ReouvrirUneSeanceAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Exceptions\UneSeanceEstDejaEnCours;
 use App\Http\Requests\UpdateWorkoutRequest;
@@ -130,6 +131,23 @@ class WorkoutController extends Controller
         }
 
         return back();
+    }
+
+    /**
+     * « Reprendre » du bilan (#2434) : rouvre la séance que le compte vient de
+     * terminer, et le ramène sur elle. Refusée (403) au-delà du délai ou pour la
+     * séance d'un autre ; refusée avec le message d'une séance déjà en cours si
+     * une autre s'est ouverte depuis.
+     */
+    public function reopen(Workout $workout, ReouvrirUneSeanceAction $reouvrir): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            $rouverte = $reouvrir->execute($this->user(), $workout->id);
+        } catch (UneSeanceEstDejaEnCours $refus) {
+            return redirect()->route('workouts.show', $refus->seanceEnCours)->with('error', UneSeanceEstDejaEnCours::MESSAGE);
+        }
+
+        return redirect()->route('workouts.show', $rouverte);
     }
 
     public function destroy(Workout $workout): \Illuminate\Http\RedirectResponse
