@@ -40,7 +40,7 @@ final class AdmissionDesExceptions
         }
 
         if ($admise) {
-            Context::add(self::CONTEXTE, $empreinte);
+            Context::add(self::CONTEXTE, [$empreinte, $exception::class, $exception->getFile(), $exception->getLine()]);
         }
 
         return $admise;
@@ -49,11 +49,11 @@ final class AdmissionDesExceptions
     /**
      * L'empreinte que la ligne en cours d'écriture doit porter, une seule fois.
      */
-    public function empreinteEnCours(): ?string
+    public function empreinteEnCours(string $type, string $fichier, int $ligne): ?string
     {
-        $empreinte = Context::pull(self::CONTEXTE);
+        $admise = Context::pull(self::CONTEXTE);
 
-        return is_string($empreinte) ? $empreinte : null;
+        return is_array($admise) && $admise[1] === $type && $admise[2] === $fichier && $admise[3] === $ligne && is_string($admise[0]) ? $admise[0] : null;
     }
 
     public function retenir(string $empreinte, int $identifiant): void
@@ -102,6 +102,7 @@ final class AdmissionDesExceptions
         }
 
         $this->verserLeCompte($empreinte);
+        Cache::forget($this->clef('ligne', $empreinte));
 
         return true;
     }

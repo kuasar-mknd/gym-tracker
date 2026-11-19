@@ -185,7 +185,7 @@ final class ExceptionEnregistree extends Exception
     {
         self::creating(function (self $exception): void {
             $exception->user_id ??= self::compteDeLaRequete();
-            $exception->empreinte ??= app(AdmissionDesExceptions::class)->empreinteEnCours();
+            $exception->empreinte ??= app(AdmissionDesExceptions::class)->empreinteEnCours((string) $exception->type, (string) $exception->file, (int) $exception->line);
         });
 
         self::created(function (self $exception): void {

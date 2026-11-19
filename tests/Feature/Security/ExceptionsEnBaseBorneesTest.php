@@ -19,9 +19,14 @@ beforeEach(function (): void {
     $this->travelTo('2026-11-19 10:00:00');
 
     Route::post('/_boum', function (): never {
-        throw new RuntimeException('boum '.request()->string('detail'));
+        throw exceptionsEnBaseBorneesBoum((string) request()->string('detail'));
     });
 });
+
+function exceptionsEnBaseBorneesBoum(string $detail): RuntimeException
+{
+    return new RuntimeException('boum '.$detail);
+}
 
 function exceptionsEnBaseEcritures(): int
 {
@@ -150,4 +155,35 @@ it('ne rattache aucune empreinte à une ligne écrite hors du rapport', function
 
     expect($ligne->empreinte)->toBeNull()
         ->and(ExceptionEnregistree::query()->whereKey($ligne->id)->value('empreinte'))->toBeNull();
+});
+
+it('ne donne pas l’empreinte d’une exception admise mais jamais écrite à la ligne suivante', function (): void {
+    expect(app(AdmissionDesExceptions::class)->admet(new RuntimeException('')))->toBeTrue();
+
+    $ligne = ExceptionEnregistree::query()->create([
+        'type' => LogicException::class, 'code' => '0', 'message' => 'm', 'file' => 'f.php', 'line' => 1,
+        'trace' => [], 'method' => 'GET', 'path' => '/',
+    ]);
+
+    expect(ExceptionEnregistree::query()->whereKey($ligne->id)->value('empreinte'))->toBeNull();
+});
+
+it('n’écrit pas le total d’une fenêtre sur la ligne de la précédente', function (): void {
+    foreach (range(1, 50) as $_) {
+        $this->post('/_boum', ['detail' => 'x'])->assertStatus(500);
+    }
+
+    $premiere = ExceptionEnregistree::query()->sole();
+
+    $this->travel(AdmissionDesExceptions::FENETRE_EN_SECONDES + 1)->seconds();
+    $exception = exceptionsEnBaseBorneesBoum('x');
+
+    expect(app(AdmissionDesExceptions::class)->admet($exception))->toBeTrue()
+        ->and(ExceptionEnregistree::query()->whereKey($premiere->id)->value('occurrences'))->toBe(50);
+
+    foreach (range(1, 10) as $_) {
+        app(AdmissionDesExceptions::class)->admet($exception);
+    }
+
+    expect(ExceptionEnregistree::query()->whereKey($premiere->id)->value('occurrences'))->toBe(50);
 });
