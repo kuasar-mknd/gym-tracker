@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Support\Str;
 
+$cookieReserveAHttps = (bool) env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production');
+$prefixeDeLHote = $cookieReserveAHttps && in_array(env('SESSION_DOMAIN'), [null, ''], true) && in_array(env('SESSION_PATH', '/'), ['/', ''], true)
+    ? '__Host-'
+    : '';
+
 return [
 
     /*
@@ -143,7 +148,7 @@ return [
 
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+        $prefixeDeLHote.Str::slug((string) env('APP_NAME', 'laravel')).'-session'
     ),
 
     /*
@@ -183,7 +188,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
+    'secure' => $cookieReserveAHttps,
 
     /*
     |--------------------------------------------------------------------------
