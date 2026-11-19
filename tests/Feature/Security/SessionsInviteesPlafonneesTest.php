@@ -9,7 +9,7 @@ use function Pest\Laravel\withCredentials;
 
 beforeEach(function (): void {
     config(['session.invites_par_minute' => 3]);
-    RateLimiter::clear('sessions-neuves:127.0.0.1');
+    RateLimiter::clear('sessions-neuves:'.bin2hex((string) inet_pton('127.0.0.1')));
 });
 
 it('refuse en 429, sans poser de cookie, la requête sans session au-delà du plafond', function (): void {
@@ -41,17 +41,17 @@ it('compte une IPv4 mappée comme la même IPv4 pointée, et deux IPv4 mappées 
     $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.8'])->get(route('login'))->assertOk();
     $this->withServerVariables(['REMOTE_ADDR' => '::ffff:203.0.113.9'])->get(route('login'))->assertOk();
 
-    expect(RateLimiter::attempts('sessions-neuves:203.0.113.8'))->toBe(2)
-        ->and(RateLimiter::attempts('sessions-neuves:203.0.113.9'))->toBe(1);
+    expect(RateLimiter::attempts('sessions-neuves:'.bin2hex((string) inet_pton('203.0.113.8'))))->toBe(2)
+        ->and(RateLimiter::attempts('sessions-neuves:'.bin2hex((string) inet_pton('203.0.113.9'))))->toBe(1);
 
-    RateLimiter::clear('sessions-neuves:203.0.113.8');
-    RateLimiter::clear('sessions-neuves:203.0.113.9');
+    RateLimiter::clear('sessions-neuves:'.bin2hex((string) inet_pton('203.0.113.8')));
+    RateLimiter::clear('sessions-neuves:'.bin2hex((string) inet_pton('203.0.113.9')));
 });
 
 it('compte l’adresse locale sous la clé que le test efface', function (): void {
     get(route('login'))->assertOk();
 
-    expect(RateLimiter::attempts('sessions-neuves:127.0.0.1'))->toBe(1);
+    expect(RateLimiter::attempts('sessions-neuves:'.bin2hex((string) inet_pton('127.0.0.1'))))->toBe(1);
 });
 
 it('plafonne aussi les routes de connexion sociale sans cookie', function (): void {

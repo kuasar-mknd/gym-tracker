@@ -158,13 +158,9 @@ final class OuvreLaSession extends StartSession
         }
 
         $clef = 'sessions-neuves:'.self::partitionDeLAdresse((string) $request->ip());
-        $plafond = config()->integer('session.invites_par_minute');
+        $accepte = RateLimiter::attempt($clef, config()->integer('session.invites_par_minute'), static fn (): bool => true, 60);
 
-        if (RateLimiter::tooManyAttempts($clef, $plafond)) {
-            throw new ThrottleRequestsException('Too Many Attempts.', null, ['Retry-After' => RateLimiter::availableIn($clef)]);
-        }
-
-        RateLimiter::hit($clef, 60);
+        throw_unless($accepte, ThrottleRequestsException::class, 'Too Many Attempts.', null, ['Retry-After' => RateLimiter::availableIn($clef)]);
     }
 
     /**
@@ -174,8 +170,9 @@ final class OuvreLaSession extends StartSession
     private static function partitionDeLAdresse(string $adresse): string
     {
         $adresse = preg_replace('/^::ffff:(?=\d+\.)/i', '', $adresse) ?? $adresse;
+        $valide = filter_var($adresse, FILTER_VALIDATE_IP, ['options' => ['default' => '::']]);
 
-        return str_contains($adresse, ':') ? bin2hex(substr((string) inet_pton($adresse), 0, 8)) : $adresse;
+        return bin2hex(substr((string) inet_pton((string) $valide), 0, 8));
     }
 
     /**
