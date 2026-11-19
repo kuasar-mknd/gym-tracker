@@ -434,6 +434,8 @@ describe('clic sur une notification', () => {
         ['une autre origine', 'https://evil.example/workouts/12'],
         ['une adresse sans schéma d’origine', '//evil.example/workouts/12'],
         ['javascript:', 'javascript:alert(1)'],
+        ['un chemin à double barre oblique', '/.//evil.example/x'],
+        ['une adresse de l’origine à double barre oblique', `${self.location.origin}//evil.example`],
     ])('refuse %s, portée par la notification ou par le bouton', async (_nom, destination) => {
         for (const evenement of [{ data: { url: destination } }, { action: destination, data: { url: '/' } }]) {
             const fenetre = fenetreCliente()

@@ -236,7 +236,10 @@ const destinationDeLOrigine = (brute) => {
     try {
         const adresse = new URL(brute, self.location.origin)
 
-        return adresse.origin === self.location.origin ? `${adresse.pathname}${adresse.search}${adresse.hash}` : null
+        const chemin = `${adresse.pathname}${adresse.search}${adresse.hash}`
+
+        // Un chemin qui commence par `//` se relit comme une adresse sans schéma.
+        return adresse.origin === self.location.origin && !chemin.startsWith('//') ? chemin : null
     } catch {
         return null
     }

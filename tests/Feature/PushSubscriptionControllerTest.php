@@ -254,6 +254,13 @@ describe('PushSubscriptionController', function (): void {
             expect($alice->pushSubscriptions()->count())->toBe(1);
         });
 
+        it('refuse une ancienne adresse hors ASCII, que la colonne ne saurait comparer', function () use ($abonnement): void {
+            $this->actingAs(User::factory()->create())
+                ->postJson(route('push-subscriptions.update'), $abonnement('https://fcm.googleapis.com/fcm/send/nouveau') + ['ancien_endpoint' => 'https://fcm.googleapis.com/fcm/send/é'])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['ancien_endpoint']);
+        });
+
         it('refuse une ancienne adresse qui n\'en est pas une', function () use ($abonnement): void {
             $this->actingAs(User::factory()->create())
                 ->postJson(route('push-subscriptions.update'), $abonnement('https://fcm.googleapis.com/fcm/send/nouveau') + ['ancien_endpoint' => ['x']])

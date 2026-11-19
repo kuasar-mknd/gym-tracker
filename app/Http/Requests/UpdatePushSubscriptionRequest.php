@@ -48,7 +48,7 @@ class UpdatePushSubscriptionRequest extends FormRequest
             // L'adresse que ce renouvellement remplace : le worker l'envoie,
             // et le serveur la retire de tout compte, la session courante
             // pouvant être celle d'un autre que le propriétaire de l'ancienne.
-            'ancien_endpoint' => ['nullable', 'string', 'max:'.PushSubscription::ENDPOINT_MAX_LENGTH],
+            'ancien_endpoint' => ['nullable', 'string', 'max:'.PushSubscription::ENDPOINT_MAX_LENGTH, 'regex:/^[\x21-\x7E]+$/'],
             'keys' => ['required', 'array'],
             'keys.auth' => ['bail', 'required', 'string', 'max:'.self::CLEF_MAX],
             'keys.p256dh' => ['bail', 'required', 'string', 'max:'.self::CLEF_MAX],
