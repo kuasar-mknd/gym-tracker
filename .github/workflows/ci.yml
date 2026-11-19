@@ -824,7 +824,7 @@ jobs:
         name: Build Image (${{ matrix.platform }})
         runs-on: ${{ matrix.runner }}
         timeout-minutes: 60
-        needs: [laravel-tests, browser-tests, frontend-build, lint, audit]
+        needs: [laravel-tests, browser-tests, frontend-build, lint, audit, semgrep, secrets, workflows]
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         strategy:
             matrix:
@@ -903,8 +903,8 @@ jobs:
     # Ne s'applique qu'aux tags : sur `main`, `merge` publie `latest` et
     # `sha-*`, que la production ne tire pas.
     demarrage:
-        name: L'image démarre sur une base vide (MySQL ${{ matrix.mysql }})
-        runs-on: ubuntu-latest
+        name: L'image démarre sur une base vide (MySQL ${{ matrix.mysql }}, ${{ matrix.arch }})
+        runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
         timeout-minutes: 15
         needs: build
         permissions:
@@ -919,6 +919,7 @@ jobs:
             fail-fast: false
             matrix:
                 mysql: ['8.4', '9.7.4']
+                arch: [amd64, arm64]
         services:
             mysql:
                 image: mysql:${{ matrix.mysql }}
@@ -939,10 +940,10 @@ jobs:
                 ports:
                     - 6379:6379
         steps:
-            - name: Download digest (amd64)
+            - name: Download digest (${{ matrix.arch }})
               uses: actions/download-artifact@v8
               with:
-                  name: digests-amd64
+                  name: digests-${{ matrix.arch }}
                   path: /tmp/digests
 
             - name: Log in to the Container registry
@@ -1131,6 +1132,7 @@ jobs:
               uses: docker/metadata-action@v6
               with:
                   images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  flavor: latest=false
                   tags: |
                       type=semver,pattern={{version}}
                       type=semver,pattern={{major}}.{{minor}}
@@ -1145,5 +1147,4 @@ jobs:
                   # each tag must become its own argument. Quoting collapses them into one
                   # and breaks the multi-arch manifest.
                   docker buildx imagetools create $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *) \
-                  --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
                   $(echo "${{ steps.meta.outputs.tags }}" | xargs -I {} echo "--tag {}")

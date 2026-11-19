@@ -1,5 +1,6 @@
 x-app-env: &app-env
     APP_KEY: ${APP_KEY}
+    APP_PREVIOUS_KEYS: ${APP_PREVIOUS_KEYS:-}
     APP_URL: ${APP_URL}
     ASSET_URL: ${APP_URL}
     APP_ENV: production
@@ -113,6 +114,10 @@ services:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
             - journaux:/app/storage/logs
         restart: always
+        cap_drop:
+            - ALL
+        cap_add:
+            - NET_BIND_SERVICE
         logging: *app-logging
         ports:
             # Sur la boucle locale de l'hôte : le proxy inverse y joint app, et
@@ -175,6 +180,15 @@ services:
     db:
         image: mysql:8.4
         restart: always
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        cap_add:
+            - CHOWN
+            - DAC_OVERRIDE
+            - SETGID
+            - SETUID
         # Sans ce délai, un arrêt, un redémarrage ou une recréation du service
         # coupe mysqld au bout de dix secondes, qu'il ait fini d'écrire son
         # tampon ou non ; avec lui, mysqld rend la main dès qu'il a fini. La
@@ -238,6 +252,14 @@ services:
     redis:
         image: redis:8.10.3-alpine
         restart: always
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        cap_add:
+            - CHOWN
+            - SETGID
+            - SETUID
         # Le mot de passe n'est plus un argument de `redis-server` (#2353) :
         # il se lisait dans `docker inspect` et `ps`. Il entre par la
         # configuration lue sur l'entrée standard (`-`), sous les guillemets
@@ -281,6 +303,14 @@ services:
     redis-cache:
         image: redis:8.10.3-alpine
         restart: always
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        cap_add:
+            - CHOWN
+            - SETGID
+            - SETUID
         # Le mot de passe entre comme pour `redis`, par la configuration lue
         # sur l'entrée standard et non par un argument (#2353).
         command:
@@ -315,6 +345,10 @@ services:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
         pull_policy: always
         restart: always
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
         logging: *app-logging
         command: php artisan horizon
         volumes:
@@ -382,6 +416,10 @@ services:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
             - journaux:/app/storage/logs
         restart: always
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
         logging: *app-logging
         command: php artisan schedule:work
         environment:
