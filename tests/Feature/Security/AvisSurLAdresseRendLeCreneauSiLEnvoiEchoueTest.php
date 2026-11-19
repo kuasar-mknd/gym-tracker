@@ -46,8 +46,24 @@ it('garde le creneau d un autre compte quand l envoi echoue', function (): void 
     expect(RateLimiter::tooManyAttempts(PrevenirLeTitulaireDeLAdresse::clefDuCompte($autre->id), 1))->toBeTrue();
 });
 
-it('ne leve rien pour une charge d avant le correctif, sans compte', function (): void {
-    new TentativeSurTonAdresse(MotifDeLaTentative::Inscription)->failed(new RuntimeException('x'));
+it('ne touche a aucun creneau pour une charge d avant le correctif, sans compte', function (): void {
+    $titulaire = User::factory()->create();
+    RateLimiter::hit(PrevenirLeTitulaireDeLAdresse::clefDuCompte($titulaire->id), 3600);
 
-    expect(true)->toBeTrue();
+    $charge = serialize(new TentativeSurTonAdresse(MotifDeLaTentative::Inscription, $titulaire->id));
+    $sansCompte = preg_replace('/s:\d+:"compte";i:\d+;/', '', $charge, 1, $retires);
+    $sansCompte = preg_replace_callback(
+        '/^(O:\d+:"[^"]+":)(\d+)/',
+        static fn (array $m): string => $m[1].((int) $m[2] - 1),
+        (string) $sansCompte,
+    );
+
+    expect($retires)->toBe(1);
+
+    $ancienne = unserialize((string) $sansCompte);
+    assert($ancienne instanceof TentativeSurTonAdresse);
+
+    $ancienne->failed(new RuntimeException('x'));
+
+    expect(RateLimiter::tooManyAttempts(PrevenirLeTitulaireDeLAdresse::clefDuCompte($titulaire->id), 1))->toBeTrue();
 });
