@@ -49,7 +49,7 @@ final class AdmissionDesExceptions
         }
 
         if ($admise) {
-            Context::add(self::CONTEXTE, [$empreinte, $exception::class, $exception->getFile(), $exception->getLine()]);
+            Context::addHidden(self::CONTEXTE, [$empreinte, $exception::class, $exception->getFile(), $exception->getLine()]);
         }
 
         return $admise;
@@ -60,7 +60,7 @@ final class AdmissionDesExceptions
      */
     public function empreinteEnCours(string $type, string $fichier, int $ligne): ?string
     {
-        $admise = Context::pull(self::CONTEXTE);
+        $admise = Context::pullHidden(self::CONTEXTE);
 
         return is_array($admise) && $admise[1] === $type && $admise[2] === $fichier && $admise[3] === $ligne && is_string($admise[0]) ? $admise[0] : null;
     }
