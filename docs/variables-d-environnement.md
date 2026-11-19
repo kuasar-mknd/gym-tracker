@@ -35,7 +35,7 @@ Trois règles valent pour toutes :
 | `APP_PREVIOUS_KEYS` | non | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY`. Transmise à `app`, `worker` et `scheduler`. |
 | `APP_URL` | oui | vide | Adresse publique en `https://`, celle du proxy inverse. |
 | `APP_DEBUG` | non | `false` | Pages d'erreur détaillées. **Jamais en production.** |
-| `TRUSTED_PROXIES` | conseillé | `127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` | Pairs dont l'application croit les en-têtes `X-Forwarded-*`. Transmise à `app` seul. |
+| `TRUSTED_PROXIES` | conseillé | `127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` | Pairs dont l'application croit les en-têtes `X-Forwarded-*` (adresse cliente, HTTPS, hôte, port). Transmise à `app` seul. |
 
 #### `APP_KEY` : générer, changer
 

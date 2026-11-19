@@ -154,7 +154,7 @@ Il passe à l'orange :
 
 ### Avec un cache en base (pas en production)
 
-Ces comportements ne valent qu'avec un magasin de cache `database`, ou un magasin `failover` qui le nomme. En production, le cache est Redis.
+Ces comportements ne valent qu'avec un magasin de cache `database` ; le premier vaut aussi avec un magasin `failover` qui le nomme. En production, le cache est Redis.
 
 - Les refus de la garde ne sont ni comptés ni journalisés.
 - Les comptes sur sept jours de `etat` (soixante secondes, une clef par source) sont une écriture SQL par minute et par source.

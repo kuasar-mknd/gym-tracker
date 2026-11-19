@@ -10,7 +10,7 @@ Trois choses vivent hors ligne :
 | Les copies des pages utiles en salle | [Copies des pages de salle](#copies-des-pages-de-salle) |
 | L'ouverture de l'application sans réseau | [Ouverture sans réseau](#ouverture-sans-réseau) |
 
-Une clé, portée par un cookie de session, relie les deux premières : les copies ne se lisent que tant que ce cookie vit.
+Une clé, portée par un cookie de session, protège les copies : elles ne se lisent que tant que ce cookie vit.
 
 ## Modifications en attente
 

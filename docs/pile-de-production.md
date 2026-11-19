@@ -146,6 +146,6 @@ Aucune variable d'environnement n'est ajoutée : redéployer la pile recrée ces
 
 `pull_policy: always` fait retélécharger l'image à chaque mise à jour de la pile et recréer les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé : retélécharger `:v1` ne met à jour aucun conteneur existant, et un simple redémarrage ne télécharge rien.
 
-`db`, `redis` et `redis-cache` ne suivent pas `v1` : ils lancent l'étiquette de la composition, une version exacte, sans `pull_policy`.
+`db`, `redis` et `redis-cache` ne suivent pas `v1` : ils lancent l'étiquette de la composition (une ligne pour `db`, une version exacte pour `redis` et `redis-cache`), sans `pull_policy`.
 
 Au démarrage, `app` joue les migrations. Une migration qui échoue l'arrête, plutôt que de servir un code qui ne correspond pas au schéma.
