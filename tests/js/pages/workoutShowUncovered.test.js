@@ -1580,7 +1580,7 @@ describe('Workouts/Show — deleting a set', () => {
             await click(wrapper, 'remove-set-0-1')
 
             expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 43])
-            expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+            expect(suppressionAnnulable.value).toMatchObject({ message: 'Série supprimée' })
             expect(destroy).not.toHaveBeenCalled()
         })
 
@@ -1589,7 +1589,7 @@ describe('Workouts/Show — deleting a set', () => {
 
             await click(wrapper, 'swipe-remove-set-0-1')
 
-            expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+            expect(suppressionAnnulable.value).toMatchObject({ message: 'Série supprimée' })
             expect(destroy).not.toHaveBeenCalled()
         })
 
@@ -1654,7 +1654,7 @@ describe('Workouts/Show — deleting a set', () => {
             expect(destroy).toHaveBeenCalledTimes(1)
             expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
             expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41])
-            expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+            expect(suppressionAnnulable.value).toMatchObject({ message: 'Série supprimée' })
         })
 
         it('sends it before the page goes away', async () => {
@@ -1668,14 +1668,40 @@ describe('Workouts/Show — deleting a set', () => {
             expect(suppressionAnnulable.value).toBeNull()
         })
 
-        it('sends it when the page is hidden', async () => {
+        it('puts it in the durable queue, and sends nothing, when the page is hidden', async () => {
             const wrapper = await mountPage(troisSeries())
 
             await click(wrapper, 'remove-set-0-1')
             window.dispatchEvent(new Event('pagehide'))
             await flushPromises()
 
-            expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
+            expect(mettreEnFile).toHaveBeenCalledWith({ method: 'delete', url: '/api/v1/sets/42' })
+            expect(destroy).not.toHaveBeenCalled()
+            expect(suppressionAnnulable.value).toBeNull()
+        })
+
+        it('does the same when the document turns hidden', async () => {
+            const wrapper = await mountPage(troisSeries())
+            const etat = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+
+            await click(wrapper, 'remove-set-0-1')
+            document.dispatchEvent(new Event('visibilitychange'))
+            await flushPromises()
+            etat.mockRestore()
+
+            expect(mettreEnFile).toHaveBeenCalledWith({ method: 'delete', url: '/api/v1/sets/42' })
+            expect(destroy).not.toHaveBeenCalled()
+        })
+
+        it('ignores a document that stays visible', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            document.dispatchEvent(new Event('visibilitychange'))
+            await flushPromises()
+
+            expect(mettreEnFile).not.toHaveBeenCalled()
+            expect(suppressionAnnulable.value).not.toBeNull()
         })
 
         it('does not undo a delete that the server refused after the time ran out', async () => {
@@ -1703,7 +1729,7 @@ describe('Workouts/Show — deleting a set', () => {
             expect(flash()).toBeUndefined()
         })
 
-        it('drops the pending delete when the exercise that holds the row is removed', async () => {
+        it('puts the row back inside its exercise when the exercise is removed, and sends no delete for it', async () => {
             const wrapper = await mountPage(troisSeries())
 
             await click(wrapper, 'remove-set-0-1')
@@ -1711,6 +1737,20 @@ describe('Workouts/Show — deleting a set', () => {
             await click(wrapper, 'confirm-dialog-confirm')
 
             expect(suppressionAnnulable.value).toBeNull()
+            expect(destroy).not.toHaveBeenCalledWith('/api/v1/sets/42')
+            expect(destroy).toHaveBeenCalledWith('/api/v1/workout-lines/10')
+        })
+
+        it('shows the row again, with its exercise, when the server refuses to remove the exercise', async () => {
+            destroy.mockRejectedValue({ response: { status: 500 } })
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            await click(wrapper, 'remove-line-0')
+            await click(wrapper, 'confirm-dialog-confirm')
+            await flushPromises()
+
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 42, 43])
             expect(destroy).not.toHaveBeenCalledWith('/api/v1/sets/42')
         })
     })

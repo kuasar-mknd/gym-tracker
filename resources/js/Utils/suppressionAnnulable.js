@@ -8,16 +8,25 @@ export const DELAI_POUR_ANNULER_MS = 6000
  * `null` quand il n'y en a pas. Une seule à la fois ; une nouvelle valide
  * d'abord la précédente.
  *
- * @type {import('vue').Ref<{ message: string }|null>}
+ * @type {import('vue').Ref<{ message: string, auClavier: boolean }|null>}
  */
 export const suppressionAnnulable = ref(null)
 
 let courante = null
 let minuteur = null
 
+/** Le retrait vient du clavier : le focus ira sur « Annuler la suppression », que la corbeille disparue laisse sans cible. */
+const geste = () => {
+    try {
+        return document.activeElement?.matches(':focus-visible') ?? false
+    } catch {
+        return false
+    }
+}
+
 const armer = () => {
     clearTimeout(minuteur)
-    minuteur = setTimeout(valider, DELAI_POUR_ANNULER_MS)
+    minuteur = setTimeout(() => valider(), DELAI_POUR_ANNULER_MS)
 }
 
 const clore = () => {
@@ -33,14 +42,15 @@ export const suppressionsEnVol = ref(0)
 /**
  * L'échéance, ou tout ce qui ne peut plus l'attendre : la suppression part maintenant.
  *
+ * @param {{ surDepart?: boolean }} [options] la page part ou se cache : l'envoi doit être durable
  * @returns {Promise<unknown>|undefined} l'envoi, que « Terminer » attend
  */
-export function valider() {
+export function valider(options) {
     const suppression = courante
 
     clore()
 
-    const envoi = suppression?.valider()
+    const envoi = suppression?.valider(options)
 
     if (envoi !== undefined) {
         suppressionsEnVol.value++
@@ -61,7 +71,7 @@ export function valider() {
 export const proposerUneAnnulation = (suppression) => {
     valider()
     courante = suppression
-    suppressionAnnulable.value = { message: suppression.message }
+    suppressionAnnulable.value = { message: suppression.message, auClavier: geste() }
     armer()
 }
 

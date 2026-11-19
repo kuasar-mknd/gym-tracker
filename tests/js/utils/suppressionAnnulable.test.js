@@ -32,7 +32,7 @@ describe('Utils/suppressionAnnulable (#2355)', () => {
         proposerUneAnnulation(s)
         vi.advanceTimersByTime(DELAI_POUR_ANNULER_MS - 1)
 
-        expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+        expect(suppressionAnnulable.value).toMatchObject({ message: 'Série supprimée' })
         expect(s.valider).not.toHaveBeenCalled()
     })
 
@@ -68,7 +68,7 @@ describe('Utils/suppressionAnnulable (#2355)', () => {
 
         expect(premiere.valider).toHaveBeenCalledTimes(1)
         expect(seconde.valider).not.toHaveBeenCalled()
-        expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+        expect(suppressionAnnulable.value).toMatchObject({ message: 'Série supprimée' })
     })
 
     it('can be sent at once, and only once', () => {
@@ -128,5 +128,31 @@ describe('Utils/suppressionAnnulable (#2355)', () => {
         valider()
 
         expect(estEnAttenteDeSuppression({ id: 1 })).toBe(false)
+    })
+
+    it('forwards the way it is sent to the deletion', () => {
+        const s = suppression()
+
+        proposerUneAnnulation(s)
+        valider({ surDepart: true })
+
+        expect(s.valider).toHaveBeenCalledWith({ surDepart: true })
+    })
+
+    it('knows a deletion made from the keyboard, so the focus can follow it', () => {
+        const bouton = document.createElement('button')
+        document.body.append(bouton)
+        bouton.focus()
+        const matches = vi.spyOn(Element.prototype, 'matches').mockReturnValue(true)
+
+        proposerUneAnnulation(suppression())
+        expect(suppressionAnnulable.value.auClavier).toBe(true)
+
+        matches.mockReturnValue(false)
+        proposerUneAnnulation(suppression())
+        expect(suppressionAnnulable.value.auClavier).toBe(false)
+
+        matches.mockRestore()
+        bouton.remove()
     })
 })

@@ -282,7 +282,9 @@ describe('une série créée hors ligne', () => {
             await flushPromises()
 
             expect(page.ligne().sets.map((s) => s.id)).toEqual([3])
-            expect(fileDurable()).toEqual(avant)
+            expect(fileDurable()).toEqual([
+                expect.objectContaining({ data: { ...avant[0].data, is_completed: false } }),
+            ])
 
             page.annulerLaSuppression()
             await flushPromises()
@@ -299,6 +301,41 @@ describe('une série créée hors ligne', () => {
                 'post /api/v1/sets {"workout_line_id":1,"is_completed":true,"weight":200,"reps":5}',
             ])
             expect([...reseau.serveur.series.keys()].sort((a, b) => a - b)).toEqual([3, 100])
+        })
+
+        it('crée la série décochée quand le réseau revient avant l’échéance, puis la supprime', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+            await leReseauRevient(page)
+
+            expect(reseau.serveur.resume()[0]).toContain('"is_completed":false')
+
+            page.validerLaSuppression()
+            await flushPromises()
+
+            expect([...reseau.serveur.series.keys()]).toEqual([3])
+        })
+
+        it('met la suppression d’une série du serveur en file durable quand la page part, et un rechargement ne la ramène pas', async () => {
+            const page = await monterLaSeance(seance())
+
+            page.retirerAvecDelai(3)
+            await flushPromises()
+            window.dispatchEvent(new Event('pagehide'))
+            await flushPromises()
+
+            expect(fileDurable()).toEqual([expect.objectContaining({ method: 'delete', url: '/api/v1/sets/3' })])
+            expect(reseau.serveur.resume()).toEqual([])
+
+            const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+            expect([...reseau.serveur.series.keys()]).toEqual([])
+            expect(rechargee.queue).toEqual([])
         })
 
         it('supprime du serveur ce que la file a créé quand le réseau revient avant l’échéance', async () => {
