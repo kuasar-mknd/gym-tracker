@@ -53,17 +53,15 @@ final class CleDeLApplicationCheck extends Check
 
     private function estPubliee(string $cle): bool
     {
-        $formes = [$cle, str_starts_with($cle, 'base64:') ? substr($cle, 7) : $cle];
-        $empreintes = array_map(static fn (string $forme): string => hash('sha256', $forme), $formes);
-        $publiees = config('app.cles_publiees');
-        $trouvee = false;
+        $sansPrefixe = str_starts_with($cle, 'base64:') ? substr($cle, 7) : $cle;
+        $publiees = array_filter((array) config('app.cles_publiees'), is_string(...));
 
-        foreach (is_array($publiees) ? $publiees : [] as $publiee) {
-            foreach ($empreintes as $empreinte) {
-                $trouvee = (is_string($publiee) && hash_equals(strtolower($publiee), $empreinte)) || $trouvee;
-            }
-        }
-
-        return $trouvee;
+        return array_any(
+            [$cle, $sansPrefixe],
+            fn (string $forme): bool => array_any(
+                $publiees,
+                fn (string $publiee): bool => hash_equals(strtolower($publiee), hash('sha256', $forme)),
+            ),
+        );
     }
 }
