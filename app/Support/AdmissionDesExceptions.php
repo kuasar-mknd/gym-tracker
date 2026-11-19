@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\ExceptionEnregistree;
+use BezhanSalleh\FilamentExceptions\FilamentExceptions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Context;
 use Throwable;
 
 /**
  * Décide, avant tout rendu, si une exception rapportée s'écrit en base : une
- * ligne complète par empreinte (classe, fichier, ligne, message normalisé)
+ * ligne complète par empreinte (classe, fichier, ligne, compte de la requête, message normalisé)
  * et par fenêtre, au plus `PLAFOND_PAR_MINUTE` lignes par minute. Les autres
  * occurrences se comptent dans le cache, sans SQL, et le compte rejoint la
  * ligne de l'empreinte quand la fenêtre suivante s'ouvre.
@@ -30,6 +31,14 @@ final class AdmissionDesExceptions
     private const string CONTEXTE = 'empreinte_de_l_exception';
 
     public function admet(Throwable $exception): bool
+    {
+        return match (FilamentExceptions::shouldCapture($exception)) {
+            true => $this->decider($exception),
+            false => false,
+        };
+    }
+
+    private function decider(Throwable $exception): bool
     {
         $empreinte = self::empreinte($exception);
 
@@ -67,6 +76,7 @@ final class AdmissionDesExceptions
             $exception::class,
             $exception->getFile(),
             $exception->getLine(),
+            ExceptionEnregistree::compteDeLaRequete(),
             self::messageNormalise($exception->getMessage()),
         ]));
     }

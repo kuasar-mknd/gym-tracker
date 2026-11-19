@@ -721,9 +721,9 @@ it('efface en cascade toute ligne qui désigne le compte par une clé étrangèr
 /**
  * Une exception levée par une requête de ce compte, comme le serveur la garde.
  */
-function compteSupprimeLeverUneException(User $compte, string $chemin = '/_boum-du-compte'): void
+function compteSupprimeLeverUneException(User $compte): void
 {
-    test()->actingAs($compte)->post($chemin)->assertServerError();
+    test()->actingAs($compte)->post('/_boum-du-compte')->assertServerError();
 }
 
 /*
@@ -747,15 +747,11 @@ it('efface les exceptions levées par le compte, et seulement les siennes', func
         throw new RuntimeException('exception du compte');
     });
 
-    Route::middleware(['web', 'auth'])->post('/_boum-du-voisin', function (): never {
-        throw new LogicException('exception du voisin');
-    });
-
     $compte = User::factory()->create();
     $voisin = User::factory()->create();
 
     compteSupprimeLeverUneException($compte);
-    compteSupprimeLeverUneException($voisin, '/_boum-du-voisin');
+    compteSupprimeLeverUneException($voisin);
 
     expect(ExceptionEnregistree::query()->where('user_id', $compte->id)->count())->toBe(1);
 

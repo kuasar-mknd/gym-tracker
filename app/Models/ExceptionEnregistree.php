@@ -263,7 +263,7 @@ final class ExceptionEnregistree extends Exception
      * (`exists` faux) n'en reçoit pas : la clé refuserait la ligne, et le
      * paquet perdrait l'exception sans rien dire.
      */
-    private static function compteDeLaRequete(): ?int
+    public static function compteDeLaRequete(): ?int
     {
         $garde = Auth::guard('web');
         $compte = $garde->hasUser() ? $garde->user() : null;

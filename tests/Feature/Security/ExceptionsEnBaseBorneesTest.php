@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\ExceptionEnregistree;
+use App\Models\User;
 use App\Support\AdmissionDesExceptions;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Support\Facades\Cache;
@@ -157,15 +158,30 @@ it('ne rattache aucune empreinte à une ligne écrite hors du rapport', function
         ->and(ExceptionEnregistree::query()->whereKey($ligne->id)->value('empreinte'))->toBeNull();
 });
 
-it('ne donne pas l’empreinte d’une exception admise mais jamais écrite à la ligne suivante', function (): void {
-    expect(app(AdmissionDesExceptions::class)->admet(new RuntimeException('')))->toBeTrue();
+it('n’admet pas une exception que le paquet n’enregistre pas, et n’y use ni fenêtre ni plafond', function (): void {
+    $admission = app(AdmissionDesExceptions::class);
 
-    $ligne = ExceptionEnregistree::query()->create([
-        'type' => LogicException::class, 'code' => '0', 'message' => 'm', 'file' => 'f.php', 'line' => 1,
-        'trace' => [], 'method' => 'GET', 'path' => '/',
-    ]);
+    expect($admission->admet(new RuntimeException('')))->toBeFalse()
+        ->and($admission->empreinteEnCours(RuntimeException::class, __FILE__, __LINE__))->toBeNull()
+        ->and(Cache::get('exceptions:minute:'.now()->format('YmdHi')))->toBeNull();
+});
 
-    expect(ExceptionEnregistree::query()->whereKey($ligne->id)->value('empreinte'))->toBeNull();
+it('garde une ligne par compte pour la même exception, et celle du voisin survit à la suppression du premier', function (): void {
+    Route::middleware(['web', 'auth'])->post('/_boum-du-compte', function (): never {
+        throw exceptionsEnBaseBorneesBoum('x');
+    });
+
+    $premier = User::factory()->create();
+    $voisin = User::factory()->create();
+
+    $this->actingAs($premier)->post('/_boum-du-compte')->assertServerError();
+    $this->actingAs($voisin)->post('/_boum-du-compte')->assertServerError();
+
+    expect(ExceptionEnregistree::query()->count())->toBe(2);
+
+    $premier->delete();
+
+    expect(ExceptionEnregistree::query()->where('user_id', $voisin->id)->count())->toBe(1);
 });
 
 it('n’écrit pas le total d’une fenêtre sur la ligne de la précédente', function (): void {
