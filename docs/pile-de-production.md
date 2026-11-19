@@ -124,7 +124,7 @@ L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le 
 - Le proxy inverse doit donc tourner sur le même hôte. Les exigences et les vérifications sont dans [Déploiement](deploiement.md#proxy-inverse-et-port-de-lapplication).
 - L'ouverture directe ne marche d'ailleurs pas : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session, la connexion échoue.
 - Le conteneur voit la passerelle du pont, ni `127.0.0.1` ni l'adresse de l'hôte : c'est pourquoi un `TRUSTED_PROXIES` resserré doit contenir cette passerelle.
-- Par défaut (`config/trustedproxy.php` et la composition), l'application fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+- Par défaut (`config/trustedproxy.php` et la composition), l'application fait confiance à la boucle locale et aux ponts Docker (`172.16.0.0/12`), non aux réseaux locaux (`10.0.0.0/8`, `192.168.0.0/16`).
 
 **L'historique du navigateur.** `X-Forwarded-Proto` décide du chiffrement de l'historique : les pages d'un compte sont chiffrées dans l'historique du navigateur, et la déconnexion en jette la clé, pour que le bouton Retour ne réaffiche rien du compte parti.
 

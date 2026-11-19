@@ -35,7 +35,7 @@ Trois règles valent pour toutes :
 | `APP_PREVIOUS_KEYS` | non | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY`. Transmise à `app`, `worker` et `scheduler`. |
 | `APP_URL` | oui | vide | Adresse publique en `https://`, celle du proxy inverse. |
 | `APP_DEBUG` | non | `false` | Pages d'erreur détaillées. **Jamais en production.** |
-| `TRUSTED_PROXIES` | conseillé | `127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` | Pairs dont l'application croit les en-têtes `X-Forwarded-*` (adresse cliente, HTTPS, hôte, port). Transmise à `app` seul. |
+| `TRUSTED_PROXIES` | conseillé | `127.0.0.1,172.16.0.0/12` | Pairs dont l'application croit les en-têtes `X-Forwarded-*` (adresse cliente, HTTPS, hôte, port). Transmise à `app` seul. |
 
 #### `APP_KEY` : générer, changer
 
@@ -70,7 +70,7 @@ Elle affiche le code source, les requêtes SQL avec leurs valeurs, les en-têtes
 
 Une liste séparée par des virgules : adresses exactes ou sous-réseaux CIDR, IPv4 et IPv6.
 
-- Le défaut accepte la boucle locale et les trois plages privées.
+- Le défaut accepte la boucle locale et les ponts Docker (`172.16.0.0/12`), pas les réseaux locaux : un appareil de `192.168.x.x` ou `10.x.x.x` n'est plus pris pour un proxy, donc l'entrée de `X-Forwarded-For` qu'il forge n'est plus lue pour son adresse. Si la passerelle du réseau de conteneurs de l'hôte tombe dans une de ces plages, l'ajouter à `TRUSTED_PROXIES`, faute de quoi HTTPS n'est plus détecté.
 - À régler sur l'adresse précise, ou le plus petit sous-réseau, sous laquelle le proxy inverse joint `app` : l'adresse que l'application voit comme pair, pas l'adresse publique. Resserré, il doit contenir l'adresse de la passerelle du réseau de conteneurs (voir [Déploiement](deploiement.md#proxy-inverse-et-port-de-lapplication)).
 - Une valeur qui ne couvre pas le proxy fait lire l'adresse du proxy pour tous les clients (une seule limite de débit pour tous, `ADMIN_ALLOWED_IPS` sans effet) et perdre HTTPS (liens et redirections en `http://`).
 - Vide ou absente : le défaut. Le contrôle « Proxys de confiance » de la page « Santé » le signale en orange en production (plage trop large, entrée invalide ou `*`).
