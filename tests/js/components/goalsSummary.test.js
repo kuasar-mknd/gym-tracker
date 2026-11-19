@@ -94,4 +94,13 @@ describe('GoalsSummary sur une copie hors ligne', () => {
         expect(carte.get('[data-indisponible-hors-ligne]').text()).toContain('Objectifs indisponibles hors ligne')
         expect(carte.find('a').exists()).toBe(false)
     })
+
+    it('ne dit pas « indisponible » d’un compte sans objectif : il montre l’état vide et son lien', () => {
+        const carte = monter()
+
+        expect(carte.find('[data-indisponible-hors-ligne]').exists()).toBe(false)
+        expect(carte.text()).not.toContain('indisponibles hors ligne')
+        expect(carte.text()).toContain('Aucun objectif en cours')
+        expect(carte.get('a').text()).toContain('Fixer un objectif')
+    })
 })
