@@ -88,26 +88,35 @@ export const useSeriesDeLaSeance = ({
         oublierLEcritureNonConfirmee,
     })
 
-    const { addSet, removeSet, oublierLesEcrituresDeLaLigne } = useAjoutEtRetraitDeSerie({
-        localWorkout,
-        pendingIds,
-        queuedLineIds,
-        nouvelIdTemporaire,
-        newRowKey,
-        rowKey,
-        fieldWrites,
-        deleteSet,
-        oublierLesRafales,
-        oublierLaSerie,
-        markUnsynced,
-        clearUnsynced,
-        reportSyncFailure,
-        bornesDUneSerie,
-    })
+    const { addSet, removeSet, oublierLesEcrituresDeLaLigne, validerLaSuppressionEnAttente } = useAjoutEtRetraitDeSerie(
+        {
+            localWorkout,
+            pendingIds,
+            queuedLineIds,
+            nouvelIdTemporaire,
+            newRowKey,
+            rowKey,
+            fieldWrites,
+            deleteSet,
+            oublierLesRafales,
+            oublierLaSerie,
+            markUnsynced,
+            clearUnsynced,
+            reportSyncFailure,
+            bornesDUneSerie,
+        },
+    )
+
+    /** Ce qui ne peut plus attendre part d'abord : la suppression en attente, puis les saisies. */
+    const viderLesEcritures = () => {
+        validerLaSuppressionEnAttente()
+
+        return flushAllPendingUpdates()
+    }
 
     return {
         patchSet,
-        flushAllPendingUpdates,
+        flushAllPendingUpdates: viderLesEcritures,
         flushPendingUpdates,
         toggleSetCompletion,
         addSet,

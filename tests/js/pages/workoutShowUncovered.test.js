@@ -136,6 +136,7 @@ import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
+import { abandonner, annuler, DELAI_POUR_ANNULER_MS, suppressionAnnulable, valider } from '@/Utils/suppressionAnnulable'
 
 /** Les fins de séance parties par l'API (#2049) : la charge et les options de chaque envoi. */
 const finsEnvoyees = () =>
@@ -342,6 +343,7 @@ beforeEach(() => {
 
 afterEach(async () => {
     await pages.demonterToutes()
+    abandonner()
     localStorage.clear()
     vi.unstubAllGlobals()
     vi.useRealTimers()
@@ -1373,6 +1375,8 @@ describe('Workouts/Show — a set on an exercise that never reached the server',
         const wrapper = await queuedLine()
 
         await click(wrapper, 'remove-set-0-0')
+        valider()
+        await flushPromises()
 
         expect(lines(wrapper)[0].sets).toHaveLength(0)
         expect(destroy).not.toHaveBeenCalled()
@@ -1480,6 +1484,8 @@ describe('Workouts/Show — deleting a set', () => {
         const wrapper = await mountPage()
 
         await click(wrapper, 'remove-set-0-0')
+        valider()
+        await flushPromises()
 
         expect(lines(wrapper)[0].sets).toHaveLength(0)
         expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
@@ -1489,6 +1495,8 @@ describe('Workouts/Show — deleting a set', () => {
         const wrapper = await mountPage()
 
         await click(wrapper, 'swipe-remove-set-0-0')
+        valider()
+        await flushPromises()
 
         expect(lines(wrapper)[0].sets).toHaveLength(0)
         expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
@@ -1515,9 +1523,169 @@ describe('Workouts/Show — deleting a set', () => {
         )
 
         await click(wrapper, 'remove-set-0-1')
+        valider()
+        await flushPromises()
 
         expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 42, 43])
         expect(flash()).toBe('La série n’a pas pu être supprimée. Réessaie.')
+    })
+
+    describe('with a chance to take it back (#2355)', () => {
+        const troisSeries = () =>
+            session({
+                workout_lines: [
+                    {
+                        id: 10,
+                        order: 0,
+                        exercise: STRENGTH,
+                        sets: [
+                            { id: 41, weight: 60, reps: 5, is_completed: false },
+                            { id: 42, weight: 70, reps: 6, is_completed: true },
+                            { id: 43, weight: 80, reps: 5, is_completed: false },
+                        ],
+                    },
+                ],
+            })
+
+        it('takes the row off the screen, announces it, and sends nothing yet', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 43])
+            expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+            expect(destroy).not.toHaveBeenCalled()
+        })
+
+        it('announces the swipe delete the same way', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'swipe-remove-set-0-1')
+
+            expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+            expect(destroy).not.toHaveBeenCalled()
+        })
+
+        it('puts the row back in its place, with its values and its tick, when it is taken back', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            annuler()
+            await flushPromises()
+
+            expect(
+                lines(wrapper)[0].sets.map(({ id, weight, reps, is_completed }) => [id, weight, reps, is_completed]),
+            ).toEqual([
+                [41, 60, 5, false],
+                [42, 70, 6, true],
+                [43, 80, 5, false],
+            ])
+            expect(suppressionAnnulable.value).toBeNull()
+            expect(destroy).not.toHaveBeenCalled()
+
+            valider()
+            expect(destroy).not.toHaveBeenCalled()
+        })
+
+        it('sends the delete once the time to take it back has run out', async () => {
+            vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            vi.advanceTimersByTime(DELAI_POUR_ANNULER_MS - 1)
+            expect(destroy).not.toHaveBeenCalled()
+
+            vi.advanceTimersByTime(1)
+            await flushPromises()
+
+            expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
+            expect(suppressionAnnulable.value).toBeNull()
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 43])
+        })
+
+        it('does not bring the row back when the server’s copy of the session arrives meanwhile', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            await wrapper.setProps({ workout: JSON.parse(JSON.stringify(troisSeries())) })
+            await flushPromises()
+
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 43])
+
+            annuler()
+            await flushPromises()
+
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 42, 43])
+        })
+
+        it('sends a first delete at once when a second row is deleted', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            await click(wrapper, 'remove-set-0-1')
+
+            expect(destroy).toHaveBeenCalledTimes(1)
+            expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41])
+            expect(suppressionAnnulable.value).toEqual({ message: 'Série supprimée' })
+        })
+
+        it('sends it before the page goes away', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            wrapper.unmount()
+            await flushPromises()
+
+            expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
+            expect(suppressionAnnulable.value).toBeNull()
+        })
+
+        it('sends it when the page is hidden', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            window.dispatchEvent(new Event('pagehide'))
+            await flushPromises()
+
+            expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
+        })
+
+        it('does not undo a delete that the server refused after the time ran out', async () => {
+            destroy.mockRejectedValue({ response: { status: 500 } })
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            valider()
+            await flushPromises()
+
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 42, 43])
+            expect(suppressionAnnulable.value).toBeNull()
+        })
+
+        it('queues the delete when there is no network, and keeps the row off the screen', async () => {
+            destroy.mockRejectedValue({ isOffline: true, queueId: 'q-suppression' })
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            valider()
+            await flushPromises()
+
+            expect(destroy).toHaveBeenCalledWith('/api/v1/sets/42')
+            expect(lines(wrapper)[0].sets.map((set) => set.id)).toEqual([41, 43])
+            expect(flash()).toBeUndefined()
+        })
+
+        it('drops the pending delete when the exercise that holds the row is removed', async () => {
+            const wrapper = await mountPage(troisSeries())
+
+            await click(wrapper, 'remove-set-0-1')
+            await click(wrapper, 'remove-line-0')
+            await click(wrapper, 'confirm-dialog-confirm')
+
+            expect(suppressionAnnulable.value).toBeNull()
+            expect(destroy).not.toHaveBeenCalledWith('/api/v1/sets/42')
+        })
     })
 })
 

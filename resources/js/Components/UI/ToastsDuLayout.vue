@@ -5,6 +5,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import { EVENEMENT_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { annuler, reprendre, suppressionAnnulable, suspendre } from '@/Utils/suppressionAnnulable'
 
 /**
  * Les toasts d'un layout : le succès et l'erreur que la page porte dans
@@ -187,5 +188,36 @@ onUnmounted(() => {
                 </div>
             </Transition>
         </div>
+        <Transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 -translate-y-4"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-4"
+        >
+            <div
+                v-if="suppressionAnnulable"
+                class="z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80"
+                role="status"
+                aria-live="polite"
+                dusk="toast-suppression"
+                @mouseenter="suspendre"
+                @mouseleave="reprendre"
+                @focusin="suspendre"
+                @focusout="reprendre"
+            >
+                <div
+                    class="glass-panel-light border-l-accent-state flex items-center gap-3 rounded-2xl border-l-[6px] p-4 shadow-lg backdrop-blur-xl"
+                >
+                    <p class="text-text-main flex-1 text-sm font-bold">
+                        {{ suppressionAnnulable.message }}
+                    </p>
+                    <GlassButton variant="secondary" size="sm" dusk="annuler-la-suppression" @click="annuler">
+                        Annuler
+                    </GlassButton>
+                </div>
+            </div>
+        </Transition>
     </div>
 </template>

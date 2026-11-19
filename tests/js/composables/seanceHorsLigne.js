@@ -322,6 +322,7 @@ export const monterLaSeance = async (
     const { useSeanceEtSaFile } = await import('@/composables/useSeanceEtSaFile')
     const { createWriteQueue, createWriteSequencer } = await import('@/Utils/writeOrdering')
     const { fusionnerLaSeance } = await import('@/Utils/fusionDeSeance')
+    const { valider: validerLaSuppression } = await import('@/Utils/suppressionAnnulable')
 
     let page
 
@@ -407,6 +408,11 @@ export const monterLaSeance = async (
                 ...rapport,
                 ...ordre,
                 ...series,
+                // Le délai pour annuler n'est pas ce que ces suites éprouvent : la suppression part aussitôt (#2355).
+                removeSet: (setId) => {
+                    series.removeSet(setId)
+                    validerLaSuppression()
+                },
                 ...lignes,
                 ...reglages,
                 rafraichir,

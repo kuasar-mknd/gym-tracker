@@ -73,6 +73,7 @@ let sync
 let magasin
 let ecriture
 let delai
+let validerLaSuppression
 let fabriqueDeLaBase
 
 /** La séance 5 telle que la copie la garde. */
@@ -111,6 +112,7 @@ beforeAll(async () => {
             const { creerLeMagasinDesCopies, ouvrirLaBaseDuNavigateur } = await import('@/Utils/copiesHorsLigne')
             const { installerLEcritureDesCopies } = await import('@/Utils/ecritureDesCopies')
             ;({ DELAI_DE_L_INSTANTANE_MS: delai } = await import('@/composables/useCopieDeLaSeance'))
+            ;({ valider: validerLaSuppression } = await import('@/Utils/suppressionAnnulable'))
 
             magasin = creerLeMagasinDesCopies({ ouvrirLaBase: () => ouvrirLaBaseDuNavigateur(fabriqueDeLaBase) })
             ecriture = installerLEcritureDesCopies({ routeur: router, magasin })
@@ -226,6 +228,7 @@ it('verse dans la copie la séance enregistrée, jamais tant qu’une écriture 
     await auDelaDeLAntiRebond()
     const libererLaSuppression = uneReponseRetenue(reseau.serveur)
     await cliquer('[dusk="remove-set-0-1"]')
+    validerLaSuppression()
     await attendre(() => sync.ecrituresEnCours() === 1)
     expect(rangees()).toBe(1)
     await auDelaDeLAntiRebond()
@@ -245,6 +248,7 @@ it('verse dans la copie la séance enregistrée, jamais tant qu’une écriture 
     await auDelaDeLAntiRebond()
     reseau.serveur.enLigne = false
     await cliquer('[dusk="remove-set-0-0"]')
+    validerLaSuppression()
     await attendre(() => sync.enAttente() === 1)
     expect(rangees()).toBe(0)
     await auDelaDeLAntiRebond()

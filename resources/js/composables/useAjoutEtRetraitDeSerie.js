@@ -5,6 +5,7 @@ import { entreeDeLaRangee } from '@/Utils/seanceEtFile'
 import { retirerDeLaListe } from '@/Utils/miseAJourOptimiste'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 import { raisonDuRefus } from '@/composables/useSaisieDeSerie'
+import { abandonner, proposerUneAnnulation, valider } from '@/Utils/suppressionAnnulable'
 
 /**
  * Deux valeurs d'un champ mesuré qui disent la même chose : `80`, `80.0` et
@@ -521,7 +522,12 @@ export const useAjoutEtRetraitDeSerie = ({
         pendingIds.track(tempSet.id, creation)
     }
 
-    const removeSet = (setId) => {
+    /** La série retirée de l'écran dont la suppression n'est pas encore partie, ou `null`. */
+    let enAttente = null
+
+    const supprimerPourDeBon = ({ serie, remettre }) => {
+        const setId = serie.id
+
         // Clear any pending updates for this set to prevent 404s
         oublierLesRafales(setId)
 
@@ -530,25 +536,6 @@ export const useAjoutEtRetraitDeSerie = ({
         NUMERIC_SET_FIELDS.forEach((field) => fieldWrites.forget(`${setId}_${field}`))
 
         oublierLaSerie(setId)
-
-        const line = localWorkout.value.workout_lines.find((candidate) => candidate.sets.some((s) => s.id === setId))
-
-        if (line === undefined) {
-            return
-        }
-
-        /*
-         * Refusé, le retrait remet la série à sa place exacte, jamais deux fois,
-         * dans la ligne que l'écran montre alors : une réponse du serveur a pu
-         * reconstruire les lignes (`fusionnerLaSeance`) depuis le retrait, et
-         * la remettre dans l'ancienne ne la montrait plus (#2077).
-         */
-        const cleDeLaLigne = rowKey(line)
-        const remettre = retirerDeLaListe(
-            () =>
-                (localWorkout.value.workout_lines.find((candidate) => rowKey(candidate) === cleDeLaLigne) ?? line).sets,
-            setId,
-        )
 
         // La rangée a quitté l'écran : sa marque « non enregistrée » part avec elle (#2299).
         deleteSet(setId)
@@ -569,15 +556,69 @@ export const useAjoutEtRetraitDeSerie = ({
             })
     }
 
+    /** La rangée quitte l'écran ; la suppression attend « Annuler » ou l'échéance (#2355). */
+    const removeSet = (setId) => {
+        const line = localWorkout.value.workout_lines.find((candidate) => candidate.sets.some((s) => s.id === setId))
+
+        if (line === undefined) {
+            return
+        }
+
+        const serie = line.sets.find((s) => s.id === setId)
+        const cleDeLaLigne = rowKey(line)
+        const remettre = retirerDeLaListe(
+            () =>
+                (localWorkout.value.workout_lines.find((candidate) => rowKey(candidate) === cleDeLaLigne) ?? line).sets,
+            setId,
+        )
+
+        const retrait = { serie, cleDeLaLigne, remettre }
+
+        proposerUneAnnulation({
+            message: 'Série supprimée',
+            porte: (set) => String(serie.id) === String(set.id),
+            valider: () => {
+                enAttente = null
+                supprimerPourDeBon(retrait)
+            },
+            annuler: () => {
+                enAttente = null
+                remettre()
+            },
+        })
+
+        enAttente = retrait
+    }
+
+    if (getCurrentInstance()) {
+        window.addEventListener('pagehide', valider)
+
+        onUnmounted(() => {
+            window.removeEventListener('pagehide', valider)
+            valider()
+        })
+    }
+
     /**
      * Ce qu'une ligne retiree laisse derriere elle : les rafales en attente de ses
      * series, et sa chaine de creation, indexee sur une chaine que rien ne ramasse.
      */
     const oublierLesEcrituresDeLaLigne = (line) => {
+        if (enAttente?.cleDeLaLigne === rowKey(line)) {
+            oublierLesRafales(enAttente.serie.id)
+            enAttente = null
+            abandonner()
+        }
+
         line.sets?.forEach((set) => oublierLesRafales(set.id))
 
         setCreateChains.delete(rowKey(line))
     }
 
-    return { addSet, removeSet, oublierLesEcrituresDeLaLigne }
+    return {
+        addSet,
+        removeSet,
+        oublierLesEcrituresDeLaLigne,
+        validerLaSuppressionEnAttente: valider,
+    }
 }
