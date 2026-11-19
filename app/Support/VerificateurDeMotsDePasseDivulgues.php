@@ -28,33 +28,37 @@ final class VerificateurDeMotsDePasseDivulgues extends NotPwnedVerifier
     #[\Override]
     protected function search($hashPrefix): Collection
     {
-        if (Cache::has(self::CLEF_DE_LA_PAUSE)) {
-            return new Collection();
-        }
+        return Cache::has(self::CLEF_DE_LA_PAUSE) ? new Collection() : $this->interroger($hashPrefix);
+    }
 
+    /**
+     * @return Collection<int, string>
+     */
+    private function interroger(string $hashPrefix): Collection
+    {
         try {
-            $reponse = $this->factory->withHeaders(['Add-Padding' => 'true'])
+            $corps = $this->factory->withHeaders(['Add-Padding' => 'true'])
                 ->connectTimeout(self::DELAI_EN_SECONDES)
                 ->timeout(self::DELAI_EN_SECONDES)
-                ->get('https://api.pwnedpasswords.com/range/'.$hashPrefix);
+                ->get('https://api.pwnedpasswords.com/range/'.$hashPrefix)
+                ->throw()
+                ->body();
         } catch (Exception) {
             return $this->suspendre();
         }
 
-        if (! $reponse->successful()) {
-            return $this->suspendre();
-        }
+        return new Collection($this->lignes($corps));
+    }
 
-        /** @var list<string> $lignes */
-        $lignes = [];
-
-        foreach (explode("\n", trim($reponse->body())) as $ligne) {
-            if (str_contains($ligne, ':')) {
-                $lignes[] = $ligne;
-            }
-        }
-
-        return new Collection($lignes);
+    /**
+     * @return list<string>
+     */
+    private function lignes(string $corps): array
+    {
+        return array_values(array_filter(
+            explode("\n", trim($corps)),
+            static fn (string $ligne): bool => str_contains($ligne, ':'),
+        ));
     }
 
     /**
