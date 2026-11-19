@@ -12,6 +12,7 @@ use App\Models\Exercise;
 use App\Services\Stats\ExerciseStatsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,13 +29,12 @@ class ExerciseController extends Controller
     {
         $this->authorize('view', $exercise);
 
-        $progress = $exerciseStats->getExercise1RMProgress($this->user(), $exercise->id, 365);
-        $historique = $fetchExerciseHistory->execute($this->user(), $exercise);
+        $user = $this->user();
 
         return Inertia::render('Exercises/Show', [
             'exercise' => $exercise,
-            'progress' => $progress,
-            'history' => $historique,
+            'progress' => fn (): array => $exerciseStats->getExercise1RMProgress($user, $exercise->id, 365),
+            'history' => Inertia::defer(fn (): Collection => $fetchExerciseHistory->execute($user, $exercise), rescue: true),
         ]);
     }
 

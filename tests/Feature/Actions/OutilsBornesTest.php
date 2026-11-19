@@ -69,7 +69,7 @@ it('lit autant d’index avec quatre fois plus d’historique', function (): voi
 
     $lectures = fn (User $u): array => [
         'objectifs' => lecturesOutils(fn (): Collection => $u->goals()->latest()->limit(100)->get()),
-        'gabarits' => lecturesOutils(fn (): Collection => $gabarits->execute($u)),
+        'gabarits' => lecturesOutils(fn (): array => $gabarits->execute($u)),
         'minuteurs' => lecturesOutils(fn (): Collection => $u->intervalTimers()->latest('created_at')->limit(50)->get()),
         'mesures' => lecturesOutils(fn (): Collection => $mesures->execute($u, 'Chest')),
     ];

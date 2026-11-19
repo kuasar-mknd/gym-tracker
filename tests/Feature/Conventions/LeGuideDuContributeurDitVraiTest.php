@@ -26,7 +26,7 @@ use Symfony\Component\Yaml\Yaml;
  *   file : `npm run dev` seul ne lance que Vite, et les records, les badges et
  *   les objectifs, calculés en file, ne bougeraient plus en local ;
  * - ce que demande une passe `artisan dusk` sur un clone neuf : le renvoi à
- *   la section du README qui dérive `.env.dusk.local`, sans lequel la garde
+ *   la section de la documentation (`docs/developpement.md`) qui dérive `.env.dusk.local`, sans lequel la garde
  *   des parcours refuse la passe, et `npm run build` avant, chaque commande
  *   du guide qui lance le serveur de Vite arrêtée, sans quoi `public/hot` la
  *   fait refuser aussi ;
@@ -57,12 +57,13 @@ function guideAncreDuTitre(string $titre): string
 }
 
 /**
- * La section du README que vise une ancre, jusqu'au titre suivant de même
- * niveau ou de niveau supérieur ; vide si aucun titre ne porte cette ancre.
+ * La section d'un document du dépôt (README ou docs/) que vise une ancre,
+ * jusqu'au titre suivant de même niveau ou de niveau supérieur ; vide si le
+ * fichier n'existe pas ou si aucun titre ne porte cette ancre.
  */
-function guideSectionDuReadme(string $ancre): string
+function guideSectionDuDocument(string $fichier, string $ancre): string
 {
-    $readme = (string) file_get_contents(base_path('README.md'));
+    $readme = is_file(base_path($fichier)) ? (string) file_get_contents(base_path($fichier)) : '';
     preg_match_all('/^(#{1,6})\s+(.+)$/m', $readme, $titres, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
 
     foreach ($titres as $rang => $titre) {
@@ -219,13 +220,13 @@ it('dit ce qu une passe navigateur demande sur un clone neuf', function (): void
 
     foreach ($lignes as $ligne) {
         $manques = [];
-        $sections = preg_match_all('/\]\(README\.md#([^)]+)\)/', $ligne, $liens) > 0
-            ? array_map(guideSectionDuReadme(...), $liens[1])
+        $sections = preg_match_all('/\]\(((?:docs\/)?[\w.-]+\.md)#([^)]+)\)/', $ligne, $liens, PREG_SET_ORDER) > 0
+            ? array_map(static fn (array $lien): string => guideSectionDuDocument($lien[1], $lien[2]), $liens)
             : [];
         $deriveLaConfiguration = array_filter($sections, static fn (string $section): bool => str_contains($section, '> .env.dusk.local'));
 
         if ($deriveLaConfiguration === [] || ! str_contains($ligne, '.env.dusk.local')) {
-            $manques[] = 'le renvoi à la section du README qui dérive .env.dusk.local : sans lui, la garde des parcours refuse la passe (base qui ne finit pas par _dusk)';
+            $manques[] = 'le renvoi à la section de la documentation qui dérive .env.dusk.local : sans lui, la garde des parcours refuse la passe (base qui ne finit pas par _dusk)';
         }
 
         $construction = strpos($ligne, 'npm run build');

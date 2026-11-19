@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Support\Str;
 
+$cookieReserveAHttps = (bool) env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production');
+$prefixeDeLHote = $cookieReserveAHttps && in_array(env('SESSION_DOMAIN'), [null, ''], true) && in_array(env('SESSION_PATH', '/'), ['/', ''], true)
+    ? '__Host-'
+    : '';
+
 return [
 
     /*
@@ -36,6 +41,8 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
+    'invites_par_minute' => env('APP_ENV') === 'production' ? 30 : 1000,
+
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*
@@ -47,9 +54,19 @@ return [
     | should be encrypted before it's stored. All encryption is performed
     | automatically by Laravel and you may use the session like normal.
     |
+    | Vrai par défaut (#2353) : la session porte la clé des copies hors ligne
+    | (`CleDesCopiesEnSession`), et ne se lit plus en clair dans Redis. Une
+    | session écrite sans chiffrement ne se déchiffre pas : Laravel la lit
+    | comme vide, son titulaire en ouvre une neuve.
+    |
+    | Seul un refus explicite (`false`, `0`, `off`, `no`, casse et espaces
+    | ignorés) l'éteint : une
+    | variable vide ou une faute de frappe laisse le chiffrement (#2397).
+    |
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', false),
+    'encrypt' => env('SESSION_ENCRYPT') !== false
+        && ! in_array(strtolower(trim((string) env('SESSION_ENCRYPT'))), ['false', '(false)', '0', 'off', 'no'], true),
 
     /*
     |--------------------------------------------------------------------------
@@ -131,7 +148,7 @@ return [
 
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+        $prefixeDeLHote.Str::slug((string) env('APP_NAME', 'laravel')).'-session'
     ),
 
     /*
@@ -171,7 +188,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
+    'secure' => $cookieReserveAHttps,
 
     /*
     |--------------------------------------------------------------------------

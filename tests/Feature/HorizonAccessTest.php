@@ -95,11 +95,16 @@ function horizonGardeDuPanneau(): SessionGuard
  * L'empreinte du mot de passe que la connexion au panneau pose en session
  * (`SessionGuard::login()`), et que `AuthenticateSession` y tient à jour.
  *
- * @return array{password_hash_admin: string}
+ * et la preuve du second facteur (`AssuranceDuSecondFacteur`).
+ *
+ * @return array<string, string>
  */
 function horizonEmpreinteDuPanneau(Admin $admin): array
 {
-    return ['password_hash_admin' => horizonGardeDuPanneau()->hashPasswordForCookie($admin->getAuthPassword())];
+    return [
+        'password_hash_admin' => horizonGardeDuPanneau()->hashPasswordForCookie($admin->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($admin),
+    ];
 }
 
 /**
@@ -165,6 +170,18 @@ it('ouvre Horizon à l’administrateur à qui un autre rôle donne view-outils'
     withSession(horizonSessionDuPanneau($admin->fresh() ?? $admin));
 
     get('/horizon')->assertOk();
+});
+
+it('ferme Horizon à l’administrateur qui n’a pas enrôlé sa double authentification, permission ou non', function (): void {
+    horizonEnProductionDepuis('203.0.113.5', ['203.0.113.5']);
+    $role = Role::findOrCreate('exploitation', 'admin');
+    $role->givePermissionTo(Permission::findOrCreate('view-outils', 'admin'));
+    $admin = Admin::factory()->sansDoubleAuthentification()->create();
+    $admin->assignRole($role);
+
+    withSession(horizonSessionDuPanneau($admin->fresh() ?? $admin));
+
+    get('/horizon')->assertForbidden();
 });
 
 it('ferme Horizon et son API au super administrateur hors des adresses admises', function (): void {
@@ -233,7 +250,7 @@ it('ouvre Horizon juste après que la page de profil a changé le mot de passe',
     $admin = horizonSuperAdministrateur();
     $admin->forceFill(['password' => 'Un-autre-mot-de-passe-2026!'])->save();
 
-    withSession([horizonGardeDuPanneau()->getName() => $admin->getAuthIdentifier(), 'password_hash_admin' => $admin->getAuthPassword()]);
+    withSession([horizonGardeDuPanneau()->getName() => $admin->getAuthIdentifier(), 'password_hash_admin' => $admin->getAuthPassword(), \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($admin)]);
 
     get('/horizon')->assertOk();
 });

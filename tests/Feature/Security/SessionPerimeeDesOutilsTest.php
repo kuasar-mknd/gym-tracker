@@ -34,7 +34,7 @@ use function Pest\Laravel\withSession;
  * super administrateur a ouverte au panneau avec le mot de passe qu'il avait
  * alors — changé depuis, ou non.
  */
-function sessionPerimeeOuverteAuPanneau(bool $motDePasseChangeDepuis): void
+function sessionPerimeeOuverteAuPanneau(bool $motDePasseChangeDepuis, bool $avecLaPreuveDuSecondFacteur = true): void
 {
     config(['app.admin_allowed_ips' => ['203.0.113.5']]);
     app()->detectEnvironment(static fn (): string => 'production');
@@ -53,6 +53,9 @@ function sessionPerimeeOuverteAuPanneau(bool $motDePasseChangeDepuis): void
     withSession([
         $garde->getName() => $superAdministrateur->getAuthIdentifier(),
         'password_hash_admin' => $garde->hashPasswordForCookie($superAdministrateur->getAuthPassword()),
+        ...($avecLaPreuveDuSecondFacteur
+            ? [\App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($superAdministrateur)]
+            : []),
     ]);
 
     if ($motDePasseChangeDepuis) {
@@ -95,3 +98,16 @@ it('ouvre chaque outil à la même session tant que le mot de passe n’a pas ch
 
     ($json ? getJson($chemin) : get($chemin))->assertOk();
 })->with(sessionPerimeeOutils());
+
+it('refuse chaque outil à la session qui n’a jamais passé le second facteur (5.2)', function (string $chemin, bool $json, int $statut): void {
+    sessionPerimeeOuverteAuPanneau(motDePasseChangeDepuis: false, avecLaPreuveDuSecondFacteur: false);
+
+    expect(($json ? getJson($chemin) : get($chemin))->getStatusCode())->toBe($statut);
+})->with([
+    'le panneau' => ['/backoffice', false, 302],
+    'Pulse' => ['/backoffice/pulse', false, 403],
+    'le lecteur de journaux' => ['/backoffice/journaux', false, 403],
+    'l’API du lecteur de journaux' => ['/backoffice/journaux/api/folders', true, 403],
+    'Horizon' => ['/horizon', false, 403],
+    'l’API d’Horizon' => ['/horizon/api/masters', true, 403],
+]);

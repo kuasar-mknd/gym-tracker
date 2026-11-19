@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\AuthentifieLaSessionDuCompte;
 use App\Http\Requests\Auth\UpdatePasswordRequest;
 use App\Models\User;
+use App\Support\AppareilConnu;
 use App\Support\RappelDeLAppareil;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +44,8 @@ class PasswordController extends Controller
         ]);
 
         self::rouvrirCetteSession($request, $garde, $utilisateur, $seSouvenaitDeCetAppareil);
+
+        AppareilConnu::poser($utilisateur);
 
         $request->viderLeCompteurDeTentatives();
 

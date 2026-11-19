@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Middleware\ExigeLaDoubleAuthentificationDuPanneau;
+use App\Http\Middleware\IpWhitelist;
 use App\Http\Middleware\OuvreLaSession;
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
@@ -13,6 +15,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
+use App\Support\AssuranceDuSecondFacteur;
 use App\Support\BaseDeDonnees\ConnexionMariaDb;
 use App\Support\BaseDeDonnees\ConnexionMySql;
 use App\Support\ConnexionSociale\FournisseurApple;
@@ -20,15 +23,18 @@ use App\Support\Courriels\GestionnaireDesCourriels;
 use App\Support\Journaux\GestionnaireDesJournaux;
 use App\Support\LiensDesCourriels;
 use App\Support\Sessions\GestionnaireDesSessions;
+use App\Support\VerificateurDeMotsDePasseDivulgues;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Log\LogManager;
@@ -41,6 +47,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Livewire\Features\SupportFileUploads\FilePreviewController;
 use PDO;
 use RuntimeException;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -65,10 +72,13 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\AchievementService::class);
         $this->app->singleton(\App\Services\NotificationService::class);
         $this->app->singleton(\App\Services\PersonalRecordService::class);
+        $this->refuserLesEnvoisDeFichiersDeLivewire();
         $this->taireLesValeursCiteesParLeServeurDeBase();
         $this->taireLesAdressesDansLesErreursDEnvoi();
         $this->taireLesAdressesDansLeJournalDeDernierRecours();
         $this->neJamaisFaireRenaitreUneSessionDetruite();
+        $this->bornerLaRechercheDesMotsDePasseDivulgues();
+        $this->fermerLesOutilsAUnAdministrateurSansDoubleAuthentification();
 
         if (config('app.env') === 'testing') {
             config(['telescope.enabled' => false]);
@@ -89,6 +99,9 @@ final class AppServiceProvider extends ServiceProvider
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         $this->garderLeNomDuRoleDuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
+        \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::recordUsing(
+            static fn (\Throwable $exception): bool => app(\App\Support\AdmissionDesExceptions::class)->admet($exception),
+        );
         $this->ouvrirLeLecteurDeJournaux();
         $this->plafonnerLaCollecteDesErreursDuNavigateur();
 
@@ -117,7 +130,7 @@ final class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(config('app.env') !== 'production');
 
         Password::defaults(function () {
-            $rule = Password::min(8);
+            $rule = Password::min(8)->max(255);
 
             return config('app.env') === 'production'
                 ? $rule->mixedCase()->uncompromised()
@@ -184,6 +197,21 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Par `extend()` : le fournisseur de la validation est différé et
+     * écraserait une liaison posée ici.
+     */
+    private function bornerLaRechercheDesMotsDePasseDivulgues(): void
+    {
+        $this->app->extend(
+            UncompromisedVerifier::class,
+            static fn (UncompromisedVerifier $_verificateur, Application $application): VerificateurDeMotsDePasseDivulgues => new VerificateurDeMotsDePasseDivulgues(
+                $application->make(HttpFactory::class),
+                VerificateurDeMotsDePasseDivulgues::DELAI_EN_SECONDES,
+            ),
+        );
+    }
+
+    /**
      * Les erreurs d'un envoi de courriel ne citent pas d'adresse (#2076) :
      * chaque courrielleur est un `CourrielleurQuiTaitLesAdresses`, que crée
      * `GestionnaireDesCourriels`, posé ici à la place du gestionnaire de
@@ -231,7 +259,7 @@ final class AppServiceProvider extends ServiceProvider
             ->give(function (Application $app): \Minishlink\WebPush\WebPush {
                 $fournisseur = $app->getProvider(\NotificationChannels\WebPush\WebPushServiceProvider::class);
 
-                /** @var array<string, mixed> $authentification */
+                /** @var array<string, array<string, string>> $authentification */
                 $authentification = Closure::bind(
                     fn (): array => $this->webPushAuth(),
                     $fournisseur,
@@ -247,7 +275,7 @@ final class AppServiceProvider extends ServiceProvider
                 $reglage = config('webpush.automatic_padding');
                 $remplissage = is_numeric($reglage) ? (int) $reglage : (bool) $reglage;
 
-                return new \Minishlink\WebPush\WebPush($authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
+                return new \App\Support\WebPushBorne(config()->float('webpush.budget_secondes'), $authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
                     ->setReuseVAPIDHeaders(true)
                     ->setAutomaticPadding($remplissage);
             });
@@ -331,15 +359,17 @@ final class AppServiceProvider extends ServiceProvider
             app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $user->id);
 
             /*
-             * Une série cochée ou décochée dans une séance terminée la fait
-             * devenir faite ou cesser de l'être : la série de jours se
+             * Une série cochée ou décochée, ou qui devient échauffement ou
+             * série de travail, dans une séance terminée la fait devenir
+             * faite ou cesser de l'être (#2333) : la série de jours se
              * reconstruit (#2171). Dans une séance en cours, où se cochent les
              * séries, rien ne change pour elle et rien n'est lu. La fin se relit en
              * base : la séance en mémoire date d'avant l'écriture, et une fin
              * arrivée entre-temps a déjà recalculé sans cette série.
              */
-            if (($set->wasChanged('is_completed') || ($set->wasRecentlyCreated && $set->is_completed)) && Workout::query()->whereKey($set->workoutLine->workout->getKey())->whereNotNull('ended_at')->exists()) {
+            if (($set->wasChanged(['is_completed', 'is_warmup']) || ($set->wasRecentlyCreated && $set->is_completed)) && Workout::query()->whereKey($set->workoutLine->workout->getKey())->whereNotNull('ended_at')->exists()) {
                 app(StreakService::class)->recalculerPourLaSeance($set->workoutLine->workout);
+                self::oublierLesStatsDeSeancesApresLaTransaction((int) $user->id);
             }
 
             /*
@@ -389,6 +419,7 @@ final class AppServiceProvider extends ServiceProvider
                 // retirer sa place dans la série de jours (#2171).
                 if ($set->is_completed && $seance?->ended_at !== null) {
                     app(StreakService::class)->recalculerPourLaSeance($seance);
+                    self::oublierLesStatsDeSeancesApresLaTransaction((int) $user->id);
                 }
 
                 \App\Jobs\SyncUserGoals::dispatch($user);
@@ -418,12 +449,27 @@ final class AppServiceProvider extends ServiceProvider
                 // séance terminée sa place dans la série de jours (#2171).
                 if ($line->workout?->ended_at !== null) {
                     app(StreakService::class)->recalculerPourLaSeance($line->workout);
+                    self::oublierLesStatsDeSeancesApresLaTransaction((int) $user->id);
                 }
 
                 // Après les records, que lit l'objectif de charge (#1953).
                 \App\Jobs\SyncUserGoals::dispatch($user);
             }
         });
+    }
+
+    /**
+     * Une séance qui devient faite ou cesse de l'être (série cochée, série ou
+     * ligne supprimée dans une séance terminée) change ce que comptent les
+     * statistiques de séances (#2333) : leur version se renouvelle après la
+     * validation de la transaction de l'écrivain, ou son annulation.
+     */
+    private static function oublierLesStatsDeSeancesApresLaTransaction(int $idUtilisateur): void
+    {
+        $renouveler = static fn () => \App\Services\Stats\ClesDeStats::invaliderSeancesDuCompte($idUtilisateur);
+
+        \Illuminate\Support\Facades\DB::afterCommit($renouveler);
+        \Illuminate\Support\Facades\DB::afterRollBack($renouveler);
     }
 
     private function registerWorkoutEvents(): void
@@ -451,10 +497,10 @@ final class AppServiceProvider extends ServiceProvider
              */
             if ($workout->wasChanged('ended_at') || ($workout->wasChanged('started_at') && $workout->ended_at !== null)) {
                 app(StreakService::class)->recalculerPourLaSeance($workout);
-            }
 
-            \App\Jobs\SyncUserAchievements::dispatch($workout->user);
-            \App\Jobs\SyncUserGoals::dispatch($workout->user);
+                \App\Jobs\SyncUserAchievements::dispatch($workout->user);
+                \App\Jobs\SyncUserGoals::dispatch($workout->user);
+            }
         });
 
         /**
@@ -572,6 +618,26 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Pulse, le lecteur de journaux et Horizon vivent hors du panneau, que sa
+     * double authentification obligatoire (#2353) ne couvre donc pas : un
+     * compte connecté par son seul mot de passe, avant son enrôlement, les
+     * ouvrirait. Leurs capacités se refusent à un administrateur qui n'a pas
+     * enrôlé son application, ou dont la session ne porte pas la preuve du
+     * second facteur (`AssuranceDuSecondFacteur`, audit 5.2).
+     *
+     * Posée à l'enregistrement, avant `Gate::before` de Spatie (posé au
+     * démarrage du paquet, qui répond vrai à qui tient la permission du même
+     * nom : une permission Shield `viewPulse` accordée à un autre rôle ouvrirait
+     * encore Pulse, la porte `Gate::define` d'en dessous n'étant jamais lue).
+     */
+    private function fermerLesOutilsAUnAdministrateurSansDoubleAuthentification(): void
+    {
+        Gate::before(static fn (?Authenticatable $utilisateur, string $capacite): ?bool => $utilisateur instanceof Admin
+            && in_array($capacite, ['viewPulse', 'view-outils', 'view-logs'], true)
+            && (! $utilisateur->aLaDoubleAuthentification() || ! AssuranceDuSecondFacteur::estPorteeSiSession($utilisateur)) ? false : null);
+    }
+
+    /**
      * Le lecteur de journaux vit sous /backoffice mais hors du panneau : sa porte
      * est `view-logs`, celle qui montre son lien dans le menu.
      *
@@ -596,7 +662,8 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * La collecte des erreurs du navigateur a son limiteur, par compte :
+     * La collecte des erreurs du navigateur a son limiteur, par compte, par
+     * adresse et pour toute l'application :
      * `ErreurNavigateur::RAPPORTS_PAR_MINUTE` par minute et
      * `RAPPORTS_PAR_JOUR` par jour, chacun sous sa clé (deux limites sous une
      * même clé compteraient chaque envoi deux fois). Au-delà, la route répond
@@ -615,7 +682,39 @@ final class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute(ErreurNavigateur::RAPPORTS_PAR_MINUTE)->by('minute|'.$cle)->response($sansRienEcrire),
                 Limit::perDay(ErreurNavigateur::RAPPORTS_PAR_JOUR)->by('jour|'.$cle)->response($sansRienEcrire),
+                Limit::perMinute(ErreurNavigateur::RAPPORTS_PAR_ADRESSE_PAR_MINUTE)->by('minute|adresse:'.$requete->ip())->response($sansRienEcrire),
+                Limit::perDay(ErreurNavigateur::RAPPORTS_PAR_ADRESSE_PAR_JOUR)->by('jour|adresse:'.$requete->ip())->response($sansRienEcrire),
+                Limit::perDay(ErreurNavigateur::RAPPORTS_GLOBAUX_PAR_JOUR)->by('global|jour')->response($sansRienEcrire),
             ];
+        });
+    }
+
+    /**
+     * Livewire n'envoie de fichier qu'à un composant qui en a déclaré un : le
+     * panneau n'en déclare aucun, et un appel `_startUpload`, `_finishUpload`,
+     * `_removeUpload` ou `_uploadErrored` sur un autre composant, celui des
+     * notifications de la page de connexion compris, répondait 500 ou, sur
+     * une page du panneau, signait une adresse d'envoi (audit 6.3, 6.7). Il se
+     * refuse en 403 avant tout traitement de Livewire, et la route d'envoi
+     * elle-même, comme celle de l'aperçu, ne sert qu'un administrateur connecté,
+     * depuis une adresse admise.
+     */
+    private function refuserLesEnvoisDeFichiersDeLivewire(): void
+    {
+        config(['livewire.temporary_file_upload.middleware' => [IpWhitelist::class, 'auth:admin', ExigeLaDoubleAuthentificationDuPanneau::class, 'throttle:60,1']]);
+        FilePreviewController::$middleware = ['web', IpWhitelist::class, 'auth:admin', ExigeLaDoubleAuthentificationDuPanneau::class];
+
+        \Livewire\on('call', static function (object $composant, string $methode, array $parametres): void {
+            if (! in_array($methode, ['_startUpload', '_finishUpload', '_removeUpload', '_uploadErrored'], true)) {
+                return;
+            }
+
+            abort_unless(
+                is_string($parametres[0] ?? null)
+                    && method_exists($composant, 'isFileUploadForSchemaComponent')
+                    && $composant->isFileUploadForSchemaComponent($parametres[0]) === true,
+                403,
+            );
         });
     }
 

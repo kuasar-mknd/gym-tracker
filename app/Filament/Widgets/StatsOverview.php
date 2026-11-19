@@ -22,24 +22,29 @@ class StatsOverview extends StatsOverviewWidget
      * ne comptent que les comptes ouverts ; ceux qui attendent encore le lien
      * envoyé à leur adresse se comptent à part, sous « Comptes ». Ces deux
      * tuiles montrent des effectifs de comptes : elles suivent la capacité qui
-     * ouvre la liste des utilisateurs, et les deux autres restent ouvertes à
-     * tout administrateur du panneau.
+     * ouvre la liste des utilisateurs, et chacune des deux autres celle de sa
+     * liste (séances, exercices).
      */
     #[\Override]
     protected function getStats(): array
     {
-        $peutListerLesComptes = Filament::auth()->user()?->can('ViewAny:User') === true;
+        $administrateur = Filament::auth()->user();
+        $peutListerLesComptes = $administrateur?->can('ViewAny:User') === true;
 
         return [
             ...($peutListerLesComptes ? $this->tuilesDeComptes() : []),
-            Stat::make('Séances du jour', $this->getWorkoutsTodayCount())
-                ->description("Séances commencées aujourd'hui")
-                ->descriptionIcon('heroicon-m-clock')
-                ->color('warning'),
-            Stat::make('Exercices communs', Exercise::whereNull('user_id')->count())
-                ->description('Taille de la bibliothèque commune')
-                ->descriptionIcon('heroicon-m-book-open')
-                ->color('primary'),
+            ...($administrateur?->can('ViewAny:Workout') === true ? [
+                Stat::make('Séances du jour', $this->getWorkoutsTodayCount())
+                    ->description("Séances commencées aujourd'hui")
+                    ->descriptionIcon('heroicon-m-clock')
+                    ->color('warning'),
+            ] : []),
+            ...($administrateur?->can('ViewAny:Exercise') === true ? [
+                Stat::make('Exercices communs', Exercise::whereNull('user_id')->count())
+                    ->description('Taille de la bibliothèque commune')
+                    ->descriptionIcon('heroicon-m-book-open')
+                    ->color('primary'),
+            ] : []),
         ];
     }
 

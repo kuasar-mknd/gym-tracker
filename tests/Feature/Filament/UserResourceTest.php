@@ -707,3 +707,54 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
     'majuscules posées par le panneau' => ['github', '4242', 4242, 4243, 'Apres@example.org', 'apres@example.org'],
     'majuscules rendues par le fournisseur' => ['google', 'g-123', 'g-123', 'g-999', 'apres@example.org', 'Apres@Example.org'],
 ]);
+
+it('refuse une adresse déjà prise, casse comprise, à la création et à la modification', function (): void {
+    User::factory()->create(['email' => 'prise@example.org']);
+    $autre = User::factory()->create(['email' => 'autre@example.org']);
+
+    Livewire::test(CreateUser::class)
+        ->fillForm(['name' => 'Doublon', 'email' => 'PRISE@Example.org', 'password' => 'un-mot-de-passe-assez-long-1'])
+        ->call('create')
+        ->assertHasFormErrors(['email' => 'unique']);
+
+    Livewire::test(EditUser::class, ['record' => $autre->getKey()])
+        ->fillForm(['email' => 'Prise@example.org'])
+        ->call('save')
+        ->assertHasFormErrors(['email' => 'unique']);
+
+    expect($autre->refresh()->email)->toBe('autre@example.org')
+        ->and(User::query()->count())->toBe(2);
+});
+
+it('laisse enregistrer un compte sous sa propre adresse', function (): void {
+    $compte = User::factory()->create(['email' => 'propre@example.org']);
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->fillForm(['name' => 'Nouveau nom'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($compte->refresh()->name)->toBe('Nouveau nom');
+});
+
+it('refuse à l’administrateur un mot de passe trop court ou plus long que bcrypt ne lit', function (string $motDePasse): void {
+    Livewire::test(CreateUser::class)
+        ->fillForm(['name' => 'Mot De Passe', 'email' => 'mdp-court@example.com', 'default_rest_time' => 90, 'password' => $motDePasse])
+        ->call('create')
+        ->assertHasFormErrors(['password']);
+
+    expect(User::query()->where('email', 'mdp-court@example.com')->exists())->toBeFalse();
+})->with([
+    'trop court' => ['court'],
+    'au-delà des 72 octets de bcrypt' => [str_repeat('a', 73)],
+    'au-delà des 72 octets, en caractères de deux octets' => [str_repeat('é', 37)],
+]);
+
+it('n’expose ni ne laisse écrire l’avatar, que rien n’affiche', function (): void {
+    $compte = User::factory()->create(['avatar' => 'https://exemple.test/a.png']);
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->assertFormFieldDoesNotExist('avatar');
+    Livewire::test(ListUsers::class)
+        ->assertTableColumnDoesNotExist('avatar');
+});

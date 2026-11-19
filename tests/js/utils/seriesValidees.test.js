@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { peutEtablirUnRecord, seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
+import {
+    peutEtablirUnRecord,
+    seriesValidees,
+    volumeDesSeriesDeTravail,
+    volumeDesSeriesValidees,
+} from '@/Utils/seriesValidees'
 
 /**
  * Les règles que le serveur applique au volume de la séance et aux records,
@@ -58,5 +63,18 @@ describe('volumeDesSeriesValidees', () => {
                 faite({ weight: 60, reps: 10 }),
             ]),
         ).toBe(600)
+    })
+})
+
+describe('volumeDesSeriesDeTravail', () => {
+    it('laisse les échauffements validés hors du volume, contrairement à celui de la séance', () => {
+        const series = [
+            faite({ weight: 100, reps: 5 }), // 500
+            faite({ weight: 40, reps: 10, is_warmup: true }), // échauffement
+            faite({ weight: 140, reps: 5, is_completed: false }), // jamais faite
+        ]
+
+        expect(volumeDesSeriesDeTravail(series)).toBe(500)
+        expect(volumeDesSeriesValidees(series)).toBe(900)
     })
 })

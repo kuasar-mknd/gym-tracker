@@ -2,7 +2,7 @@
 import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
-import { seriesValidees } from '@/Utils/seriesValidees'
+import { seriesDeTravail } from '@/Utils/seriesValidees'
 
 const props = defineProps({
     data: {
@@ -16,8 +16,9 @@ const chartData = computed(() => {
     const sessions = [...props.data].reverse()
     const labels = sessions.map((session) => session.formatted_date.split('/').slice(0, 2).join('/'))
 
-    // Seules les séries validées : une série jamais cochée n'a pas été soulevée (#1956).
-    const series = sessions.map((session) => seriesValidees(session.sets))
+    // Seules les séries de travail validées : une série jamais cochée n'a pas été soulevée (#1956),
+    // et les premières séries d'une séance sont souvent des échauffements (#2333).
+    const series = sessions.map((session) => seriesDeTravail(session.sets))
 
     // Find maximum number of sets in the history, but limit to first 3 sets to keep the chart clean
     const maxSets = Math.min(3, Math.max(...series.map((sets) => sets.length)))

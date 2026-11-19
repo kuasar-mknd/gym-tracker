@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Actions\Auth\PrevenirLeTitulaireDeLAdresse;
 use App\Enums\MotifDeLaTentative;
 use App\Models\User;
 use App\Support\LiensDesCourriels;
@@ -11,6 +12,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\RateLimiter;
+use Throwable;
 
 /**
  * Prévient le titulaire d'une adresse qui a déjà un compte que quelqu'un a
@@ -32,9 +35,20 @@ final class TentativeSurTonAdresse extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public MotifDeLaTentative $motif)
+    public function __construct(public MotifDeLaTentative $motif, public ?int $compte = null)
     {
         $this->afterCommit();
+    }
+
+    /**
+     * Rend le créneau d'une heure que l'avis a pris à sa mise en file : un
+     * envoi qui échoue ne doit pas priver le titulaire de l'avertissement.
+     */
+    public function failed(Throwable $_exception): void
+    {
+        if (isset($this->compte)) {
+            RateLimiter::clear(PrevenirLeTitulaireDeLAdresse::clefDuCompte($this->compte));
+        }
     }
 
     /**

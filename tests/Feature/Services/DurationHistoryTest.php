@@ -25,7 +25,7 @@ function seanceDatee(User $user, int $joursEnArriere, int $minutes, ?string $nom
 {
     $debut = now()->subDays($joursEnArriere)->setTime(10, 0);
 
-    return Workout::factory()->create([
+    return Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'name' => $nom,
         'started_at' => $debut,

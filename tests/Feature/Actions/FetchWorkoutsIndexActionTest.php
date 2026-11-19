@@ -112,9 +112,11 @@ it('calculates volume history correctly', function (): void {
  * payé par chaque mutant de ces trois services que la passe nocturne y
  * faisait passer avant d'atteindre le test qui le tue.
  */
-function seancePourIndex(User $user, string $quand, string $nom = 'Seance'): Workout
+function seancePourIndex(User $user, string $quand, string $nom = 'Seance', bool $faite = false): Workout
 {
-    return Workout::withoutEvents(fn (): Workout => Workout::factory()->create([
+    $fabrique = $faite ? Workout::factory()->faite() : Workout::factory();
+
+    return Workout::withoutEvents(fn (): Workout => $fabrique->create([
         'user_id' => $user->id,
         'name' => $nom,
         'started_at' => Carbon::parse($quand),
@@ -146,7 +148,7 @@ it('borne les deux historiques aux vingt memes dernieres seances, de la plus anc
 
     // Vingt-et-une : une de plus que la borne, sinon la borne ne se voit pas.
     for ($jour = 1; $jour <= 21; $jour++) {
-        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour));
+        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour), faite: true);
     }
 
     $charts = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
@@ -177,7 +179,7 @@ it('aligne le volume par seance sur la duree, seance pour seance', function (): 
     $user = User::factory()->create();
 
     for ($jour = 1; $jour <= 30; $jour++) {
-        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour));
+        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour), faite: true);
     }
 
     $charts = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
@@ -196,10 +198,10 @@ it('rend six mois de frequence, du plus ancien au plus recent, et zero sur un mo
     Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
     $user = User::factory()->create();
 
-    seancePourIndex($user, '2026-01-20 10:00:00');  // janvier : le mois le plus ancien de la fenetre
-    seancePourIndex($user, '2026-06-02 10:00:00');  // juin
-    seancePourIndex($user, '2026-06-10 10:00:00');  // juin
-    seancePourIndex($user, '2025-12-20 10:00:00');  // decembre : hors fenetre, ne doit rien peser
+    seancePourIndex($user, '2026-01-20 10:00:00', 'Seance', true);  // janvier : le mois le plus ancien de la fenetre
+    seancePourIndex($user, '2026-06-02 10:00:00', 'Seance', true);  // juin
+    seancePourIndex($user, '2026-06-10 10:00:00', 'Seance', true);  // juin
+    seancePourIndex($user, '2025-12-20 10:00:00', 'Seance', true);  // decembre : hors fenetre, ne doit rien peser
 
     $frequence = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts']['monthly_frequency'];
 
@@ -246,7 +248,7 @@ it('associe chaque jour de la semaine a son propre compte', function (): void {
 
     foreach ($seancesParJour as $jour => $combien) {
         for ($i = 0; $i < $combien; $i++) {
-            seancePourIndex($user, $jour.' 10:00:00');
+            seancePourIndex($user, $jour.' 10:00:00', 'Seance', true);
         }
     }
 

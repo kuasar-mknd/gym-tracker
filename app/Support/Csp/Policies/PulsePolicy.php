@@ -35,6 +35,7 @@ class PulsePolicy extends Basic
 
         $policy
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
+            ->add(Directive::FRAME_ANCESTORS, Keyword::SELF)
             ->addNonce(Directive::SCRIPT)
             ->addNonce(Directive::STYLE)
             ->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE)

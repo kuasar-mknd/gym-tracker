@@ -78,6 +78,19 @@ final class ErreurNavigateur extends Model
     public const int RAPPORTS_PAR_JOUR = 200;
 
     /**
+     * Les rapports qu'une adresse peut envoyer, tous comptes confondus : de
+     * nombreux comptes vérifiés ne multiplient pas le volume gardé.
+     */
+    public const int RAPPORTS_PAR_ADRESSE_PAR_MINUTE = 30;
+
+    public const int RAPPORTS_PAR_ADRESSE_PAR_JOUR = 600;
+
+    /**
+     * Les rapports que toute l'application garde en une journée.
+     */
+    public const int RAPPORTS_GLOBAUX_PAR_JOUR = 20_000;
+
+    /**
      * La fenêtre, une heure, sur laquelle une même erreur (même empreinte) du
      * même compte ne s'écrit qu'une fois : la première occurrence est gardée,
      * les suivantes ne réécrivent rien.

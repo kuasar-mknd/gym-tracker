@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Admin;
 use App\Models\JetonDeDiagnostic;
+use App\Models\User;
 use App\Services\Diagnostic\ComptesSur7Jours;
 use App\Services\Diagnostic\EnveloppeDeDiagnostic;
 use App\Services\Diagnostic\Projections\LecturesBornees;
@@ -192,4 +193,21 @@ it('rend 503 lecture-trop-longue quand la base coupe un compte à la borne de te
 
     etatComptesAppeler($cree['entete'])->assertStatus(503)
         ->assertExactJson(['erreur' => 'lecture-trop-longue', 'note' => EnveloppeDeDiagnostic::NOTE]);
+});
+
+it('compte les erreurs du navigateur comme la liste : celles des comptes vérifiés seulement', function (): void {
+    $verifie = User::factory()->create();
+    $nonVerifie = User::factory()->unverified()->create();
+    foreach ([$verifie, $verifie, $nonVerifie, $nonVerifie, $nonVerifie] as $rang => $compte) {
+        DB::table('erreurs_navigateur')->insert([
+            'user_id' => $compte->id, 'type' => 'error', 'message' => 'boum', 'url' => 'https://gym.example.org/', 'ligne' => 1, 'colonne' => 1,
+            'empreinte' => md5((string) $rang), 'created_at' => now()->subHours(3), 'updated_at' => now()->subHours(3),
+        ]);
+    }
+    $cree = etatComptesUnJeton(['erreurs-navigateur']);
+
+    $reponse = etatComptesAppeler($cree['entete'])->assertOk();
+
+    expect($reponse->json('donnees.erreurs_navigateur.sur_7_jours'))->toBe(['total' => 2, 'plafonne' => false])
+        ->and($reponse->json('donnees.erreurs_navigateur.lignes_lues'))->toBe(2);
 });

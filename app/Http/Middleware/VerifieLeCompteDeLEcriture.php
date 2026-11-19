@@ -25,8 +25,9 @@ use Symfony\Component\HttpFoundation\Response;
  * le contrôleur : rien n'est écrit, et la file garde l'écriture pour son
  * compte. Sans session, la requête suit son cours, et l'authentification
  * répond comme avant (401), ce qui invite à se reconnecter. Une requête sans
- * l'en-tête, c'est-à-dire tout ce qui ne vient pas du vidage, n'est pas
- * touchée.
+ * l'en-tête, c'est-à-dire les lectures et les formulaires Inertia, n'est pas
+ * touchée : les écritures directes du client (`SyncService.envoyer`) le portent
+ * comme le vidage, avec le compte de l'onglet à leur départ.
  *
  * Posé en fin des groupes `web` et `api`, donc après l'ouverture de la session,
  * la vérification CSRF et l'authentification, que l'ordre de priorité de
@@ -58,7 +59,7 @@ final class VerifieLeCompteDeLEcriture
         }
 
         return response()->json([
-            'message' => 'Cette modification a été faite par un autre compte que celui connecté : elle attend que ce compte se reconnecte.',
+            'message' => 'Cette modification a été faite par un autre compte que celui connecté : elle n\'a pas été exécutée. Rejouée par la file, elle attend que ce compte se reconnecte.',
             'raison' => self::RAISON,
         ], Response::HTTP_CONFLICT);
     }

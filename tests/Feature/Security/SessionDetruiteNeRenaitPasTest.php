@@ -303,6 +303,7 @@ it('ne fait pas renaître une session détruite pendant une page du panneau, et 
     UneAutreRequete::ajouteALaSession($ancienne, [
         $gardeDuPanneau->getName() => $administrateur->getAuthIdentifier(),
         'password_hash_admin' => $gardeDuPanneau->hashPasswordForCookie($administrateur->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($administrateur),
     ]);
     $appareil->envoyer('GET', '/backoffice')->assertOk();
 
@@ -472,6 +473,7 @@ it('rouvre par le cookie « se souvenir de moi » une session neuve, et la pose'
  * de la base (`ExistenceAwareInterface`). Seul le magasin change.
  */
 it('bâtit chaque magasin de sessions en SessionGardee, sur le gestionnaire de Laravel', function (string $pilote, string $gestionnaire): void {
+    config(['session.encrypt' => false]);
     detruitePoserLePilote($pilote);
 
     $magasin = app('session.store');

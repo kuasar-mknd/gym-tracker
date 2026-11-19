@@ -6,62 +6,45 @@ namespace App\Actions;
 
 use App\Models\User;
 use App\Models\WorkoutTemplate;
+use App\Models\WorkoutTemplateLine;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Arr;
 
 class FetchWorkoutTemplatesAction
 {
     /**
-     * Les modèles de séance de l'utilisateur, avec le strict nécessaire à
-     * l'aperçu de la page d'index : le compte de lignes et les trois premiers
-     * exercices.
+     * Les cent modèles les plus récents de l'utilisateur, lus une seule fois
+     * (#2351) pour les deux choses que la page des modèles en tire : l'aperçu
+     * de chacun (`templates`, le compte de lignes et les trois premiers
+     * exercices) et de quoi le lancer sans réseau (`lancements`, #2049).
      *
-     * @return Collection<int, WorkoutTemplate>
-     */
-    public function execute(User $user): Collection
-    {
-        return WorkoutTemplate::withCount('workoutTemplateLines')
-            ->with([
-                'workoutTemplateLines' => function (Relation $query): void {
-                    /*
-                     * `with()` declare `Closure(Relation<*, *, *>)` : la fermeture
-                     * doit accepter le type le plus large, un `HasMany` n'est pas
-                     * contravariant avec lui. Ici c'est un WorkoutTemplateLine de WorkoutTemplate.
-                     */
-                    $query->select('id', 'workout_template_id', 'exercise_id')
-                        ->orderBy('order')
-                        ->limit(3)
-                        ->withCount('workoutTemplateSets')
-                        ->with('exercise:id,name');
-                },
-            ])
-            ->where('user_id', $user->id)
-            ->latest()
-            ->limit(100)
-            ->get();
-    }
-
-    /**
-     * De quoi lancer chaque modèle sans réseau (#2049), sous son identifiant :
-     * son nom, et chaque ligne avec son exercice, son rang, sa clé, et chaque
-     * série avec ses valeurs et sa clé, dans l'ordre du modèle.
+     * L'aperçu se déduit de la lecture complète au lieu d'en relancer une :
+     * mêmes modèles, mêmes colonnes qu'avant (`id`, `workout_template_id`,
+     * `exercise_id` et le compte de séries par ligne ; `id` et `name` par
+     * exercice), sans relire la base.
      *
-     * Sans réseau, la file met en file d'un seul coup la séance, ses lignes et
-     * ses séries, sous les clés que le serveur pose lui-même quand il lance le
-     * modèle : si le lancement est arrivé au serveur et que la réponse s'est
-     * perdue, chaque écriture rejouée rend celle qui existe. Une seule source
-     * pour les clés et les valeurs, celle de l'action
-     * (`CreateWorkoutFromTemplateAction::lignesDuLancement()`). Les mêmes
-     * modèles que l'aperçu (`execute()`), en quatre requêtes quel que soit
-     * leur nombre : les modèles, leurs lignes, leurs exercices, leurs séries.
+     * `lancements` : sous l'identifiant du modèle, son nom, et chaque ligne
+     * avec son exercice, son rang, sa clé, et chaque série avec ses valeurs et
+     * sa clé, dans l'ordre du modèle. Sans réseau, la file met en file d'un
+     * seul coup la séance, ses lignes et ses séries, sous les clés que le
+     * serveur pose lui-même quand il lance le modèle : si le lancement est
+     * arrivé au serveur et que la réponse s'est perdue, chaque écriture
+     * rejouée rend celle qui existe. Une seule source pour les clés et les
+     * valeurs, celle de l'action
+     * (`CreateWorkoutFromTemplateAction::lignesDuLancement()`). Quatre
+     * requêtes quel que soit le nombre de modèles : les modèles, leurs
+     * lignes, leurs exercices, leurs séries.
      *
-     * Une prop ordinaire, et non différée : la page des modèles est gardée
+     * Des props ordinaires, et non différées : la page des modèles est gardée
      * pour la salle, et le préchauffage des copies ne demande les props
      * différées que de l'accueil.
      *
-     * @return array<int, array{name: string, lignes: list<array{exercise: array{id: int, name: string, type: string}, order: int, cle: string, series: list<array{reps: int|float|null, weight: int|float|null, is_warmup: bool, cle: string}>}>}>
+     * @return array{
+     *     templates: Collection<int, WorkoutTemplate>,
+     *     lancements: array<int, array{name: string, lignes: list<array{exercise: array{id: int, name: string, type: string}, order: int, cle: string, series: list<array{reps: int|float|null, weight: int|float|null, is_warmup: bool, cle: string}>}>}>
+     * }
      */
-    public function lancements(User $user): array
+    public function execute(User $user): array
     {
         $modeles = WorkoutTemplate::query()
             ->with(['workoutTemplateLines.exercise:id,name,type', 'workoutTemplateLines.workoutTemplateSets'])
@@ -70,6 +53,43 @@ class FetchWorkoutTemplatesAction
             ->limit(100)
             ->get();
 
+        return [
+            'templates' => $modeles->map(fn (WorkoutTemplate $modele): WorkoutTemplate => $this->apercu($modele)),
+            'lancements' => $this->lancements($modeles),
+        ];
+    }
+
+    /**
+     * Le modèle tel que l'aperçu le montre : le compte de ses lignes, et ses
+     * trois premières (déjà dans l'ordre du modèle) réduites aux colonnes de
+     * l'aperçu. Une copie : le modèle lu garde ses lignes entières pour les
+     * lancements.
+     */
+    private function apercu(WorkoutTemplate $modele): WorkoutTemplate
+    {
+        $apercu = clone $modele;
+        $apercu->setAttribute('workout_template_lines_count', $modele->workoutTemplateLines->count());
+        $apercu->setRelation('workoutTemplateLines', $modele->workoutTemplateLines->take(3)->map(function (WorkoutTemplateLine $ligne): WorkoutTemplateLine {
+            $exercice = $ligne->exercise;
+            /** @var array<string, mixed> $colonnesDeLaLigne */
+            $colonnesDeLaLigne = Arr::only($ligne->getAttributes(), ['id', 'workout_template_id', 'exercise_id']);
+            $courte = $ligne->newFromBuilder([...$colonnesDeLaLigne, 'workout_template_sets_count' => $ligne->workoutTemplateSets->count()]);
+            /** @var array<string, mixed> $colonnesDeLExercice */
+            $colonnesDeLExercice = Arr::only($exercice->getAttributes(), ['id', 'name']);
+            $courte->setRelation('exercise', $exercice->newFromBuilder($colonnesDeLExercice));
+
+            return $courte;
+        })->values());
+
+        return $apercu;
+    }
+
+    /**
+     * @param  Collection<int, WorkoutTemplate>  $modeles
+     * @return array<int, array{name: string, lignes: list<array{exercise: array{id: int, name: string, type: string}, order: int, cle: string, series: list<array{reps: int|float|null, weight: int|float|null, is_warmup: bool, cle: string}>}>}>
+     */
+    private function lancements(Collection $modeles): array
+    {
         $lancements = [];
 
         foreach ($modeles as $modele) {

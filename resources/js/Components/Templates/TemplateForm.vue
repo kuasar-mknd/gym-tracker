@@ -172,7 +172,7 @@ const submit = () => {
                     <div>
                         <GlassTextarea
                             v-model="form.description"
-                            label="Description (optionnel)"
+                            label="Description (facultatif)"
                             :rows="2"
                             :maxlength="1000"
                             placeholder="Détails de la séance..."
@@ -235,7 +235,7 @@ const submit = () => {
                                             :aria-invalid="
                                                 Boolean(form.errors[`exercises.${exIndex}.sets.${setIndex}.reps`])
                                             "
-                                            class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-11 w-20 rounded-lg border text-center text-base"
+                                            class="text-text-main placeholder:text-text-muted/40 border-text-muted focus-visible:border-accent-primary focus-visible:ring-accent-primary bg-surface-card/50 h-11 w-20 rounded-lg border text-center text-base focus-visible:ring-2 focus-visible:outline-none"
                                             placeholder="réps"
                                             :aria-label="`Répétitions, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                         />
@@ -249,7 +249,7 @@ const submit = () => {
                                             :aria-invalid="
                                                 Boolean(form.errors[`exercises.${exIndex}.sets.${setIndex}.weight`])
                                             "
-                                            class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-11 w-20 rounded-lg border text-center text-base"
+                                            class="text-text-main placeholder:text-text-muted/40 border-text-muted focus-visible:border-accent-primary focus-visible:ring-accent-primary bg-surface-card/50 h-11 w-20 rounded-lg border text-center text-base focus-visible:ring-2 focus-visible:outline-none"
                                             placeholder="kg"
                                             :aria-label="`Poids en kg, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                         />
@@ -263,6 +263,7 @@ const submit = () => {
                                                     ? 'bg-accent-primary/20 text-accent-primary-deep'
                                                     : 'text-text-muted bg-surface-sunken'
                                             "
+                                            title="Échauffement"
                                             :aria-label="`Échauffement, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                             :aria-pressed="set.is_warmup"
                                         >
@@ -352,7 +353,7 @@ const submit = () => {
                     Le modèle n’a pas été enregistré : corrige les champs signalés.
                 </p>
                 <GlassButton variant="primary" size="lg" class="w-full" :loading="form.processing" type="submit">
-                    {{ template ? 'Mettre à jour le modèle' : 'Enregistrer le modèle' }}
+                    {{ template ? 'Enregistrer' : 'Créer' }}
                 </GlassButton>
             </div>
         </form>

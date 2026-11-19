@@ -534,3 +534,8 @@ it('garde le singulier pour un seul jeton révoqué, et chaque raison a son libe
     [RaisonDeRevocationDuJeton::DoubleAuthentificationChangee, 'double authentification changée'],
     [RaisonDeRevocationDuJeton::AdministrateurSupprime, 'administrateur supprimé'],
 ]);
+
+it('part chiffrée dans la file, adresses, fins de jetons et portées compris', function (): void {
+    expect(new AlerteDeDiagnostic(EvenementDAlerteDeDiagnostic::Creation, ['abcd'], ['files']))
+        ->toBeInstanceOf(Illuminate\Contracts\Queue\ShouldBeEncrypted::class);
+});

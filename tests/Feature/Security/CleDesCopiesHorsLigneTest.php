@@ -238,6 +238,7 @@ function temoinSessionDuCompteEtDuPanneau(bool $avecLeCompte = true): void
     $session = [
         $gardeDuPanneau->getName() => $administrateur->getAuthIdentifier(),
         'password_hash_admin' => $gardeDuPanneau->hashPasswordForCookie($administrateur->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($administrateur),
         CleDesCopiesEnSession::ENTREE => ['cle' => 'cle-du-compte', 'compte' => (string) $compte->id],
     ];
 

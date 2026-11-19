@@ -46,7 +46,7 @@ const submit = () => {
                     name="name"
                     dusk="exercise-name-input"
                     label="Nom de l'exercice"
-                    placeholder="Ex: Développé couché"
+                    placeholder="Ex. : Développé couché"
                     :error="form.errors.name"
                 />
                 <div class="grid grid-cols-2 gap-4">
@@ -74,7 +74,7 @@ const submit = () => {
                     data-testid="submit-exercise-button"
                     dusk="submit-exercise-btn"
                 >
-                    Créer l'exercice
+                    Créer
                 </GlassButton>
             </form>
         </div>

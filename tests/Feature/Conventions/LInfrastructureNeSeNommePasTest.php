@@ -104,6 +104,12 @@ it('ne nomme l\'infrastructure de production nulle part dans le dépôt', functi
     expect(count($fichiers))->toBeGreaterThan(500)
         ->and($fichiers)->toHaveKeys([
             'README.md',
+            'docs/README.md',
+            'docs/variables-d-environnement.md',
+            'docs/deploiement.md',
+            'docs/exploitation.md',
+            'docs/mise-a-niveau.md',
+            'docs/developpement.md',
             'docker-compose.prod.yml',
             'CHANGELOG.md',
             'resources/views/vendor/mail/html/message.blade.php',

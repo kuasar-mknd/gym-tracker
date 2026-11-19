@@ -20,6 +20,7 @@ return [
     'password' => 'Le mot de passe fourni est incorrect.',
     // Tutoie comme le reste de l'application : la connexion, le profil (où le chemin vers un mot de passe le suit, #2104) et la confirmation du mot de passe l'affichent.
     'throttle' => 'Trop d’essais. Réessaie dans :seconds secondes.',
+    'plafond' => 'Trop d’échecs sur cette adresse depuis plusieurs appareils. Utilise « Mot de passe oublié » pour retrouver l’accès, ou réessaie plus tard.',
 
     // Écrits pour les deux cas : l'adresse a déjà un compte, ou non.
     'inscription_recue' => 'Un courriel vient de partir vers cette adresse : suis son lien, puis connecte-toi ici pour ouvrir ton compte. Si elle a déjà un compte, le courriel te dit comment t’y connecter.',

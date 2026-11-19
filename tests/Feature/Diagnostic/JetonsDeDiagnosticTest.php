@@ -36,7 +36,7 @@ beforeEach(function (): void {
  */
 function jetonsDeDiagnosticSuperAdministrateur(bool $avecLaDoubleAuthentification = true): array
 {
-    $admin = FilamentAdminPanel::admin(['view-diagnostic']);
+    $admin = FilamentAdminPanel::admin(['view-diagnostic'], avecLaDoubleAuthentification: false);
     $admin->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
     $secret = new Google2FA()->generateSecretKey();
 
@@ -254,7 +254,7 @@ it('révoque les jetons d’un administrateur dont la double authentification es
 });
 
 it('ne révoque rien quand la double authentification s’active ou se réenregistre à l’identique', function (): void {
-    $admin = Admin::factory()->create();
+    $admin = Admin::factory()->sansDoubleAuthentification()->create();
     $jeton = JetonDeDiagnostic::factory()->for($admin, 'createur')->create();
 
     $admin->forceFill(['app_authentication_secret' => 'SECRETDETEST'])->save();
@@ -437,3 +437,85 @@ it('compte les essais de code sous la clé de l’administrateur, pour une minut
 
     Carbon\Carbon::setTestNow();
 });
+
+it('retire les caractères de contrôle du nom du jeton, pour qu’il ne forge pas une ligne du journal d’audit', function (string $nom, string $attendu): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+
+    $jeton = resolve(CreeUnJetonDeDiagnosticAction::class)->execute(
+        $admin,
+        $nom,
+        [PorteeDeDiagnostic::Sante],
+        7,
+        new Google2FA()->getCurrentOtp($secretTotp),
+    )['jeton'];
+
+    expect($jeton->nom)->toBe($attendu)
+        ->and($jeton->refresh()->nom)->toBe($attendu);
+})->with([
+    'un saut de ligne' => ["agent\n[2026-11-19 10:00:00] diagnostic.appel", 'agent[2026-11-19 10:00:00] diagnostic.appel'],
+    'un retour chariot et une tabulation' => ["a\r\tb", 'ab'],
+    'U+2028, U+2029 et U+0085' => ["a\u{2028}b\u{2029}c\u{85}d", 'abcd'],
+    'un octet nul et une séquence ANSI' => ["a\0b\e[31mc", 'ab[31mc'],
+    'un nom ordinaire' => ['Agent de maintenance', 'Agent de maintenance'],
+]);
+
+it('compte l’essai avant de le juger : un refus pour trop d’essais compte aussi, sans fenêtre entre la lecture et le compte', function (): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+    $cle = 'diagnostic:creation:'.$admin->id;
+    RateLimiter::clear($cle);
+
+    foreach (range(1, CreeUnJetonDeDiagnosticAction::ESSAIS_PAR_MINUTE) as $essai) {
+        RateLimiter::hit($cle, 60);
+    }
+
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::TROP_D_ESSAIS))
+        ->and(RateLimiter::attempts($cle))->toBe(CreeUnJetonDeDiagnosticAction::ESSAIS_PAR_MINUTE + 1);
+});
+
+/**
+ * Une écriture en masse sur la table des administrateurs, qui n'émet aucun
+ * évènement de modèle : les jetons de leur créateur resteraient actifs.
+ */
+function jetonsDeDiagnosticEcritureEnMasseSurLesAdministrateurs(string $source): bool
+{
+    return preg_match('/(?:Admin::(?:query\(\)|where\w*\()|DB::table\([\'"]admins[\'"]\))[^;]*->(?:update|upsert|updateOrInsert|increment|decrement)\(/s', $source) === 1;
+}
+
+it('reconnaît une écriture en masse sur les administrateurs', function (string $source): void {
+    expect(jetonsDeDiagnosticEcritureEnMasseSurLesAdministrateurs($source))->toBeTrue();
+})->with([
+    'constructeur de modèle' => ["Admin::query()->update(['password' => \$hash]);"],
+    'clause et mise à jour' => ["Admin::query()->whereKey(1)->update(['app_authentication_secret' => null]);"],
+    'table brute' => ["DB::table('admins')->where('id', 1)->update(['password' => \$hash]);"],
+]);
+
+it('n’écrit aucun mot de passe ni secret d’administrateur par une mise à jour en masse', function (): void {
+    $fichiers = [];
+
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path(), FilesystemIterator::SKIP_DOTS)) as $fichier) {
+        if ($fichier instanceof SplFileInfo && $fichier->getExtension() === 'php' && jetonsDeDiagnosticEcritureEnMasseSurLesAdministrateurs((string) file_get_contents($fichier->getPathname()))) {
+            $fichiers[] = $fichier->getPathname();
+        }
+    }
+
+    expect($fichiers)->toBe([]);
+});
+
+it('refuse un nom qui est vide une fois nettoyé, sans consommer le code', function (string $nom): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+
+    try {
+        resolve(CreeUnJetonDeDiagnosticAction::class)->execute($admin, $nom, [PorteeDeDiagnostic::Sante], 7, new Google2FA()->getCurrentOtp($secretTotp));
+        $motif = null;
+    } catch (CreationDeJetonRefusee $refus) {
+        $motif = $refus->motif;
+    }
+
+    expect($motif)->toBe(CreationDeJetonRefusee::NOM_INVALIDE)
+        ->and(JetonDeDiagnostic::query()->count())->toBe(0);
+})->with([
+    'seulement U+2028 et U+2029' => ["\u{2028}\u{2029}"],
+    'seulement des contrôles' => ["\n\t\r"],
+    'un texte qui n’est pas de l’UTF-8' => ["\xFF\xFE"],
+]);

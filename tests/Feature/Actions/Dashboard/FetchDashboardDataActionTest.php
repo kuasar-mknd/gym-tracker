@@ -226,13 +226,13 @@ it('regarde exactement quatre-vingt-dix jours de seances', function (): void {
      *   90 jours -> depuis le 20 mars 12h00 : la seance du 21 mars seulement.
      *   91 jours -> depuis le 19 mars 12h00 : les deux.
      */
-    Workout::factory()->create([
+    Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::parse('2026-03-21 08:00:00'),
         'ended_at' => Carbon::parse('2026-03-21 08:45:00'),
     ]);
 
-    Workout::factory()->create([
+    Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::parse('2026-03-19 20:00:00'),
         'ended_at' => Carbon::parse('2026-03-19 21:40:00'),

@@ -7,6 +7,7 @@ namespace App\Notifications;
 use App\Enums\EvenementDAlerteDeDiagnostic;
 use App\Enums\RaisonDeRevocationDuJeton;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -30,7 +31,7 @@ use Illuminate\Support\Carbon;
  */
 #[Tries(5)]
 #[Backoff(60, 300, 900)]
-final class AlerteDeDiagnostic extends Notification implements ShouldQueue
+final class AlerteDeDiagnostic extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
 

@@ -29,7 +29,7 @@
                         <GlassBigNumber
                             id="warmup-bar-weight"
                             v-model="form.bar_weight"
-                            label="Poids Barre"
+                            label="Poids barre"
                             unite="kg"
                             placeholder="20"
                         />
@@ -115,7 +115,7 @@
                         >
                             <div class="col-span-3">Pourcentage</div>
                             <div class="col-span-3">Répétitions</div>
-                            <div class="col-span-5">Label (optionnel)</div>
+                            <div class="col-span-5">Label (facultatif)</div>
                             <div class="col-span-1"></div>
                         </div>
 

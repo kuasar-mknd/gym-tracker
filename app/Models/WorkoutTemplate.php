@@ -57,7 +57,7 @@ class WorkoutTemplate extends Model
      * écriture (la séance, puis chaque ligne et chaque série), et le serveur
      * a pu l'exécuter déjà. Les lignes et les séries qu'il a créées portent
      * ces clés, et la page des modèles donne les mêmes à la file
-     * (`FetchWorkoutTemplatesAction::lancements()`) : chaque écriture rejouée
+     * (`FetchWorkoutTemplatesAction::execute()`) : chaque écriture rejouée
      * rend alors celle qui existe, au lieu de la doubler. Une seule source
      * pour les deux, ici, plutôt qu'un calcul recopié en JavaScript.
      *

@@ -46,3 +46,76 @@ it('ne compose un titre que par un rôle de la charte', () => {
 
     expect(fautifs, `un titre porte titre-page, titre-section, titre-carte ou sur-titre, et rien d'autre`).toEqual([])
 })
+
+/**
+ * La typographie des libellés et des exemples de champ (#2355) : « (facultatif) », « Ex. : » avec ses deux espaces, une virgule décimale dans un
+ * exemple de nombre (fr-CH, `Utils/nombre.js`) et le signe « × » pour une
+ * quantité, jamais un « x » de clavier.
+ */
+it('écrit les libellés et les exemples de champ à la française', () => {
+    const regles = [
+        [/\([Oo]ptionnel\)/, 'un champ qu’on peut laisser vide se dit « (facultatif) »'],
+        [
+            /Enregistrer les modifications|Mettre à jour le modèle|Enregistrer le modèle|Créer l['’](?:objectif|exercice)/,
+            'la même action se dit « Enregistrer » (édition) ou « Créer » (création)',
+        ],
+        [/:label="[^"]*'[A-ZÉ][a-zéèêàâ]+ [A-ZÉ][a-zéèêàâ]+'/, 'un libellé dynamique s’écrit en casse de phrase'],
+        [/\}\}x\b/, 'une quantité s’écrit « × »'],
+        [/\bBF\b/, 'la masse grasse se dit « MG »'],
+        [
+            /\bProgrammes?\b/i,
+            'un modèle de séance se dit « Modèle », pas « Programme »',
+            (fichier) => fichier.endsWith('.vue'),
+        ],
+        [
+            /\bProgrammes?\b/,
+            'un modèle de séance se dit « Modèle », pas « Programme » (le programme d’un minuteur, en minuscule, reste du code)',
+            (fichier) => !fichier.endsWith('.vue'),
+        ],
+        [/placeholder="Ex:/, '« Ex. : » et non « Ex: »'],
+        [/placeholder="\d+\.\d+"/, 'un exemple de nombre prend la virgule'],
+        [/>\s*x \{\{/, 'une quantité s’écrit « × »'],
+    ]
+
+    const fautifs = collectSourceFiles({ extensions: ['.vue', '.js'] }).flatMap((fichier) => {
+        const source = readFileSync(fichier, 'utf8')
+
+        return regles
+            .filter(([, , vise = () => true]) => vise(fichier))
+            .flatMap(([motif, raison]) =>
+                source
+                    .split('\n')
+                    .flatMap((ligne, index) =>
+                        motif.test(ligne)
+                            ? [`${fichier.replace(jsRoot, 'resources/js')}:${index + 1} — ${raison}`]
+                            : [],
+                    ),
+            )
+    })
+
+    expect(fautifs).toEqual([])
+})
+
+/**
+ * Un bouton qui crée se dit « Créer », un bouton qui modifie « Enregistrer »
+ * (#2355). Les deux formulaires de création qui disaient encore « Enregistrer »
+ * (une plaque) et « Ajouter » (un complément) sont nommés ici : le libellé d'un
+ * bouton se lit dans son gabarit, que la garde ne peut pas deviner création ou
+ * édition d'après le seul mot.
+ */
+it('nomme « Créer » le bouton des formulaires de création', () => {
+    const creations = [
+        ['Pages/Tools/PlateCalculator.vue', /@click="savePlate"[^>]*>\s*([^<]*?)\s*</],
+        [
+            'Pages/Supplements/Index.vue',
+            /type="submit" variant="primary" class="flex-1" :loading="form\.processing">\s*([^<]*?)\s*</,
+        ],
+    ]
+
+    const libelles = creations.map(([fichier, motif]) => [
+        fichier,
+        readFileSync(`${jsRoot}/${fichier}`, 'utf8').match(motif)?.[1],
+    ])
+
+    expect(libelles).toEqual(creations.map(([fichier]) => [fichier, 'Créer']))
+})
