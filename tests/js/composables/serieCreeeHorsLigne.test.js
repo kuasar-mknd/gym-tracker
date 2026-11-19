@@ -343,6 +343,24 @@ describe('une série créée hors ligne', () => {
             ])
         })
 
+        it('montre la série décochée, comme le serveur, quand le rétablissement de la coche est refusé en ligne', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+            await leReseauRevient(page)
+            reseau.serveur.imposer.push(async () => {
+                throw { response: { status: 500, data: {}, headers: {} } }
+            })
+            page.annulerLaSuppression()
+            await vi.waitFor(() => expect(page.ligne().sets.at(-1).is_completed).toBe(false))
+
+            expect(reseau.serveur.series.get(100).is_completed).toBe(false)
+        })
+
         it('met la suppression d’une série du serveur en file durable quand la page part, et un rechargement ne la ramène pas', async () => {
             const page = await monterLaSeance(seance())
 

@@ -631,8 +631,16 @@ export const useAjoutEtRetraitDeSerie = ({
                     serie.is_completed
                 ) {
                     patchSet(serie, { is_completed: true }).catch((err) => {
-                        if (!err.isOffline) {
-                            reportSyncFailure('La coche n’a pas pu être rétablie. Réessaie.')
+                        if (err.isOffline) {
+                            return
+                        }
+
+                        // Refusée en ligne : l'écran dit ce que le serveur a, un tap de plus la validerait.
+                        serie.is_completed = false
+
+                        // Une ligne retirée entre-temps rend 404 : il n'y a plus rien à rétablir.
+                        if (err.response?.status !== 404) {
+                            reportSyncFailure('La coche n’a pas pu être rétablie.')
                         }
                     })
                 }
