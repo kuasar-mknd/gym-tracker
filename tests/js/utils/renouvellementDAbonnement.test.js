@@ -47,7 +47,7 @@ describe('le renouvellement d’un abonnement par le worker', () => {
         // L'ordre compte : oublier d'abord laisserait l'appareil sans aucun
         // abonnement côté serveur si l'enregistrement échouait ensuite.
         expect(envoyer.mock.calls).toEqual([
-            [URL_D_ENREGISTREMENT, nouveau.toJSON()],
+            [URL_D_ENREGISTREMENT, { ...nouveau.toJSON(), ancien_endpoint: 'https://push.example/ancien' }],
             [URL_D_OUBLI, { endpoint: 'https://push.example/ancien' }],
         ])
         // Le navigateur a déjà fourni le remplaçant : se réabonner en
@@ -83,7 +83,7 @@ describe('le renouvellement d’un abonnement par le worker', () => {
 
         expect(pushManager.subscribe).toHaveBeenCalledWith(ancien.options)
         expect(envoyer.mock.calls).toEqual([
-            [URL_D_ENREGISTREMENT, reabonnement.toJSON()],
+            [URL_D_ENREGISTREMENT, { ...reabonnement.toJSON(), ancien_endpoint: 'https://push.example/revoque' }],
             [URL_D_OUBLI, { endpoint: 'https://push.example/revoque' }],
         ])
     })

@@ -189,4 +189,76 @@ describe('PushSubscriptionController', function (): void {
                 ->assertHeader('Content-Type', 'application/json');
         });
     });
+
+    /*
+     * Alice se déconnecte, puis Bruno ouvre une session sur le même navigateur :
+     * l'abonnement de l'appareil s'écrit pour Bruno, et celui d'Alice, que seul
+     * le client retirait (`detacherLAppareil`), restait. Le serveur ne sait pas
+     * quel abonnement va avec quelle session ; il sait qu'un appareil porte une
+     * adresse et une clef publique, et qu'il n'appartient qu'à un compte à la
+     * fois.
+     */
+    describe('un appareil n\'appartient qu\'à un compte', function (): void {
+        $abonnement = static fn (string $adresse, string $cle = 'cle-p256dh'): array => [
+            'endpoint' => $adresse,
+            'keys' => ['p256dh' => $cle, 'auth' => 'jeton-auth'],
+        ];
+
+        it('détache des autres comptes l\'abonnement qui porte la même clef publique', function () use ($abonnement): void {
+            $alice = User::factory()->create();
+            $bruno = User::factory()->create();
+            $alice->updatePushSubscription('https://fcm.googleapis.com/fcm/send/ancien-d-alice', 'cle-de-l-appareil', 'jeton');
+
+            $this->actingAs($bruno)
+                ->postJson(route('push-subscriptions.update'), $abonnement('https://fcm.googleapis.com/fcm/send/nouveau-de-bruno', 'cle-de-l-appareil'))
+                ->assertOk();
+
+            expect($alice->pushSubscriptions()->count())->toBe(0)
+                ->and($bruno->pushSubscriptions()->pluck('endpoint')->all())->toBe(['https://fcm.googleapis.com/fcm/send/nouveau-de-bruno']);
+        });
+
+        it('détache des autres comptes l\'ancienne adresse que le renouvellement envoie', function () use ($abonnement): void {
+            $alice = User::factory()->create();
+            $bruno = User::factory()->create();
+            $alice->updatePushSubscription('https://fcm.googleapis.com/fcm/send/ancien-d-alice', 'cle-d-alice', 'jeton');
+
+            $this->actingAs($bruno)
+                ->postJson(route('push-subscriptions.update'), $abonnement('https://fcm.googleapis.com/fcm/send/nouveau-de-bruno', 'cle-de-bruno') + ['ancien_endpoint' => 'https://fcm.googleapis.com/fcm/send/ancien-d-alice'])
+                ->assertOk();
+
+            expect($alice->pushSubscriptions()->count())->toBe(0)
+                ->and($bruno->pushSubscriptions()->count())->toBe(1);
+        });
+
+        it('laisse aux autres comptes leurs appareils, qui portent une autre clef et une autre adresse', function () use ($abonnement): void {
+            $alice = User::factory()->create();
+            $bruno = User::factory()->create();
+            $alice->updatePushSubscription('https://fcm.googleapis.com/fcm/send/telephone-d-alice', 'cle-d-alice', 'jeton');
+
+            $this->actingAs($bruno)
+                ->postJson(route('push-subscriptions.update'), $abonnement('https://fcm.googleapis.com/fcm/send/portable-de-bruno', 'cle-de-bruno'))
+                ->assertOk();
+
+            expect($alice->pushSubscriptions()->count())->toBe(1);
+        });
+
+        it('ne prend pas une clef qui ne diffère que par la casse pour celle d\'un autre appareil', function () use ($abonnement): void {
+            $alice = User::factory()->create();
+            $bruno = User::factory()->create();
+            $alice->updatePushSubscription('https://fcm.googleapis.com/fcm/send/telephone-d-alice', 'cle-de-l-appareil', 'jeton');
+
+            $this->actingAs($bruno)
+                ->postJson(route('push-subscriptions.update'), $abonnement('https://fcm.googleapis.com/fcm/send/portable-de-bruno', 'CLE-DE-L-APPAREIL'))
+                ->assertOk();
+
+            expect($alice->pushSubscriptions()->count())->toBe(1);
+        });
+
+        it('refuse une ancienne adresse qui n\'en est pas une', function () use ($abonnement): void {
+            $this->actingAs(User::factory()->create())
+                ->postJson(route('push-subscriptions.update'), $abonnement('https://fcm.googleapis.com/fcm/send/nouveau') + ['ancien_endpoint' => ['x']])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['ancien_endpoint']);
+        });
+    });
 });
