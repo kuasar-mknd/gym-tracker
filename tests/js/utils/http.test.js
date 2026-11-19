@@ -179,3 +179,22 @@ describe('http et l’état du réseau', () => {
         expect(joignable()).toBe(true)
     })
 })
+
+describe('http hors de l’origine de la page', () => {
+    it.each(['https://autre.example/api/v1/sets', '//autre.example/api/v1/sets'])(
+        'n’envoie rien, jeton CSRF compris, à %s',
+        async (url) => {
+            await expect(http({ method: 'post', url, data: {} })).rejects.toBeInstanceOf(ErreurReseau)
+
+            expect(globalThis.fetch).not.toHaveBeenCalled()
+        },
+    )
+
+    it('envoie à une adresse absolue de sa propre origine', async () => {
+        globalThis.fetch.mockResolvedValue(reponse(null, { status: 204 }))
+
+        await http({ method: 'post', url: `${window.location.origin}/api/v1/sets`, data: {} })
+
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+    })
+})

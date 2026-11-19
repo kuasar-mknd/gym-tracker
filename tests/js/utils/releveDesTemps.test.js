@@ -504,8 +504,8 @@ describe('quand le serveur mesure', () => {
 
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
         installe = installerLeReleveDesTemps({ routeur: routeurSimule(), fenetre: simulee.fenetre })
-        await http.post(`${ORIGINE}/api/v1/sets`, { reps: 8 })
-        await http.delete(`${ORIGINE}/api/v1/sets/41`)
+        await http.post('/api/v1/sets', { reps: 8 })
+        await http.delete('/api/v1/sets/41')
         simulee.recevoir(
             entreeDeRequete('/api/v1/sets/41', { initiatorType: 'fetch' }),
             entreeDeRequete('/api/v1/sets', { initiatorType: 'fetch' }),

@@ -1977,7 +1977,7 @@ describe('SyncService une création tentée sans réponse', () => {
      */
     it('donne au vrai Ziggy un identifiant à venir qu’il accepte, puis le remplace par celui que le serveur a produit', async () => {
         const table = {
-            url: 'http://localhost',
+            url: window.location.origin,
             port: null,
             defaults: {},
             routes: {
@@ -2012,8 +2012,8 @@ describe('SyncService une création tentée sans réponse', () => {
                 aAnnuler,
             ]),
         ).toEqual([
-            [`http://localhost/api/v1/sets/${A_VENIR}`, `http://localhost/api/v1/sets/${A_VENIR}`],
-            [`http://localhost/api/v1/sets/${A_VENIR}`, undefined],
+            [`${window.location.origin}/api/v1/sets/${A_VENIR}`, `${window.location.origin}/api/v1/sets/${A_VENIR}`],
+            [`${window.location.origin}/api/v1/sets/${A_VENIR}`, undefined],
         ])
 
         // Le réseau revient : la retirée est supprimée, l'autre revient sans sa coche et se rattrape.
@@ -2023,9 +2023,9 @@ describe('SyncService une création tentée sans réponse', () => {
 
         expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
             'post /api/v1/sets',
-            'delete http://localhost/api/v1/sets/100',
+            `delete ${window.location.origin}/api/v1/sets/100`,
             'post /api/v1/sets',
-            'patch http://localhost/api/v1/sets/101',
+            `patch ${window.location.origin}/api/v1/sets/101`,
         ])
         expect(service.queue).toEqual([])
     })
@@ -3312,6 +3312,7 @@ describe('SyncService l’heure de l’appareil au départ', () => {
         expect(request.mock.calls[0][0].data).toEqual({ started_at: '2026-10-21T12:59:58.000Z' })
         expect(request.mock.calls[0][0].headers).toEqual({
             'Idempotency-Key': 'cle-de-la-seance',
+            'X-Compte-De-L-Ecriture': COMPTE,
             'X-Heure-De-L-Appareil': '2026-10-21T13:00:00.000Z',
         })
     })
@@ -3370,6 +3371,7 @@ describe('SyncService l’heure de l’appareil au départ', () => {
         expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T13:00:00.000Z')
         expect(request.mock.calls[1][0].headers).toEqual({
             'Idempotency-Key': 'cle-de-la-seance',
+            'X-Compte-De-L-Ecriture': COMPTE,
             'X-Heure-De-L-Appareil': '2026-10-21T13:00:20.000Z',
         })
         expect(service.queue).toEqual([])
@@ -3397,7 +3399,92 @@ describe('SyncService l’heure de l’appareil au départ', () => {
         expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T13:00:00.000Z')
         expect(request.mock.calls[1][0].headers).toEqual({
             'Idempotency-Key': 'cle-de-la-seance',
+            'X-Compte-De-L-Ecriture': COMPTE,
             'X-Heure-De-L-Appareil': '2026-10-21T13:00:03.000Z',
         })
+    })
+})
+
+describe('SyncService le compte d’une écriture directe', () => {
+    it('envoie le compte de l’onglet avec une écriture directe, file vide', async () => {
+        request.mockResolvedValue({ data: {} })
+        const service = await chargé()
+
+        await service.patch('/api/v1/sets/5', { reps: 8 })
+
+        expect(request.mock.calls[0][0].headers['X-Compte-De-L-Ecriture']).toBe(COMPTE)
+    })
+
+    it('ne l’envoie pas avec une lecture', async () => {
+        request.mockResolvedValue({ data: {} })
+        const service = await chargé()
+
+        await service.get('/api/v1/sets')
+
+        expect(request.mock.calls[0][0].headers?.['X-Compte-De-L-Ecriture']).toBeUndefined()
+    })
+
+    it('lit le 409 d’un autre compte comme un refus de l’écriture directe, sans la mettre en file', async () => {
+        request.mockRejectedValueOnce({ response: { status: 409, data: { raison: 'compte-different' } } })
+        const service = await chargé()
+
+        await expect(service.patch('/api/v1/sets/5', { reps: 8 })).rejects.toMatchObject({
+            response: { status: 409 },
+        })
+
+        expect(service.enAttente()).toBe(0)
+    })
+
+    it('ne range pas l’en-tête avec l’écriture mise en file', async () => {
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+
+        await expect(service.patch('/api/v1/sets/5', { reps: 8 })).rejects.toMatchObject({ isOffline: true })
+
+        expect(service.queue[0].headers?.['X-Compte-De-L-Ecriture']).toBeUndefined()
+    })
+})
+
+describe('SyncService le rejeu n’épingle que l’origine et les en-têtes connus', () => {
+    it('classe refusée une entrée hors origine, sans l’envoyer, et vide la suite', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                { ...aQueuedPatch('https://autre.example/api/v1/sets/1'), id: 'etrangere' },
+                { ...aQueuedPatch('//autre.example/api/v1/sets/2'), id: 'relative-au-protocole' },
+                { ...aQueuedPatch('/api/v1/sets/3'), id: 'saine' },
+            ]),
+        )
+        request.mockResolvedValue({ data: {} })
+
+        const service = await chargé()
+
+        expect(request.mock.calls.map(([config]) => config.url)).toEqual(['/api/v1/sets/3'])
+        expect(service.enAttente()).toBe(0)
+        expect(JSON.parse(localStorage.getItem('offline_sync_failed')).map(({ id }) => id)).toEqual([
+            'etrangere',
+            'relative-au-protocole',
+        ])
+    })
+
+    it('ne rejoue que la clé d’idempotence, pas les autres en-têtes rangés', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                {
+                    ...aQueuedPatch(),
+                    headers: { 'Idempotency-Key': 'cle', Authorization: 'Bearer x', 'X-CSRF-TOKEN': 'faux' },
+                },
+            ]),
+        )
+        request.mockResolvedValue({ data: {} })
+
+        await chargé()
+
+        const { headers } = request.mock.calls[0][0]
+
+        expect(headers['Idempotency-Key']).toBe('cle')
+        expect(headers).not.toHaveProperty('Authorization')
+        expect(headers).not.toHaveProperty('X-CSRF-TOKEN')
     })
 })
