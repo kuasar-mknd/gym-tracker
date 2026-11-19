@@ -924,6 +924,7 @@ it('efface du volume `journaux` ce que le canal `daily` y garde au-delà de quat
     $dossier = sys_get_temp_dir().'/journaux-du-jour-'.bin2hex(random_bytes(6));
     $aujourdhui = new DateTimeImmutable();
     $exploitation = (string) preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('docs/exploitation.md')));
+    $toutesLesDocs = (string) preg_replace('/\s+/', ' ', implode(' ', array_map(file_get_contents(...), [base_path('README.md'), ...glob(base_path('docs/*.md')) ?: []])));
 
     try {
         File::ensureDirectoryExists($dossier.'/peu');
@@ -945,7 +946,7 @@ it('efface du volume `journaux` ce que le canal `daily` y garde au-delà de quat
             ->toBeTrue('docs/exploitation.md doit dire ce que garde le volume `journaux` : quatorze jours, que tient la purge planifiée.')
             ->and(str_contains($exploitation, '`journaux:purger`'))
             ->toBeTrue('docs/exploitation.md doit nommer la purge planifiée qui borne le volume `journaux`.')
-            ->and(preg_match_all('/derniers jours où le conteneur a écrit|pas quatorze jours de calendrier/', $exploitation))
+            ->and(preg_match_all('/derniers jours où le conteneur a écrit|pas quatorze jours de calendrier/', $toutesLesDocs))
             ->toBe(0, 'docs/exploitation.md dit encore que le volume `journaux` garde les quatorze derniers jours où le conteneur a écrit : la purge planifiée le borne à quatorze jours de calendrier.');
     } finally {
         File::deleteDirectory($dossier);

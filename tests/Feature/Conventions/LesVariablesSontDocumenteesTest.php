@@ -213,3 +213,18 @@ it('ne présente comme réglable en production que ce que la composition transme
             implode("\n- ", $intransmises),
         ));
 });
+
+it('ne présente dans la procédure du README que des variables que la composition transmet', function (): void {
+    $readme = (string) file_get_contents(base_path('README.md'));
+    $variables = array_values(array_filter(
+        documentationVariablesCiteesDans($readme),
+        static fn (string $nom): bool => str_contains($nom, '_'),
+    ));
+    $intransmises = array_values(array_diff($variables, documentationVariablesInterpoleesEnProduction()));
+
+    expect($variables)->toContain('APP_KEY', 'DB_ROOT_PASSWORD', 'BACKUP_HOST_PATH')
+        ->and($intransmises)->toBe([], sprintf(
+            "Le README invite à poser ces variables dans la pile, mais docker-compose.prod.yml ne les transmet pas :\n- %s",
+            implode("\n- ", $intransmises),
+        ));
+});
