@@ -284,7 +284,6 @@ return Application::configure(basePath: dirname(__DIR__))
          * par un cookie chiffré, et qu'Apple signe dans le jeton d'identité.
          */
         $middleware->preventRequestForgery(except: [
-            '_dusk/*',
             'auth/apple/callback',
         ]);
 

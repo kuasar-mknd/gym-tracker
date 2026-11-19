@@ -17,7 +17,8 @@ use stdClass;
  * Les exceptions enregistrées, vues par le diagnostic (#2032).
  *
  * La liste groupe par type, fichier et ligne les exceptions de la fenêtre :
- * nombre, première et dernière occurrence, dernier identifiant, nom de
+ * nombre de lignes, `occurrences` (leur somme : une rafale que la fenêtre
+ * a passée sous silence y compte), première et dernière occurrence, dernier identifiant, nom de
  * route. Le détail d'une exception donne son type, son code, son fichier,
  * sa ligne, sa méthode, sa route, le gabarit de son chemin et sa pile, sans
  * arguments ; avec `TexteBrut`, son message et son chemin brut, sous
@@ -46,7 +47,7 @@ final class ProjectionDesExceptions
      */
     public function liste(FenetreDeDiagnostic $fenetre): array
     {
-        $lignes = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'type', 'file', 'line', 'created_at'])
+        $lignes = LecturesBornees::requete(ExceptionEnregistree::query()->toBase(), ['id', 'type', 'file', 'line', 'occurrences', 'created_at'])
             ->where('created_at', '>=', $fenetre->depuis)
             ->orderByDesc('id')
             ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
@@ -55,10 +56,11 @@ final class ProjectionDesExceptions
         $groupes = new RegroupeLesOccurrences()(
             LecturesBornees::bornees($lignes),
             static fn (stdClass $ligne): string => (string) json_encode([$ligne->type, $ligne->file, $ligne->line]),
-            static fn (stdClass $ligne): array => [
+            static fn (stdClass $ligne, Collection $lignes): array => [
                 'type' => Vocabulaire::forme(Vocabulaire::CLASSE, $ligne->type),
                 'fichier' => Vocabulaire::fichier($ligne->file),
                 'ligne' => ValeurLue::entier($ligne->line),
+                'occurrences' => ValeurLue::entier($lignes->sum(static fn (stdClass $occurrence): int => ValeurLue::entier($occurrence->occurrences) ?? 1)),
             ],
         );
 

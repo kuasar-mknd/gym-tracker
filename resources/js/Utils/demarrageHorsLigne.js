@@ -376,6 +376,15 @@ export const demarrerHorsLigne = async (options = {}) => {
         return laisser('sans-routes')
     }
 
+    // Une table de routes qui nomme une autre origine enverrait les requêtes de la page ailleurs.
+    try {
+        if (new URL(String(ziggy.url)).origin !== fenetre.location.origin) {
+            return laisser('sans-routes')
+        }
+    } catch {
+        return laisser('sans-routes')
+    }
+
     let page
     let raison
 

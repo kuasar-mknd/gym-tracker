@@ -52,19 +52,11 @@ jobs:
         name: Fraicheur de l'ensemble d'avis
         runs-on: ubuntu-latest
         timeout-minutes: 10
-        # Le secret passe par `env` parce que le contexte `secrets` n'est pas
-        # lisible dans le `if` d'une etape. Vide quand il n'existe pas, ce qui
-        # desactive proprement l'ouverture de la PR.
-        env:
-            JETON: ${{ secrets.AVIS_HORS_LIGNE_TOKEN }}
         steps:
             - name: Checkout code
               uses: actions/checkout@v7
               with:
-                  # Le jeton sert au push : c'est lui qui decide si `ci.yml` se
-                  # declenchera sur la PR. Absent, on retombe sur le jeton par
-                  # defaut et l'etape d'ouverture se desactive d'elle-meme.
-                  token: ${{ secrets.AVIS_HORS_LIGNE_TOKEN || github.token }}
+                  persist-credentials: false
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -120,7 +112,7 @@ jobs:
                   set -euo pipefail
 
                   if ! composer update roave/security-advisories \
-                          --no-interaction --no-scripts --no-audit 2>&1 | tee /tmp/refresh.log; then
+                          --no-interaction --no-scripts --no-plugins --no-audit 2>&1 | tee /tmp/refresh.log; then
                       echo "::error::La resolution a echoue en rafraichissant l'ensemble d'avis."
                       echo "Un avis publie depuis le ${{ steps.verrou.outputs.date }} entre en" \
                            "conflit avec une version installee : c'est une vulnerabilite qui" \
@@ -134,15 +126,22 @@ jobs:
             # premier mois, et personne ne les relirait.
             - name: Ouvrir la PR de rafraichissement
               id: pr
-              if: ${{ env.JETON != '' }}
               env:
-                  GH_TOKEN: ${{ env.JETON }}
+                  JETON: ${{ secrets.AVIS_HORS_LIGNE_TOKEN }}
+                  GH_TOKEN: ${{ secrets.AVIS_HORS_LIGNE_TOKEN }}
+                  DEPOT: ${{ github.repository }}
                   BRANCHE: avis-hors-ligne/rafraichissement
                   DATE_AVANT: ${{ steps.verrou.outputs.date }}
                   JOURS_AVANT: ${{ steps.verrou.outputs.jours }}
                   CONFLITS_AVANT: ${{ steps.verrou.outputs.conflits }}
               run: |
                   set -euo pipefail
+
+                  if [ -z "$JETON" ]; then
+                      echo "Pas de jeton AVIS_HORS_LIGNE_TOKEN : la PR ne s'ouvre pas."
+                      echo 'ouverte=non' >>"$GITHUB_OUTPUT"
+                      exit 0
+                  fi
 
                   if git diff --quiet -- composer.lock; then
                       echo "Le verrou n'a pas bouge : rien a proposer."
@@ -178,8 +177,9 @@ jobs:
                   # etait refuse en "stale info", et plus aucune PR ne
                   # s'ouvrait (#2026). Le push reste refuse si la branche a
                   # bouge entre la lecture et l'envoi.
-                  attendu="$(git ls-remote origin "refs/heads/$BRANCHE" | cut -f1)"
-                  git push --force-with-lease="$BRANCHE:$attendu" origin "$BRANCHE"
+                  origine="https://x-access-token:${JETON}@github.com/${DEPOT}.git"
+                  attendu="$(git ls-remote "$origine" "refs/heads/$BRANCHE" | cut -f1)"
+                  git push --force-with-lease="$BRANCHE:$attendu" "$origine" "$BRANCHE"
 
                   # `gh pr create` echoue si une PR existe deja sur cette
                   # branche ; le push l'aura simplement mise a jour.

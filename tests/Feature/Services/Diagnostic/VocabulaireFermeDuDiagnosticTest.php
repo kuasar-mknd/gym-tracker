@@ -62,7 +62,7 @@ function vocabulaireFermeFormes(): array
     $entier = 'int';
 
     return [
-        'id' => $entier, 'ligne' => $entier, 'colonne' => $entier, 'nombre' => $entier, 'dernier_id' => $entier,
+        'id' => $entier, 'ligne' => $entier, 'colonne' => $entier, 'nombre' => $entier, 'occurrences' => $entier, 'dernier_id' => $entier,
         'lignes_lues' => $entier, 'age_en_secondes' => $entier, 'marge_en_minutes' => $entier, 'code_de_sortie' => $entier,
         'comptes_touches' => $entier, 'taille' => $entier, 'attente_en_secondes' => $entier, 'plus_ancien_en_secondes' => $entier, 'total' => $entier, 'plafonne' => 'bool', 'echecs' => $entier, 'processus' => $entier, 'echecs_sur_7_jours' => $entier,
         'duree_en_secondes' => 'float',
