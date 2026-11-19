@@ -53,11 +53,11 @@ function instructionsDeLEtapeDeBase(): array
     return $etape;
 }
 
-it('suit la dernière 8.5 de l’image de base, sans figer une version ancienne', function (): void {
+it('garde l’étiquette 1-php8.5 de l’image de base et la fige par son digest', function (): void {
     $etape = instructionsDeLEtapeDeBase();
 
     expect($etape)->not->toBeEmpty('Le Dockerfile n’a plus d’étape `base`.')
-        ->and($etape[0])->toBe('FROM dunglas/frankenphp:1-php8.5 AS base');
+        ->and($etape[0])->toStartWith('FROM dunglas/frankenphp:1-php8.5@sha256:')->and($etape[0])->toEndWith(' AS base');
 });
 
 it('vérifie le plancher de PHP avant toute autre instruction de l’étape de base', function (): void {

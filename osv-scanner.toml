@@ -1,7 +1,0 @@
-# Exception datee, decidee le 2026-11-17 : picomatch <= 4.0.7 (ReDoS, avis publie le
-# 2026-10-19) n'a aucune version corrigee. Il n'arrive que par l'outillage de build
-# (vite et ses dependances), jamais dans le code servi. A reexaminer a l'echeance.
-[[IgnoredVulns]]
-id = "GHSA-fc5q-39xc-vjpf"
-ignoreUntil = 2026-12-17
-reason = "picomatch: aucune version corrigee, outillage de build seulement (decision du 2026-11-17)"
