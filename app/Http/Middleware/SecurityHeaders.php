@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
 {
+    private const string POLITIQUE_DES_ERREURS = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
     /**
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
@@ -37,6 +39,10 @@ class SecurityHeaders
             'camera=(), microphone=(), geolocation=(), payment=(), usb=(), xr-spatial-tracking=()'
         );
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+
+        if ($response->getStatusCode() >= 400 && ! $response->headers->has('Content-Security-Policy')) {
+            $response->headers->set('Content-Security-Policy', self::POLITIQUE_DES_ERREURS);
+        }
 
         return $response;
     }
