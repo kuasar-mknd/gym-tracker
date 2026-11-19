@@ -433,3 +433,32 @@ it('masque les en-têtes qu’une authentification HTTP tire de l’en-tête Aut
         ['authorization', 'php-auth-digest'],
     ],
 ]);
+
+it('masque le code de récupération, le nouveau mot de passe et l’état OAuth d’un corps, sous toute écriture', function (): void {
+    $exception = ExceptionEnregistree::query()->create([
+        'type' => 'RuntimeException',
+        'code' => '0',
+        'message' => 'Boum',
+        'file' => 'app.php',
+        'line' => 1,
+        'trace' => [],
+        'method' => 'POST',
+        'path' => 'livewire/update',
+        'body' => [
+            'recoveryCode' => 'code-secret-1234',
+            'data' => ['newPassword' => 'Nouveau-mdp-2026!', 'oldPassword' => 'Ancien-mdp-2026!'],
+            'components' => [['updates' => ['data.recovery_code' => 'abcd-efgh']]],
+            'state' => 'etat-oauth-xyz',
+            'resetToken' => 'jeton-xyz',
+            'nom' => 'Camille',
+        ],
+    ]);
+
+    $corps = json_encode($exception->refresh()->body, JSON_THROW_ON_ERROR);
+
+    foreach (['code-secret-1234', 'Nouveau-mdp-2026!', 'Ancien-mdp-2026!', 'abcd-efgh', 'etat-oauth-xyz', 'jeton-xyz'] as $secret) {
+        expect($corps)->not->toContain($secret);
+    }
+
+    expect($corps)->toContain('Camille');
+});

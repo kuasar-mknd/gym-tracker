@@ -158,6 +158,8 @@ final class ExceptionEnregistree extends Exception
         'user',
         'idtoken',
         'code',
+        'recoverycode',
+        'state',
         'referer',
         'keys',
         'auth',
@@ -273,7 +275,7 @@ final class ExceptionEnregistree extends Exception
         foreach ($valeurs as $clef => $valeur) {
             $forme = self::formeComparable($clef);
 
-            if (in_array($forme, self::CLEFS_MASQUEES, true)) {
+            if (self::estUneClefMasquee($forme)) {
                 $valeurs[$clef] = self::MASQUE;
             } elseif (is_array($valeur)) {
                 $valeurs[$clef] = self::masquer($valeur);
@@ -283,6 +285,17 @@ final class ExceptionEnregistree extends Exception
         }
 
         return $valeurs;
+    }
+
+    /**
+     * Une clef est masquée quand sa forme comparable est dans la liste, ou
+     * quand elle finit par un mot de passe, un jeton ou un secret
+     * (`newPassword`, `oldPassword`, `resetToken`).
+     */
+    private static function estUneClefMasquee(?string $forme): bool
+    {
+        return $forme !== null
+            && (in_array($forme, self::CLEFS_MASQUEES, true) || Str::endsWith($forme, ['password', 'token', 'secret']));
     }
 
     /**
@@ -324,7 +337,7 @@ final class ExceptionEnregistree extends Exception
         $valeursMasquees = [];
 
         foreach ($parametres ?? [] as $clef => $valeur) {
-            if ((is_string($valeur) || is_int($valeur)) && $valeur !== '' && in_array(self::formeComparable($clef), self::CLEFS_MASQUEES, true)) {
+            if ((is_string($valeur) || is_int($valeur)) && $valeur !== '' && self::estUneClefMasquee(self::formeComparable($clef))) {
                 $valeursMasquees[] = (string) $valeur;
             }
         }

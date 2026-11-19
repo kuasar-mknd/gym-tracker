@@ -634,7 +634,8 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * La collecte des erreurs du navigateur a son limiteur, par compte :
+     * La collecte des erreurs du navigateur a son limiteur, par compte, par
+     * adresse et pour toute l'application :
      * `ErreurNavigateur::RAPPORTS_PAR_MINUTE` par minute et
      * `RAPPORTS_PAR_JOUR` par jour, chacun sous sa clé (deux limites sous une
      * même clé compteraient chaque envoi deux fois). Au-delà, la route répond
@@ -653,6 +654,9 @@ final class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute(ErreurNavigateur::RAPPORTS_PAR_MINUTE)->by('minute|'.$cle)->response($sansRienEcrire),
                 Limit::perDay(ErreurNavigateur::RAPPORTS_PAR_JOUR)->by('jour|'.$cle)->response($sansRienEcrire),
+                Limit::perMinute(ErreurNavigateur::RAPPORTS_PAR_ADRESSE_PAR_MINUTE)->by('minute|adresse:'.$requete->ip())->response($sansRienEcrire),
+                Limit::perDay(ErreurNavigateur::RAPPORTS_PAR_ADRESSE_PAR_JOUR)->by('jour|adresse:'.$requete->ip())->response($sansRienEcrire),
+                Limit::perDay(ErreurNavigateur::RAPPORTS_GLOBAUX_PAR_JOUR)->by('global|jour')->response($sansRienEcrire),
             ];
         });
     }
