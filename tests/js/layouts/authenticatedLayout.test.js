@@ -556,18 +556,18 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
     })
 
     it('laisse l’en-tête de page porter le titre de bureau', () => {
-        const wrapper = mountLayout({ props: { pageTitle: 'Mes Séances' }, slots: { header: '<h1>Mes Séances</h1>' } })
+        const wrapper = mountLayout({ props: { pageTitle: 'Mes séances' }, slots: { header: '<h1>Mes séances</h1>' } })
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mes Séances'], bureau: ['Mes Séances'] })
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mes séances'], bureau: ['Mes séances'] })
     })
 
     it('s’efface devant le titre de bureau que la page pose dans son contenu', () => {
         const wrapper = mountLayout({
-            props: { pageTitle: 'Mon Évolution', titreDansLaPage: true },
-            slots: { default: '<div class="bureau:block hidden"><h1>Mon Évolution</h1></div>' },
+            props: { pageTitle: 'Mon évolution', titreDansLaPage: true },
+            slots: { default: '<div class="bureau:block hidden"><h1>Mon évolution</h1></div>' },
         })
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mon Évolution'], bureau: ['Mon Évolution'] })
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mon évolution'], bureau: ['Mon évolution'] })
     })
 
     it('ne pose aucun titre sans page-title, la page portant le sien', () => {

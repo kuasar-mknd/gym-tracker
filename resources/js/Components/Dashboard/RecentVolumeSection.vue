@@ -16,7 +16,7 @@ defineProps({
     >
         <div class="relative z-10 mb-6">
             <h3 class="text-accent-primary-deep sur-titre mb-1">Progression</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Récent</p>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume récent</p>
         </div>
 
         <!-- Recent Workouts Bar Chart -->

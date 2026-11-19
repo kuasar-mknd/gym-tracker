@@ -1,5 +1,5 @@
 <template>
-    <Head title="Suivi Hydratation" />
+    <Head title="Suivi hydratation" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
@@ -9,7 +9,7 @@
                     Suivi<br />
                     <span class="text-gradient from-accent-info to-accent-tertiary">Hydratation</span>
                 </h1>
-                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">Reste Hydraté</p>
+                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">Reste hydraté</p>
             </header>
 
             <!-- Main Tracker Section -->

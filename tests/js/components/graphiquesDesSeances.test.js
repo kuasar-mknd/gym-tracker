@@ -38,7 +38,7 @@ describe('GraphiquesDesSeances', () => {
     it('ne dessine que les séries qui portent des points', () => {
         const wrapper = monter({ charts: { ...toutes, monthly_volume: [], duration_history: [], volume_history: [] } })
 
-        expect(titres(wrapper)).toEqual(['Fréquence par Jour', 'Fréquence Mensuelle'])
+        expect(titres(wrapper)).toEqual(['Fréquence par jour', 'Fréquence mensuelle'])
     })
 
     it('tend à chaque graphique sa propre série, dans l’ordre des cartes', async () => {
@@ -46,11 +46,11 @@ describe('GraphiquesDesSeances', () => {
         await flushPromises()
 
         expect(titres(wrapper)).toEqual([
-            'Fréquence par Jour',
-            'Fréquence Mensuelle',
-            'Volume Mensuel',
+            'Fréquence par jour',
+            'Fréquence mensuelle',
+            'Volume mensuel',
             'Durée',
-            'Volume par Séance',
+            'Volume par séance',
         ])
         expect(wrapper.findComponent({ name: 'WorkoutFrequencyChart' }).props('data')).toEqual(
             toutes.day_of_week_frequency,

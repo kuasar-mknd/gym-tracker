@@ -200,7 +200,7 @@ const donneesDuGraphique = (nom) =>
 /** Le poids que la carte du poids corporel affiche. */
 const poidsAffiche = () =>
     [...document.querySelectorAll('h3')]
-        .find((titre) => titre.textContent.trim() === 'Poids Corporel')
+        .find((titre) => titre.textContent.trim() === 'Poids corporel')
         ?.nextElementSibling.textContent.replace(/\s+/g, ' ')
         .trim()
 

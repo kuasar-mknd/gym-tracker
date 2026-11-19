@@ -40,7 +40,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
      * Le résumé que `BaseChart` écrit des valeurs que trace la courbe du volume.
      */
     private const string RESUME_DU_VOLUME = <<<'JS'
-        const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Évolution du Volume');
+        const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Évolution du volume');
         const resume = titre?.closest('.stagger-3')?.querySelector('p.sr-only') ?? null;
         return resume ? resume.textContent.trim() : null;
         JS;

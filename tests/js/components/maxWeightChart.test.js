@@ -20,7 +20,7 @@ describe('MaxWeightChart series', () => {
 
         expect(series.labels).toEqual(['01/07', '08/07', '15/07'])
         expect(series.datasets).toHaveLength(1)
-        expect(series.datasets[0].label).toBe('Charge Max (kg)')
+        expect(series.datasets[0].label).toBe('Charge max (kg)')
         expect(series.datasets[0].data).toEqual([80, 82.5, 85])
     })
 

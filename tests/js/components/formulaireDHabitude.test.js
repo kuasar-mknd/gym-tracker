@@ -76,7 +76,7 @@ describe('FormulaireDHabitude', () => {
         await wrapper.setProps({ habitude: null })
         await wrapper.setProps({ show: true })
 
-        expect(wrapper.get('h3').text()).toBe('Nouvelle Habitude')
+        expect(wrapper.get('h3').text()).toBe('Nouvelle habitude')
         expect(form.reset).toHaveBeenCalled()
         expect(form.name).toBe('')
         expect(form.color).toBe('bg-palette-ardoise')

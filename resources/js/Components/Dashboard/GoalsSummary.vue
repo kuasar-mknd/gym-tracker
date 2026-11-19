@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import { pourcentage, progressionAffichee } from '@/Utils/nombre'
 
@@ -9,7 +10,7 @@ defineProps({
     /**
      * Les objectifs manquent parce que la page est une copie hors ligne, qui
      * ne garde jamais rien d'eux (#2048) : la carte le dit, plutôt que de
-     * disparaître comme pour un compte sans objectif. Sans lien vers les
+     * proposer d'en fixer un comme pour un compte sans objectif. Sans lien vers les
      * objectifs, qu'aucune copie ne garde non plus.
      */
     indisponible: { type: Boolean, default: false },
@@ -62,5 +63,21 @@ defineProps({
                 </GlassCard>
             </Link>
         </div>
+    </section>
+    <section v-else class="stagger-5 animate-slide-up">
+        <h3 class="text-text-muted sur-titre mb-4 px-1">Objectifs en cours</h3>
+        <GlassCard padding="p-4">
+            <GlassEmptyState taille="ligne" icon="flag" title="Aucun objectif en cours">
+                <template #action>
+                    <Link
+                        :href="route('goals.index')"
+                        class="text-accent-primary-deep focus-visible:ring-accent-primary mt-2 inline-block rounded-md text-xs font-bold tracking-wider uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        dusk="objectifs-fixer"
+                    >
+                        Fixer un objectif
+                    </Link>
+                </template>
+            </GlassEmptyState>
+        </GlassCard>
     </section>
 </template>

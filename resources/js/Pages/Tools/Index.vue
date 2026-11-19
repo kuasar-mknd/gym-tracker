@@ -38,7 +38,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="titre-carte">Calculateur de Plaques</h3>
+                        <h3 class="titre-carte">Calculateur de plaques</h3>
                         <p class="text-text-muted text-sm">
                             Calcule quelles plaques charger sur la barre pour un poids spécifique.
                         </p>
@@ -117,7 +117,7 @@
                         <div class="bg-accent-state/20 text-accent-state-deep rounded-full p-4">
                             <GlassIcon name="local_fire_department" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Calculateur de Macros</h3>
+                        <h3 class="titre-carte">Calculateur de macros</h3>
                         <p class="text-text-muted text-sm">
                             Estime tes besoins quotidiens en calories et macros selon tes objectifs.
                         </p>
@@ -148,7 +148,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="titre-carte">Calculateur d'Échauffement</h3>
+                        <h3 class="titre-carte">Calculateur d'échauffement</h3>
                         <p class="text-text-muted text-sm">
                             Calcule tes séries d'échauffement basées sur ton poids de travail.
                         </p>
@@ -165,7 +165,7 @@
                         <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
                             <GlassIcon name="water_drop" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Suivi Hydratation</h3>
+                        <h3 class="titre-carte">Suivi hydratation</h3>
                         <p class="text-text-muted text-sm">Suis ta consommation d'eau quotidienne et reste hydraté.</p>
                     </div>
                 </GlassCard>
@@ -180,7 +180,7 @@
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <GlassIcon name="timer" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Minuteur d'Intervalle</h3>
+                        <h3 class="titre-carte">Minuteur d'intervalle</h3>
                         <p class="text-text-muted text-sm">
                             Crée et lance tes propres minuteurs pour tes entraînements HIIT ou Tabata.
                         </p>
@@ -197,7 +197,7 @@
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <GlassIcon name="schedule" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Suivi de Jeûne</h3>
+                        <h3 class="titre-carte">Suivi de jeûne</h3>
                         <p class="text-text-muted text-sm">
                             Suis tes fenêtres de jeûne intermittent et ta progression.
                         </p>

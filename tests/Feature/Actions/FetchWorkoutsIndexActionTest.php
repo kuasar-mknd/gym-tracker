@@ -168,7 +168,7 @@ it('borne les deux historiques aux vingt memes dernieres seances, de la plus anc
 });
 
 /**
- * Le graphique « Volume par Séance » et son voisin « Durée » couvrent les
+ * Le graphique « Volume par séance » et son voisin « Durée » couvrent les
  * memes seances, dans le meme ordre (#1957).
  *
  * Trente seances : avec dix de plus que la borne, l'ecart entre les vingt

@@ -300,7 +300,7 @@ const previewFromForm = () => {
 
                 <!-- List of Timers -->
                 <div class="space-y-4">
-                    <h3 class="titre-carte px-2">Mes Minuteurs</h3>
+                    <h3 class="titre-carte px-2">Mes minuteurs</h3>
                     <GlassEmptyState
                         v-if="timers.length === 0"
                         taille="ligne"

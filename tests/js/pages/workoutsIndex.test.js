@@ -589,11 +589,11 @@ describe('Workouts/Index — the deferred charts and exercises', () => {
             .findAll('h3')
             .map((heading) => heading.text())
 
-        expect(headings).toContain('Fréquence par Jour')
-        expect(headings).toContain('Fréquence Mensuelle')
-        expect(headings).not.toContain('Volume Mensuel')
+        expect(headings).toContain('Fréquence par jour')
+        expect(headings).toContain('Fréquence mensuelle')
+        expect(headings).not.toContain('Volume mensuel')
         expect(headings).not.toContain('Durée')
-        expect(headings).not.toContain('Volume par Séance')
+        expect(headings).not.toContain('Volume par séance')
     })
 
     it('shows all five once every series has points', () => {
@@ -608,11 +608,11 @@ describe('Workouts/Index — the deferred charts and exercises', () => {
 
         expect(headings).toEqual(
             expect.arrayContaining([
-                'Fréquence par Jour',
-                'Fréquence Mensuelle',
-                'Volume Mensuel',
+                'Fréquence par jour',
+                'Fréquence mensuelle',
+                'Volume mensuel',
                 'Durée',
-                'Volume par Séance',
+                'Volume par séance',
             ]),
         )
     })
@@ -630,7 +630,7 @@ describe('Workouts/Index — the deferred charts and exercises', () => {
     it('offers no charts at all before the first session exists', () => {
         const wrapper = mountPage({ workouts: { ...structuredClone(paginator), data: [], total: 0 } })
 
-        expect(wrapper.findAll('h3').map((heading) => heading.text())).not.toContain('Fréquence Mensuelle')
+        expect(wrapper.findAll('h3').map((heading) => heading.text())).not.toContain('Fréquence mensuelle')
     })
 })
 

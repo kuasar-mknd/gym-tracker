@@ -68,13 +68,13 @@ class NavigationHorsLigneTest extends DuskTestCase
     private const string PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau.";
 
     /**
-     * Si la carte « Aperçu Historique » de la liste des séances porte son
+     * Si la carte « Aperçu historique » de la liste des séances porte son
      * graphique (le résumé que `BaseChart` écrit sitôt le morceau chargé : le
      * canevas, lui, attend d'approcher de l'écran), et plus le composant d'erreur des graphiques.
      */
     private const string LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE = <<<'SCRIPT'
         (() => {
-            const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Aperçu Historique');
+            const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Aperçu historique');
             const carte = titre?.parentElement?.parentElement ?? null;
 
             return carte !== null && carte.querySelector('p.sr-only') !== null && carte.querySelector('[data-graphique-indisponible]') === null;
@@ -136,7 +136,7 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 // La flèche de l'en-tête, un lien d'Inertia vers les séances, ouvre leur copie.
                 $browser->clickWhenSettled('header a[aria-label="Retour"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
+                $this->attendreLaCopie($browser, '/workouts', 'Mes séances');
                 /*
                  * La séance en cours est dans la copie. Le préchauffage ne demande jamais la prop différée
                  * de la liste, qui le dit ; le graphique de l'historique, hors du precache, aussi.
@@ -153,7 +153,7 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 // Depuis la séance : Séances, Plus, Outils, puis le minuteur d'intervalles.
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
+                $this->attendreLaCopie($browser, '/workouts', 'Mes séances');
 
                 $browser->clickWhenSettled('[dusk="nav-profile"]');
                 $this->attendreLaCopie($browser, '/profile', 'Plus');
@@ -168,7 +168,7 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 // Puis les séances de nouveau, leur graphique indisponible : c'est la copie que le réseau retrouvera.
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
+                $this->attendreLaCopie($browser, '/workouts', 'Mes séances');
                 $browser->waitFor('[data-graphique-indisponible]', 15);
 
                 // Rien d'autre n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
@@ -182,7 +182,7 @@ class NavigationHorsLigneTest extends DuskTestCase
              */
             $browser->waitUntilMissing('[dusk="bandeau-hors-ligne"]', 90)
                 ->assertPathIs('/workouts')
-                ->assertScript($this->texteDe('header h1'), 'Mes Séances')
+                ->assertScript($this->texteDe('header h1'), 'Mes séances')
                 ->waitUntil(self::LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE, 30, 'le graphique de l’historique dit encore qu’il est indisponible hors ligne');
         });
     }

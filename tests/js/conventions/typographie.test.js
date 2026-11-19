@@ -97,6 +97,32 @@ it('écrit les libellés et les exemples de champ à la française', () => {
 })
 
 /**
+ * Un titre français s'écrit en casse de phrase (« Mes séances »), pas en casse
+ * de titre anglaise (#2355). La garde lit le fichier entier : un titre que
+ * Prettier a mis seul sur sa ligne, suivi d'une unité, de trois mots ou d'un
+ * connecteur en minuscule en fait partie. « Wilks », « Liquid Glass » et les
+ * noms de police sont des noms propres.
+ */
+it('écrit les titres en casse de phrase française', () => {
+    const MOT = '[A-ZÉÈ][a-zéèêàçùôïî]+'
+    const motif = new RegExp(
+        `(?:>\\s*|(?<![A-Za-zé])["'\`])(?!Liquid Glass|Space Grotesk|Month Year|Gym Tracker|${MOT} Wilks)${MOT}(?: (?:(?:de|du|des|d'|la|le|les|l'|par|vs|et|en) ?)*${MOT})+`,
+        'g',
+    )
+
+    const fautifs = collectSourceFiles({ extensions: ['.vue', '.js'] }).flatMap((fichier) => {
+        const source = readFileSync(fichier, 'utf8')
+
+        return [...source.matchAll(motif)].map(
+            (trouve) =>
+                `${fichier.replace(jsRoot, 'resources/js')}:${source.slice(0, trouve.index).split('\n').length} — ${trouve[0].trim()}`,
+        )
+    })
+
+    expect(fautifs).toEqual([])
+})
+
+/**
  * Un bouton qui crée se dit « Créer », un bouton qui modifie « Enregistrer »
  * (#2355). Les deux formulaires de création qui disaient encore « Enregistrer »
  * (une plaque) et « Ajouter » (un complément) sont nommés ici : le libellé d'un

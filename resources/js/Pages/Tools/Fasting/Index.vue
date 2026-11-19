@@ -182,9 +182,9 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
 </script>
 
 <template>
-    <Head title="Suivi de Jeûne" />
+    <Head title="Suivi de jeûne" />
 
-    <AuthenticatedLayout page-title="Suivi de Jeûne" show-back back-route="tools.index" largeur="etroite">
+    <AuthenticatedLayout page-title="Suivi de jeûne" show-back back-route="tools.index" largeur="etroite">
         <template #header>
             <div class="flex items-center gap-4">
                 <Link
@@ -194,7 +194,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h1 class="titre-carte">Suivi de Jeûne</h1>
+                <h1 class="titre-carte">Suivi de jeûne</h1>
             </div>
         </template>
 

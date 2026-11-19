@@ -118,7 +118,7 @@ const updatePreferences = () => {
 
 <template>
     <GlassSection
-        title="Préférences de Notification"
+        title="Préférences de notification"
         description="Choisis comment tu souhaites être informé de tes progrès."
     >
         <form @submit.prevent="updatePreferences" class="mt-6 space-y-6">

@@ -23,7 +23,7 @@ const emit = defineEmits(['startWorkout'])
     <!-- Recent Activity -->
     <section class="stagger-4 animate-slide-up">
         <div class="mb-5 flex items-center justify-between px-1">
-            <h3 class="text-text-muted sur-titre">Activité Récente</h3>
+            <h3 class="text-text-muted sur-titre">Activité récente</h3>
             <Link
                 :href="route('workouts.index')"
                 class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary relative rounded-md text-xs font-bold tracking-wider uppercase transition-colors before:absolute before:-inset-x-2 before:-inset-y-3.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"

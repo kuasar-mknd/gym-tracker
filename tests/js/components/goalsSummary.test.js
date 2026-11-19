@@ -41,13 +41,15 @@ describe('GoalsSummary', () => {
         expect(wrapper.text()).not.toContain('100')
     })
 
-    it('stays off the dashboard entirely when nothing is in progress', () => {
+    it('offre au compte sans objectif un lien vers la page des objectifs (#2355)', () => {
         const wrapper = mountSummary([])
+        const liens = wrapper.findAll('a')
 
-        // Not an empty list with a heading above it: the whole block is absent,
-        // heading, "Voir tout" link and all.
-        expect(wrapper.find('section').exists()).toBe(false)
-        expect(wrapper.text()).toBe('')
+        expect(wrapper.find('[role="progressbar"]').exists()).toBe(false)
+        expect(wrapper.text()).toContain('Aucun objectif en cours')
+        expect(liens).toHaveLength(1)
+        expect(liens[0].attributes('href')).toBe('/goals.index')
+        expect(liens[0].text()).toContain('Fixer un objectif')
     })
 
     it('rounds the figure it prints but not the bar it draws', () => {
@@ -93,7 +95,12 @@ describe('GoalsSummary sur une copie hors ligne', () => {
         expect(carte.find('a').exists()).toBe(false)
     })
 
-    it('ne dit rien de tel pour un compte sans objectif', () => {
-        expect(monter().text()).toBe('')
+    it('ne dit pas « indisponible » d’un compte sans objectif : il montre l’état vide et son lien', () => {
+        const carte = monter()
+
+        expect(carte.find('[data-indisponible-hors-ligne]').exists()).toBe(false)
+        expect(carte.text()).not.toContain('indisponibles hors ligne')
+        expect(carte.text()).toContain('Aucun objectif en cours')
+        expect(carte.get('a').text()).toContain('Fixer un objectif')
     })
 })

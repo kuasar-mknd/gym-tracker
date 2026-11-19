@@ -31,7 +31,7 @@ describe('BodyFatChart', () => {
     })
 
     it('nomme la série pour ce qu’elle mesure', () => {
-        expect(chartOf(history).props('data').datasets[0].label).toBe('Masse Grasse (%)')
+        expect(chartOf(history).props('data').datasets[0].label).toBe('Masse grasse (%)')
     })
 
     it('trace un historique vide sans point', () => {

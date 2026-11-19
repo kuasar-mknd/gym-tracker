@@ -31,7 +31,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
         <div class="relative z-10 mb-6 flex items-start justify-between">
             <div>
                 <h3 class="text-accent-primary-deep sur-titre mb-1">Aperçu</h3>
-                <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Hebdo</p>
+                <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume hebdo</p>
             </div>
             <div class="text-right">
                 <p

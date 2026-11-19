@@ -1,5 +1,5 @@
 <template>
-    <Head title="Calculateur de Plaques" />
+    <Head title="Calculateur de plaques" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
@@ -128,7 +128,7 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="titre-carte">Mon Inventaire</h2>
+                            <h2 class="titre-carte">Mon inventaire</h2>
                             <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
                                 Plaques disponibles
                             </p>

@@ -69,9 +69,9 @@ const {
 </script>
 
 <template>
-    <Head title="Mes Modèles" />
+    <Head title="Mes modèles" />
 
-    <AuthenticatedLayout page-title="Mes Modèles" show-back back-route="workouts.index">
+    <AuthenticatedLayout page-title="Mes modèles" show-back back-route="workouts.index">
         <!--
             « Nouveau modèle » est une navigation : `GlassButton` la rend en un
             seul lien par `href`, jamais un bouton posé dans un `Link` (#2117).
@@ -84,7 +84,7 @@ const {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Mes Modèles</h1>
+                <h1 class="titre-carte">Mes modèles</h1>
                 <GlassButton :href="route('templates.create')" variant="primary">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Nouveau modèle

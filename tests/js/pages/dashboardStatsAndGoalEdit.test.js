@@ -264,7 +264,7 @@ describe('Dashboard', () => {
     /*
      * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
      * objectifs (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent,
-     * plutôt que de disparaître comme pour un compte qui n'a rien noté.
+     * plutôt que d'afficher un état vide comme pour un compte qui n'a rien noté.
      */
     it('sur une copie hors ligne, dit le dernier poids et les objectifs indisponibles', () => {
         pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }
@@ -290,12 +290,12 @@ describe('Dashboard', () => {
         const none = mountDashboard({ activeGoals: [] })
         const one = mountDashboard({ activeGoals: goals })
 
-        // An empty chart under a "Progression des Objectifs" heading is worse
+        // An empty chart under a "Progression des objectifs" heading is worse
         // than no chart: it reads as no progress rather than no goal. So the
         // heading is checked *and* the series behind it — the heading alone is
         // satisfied by exactly the empty chart this test exists to forbid.
-        expect(none.text()).not.toContain('Progression des Objectifs')
-        expect(one.text()).toContain('Progression des Objectifs')
+        expect(none.text()).not.toContain('Progression des objectifs')
+        expect(one.text()).toContain('Progression des objectifs')
         expect(one.findComponent({ name: 'ActiveGoalsChart' }).props('data')).toEqual(goals)
     })
 
