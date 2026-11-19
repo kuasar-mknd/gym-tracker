@@ -46,7 +46,7 @@ defineProps({
             </g>
         </svg>
         <span
-            class="text-gradient font-display font-black tracking-tight uppercase italic"
+            class="text-text-main font-display font-semibold tracking-tight"
             :class="DISPOSITIONS_DE_LA_MARQUE[disposition].nom"
         >
             GymTracker

@@ -23,10 +23,10 @@ const emit = defineEmits(['startWorkout'])
     <!-- Recent Activity -->
     <section class="stagger-4 animate-slide-up">
         <div class="mb-5 flex items-center justify-between px-1">
-            <h3 class="text-text-muted sur-titre">Activité Récente</h3>
+            <h3 class="text-text-muted sur-titre">Activité récente</h3>
             <Link
                 :href="route('workouts.index')"
-                class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary relative rounded-md text-xs font-bold tracking-wider uppercase transition-colors before:absolute before:-inset-x-2 before:-inset-y-3.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary relative rounded-md text-xs font-medium transition-colors before:absolute before:-inset-x-2 before:-inset-y-3.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 Voir tout
             </Link>
@@ -35,9 +35,9 @@ const emit = defineEmits(['startWorkout'])
         <!-- Empty State -->
         <GlassEmptyState
             v-if="recentWorkouts.length === 0"
-            icon="🏋️"
+            icon="fitness_center"
             title="Aucune séance pour l'instant"
-            description="Commence ton parcours fitness !"
+            description="Commence ton parcours."
         >
             <template #action>
                 <GlassButton variant="primary" :loading="processing" class="mx-auto" @click="emit('startWorkout')">
@@ -48,10 +48,8 @@ const emit = defineEmits(['startWorkout'])
 
         <!-- Activity Cards and Chart -->
         <div v-else class="flex flex-col gap-3">
-            <div
-                class="border-surface-card/20 bg-surface-card/10 relative mb-2 overflow-hidden rounded-3xl border p-4 backdrop-blur-md"
-            >
-                <div class="sur-titre text-accent-tertiary-deep mb-4">Durée des séances</div>
+            <div class="carte-plate relative mb-2 overflow-hidden rounded-2xl p-4">
+                <div class="sur-titre text-text-muted mb-4">Durée des séances</div>
                 <RecentWorkoutsTimelineChart :data="recentWorkouts" />
             </div>
 
@@ -60,7 +58,7 @@ const emit = defineEmits(['startWorkout'])
                 :key="workout.id"
                 v-press
                 :href="route('workouts.show', { workout: workout.id })"
-                class="group focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative flex items-center justify-between rounded-3xl border p-4 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+                class="focus-visible:ring-accent-primary carte-plate hover:bg-surface-sunken relative flex items-center justify-between rounded-2xl p-4 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 <!-- Color indicator -->
                 <div
@@ -92,10 +90,10 @@ const emit = defineEmits(['startWorkout'])
                         <GlassIcon :name="(workout.workout_lines_count || 0) > 3 ? 'timer' : 'fitness_center'" />
                     </div>
                     <div>
-                        <h4 class="font-display text-text-main text-lg leading-tight font-bold uppercase italic">
+                        <h4 class="font-display text-text-main text-lg leading-tight font-semibold">
                             {{ workout.name || 'Séance' }}
                         </h4>
-                        <p class="text-text-muted mt-1 text-xs font-bold">
+                        <p class="text-text-muted mt-1 text-xs font-medium tabular-nums">
                             {{
                                 new Date(workout.started_at).toLocaleDateString('fr-FR', {
                                     weekday: 'long',
@@ -111,8 +109,8 @@ const emit = defineEmits(['startWorkout'])
                 </div>
                 <div class="flex flex-col items-end">
                     <span v-if="workout.ended_at" class="glass-badge glass-badge-success">Fait</span>
-                    <span v-else class="glass-badge glass-badge-warning animate-pulse">En cours</span>
-                    <span class="text-text-muted mt-1 font-mono text-xs">
+                    <span v-else class="glass-badge glass-badge-warning">En cours</span>
+                    <span class="text-text-muted mt-1 text-xs tabular-nums">
                         {{
                             new Date(workout.started_at).toLocaleTimeString('fr-FR', {
                                 hour: '2-digit',

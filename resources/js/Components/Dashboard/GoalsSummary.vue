@@ -27,7 +27,7 @@ defineProps({
             <h3 class="text-text-muted sur-titre">Objectifs en cours</h3>
             <Link
                 :href="route('goals.index')"
-                class="text-accent-primary-deep focus-visible:ring-accent-primary rounded-md text-xs font-bold tracking-wider uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary rounded-md text-xs font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 Voir tout
             </Link>
@@ -38,12 +38,12 @@ defineProps({
                 v-for="goal in activeGoals"
                 :key="goal.id"
                 :href="route('goals.index')"
-                class="focus-visible:ring-accent-primary block rounded-3xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="focus-visible:ring-accent-primary block rounded-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
-                <GlassCard :hover="true" padding="p-4">
+                <GlassCard variant="plate" padding="p-4" rounded="rounded-2xl">
                     <div class="mb-2 flex items-center justify-between">
-                        <span class="text-text-main line-clamp-1 text-sm font-bold">{{ goal.title }}</span>
-                        <span class="text-accent-primary-deep text-xs font-black">{{
+                        <span class="text-text-main line-clamp-1 text-sm font-medium">{{ goal.title }}</span>
+                        <span class="text-text-main text-xs font-semibold tabular-nums">{{
                             pourcentage(progressionAffichee(goal), 0)
                         }}</span>
                     </div>
@@ -54,10 +54,7 @@ defineProps({
                         aria-valuemin="0"
                         aria-valuemax="100"
                     >
-                        <div
-                            class="glow-orange bg-gradient-main h-full transition duration-1000"
-                            :style="{ width: goal.progress_pct + '%' }"
-                        ></div>
+                        <div class="accent-fill h-full rounded-full" :style="{ width: goal.progress_pct + '%' }"></div>
                     </div>
                 </GlassCard>
             </Link>

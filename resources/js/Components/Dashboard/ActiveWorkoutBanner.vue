@@ -106,11 +106,11 @@ onUnmounted(() => {
         v-press
         :href="adresse"
         @click="ouvrir"
-        class="from-session-from via-session-via to-session-to border-session-from/40 text-text-on-dark-accent focus-visible:ring-session-from focus-visible:ring-offset-surface-page flex min-h-12 items-center gap-3 rounded-2xl border bg-linear-to-r px-4 py-2 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
+        class="from-session-from via-session-via to-session-to border-session-from/40 text-text-on-dark-accent focus-visible:ring-session-from focus-visible:ring-offset-surface-page flex min-h-12 items-center gap-3 rounded-2xl border bg-linear-to-r px-4 py-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         dusk="active-workout-banner"
     >
         <GlassIcon name="fitness_center" size="sm" fill />
-        <span class="min-w-0 flex-1 truncate text-sm font-black uppercase italic">{{ workout.name || 'Séance' }}</span>
+        <span class="min-w-0 flex-1 truncate text-sm font-semibold">{{ workout.name || 'Séance' }}</span>
         <span class="flex items-center gap-1 text-xs font-bold tabular-nums">
             <GlassIcon name="timer" size="xs" />
             {{ elapsed }}
@@ -123,14 +123,11 @@ onUnmounted(() => {
         v-press
         :href="adresse"
         @click="ouvrir"
-        class="animate-fade-in group border-session-from/40 focus-visible:ring-session-from focus-visible:ring-offset-surface-page relative block overflow-hidden rounded-3xl border-2 transition duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
+        class="animate-fade-in border-session-from/40 focus-visible:ring-session-from focus-visible:ring-offset-surface-page relative block overflow-hidden rounded-3xl border-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         dusk="active-workout-banner"
     >
-        <!-- Animated gradient background -->
+        <!-- Fond : les couleurs de séance, que Sam a gardées (voir app.css) -->
         <div class="from-session-from via-session-via to-session-to absolute inset-0 bg-linear-to-r opacity-90"></div>
-        <div
-            class="from-session-from via-session-via to-session-to absolute inset-0 bg-linear-to-r opacity-0 transition-opacity duration-500 group-hover:opacity-90"
-        ></div>
 
         <!-- Pulse ring effect -->
         <div class="absolute top-4 right-4 flex items-center gap-2">
@@ -140,14 +137,12 @@ onUnmounted(() => {
                 ></span>
                 <span class="bg-surface-card relative inline-flex size-3 rounded-full"></span>
             </span>
-            <span class="text-text-on-dark-accent/90 text-xs font-black tracking-widest uppercase">En cours</span>
+            <span class="text-text-on-dark-accent/90 text-xs font-medium">En cours</span>
         </div>
 
         <div class="relative z-10 flex items-center gap-4 p-5">
             <!-- Icon -->
-            <div
-                class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
-            >
+            <div class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl">
                 <GlassIcon name="fitness_center" size="lg" fill class="text-text-on-dark-accent" />
             </div>
 
@@ -174,10 +169,7 @@ onUnmounted(() => {
 
             <!-- Arrow -->
             <div class="flex shrink-0 items-center">
-                <GlassIcon
-                    name="arrow_forward_ios"
-                    class="text-text-on-dark-accent/60 group-hover:text-text-on-dark-accent transition-transform duration-300 group-hover:translate-x-1"
-                />
+                <GlassIcon name="arrow_forward_ios" class="text-text-on-dark-accent/70" />
             </div>
         </div>
     </component>

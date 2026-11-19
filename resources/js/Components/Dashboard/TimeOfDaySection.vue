@@ -11,12 +11,10 @@ defineProps({
 
 <template>
     <!-- Time of Day Distribution Chart -->
-    <section
-        class="stagger-4 animate-slide-up border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-6 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
-    >
+    <section class="stagger-4 animate-slide-up carte-plate rounded-2xl p-6">
         <div class="relative z-10 mb-6">
-            <h3 class="text-accent-secondary-deep sur-titre mb-1">Habitudes</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic">Horaire Favori</p>
+            <h3 class="text-text-muted sur-titre mb-1">Habitudes</h3>
+            <p class="titre-section">Horaire favori</p>
         </div>
 
         <!-- Time of Day Chart -->

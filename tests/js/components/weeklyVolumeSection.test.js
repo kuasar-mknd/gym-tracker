@@ -29,7 +29,7 @@ const chartOf = (wrapper) => wrapper.findComponent({ name: 'WeeklyVolumeChart' }
 /** The big number, read the way the user reads it. */
 const volumeText = (wrapper) => wrapper.get('p.text-4xl').text()
 
-/** The "+12% vs sem. passée" line, absent altogether when the weeks tie. */
+/** The "+12% vs semaine dernière" line, absent altogether when the weeks tie. */
 const comparisonOf = (wrapper) => wrapper.get('p.justify-end')
 
 describe('WeeklyVolumeSection', () => {
@@ -52,7 +52,7 @@ describe('WeeklyVolumeSection', () => {
         const comparison = comparisonOf(wrapper)
 
         expect(comparison.text()).toContain('trending_up')
-        expect(comparison.text()).toContain('+12 % vs sem. passée')
+        expect(comparison.text()).toContain('+12 % vs semaine dernière')
         expect(comparison.classes()).toContain('text-trend-up')
     })
 
@@ -64,7 +64,7 @@ describe('WeeklyVolumeSection', () => {
         const comparison = comparisonOf(wrapper)
 
         expect(comparison.text()).toContain('trending_down')
-        expect(comparison.text()).toContain('-8 % vs sem. passée')
+        expect(comparison.text()).toContain('-8 % vs semaine dernière')
         expect(comparison.text()).not.toContain('+')
         expect(comparison.classes()).toContain('text-trend-down')
     })
@@ -86,7 +86,7 @@ describe('WeeklyVolumeSection', () => {
 
         const comparison = comparisonOf(wrapper)
 
-        expect(comparison.text()).toContain('Stable vs sem. passée')
+        expect(comparison.text()).toContain('Stable vs semaine dernière')
         expect(comparison.text()).toContain('trending_flat')
         expect(comparison.classes()).not.toContain('text-trend-down')
         expect(comparison.classes()).not.toContain('text-trend-up')
@@ -98,7 +98,7 @@ describe('WeeklyVolumeSection', () => {
         })
 
         expect(wrapper.find('p.justify-end').exists()).toBe(false)
-        expect(wrapper.text()).not.toContain('vs sem. passée')
+        expect(wrapper.text()).not.toContain('vs semaine dernière')
         // Le volume de la semaine, lui, reste affiche : il est mesure, pas compare.
         expect(volumeText(wrapper)).toBe("21'500")
     })

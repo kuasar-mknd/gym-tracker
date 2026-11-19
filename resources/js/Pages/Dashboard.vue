@@ -127,13 +127,13 @@ const installationProposee = ref(false)
             <GlassCard
                 v-if="activeGoals && activeGoals.length > 0"
                 as="section"
+                variant="plate"
+                rounded="rounded-2xl"
                 class="stagger-6 animate-slide-up relative overflow-hidden"
             >
                 <div class="relative z-10 mb-6">
-                    <h3 class="text-accent-primary-deep sur-titre mb-1">Visualisation</h3>
-                    <p class="font-display text-text-main text-2xl font-black uppercase italic">
-                        Progression des Objectifs
-                    </p>
+                    <h3 class="text-text-muted sur-titre mb-1">Visualisation</h3>
+                    <p class="titre-section">Progression des objectifs</p>
                 </div>
                 <div class="relative -mx-2 mt-2 h-48 w-auto">
                     <ActiveGoalsChart :data="activeGoals" />

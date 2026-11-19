@@ -190,9 +190,7 @@ onUnmounted(() => {
             reste et s'abrège au-delà : sur plusieurs lignes, un nom long
             faisait déborder le bouton du compte hors de la barre.
         -->
-        <nav
-            class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b backdrop-blur-xl"
-        >
+        <nav class="bg-surface-page border-border z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b">
             <div class="px-sure-8 mx-auto max-w-7xl">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
@@ -231,7 +229,7 @@ onUnmounted(() => {
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-accent-primary-deep border-surface-card bg-surface-card/60 hover:bg-surface-card relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition hover:shadow-md"
+                            class="text-text-muted hover:text-text-main carte-plate relative flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors"
                             :aria-label="
                                 $page.props.auth.user.unread_notifications_count > 0
                                     ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -255,10 +253,10 @@ onUnmounted(() => {
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex max-w-full items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        class="text-text-main focus-visible:ring-accent-primary carte-plate hover:bg-surface-sunken inline-flex max-w-full items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
-                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black"
+                                            class="bg-surface-sunken text-text-main flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
                                         >
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
@@ -295,7 +293,7 @@ onUnmounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/80 border-surface-card/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between border-b pb-4 backdrop-blur-xl"
+            class="bg-surface-page border-border z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between border-b pb-4"
         >
             <div class="flex min-w-0 items-center gap-4">
                 <Link
@@ -320,7 +318,7 @@ onUnmounted(() => {
                 <Link
                     v-press
                     :href="route('notifications.index')"
-                    class="text-text-muted border-surface-card bg-surface-card/60 relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition"
+                    class="text-text-muted carte-plate relative flex size-11 shrink-0 items-center justify-center rounded-xl transition"
                     :aria-label="
                         $page.props.auth.user.unread_notifications_count > 0
                             ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -340,10 +338,7 @@ onUnmounted(() => {
         </header>
 
         <!-- Desktop Page Heading Slot -->
-        <header
-            v-if="$slots.header"
-            class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 bureau:block hidden border-b"
-        >
+        <header v-if="$slots.header" class="bg-surface-page border-border bureau:block hidden border-b">
             <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto py-6" :class="LARGEURS[largeur]">
                 <slot name="header" />
             </div>

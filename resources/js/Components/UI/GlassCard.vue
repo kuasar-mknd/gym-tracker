@@ -19,6 +19,7 @@
  *   - 'glow-orange': A soft orange drop shadow.
  *   - 'glow-violet': A soft violet drop shadow.
  *   - 'solid': An opaque white background.
+ *   - 'plate': A flat surface with a hairline border, no glass, no shadow.
  * @property {String} as - The HTML element or Vue component to render as the root node (default: 'div').
  * @property {String} padding - Tailwind utility classes for the card's inner padding (default: 'p-5 sm:p-6').
  * @property {String} rounded - Tailwind utility classes for the card's border radius (default: 'rounded-3xl').
@@ -27,7 +28,7 @@
 defineProps({
     variant: {
         type: String,
-        default: 'default', // default | iridescent | glow-orange | glow-violet | solid
+        default: 'default', // default | iridescent | glow-orange | glow-violet | solid | plate
     },
     as: {
         type: String,
@@ -52,7 +53,8 @@ defineProps({
     <component
         :is="as"
         :class="[
-            'glass-panel-light animate-fade-in transition duration-300',
+            'animate-fade-in transition duration-300',
+            variant === 'plate' ? 'carte-plate' : 'glass-panel-light',
             padding,
             rounded,
             {

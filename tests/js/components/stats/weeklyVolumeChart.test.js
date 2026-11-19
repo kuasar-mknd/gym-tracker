@@ -21,29 +21,6 @@ const WeeklyVolumeChart = (await import('@/Components/Stats/WeeklyVolumeChart.vu
 
 const chartOf = (data) => mount(WeeklyVolumeChart, { props: { data } }).findComponent({ name: 'Line' })
 
-/** A canvas context that records the gradients asked of it. */
-const recordingContext = () => {
-    const created = []
-
-    return {
-        created,
-        ctx: {
-            createLinearGradient: (...coordinates) => {
-                const stops = []
-                created.push({ coordinates, stops })
-
-                return { addColorStop: (offset, color) => stops.push([offset, color]) }
-            },
-        },
-    }
-}
-
-/** The argument Chart.js passes to a scriptable option. */
-const scriptableContext = (ctx, chartArea) => ({ chart: { ctx, chartArea } })
-
-/** The plot area once Chart.js has measured the canvas. */
-const laidOutArea = { top: 0, bottom: 200, left: 10, right: 310 }
-
 describe('WeeklyVolumeChart', () => {
     it('aligne chaque volume sur son jour, dans l’ordre reçu', () => {
         const chart = chartOf([
@@ -84,47 +61,16 @@ describe('WeeklyVolumeChart', () => {
         expect(chartOf([{ day_label: 'Lun', volume: 1200 }]).props('options').scales.y.beginAtZero).toBe(true)
     })
 
-    describe('dégradés', () => {
+    describe('couleurs', () => {
         const dataset = () => chartOf([{ day_label: 'Lun', volume: 1200 }]).props('data').datasets[0]
 
-        it('remplit de haut en bas, en s’effaçant vers l’axe', () => {
-            const { ctx, created } = recordingContext()
-
-            dataset().backgroundColor(scriptableContext(ctx, laidOutArea))
-
-            // Vertical: x stays at 0, y runs from the top of the area to its
-            // bottom. Handing it the horizontal coordinates instead would fade
-            // the fill left-to-right, across days rather than towards the axis.
-            expect(created[0].coordinates).toEqual([0, 0, 0, 200])
-            expect(created[0].stops.map(([offset]) => offset)).toEqual([0, 1])
-            expect(created[0].stops[0][1]).toBe(jetonTransparent('accent-primary', 0.2))
-            expect(created[0].stops[1][1]).toBe(jetonTransparent('accent-primary', 0))
+        it('trace la ligne d’une seule couleur, l’orange, sans dégradé', () => {
+            expect(dataset().borderColor).toBe(jeton('accent-primary'))
+            expect(dataset().pointBorderColor).toBe(jeton('accent-primary'))
         })
 
-        it('trace la ligne de gauche à droite, orange vers violet', () => {
-            const { ctx, created } = recordingContext()
-
-            dataset().borderColor(scriptableContext(ctx, laidOutArea))
-
-            expect(created[0].coordinates).toEqual([10, 0, 310, 0])
-            expect(created[0].stops).toEqual([
-                [0, jeton('accent-primary')],
-                [0.5, jeton('accent-secondary')],
-                [1, jeton('accent-tertiary')],
-            ])
-        })
-
-        /**
-         * Chart.js evaluates scriptable options once before it has measured the
-         * canvas. Reading `chartArea.top` off that undefined area throws, and
-         * the whole page renders blank instead of the chart.
-         */
-        it('ne peint rien tant que la zone de tracé n’est pas mesurée', () => {
-            const { ctx } = recordingContext()
-            const beforeLayout = scriptableContext(ctx)
-
-            expect(dataset().backgroundColor(beforeLayout)).toBeNull()
-            expect(dataset().borderColor(beforeLayout)).toBeNull()
+        it('remplit d’un aplat léger de la même couleur', () => {
+            expect(dataset().backgroundColor).toBe(jetonTransparent('accent-primary', 0.08))
         })
     })
 })
