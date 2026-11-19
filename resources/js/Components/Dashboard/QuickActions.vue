@@ -39,7 +39,7 @@ const emit = defineEmits(['startWorkout'])
             :href="route('templates.index')"
             class="verre-regulier rounded-carte text-text-main focus-visible:ring-accent-primary flex min-h-28 flex-col items-start justify-between p-4 text-base leading-tight font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-            <span class="bg-surface-glass-strong rounded-icone flex size-10 items-center justify-center">
+            <span class="bg-text-main/10 rounded-icone flex size-10 items-center justify-center">
                 <GlassIcon name="assignment_add" size="lg" />
             </span>
             Mes modèles

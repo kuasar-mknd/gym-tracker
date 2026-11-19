@@ -304,7 +304,7 @@ onUnmounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/80 border-surface-card/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between border-b pb-4 backdrop-blur-xl"
+            class="bg-surface-page/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between pb-4 backdrop-blur-xl"
         >
             <div class="flex min-w-0 items-center gap-4">
                 <Link
