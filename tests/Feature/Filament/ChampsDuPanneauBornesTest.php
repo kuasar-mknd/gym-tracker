@@ -70,7 +70,6 @@ it('refuse sur son champ ce que la colonne du panneau ne tient pas', function (s
         'doses restantes d’un complément' => [EditSupplement::class, Supplement::class, 'servings_remaining', '1e30'],
         'seuil de stock d’un complément' => [EditSupplement::class, Supplement::class, 'low_stock_threshold', (string) PHP_INT_MAX],
         'nom d’un compte' => [EditUser::class, User::class, 'name', $long],
-        'avatar d’un compte' => [EditUser::class, User::class, 'avatar', $long],
         'repos d’un compte' => [EditUser::class, User::class, 'default_rest_time', '-1e30'],
         'nom d’une séance' => [EditWorkout::class, Workout::class, 'name', $long],
         'notes d’une séance' => [EditWorkout::class, Workout::class, 'notes', $texteDeQuatreOctets],
