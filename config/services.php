@@ -10,6 +10,11 @@ declare(strict_types=1);
  * pas son défaut. Dérivée d'APP_URL plutôt que relative, l'URL ne dépend pas
  * des en-têtes que le proxy inverse transmet.
  */
+/**
+ * Les appels d'échange vers les fournisseurs sociaux ne restent pas pendus.
+ */
+$delaisDesAppelsSociaux = ['timeout' => 10, 'connect_timeout' => 5];
+
 $urlDeRappelSociale = static function (string $fournisseur): string {
     $posee = env(strtoupper($fournisseur).'_REDIRECT_URI');
 
@@ -91,12 +96,14 @@ return [
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
         'redirect' => $urlDeRappelSociale('github'),
+        'guzzle' => $delaisDesAppelsSociaux,
     ],
 
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => $urlDeRappelSociale('google'),
+        'guzzle' => $delaisDesAppelsSociaux,
     ],
 
     /*
@@ -112,6 +119,7 @@ return [
         'key_id' => env('APPLE_KEY_ID'),
         'private_key' => $clePriveeApple(),
         'redirect' => $urlDeRappelSociale('apple'),
+        'guzzle' => $delaisDesAppelsSociaux,
     ],
 
 ];

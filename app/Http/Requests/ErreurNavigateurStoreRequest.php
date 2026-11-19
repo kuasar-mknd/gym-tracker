@@ -54,6 +54,12 @@ class ErreurNavigateurStoreRequest extends FormRequest
     #[\Override]
     protected function prepareForValidation(): void
     {
+        $url = $this->input('url');
+
+        if (is_string($url)) {
+            $this->merge(['url' => preg_replace('/[?#].*$/s', '', $url) ?? $url]);
+        }
+
         $pile = $this->input('pile');
 
         if (is_string($pile) && mb_strlen($pile) > ErreurNavigateur::PILE_MAX_CARACTERES) {
