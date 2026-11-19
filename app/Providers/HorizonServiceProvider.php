@@ -152,14 +152,21 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     private static function sessionValideAuPanneau(Request $request, Admin $administrateur): bool
     {
         $garde = Auth::guard('admin');
-        $empreinte = $request->hasSession() ? $request->session()->get('password_hash_admin') : null;
+        $empreinte = self::empreinteDeLaSession($request);
         $motDePasse = $administrateur->getAuthPassword();
 
-        if (! $garde instanceof SessionGuard || ! is_string($empreinte) || $motDePasse === '') {
+        if (! $garde instanceof SessionGuard || $empreinte === null || $motDePasse === '') {
             return false;
         }
 
         return hash_equals($garde->hashPasswordForCookie($motDePasse), $empreinte)
             || hash_equals($motDePasse, $empreinte);
+    }
+
+    private static function empreinteDeLaSession(Request $request): ?string
+    {
+        $empreinte = $request->hasSession() ? $request->session()->get('password_hash_admin') : null;
+
+        return is_string($empreinte) ? $empreinte : null;
     }
 }
