@@ -55,7 +55,7 @@ const JOURNAL = [
  * `ExerciseCategoryChart` ne trace pas une prop `data`. `JournalChart` et
  * `BodyPartDiffChart` montrent leur état vide, sans canevas, tant qu'ils n'ont
  * rien à tracer : sans point, la garde ci-dessous n'aurait rien lu chez eux.
- * Avec ces props, chacune des quarante-huit cartes rend son canevas.
+ * Avec ces props, chacune des quarante-sept cartes rend son canevas.
  */
 const PROPS_PROPRES = {
     'ExerciseCategoryChart.vue': { exercises: [] },
@@ -68,8 +68,8 @@ const carte = (nom) => cartes[`/resources/js/Components/Stats/${nom}.vue`]
 const boutonNomme = (wrapper, nom) => wrapper.findAll('button').find((bouton) => bouton.text() === nom)
 
 describe('un graphique se lit sans le voir', () => {
-    it('trouve les quarante-huit cartes de graphique', () => {
-        expect(Object.keys(cartes)).toHaveLength(48)
+    it('trouve les quarante-sept cartes de graphique', () => {
+        expect(Object.keys(cartes)).toHaveLength(47)
     })
 
     it('nomme le canevas des habitudes et écrit les valeurs tracées', () => {
