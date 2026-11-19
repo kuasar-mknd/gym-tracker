@@ -94,6 +94,9 @@ final class AppServiceProvider extends ServiceProvider
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         $this->garderLeNomDuRoleDuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
+        \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::recordUsing(
+            static fn (\Throwable $exception): bool => app(\App\Support\AdmissionDesExceptions::class)->admet($exception),
+        );
         $this->ouvrirLeLecteurDeJournaux();
         $this->plafonnerLaCollecteDesErreursDuNavigateur();
 
