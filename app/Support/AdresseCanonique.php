@@ -75,15 +75,30 @@ final class AdresseCanonique
             return $adresse;
         }
 
+        $converti = self::conversionAdmise($domaine);
+
+        if ($converti === null) {
+            return $adresse;
+        }
+
+        return substr($adresse, 0, $arobase + 1).$converti;
+    }
+
+    /**
+     * Le domaine converti, quand les deux traitements s'accordent et qu'un
+     * label est internationalisé ; null sinon.
+     */
+    private static function conversionAdmise(string $domaine): ?string
+    {
         $converti = self::versLAscii($domaine, self::CONVERSION);
 
         if ($converti === null
             || $converti !== self::versLAscii($domaine, self::ANCIEN_TRAITEMENT)
             || ! self::porteUnLabelInternationalise($converti)) {
-            return $adresse;
+            return null;
         }
 
-        return substr($adresse, 0, $arobase + 1).$converti;
+        return $converti;
     }
 
     /**

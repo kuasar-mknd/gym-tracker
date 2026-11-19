@@ -1,8 +1,8 @@
 # Multi-stage build for Gym Tracker
 # 1. Base image for runtime dependencies
-FROM dunglas/frankenphp:1-php8.5 AS base
+FROM dunglas/frankenphp:1-php8.5@sha256:667c5fffd348d9c3c260803d75956f1d9aace7e4b7331d8893de6f101d7e0e57 AS base
 
-# Le plancher de PHP. L'étiquette suit la dernière 8.5 publiée, mais une image
+# Le plancher de PHP. Le digest fige l'image ; Dependabot le monte avec l'étiquette. Une image
 # de base pas encore reconstruite donnerait une version déjà corrigée depuis :
 # la construction s'arrête plutôt que de livrer un PHP sous ce plancher.
 # 8.5.12 corrige CVE-2026-109618 et CVE-2026-109619.
@@ -34,7 +34,7 @@ RUN mkdir -p /etc/mysql/conf.d && printf '[client]\nskip-ssl-verify-server-cert\
 # l'image a tourne sur 25, qui n'etait pas LTS, quand la CI testait sur 24, et
 # les actifs livres n'etaient pas ceux qui avaient ete testes.
 # `LeMemeNodePartoutTest` tient la meme majeure ici, en CI et sur le poste.
-FROM --platform=$BUILDPLATFORM node:26-slim AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 # Meme commande que la CI (`npm ci` nu) : le lock qui a ete teste est celui
@@ -49,7 +49,7 @@ COPY public/*.ico public/*.png public/*.svg ./public/
 RUN npm run build
 
 # 3. Builder stage for Composer dependencies
-FROM --platform=$BUILDPLATFORM composer:2 AS composer-builder
+FROM --platform=$BUILDPLATFORM composer:2@sha256:0c8e663f14c94d07b3c45b175c51f5a14718508f21fe4dd7e54f09488dd0ed71 AS composer-builder
 WORKDIR /app
 COPY composer.* ./
 RUN composer install --no-dev --no-autoloader --no-scripts --ignore-platform-reqs
