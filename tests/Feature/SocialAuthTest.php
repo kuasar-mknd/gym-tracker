@@ -139,4 +139,26 @@ class SocialAuthTest extends TestCase
         $this->assertEquals('112233', $user->refresh()->provider_id);
         $response->assertRedirect(route('dashboard'));
     }
+
+    public function test_social_routes_share_a_per_address_ceiling(): void
+    {
+        foreach (range(1, 20) as $appel) {
+            $this->get(route('social.redirect', 'github'))->assertRedirect();
+        }
+
+        $this->get(route('social.redirect', 'github'))->assertTooManyRequests();
+        $this->get(route('social.callback', 'google'))->assertTooManyRequests();
+        $this->post(route('social.callback.apple'))->assertTooManyRequests();
+    }
+
+    public function test_social_providers_call_out_with_explicit_timeouts(): void
+    {
+        foreach (['github', 'google', 'apple'] as $fournisseur) {
+            $client = new \ReflectionMethod(\Laravel\Socialite\Two\AbstractProvider::class, 'getHttpClient')
+                ->invoke(\Laravel\Socialite\Facades\Socialite::driver($fournisseur));
+
+            $this->assertSame(10, $client->getConfig('timeout'), $fournisseur);
+            $this->assertSame(5, $client->getConfig('connect_timeout'), $fournisseur);
+        }
+    }
 }

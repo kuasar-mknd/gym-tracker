@@ -63,10 +63,4 @@ class ConfirmPasswordRequest extends FormRequest
             ]);
         }
     }
-
-    #[\Override]
-    protected function passedValidation(): void
-    {
-        $this->viderLeCompteurDeTentatives();
-    }
 }
