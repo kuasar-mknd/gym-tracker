@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Str;
 
 $cookieReserveAHttps = (bool) env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production');
-$prefixeDeLHote = $cookieReserveAHttps && env('SESSION_DOMAIN') === null && env('SESSION_PATH', '/') === '/'
+$prefixeDeLHote = $cookieReserveAHttps && in_array(env('SESSION_DOMAIN'), [null, ''], true) && in_array(env('SESSION_PATH', '/'), ['/', ''], true)
     ? '__Host-'
     : '';
 
