@@ -20,7 +20,7 @@ use App\Models\Admin;
  * mise à jour du mot de passe ou du secret par le constructeur de requêtes) n'émet pas l'évènement : les
  * jetons restent actifs, sans créateur ou avec l'ancien mot de passe ou secret,
  * jusqu'à leur expiration ou `diagnostic:revoquer --tous`. Aucun chemin livré
- * n'en fait une ; `JetonsDeDiagnosticTest` en interdit l'écriture dans `app/`.
+ * n'en fait une ; `JetonsDeDiagnosticTest` en interdit les formes courantes dans `app/`.
  */
 trait RevoqueLesJetonsDeDiagnostic
 {
