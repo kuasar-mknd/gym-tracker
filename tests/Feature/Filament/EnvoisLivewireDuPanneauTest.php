@@ -38,11 +38,46 @@ it('refuse les appels d’envoi de Livewire à une page du panneau qui n’en d�
         ->assertStatus(403);
 })->with(['_startUpload', '_finishUpload', '_removeUpload', '_uploadErrored']);
 
+/**
+ * @param  array<string, string>  $parametres
+ */
+function adresseSigneeDEnvoi(string $route, array $parametres = []): string
+{
+    return URL::temporarySignedRoute($route, now()->addMinutes(5), $parametres, absolute: false);
+}
+
+it('ouvre la route d’envoi à un administrateur connecté (témoin)', function (): void {
+    Storage::fake('tmp-for-tests');
+    $admin = FilamentAdminPanel::admin();
+
+    $this->actingAs($admin, 'admin')
+        ->withSession(['_token' => 'jeton'])
+        ->postJson(adresseSigneeDEnvoi('livewire.upload-file'), ['files' => [UploadedFile::fake()->image('a.png')]], ['X-CSRF-TOKEN' => 'jeton'])
+        ->assertOk()
+        ->assertJsonStructure(['paths']);
+});
+
 it('ferme la route d’envoi à qui n’est pas administrateur connecté', function (): void {
     Storage::fake('local');
-    $adresse = URL::temporarySignedRoute('livewire.upload-file', now()->addMinutes(5), [], absolute: false);
 
-    $this->postJson($adresse, ['files' => [UploadedFile::fake()->image('a.png')]])->assertStatus(401);
+    $this->postJson(adresseSigneeDEnvoi('livewire.upload-file'), ['files' => [UploadedFile::fake()->image('a.png')]])
+        ->assertUnauthorized();
+});
+
+it('ferme la route d’aperçu à qui n’est pas administrateur connecté', function (): void {
+    $this->getJson(adresseSigneeDEnvoi('livewire.preview-file', ['filename' => 'a.png']))->assertUnauthorized();
+});
+
+it('ferme la route d’envoi hors de la liste d’adresses, en production', function (): void {
+    config(['app.admin_allowed_ips' => ['203.0.113.5']]);
+    $this->app->detectEnvironment(fn (): string => 'production');
+    $admin = FilamentAdminPanel::admin();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])
+        ->withSession(['_token' => 'jeton'])
+        ->postJson(adresseSigneeDEnvoi('livewire.upload-file'), ['files' => [UploadedFile::fake()->image('a.png')]], ['X-CSRF-TOKEN' => 'jeton'])
+        ->assertNotFound();
 });
 
 it('lit les changements du journal d’activité dans attribute_changes', function (): void {

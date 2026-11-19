@@ -42,6 +42,15 @@ final class AssuranceDuSecondFacteur
     }
 
     /**
+     * Comme `estPortee()`, mais sans session (console, file) il n'y a rien à
+     * prouver : seule une requête HTTP porte une session.
+     */
+    public static function estPorteeSiSession(Admin $administrateur): bool
+    {
+        return ! request()->hasSession() || self::estPortee($administrateur);
+    }
+
+    /**
      * Périme la preuve de toutes les sessions ouvertes de l'administrateur.
      */
     public static function fermerLesSessions(Admin $administrateur): void

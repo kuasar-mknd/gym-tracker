@@ -14,6 +14,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
+use App\Support\AssuranceDuSecondFacteur;
 use App\Support\BaseDeDonnees\ConnexionMariaDb;
 use App\Support\BaseDeDonnees\ConnexionMySql;
 use App\Support\ConnexionSociale\FournisseurApple;
@@ -42,6 +43,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Livewire\Features\SupportFileUploads\FilePreviewController;
 use PDO;
 use RuntimeException;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -597,7 +599,8 @@ final class AppServiceProvider extends ServiceProvider
      * double authentification obligatoire (#2353) ne couvre donc pas : un
      * compte connecté par son seul mot de passe, avant son enrôlement, les
      * ouvrirait. Leurs capacités se refusent à un administrateur qui n'a pas
-     * enrôlé son application.
+     * enrôlé son application, ou dont la session ne porte pas la preuve du
+     * second facteur (`AssuranceDuSecondFacteur`, audit 5.2).
      *
      * Posée à l'enregistrement, avant `Gate::before` de Spatie (posé au
      * démarrage du paquet, qui répond vrai à qui tient la permission du même
@@ -608,7 +611,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         Gate::before(static fn (?Authenticatable $utilisateur, string $capacite): ?bool => $utilisateur instanceof Admin
             && in_array($capacite, ['viewPulse', 'view-outils', 'view-logs'], true)
-            && ! $utilisateur->aLaDoubleAuthentification() ? false : null);
+            && (! $utilisateur->aLaDoubleAuthentification() || ! AssuranceDuSecondFacteur::estPorteeSiSession($utilisateur)) ? false : null);
     }
 
     /**
@@ -666,12 +669,13 @@ final class AppServiceProvider extends ServiceProvider
      * notifications de la page de connexion compris, répondait 500 ou, sur
      * une page du panneau, signait une adresse d'envoi (audit 6.3, 6.7). Il se
      * refuse en 403 avant tout traitement de Livewire, et la route d'envoi
-     * elle-même ne sert qu'un administrateur connecté, depuis une adresse
-     * admise.
+     * elle-même, comme celle de l'aperçu, ne sert qu'un administrateur connecté,
+     * depuis une adresse admise.
      */
     private function refuserLesEnvoisDeFichiersDeLivewire(): void
     {
         config(['livewire.temporary_file_upload.middleware' => [IpWhitelist::class, 'auth:admin', 'throttle:60,1']]);
+        FilePreviewController::$middleware = ['web', IpWhitelist::class, 'auth:admin'];
 
         \Livewire\on('call', static function (object $composant, string $methode, array $parametres): void {
             if (! in_array($methode, ['_startUpload', '_finishUpload', '_removeUpload', '_uploadErrored'], true)) {

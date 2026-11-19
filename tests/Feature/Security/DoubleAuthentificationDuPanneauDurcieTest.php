@@ -34,6 +34,10 @@ function administrateurDuSecondFacteur(): Admin
     return $administrateur;
 }
 
+it('sert la connexion de l’application au panneau', function (): void {
+    $this->get('/backoffice/login')->assertOk()->assertSeeLivewire(ConnexionDuPanneau::class);
+});
+
 describe('la régénération des codes de récupération (5.0)', function (): void {
     it('refuse le mot de passe seul, sans le code de l’application', function (): void {
         $administrateur = administrateurDuSecondFacteur();
