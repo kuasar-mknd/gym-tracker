@@ -41,6 +41,33 @@ function reglagesDeRedisCacheAPart(): void
     Config::set('database.redis.cache.port', '6379');
 }
 
+/**
+ * Les sessions posées sur leur propre instance, comme le fait la composition
+ * de production, avec le cache à part.
+ */
+function reglagesDeRedisSessionsAPart(): void
+{
+    reglagesDeRedisCacheAPart();
+    Config::set('database.redis.sessions.host', 'redis-sessions');
+    Config::set('database.redis.sessions.port', '6379');
+}
+
+/**
+ * Les trois instances en ordre : données en `noeviction`, cache et sessions
+ * sous leur politique, chacune avec les surcharges données.
+ *
+ * @param  array<string, int|float|string>  $sessions
+ * @param  array<string, int|float|string>  $donnees
+ */
+function reglagesDeRedisTroisInstances(array $sessions = [], array $donnees = []): void
+{
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['maxmemory_policy' => 'noeviction', ...$donnees]),
+        'cache' => RedisQuiRepond::info(),
+        'sessions' => RedisQuiRepond::info(['maxmemory_policy' => 'volatile-lru', 'maxmemory' => 67_108_864, 'used_memory' => 6_710_886, ...$sessions]),
+    ]);
+}
+
 beforeEach(function (): void {
     Config::set('database.redis.default.host', 'redis');
     Config::set('database.redis.default.port', '6379');
@@ -48,6 +75,9 @@ beforeEach(function (): void {
     Config::set('database.redis.cache.host', 'redis');
     Config::set('database.redis.cache.port', '6379');
     Config::set('database.redis.cache.url');
+    Config::set('database.redis.sessions.host', 'redis');
+    Config::set('database.redis.sessions.port', '6379');
+    Config::set('database.redis.sessions.url');
 });
 
 it('ne juge pas Redis hors production, sans le lire', function (): void {
@@ -154,7 +184,7 @@ it('met Redis au rouge quand l’instance des données a évincé une clé, et d
         ->and($resultat->shortSummary)->toBe('Redis 8.10.3 · données 10 % du plafond · allkeys-lru · 17 évictions')
         ->and($resultat->notificationMessage)
         ->toContain('17 clés évincées depuis le démarrage de Redis')
-        ->toContain('file, sessions et verrous')
+        ->toContain('file, verrous et, sans instance des sessions à part, sessions y vivent')
         ->toContain('--maxmemory');
 });
 
@@ -403,4 +433,93 @@ it('met Redis au rouge quand l’instance du cache à part ne répond pas', func
 
     expect($resultat->status->value)->toBe('failed')
         ->and($resultat->notificationMessage)->toContain('L\'instance du cache ne répond pas à INFO');
+});
+
+/*
+ * Les sessions ont leur instance (`redis-sessions`, `volatile-lru`) : un
+ * afflux de visiteurs sans compte y évince les sessions les moins récentes
+ * au lieu de refuser une écriture à la file et aux verrous. Une éviction y
+ * est donc un signe, pas une panne : orange ; un refus d'écriture, lui, ferme
+ * les connexions : rouge.
+ */
+it('lit l’instance des sessions dès que son hôte, son port ou son URL mène ailleurs', function (string $cle, string $valeur): void {
+    Config::set("database.redis.sessions.{$cle}", $valeur);
+
+    expect(app(LecteurDeRedis::class)->instances())->toBe(['donnees' => 'default', 'sessions' => 'sessions']);
+})->with([
+    'autre hôte' => ['host', 'redis-sessions'],
+    'même hôte, autre port' => ['port', '6380'],
+    'autre URL, même hôte et même port' => ['url', 'redis://redis-sessions:6379'],
+]);
+
+it('lit les trois instances en production, et met les sessions au vert sous volatile-lru, pleines ou non', function (): void {
+    reglagesDeRedisSessionsAPart();
+    reglagesDeRedisTroisInstances();
+
+    $resultat = reglagesDeRedisEnProduction()->run();
+
+    expect(app(LecteurDeRedis::class)->instances())->toBe(['donnees' => 'default', 'cache' => 'cache', 'sessions' => 'sessions'])
+        ->and($resultat->status->value)->toBe('ok', $resultat->notificationMessage)
+        ->and($resultat->shortSummary)->toContain('· sessions 10 % · volatile-lru · 0 éviction')
+        ->and($resultat->meta)->toHaveKeys(['donnees', 'cache', 'sessions']);
+
+    reglagesDeRedisTroisInstances(['used_memory' => 67_000_000]);
+
+    expect(reglagesDeRedisEnProduction()->run()->status->value)->toBe('ok');
+});
+
+it('met Redis à l’orange quand les sessions évincent, sans toucher au reste', function (): void {
+    reglagesDeRedisSessionsAPart();
+    reglagesDeRedisTroisInstances(['evicted_keys' => 420]);
+
+    $resultat = reglagesDeRedisEnProduction()->run();
+
+    expect($resultat->status->value)->toBe('warning')
+        ->and($resultat->notificationMessage)->toContain('L\'instance des sessions a évincé 420 clés depuis le démarrage de Redis')
+        ->toContain('redis-sessions');
+
+    expect($resultat->notificationMessage)->not->toContain('file');
+});
+
+it('met Redis au rouge quand les sessions refusent une écriture, et nomme leur service', function (): void {
+    reglagesDeRedisSessionsAPart();
+    reglagesDeRedisTroisInstances(['errorstat_OOM' => 'count=7']);
+
+    $resultat = reglagesDeRedisEnProduction()->run();
+
+    expect($resultat->status->value)->toBe('failed')
+        ->and($resultat->notificationMessage)->toContain('L\'instance des sessions : 7 écritures refusées')
+        ->toContain('les connexions et toute requête qui ouvre une session échouent')
+        ->toContain('du service redis-sessions');
+});
+
+it('met Redis à l’orange quand les sessions ne sont pas sous volatile-lru', function (string $politique): void {
+    reglagesDeRedisSessionsAPart();
+    reglagesDeRedisTroisInstances(['maxmemory_policy' => $politique]);
+
+    $resultat = reglagesDeRedisEnProduction()->run();
+
+    expect($resultat->status->value)->toBe('warning')
+        ->and($resultat->notificationMessage)->toContain("politique {$politique} au lieu de volatile-lru")
+        ->toContain('--maxmemory-policy volatile-lru');
+})->with(['noeviction', 'allkeys-lru']);
+
+it('met Redis au rouge quand l’instance des sessions ne répond pas, ou que son instantané échoue', function (): void {
+    reglagesDeRedisSessionsAPart();
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['maxmemory_policy' => 'noeviction']),
+        'cache' => RedisQuiRepond::info(),
+        'sessions' => new RuntimeException('read error on connection'),
+    ]);
+
+    $muette = reglagesDeRedisEnProduction()->run();
+
+    reglagesDeRedisTroisInstances(['maxmemory_policy' => 'volatile-lru', 'rdb_last_bgsave_status' => 'err']);
+    $enEchec = reglagesDeRedisEnProduction()->run();
+
+    expect($muette->status->value)->toBe('failed')
+        ->and($muette->notificationMessage)->toContain('L\'instance des sessions ne répond pas à INFO')
+        ->and($muette->shortSummary)->toContain('sessions ne répond pas')
+        ->and($enEchec->status->value)->toBe('failed')
+        ->and($enEchec->notificationMessage)->toContain('Persistance de l\'instance des sessions');
 });

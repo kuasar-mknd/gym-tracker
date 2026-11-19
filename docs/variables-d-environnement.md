@@ -103,7 +103,7 @@ Les guillemets doubles seuls n'ont pas cassé l'initialisation (non reproduit). 
 
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
-| `REDIS_PASSWORD` | oui | vide : la mise à jour de la pile est refusée | Mot de passe imposé aux services `redis` et `redis-cache`, et utilisé par `app`, `worker` et `scheduler` pour les sessions, le cache, les files et Horizon. |
+| `REDIS_PASSWORD` | oui | vide : la mise à jour de la pile est refusée | Mot de passe imposé aux trois services Redis (`redis`, `redis-cache`, `redis-sessions`), et utilisé par `app`, `worker` et `scheduler` pour les sessions, le cache, les files et Horizon. |
 
 Absent ou vide, Compose refuse la mise à jour (`${REDIS_PASSWORD:?…}`) plutôt que de lancer un Redis sans authentification (`requirepass` vide) : c'est le seul garde-fou.
 
@@ -249,11 +249,13 @@ Tant qu'il est faux, aucun jeton ne se crée, et chaque démarrage de `app` rév
 | `APP_ENV` | `production`, aussi posée par le `Dockerfile` | Cookie de session réservé à HTTPS, panneau fermé sans `ADMIN_ALLOWED_IPS`, Horizon fermé hors liste et hors administrateur du panneau, mots de passe à casse mixte et absents des fuites connues. Telescope, dépendance de développement, n'est pas dans l'image. |
 | `ASSET_URL` | la valeur d'`APP_URL` | Les actifs se servent depuis l'adresse publique. |
 | `DB_CONNECTION`, `DB_HOST`, `DB_PORT` | `mysql`, `db`, `3306` | Le service `db` ; `entrypoint.sh` l'attend jusqu'à vingt minutes avant d'abandonner. |
-| `REDIS_HOST`, `REDIS_PORT` | `redis`, `6379` | Le service `redis` : l'instance des données (file, Horizon, sessions, verrous, limiteurs, battements de santé), en `noeviction`, persistée dans `redis_data`. |
+| `REDIS_HOST`, `REDIS_PORT` | `redis`, `6379` | Le service `redis` : l'instance des données (file, Horizon, verrous, limiteurs, battements de santé), en `noeviction`, persistée dans `redis_data`. |
 | `REDIS_CACHE_HOST`, `REDIS_CACHE_PORT` | `redis-cache`, `6379` | Le service `redis-cache` : l'instance du cache, en `allkeys-lru`, sans persistance ni volume (elle repart vide). Le mot de passe est celui de `REDIS_PASSWORD`. Absentes, la connexion `cache` retombe sur `REDIS_HOST` et `REDIS_PORT` : Sail et la CI gardent une seule instance. |
+| `REDIS_SESSIONS_HOST`, `REDIS_SESSIONS_PORT` | `redis-sessions`, `6379` | Le service `redis-sessions` : l'instance des sessions, plafonnée à 64 Mo, en `volatile-lru`, avec un instantané dans `redis_sessions_data` et sans AOF. Absentes, la connexion `sessions` retombe sur `REDIS_HOST` et `REDIS_PORT` : Sail et la CI gardent une seule instance. Le mot de passe est celui de `REDIS_PASSWORD`. |
+| `SESSION_CONNECTION` | `sessions` | La connexion Redis des sessions (`config/database.php`). Vide, la connexion par défaut : celle des données. Posée dans une pile dont l'image ne connaît pas la connexion `sessions`, toute requête qui ouvre une session échoue. |
 | `CACHE_DURABLE_STORE` | `redis-durable` | Le magasin des limiteurs de tentatives et des battements de « File d'attente » et « Planificateur » : la connexion des données, que le cache à part ne vide pas. Vide, il suit le magasin par défaut. |
 | `VERSION_ATTENDUE_DE_MYSQL`, `VERSION_ATTENDUE_DE_REDIS` | l'étiquette de `image:` de `db` et de `redis`, sans sa variante : `8.4` et `8.10.3` | Les versions que « Versions des services » attend des deux serveurs. Elles montent avec l'étiquette, dans la même PR (`LesVersionsAttenduesSuiventLesImagesTest`). Une pile qui ne les a pas n'a pas reçu la composition de la release. |
-| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions, cache, résultats des contrôles de santé, versions annoncées par les conteneurs et file d'Horizon, partagés par les trois conteneurs de l'application. |
+| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions (sur `redis-sessions`), cache (sur `redis-cache`), résultats des contrôles de santé, versions annoncées par les conteneurs et file d'Horizon, partagés par les trois conteneurs de l'application. |
 | `MAIL_MAILER` | `smtp` | Les courriels partent par le serveur de `MAIL_HOST`. |
 | `GOMAXPROCS` | `2` | Plafonne les threads Go de FrankenPHP dans `app`. `worker` et `scheduler`, en PHP CLI, l'ignorent. |
 | `OCTANE_SERVER` | `frankenphp`, dans `app` seulement | Serveur que visent `octane:status` et `octane:reload`. L'image lance `octane:frankenphp` directement. |

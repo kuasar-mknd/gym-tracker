@@ -72,13 +72,13 @@ Le compte est `admin@gymtracker.app`. Le panneau est à `/backoffice`, ouvert au
 
    Vous pouvez aussi utiliser la mise à jour de la pile de votre outil. L'image est retéléchargée, et les conteneurs dont l'image a changé sont recréés.
 4. Vérifier :
-   - `docker compose -f docker-compose.prod.yml ps` : `db`, `redis` et `redis-cache` en `healthy` ;
+   - `docker compose -f docker-compose.prod.yml ps` : `db`, `redis`, `redis-cache` et `redis-sessions` en `healthy` ;
    - la page « Santé » reste verte. « Versions des conteneurs » et « Versions des services » disent si les conteneurs et les services servent la version attendue.
 
 Ce qu'il faut savoir :
 
 - **La base et Redis ne suivent pas `v1`.** `db` et `redis` lancent l'étiquette de la composition (`mysql:8.4`, `redis:8.10.3-alpine`). C'est pourquoi la pile doit recevoir la composition de la release à chaque fois.
-- **Une release qui monte `redis`** se déploie par la marche « Redis » de `.ai/rules/dependencies.md`, à une heure creuse :
+- **Une release qui monte `redis`** (`redis-cache` et `redis-sessions` portent la même étiquette et suivent la même marche, `redis-sessions` avec son volume `redis_sessions_data`) se déploie par la marche « Redis » de `.ai/rules/dependencies.md`, à une heure creuse :
   1. arrêter l'application, puis Redis ;
   2. copier le volume de données de `redis` ;
   3. mettre à jour, puis vérifier ;
@@ -97,7 +97,7 @@ Ce qu'il faut savoir :
    docker compose -f docker-compose.prod.yml up -d --remove-orphans
    ```
 
-   Sans `--remove-orphans`, `redis-cache` reste lancé.
+   Sans `--remove-orphans`, `redis-cache` et `redis-sessions` restent lancés.
 
 Ce que le retour ne défait pas :
 

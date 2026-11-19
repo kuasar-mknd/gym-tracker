@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Sante;
 
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Lit la version que rendent MySQL et Redis, en lecture seule (#2152).
@@ -40,12 +41,39 @@ class LecteurDesVersionsDesServices
     }
 
     /**
-     * `redis_version` de l'instance des données, par la liste blanche de
-     * `LecteurDeRedis`, résolu à chaque lecture comme les contrôles le
-     * résolvent.
+     * `redis_version` de chaque instance que lit `LecteurDeRedis` (données,
+     * et cache et sessions quand elles sont à part), par sa liste blanche,
+     * résolu à chaque lecture comme les contrôles le résolvent. Une instance
+     * du cache ou des sessions qui ne répond pas, ou qui ne rend pas sa
+     * version, n'est pas comptée : « Réglages de Redis » la juge. Celle des
+     * données qui ne répond pas lève, comme avant. Des versions de même
+     * valeur rendent cette version ; sinon celles lues, séparées par une
+     * barre, que la version attendue ne peut pas égaler.
      */
     public function redis(): ?string
     {
-        return app(LecteurDeRedis::class)->lire('default')['redis_version'] ?? null;
+        $lecteur = app(LecteurDeRedis::class);
+        $versions = [];
+
+        foreach ($lecteur->instances() as $role => $connexion) {
+            $version = $this->versionDeLInstance($lecteur, $role, $connexion);
+
+            if ($version !== null) {
+                $versions[$role] = $version;
+            }
+        }
+
+        $distinctes = array_values(array_unique($versions));
+
+        return count($distinctes) > 1 ? implode(' / ', $versions) : ($distinctes[0] ?? null);
+    }
+
+    private function versionDeLInstance(LecteurDeRedis $lecteur, string $role, string $connexion): ?string
+    {
+        try {
+            return $lecteur->lire($connexion)['redis_version'] ?? null;
+        } catch (Throwable $erreur) {
+            return $role === 'donnees' ? throw $erreur : null;
+        }
     }
 }

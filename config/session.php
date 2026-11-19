@@ -89,6 +89,8 @@ return [
     | When using the "database" or "redis" session drivers, you may specify a
     | connection that should be used to manage these sessions. This should
     | correspond to a connection in your database configuration options.
+    | La production pose `sessions`, l'instance Redis des sessions ; sans
+    | valeur, la connexion par défaut.
     |
     */
 

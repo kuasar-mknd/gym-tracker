@@ -21,7 +21,7 @@ use Throwable;
 final class ReleverLesCompteursDeRedis extends Command
 {
     /** @var array<string, string> */
-    private const array INSTANCES = ['donnees' => 'Instance des données', 'cache' => 'Instance du cache'];
+    private const array INSTANCES = ['donnees' => 'Instance des données', 'cache' => 'Instance du cache', 'sessions' => 'Instance des sessions'];
 
     #[\Override]
     protected $signature = 'redis:relever';

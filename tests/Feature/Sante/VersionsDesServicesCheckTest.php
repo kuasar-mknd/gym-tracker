@@ -239,3 +239,70 @@ it('lit la version de Redis par le lecteur d’INFO, sur l’instance des donné
         ->and(app(LecteurDesVersionsDesServices::class))->toBeInstanceOf(LecteurDesVersionsDesServices::class)
         ->and(app(LecteurDeRedis::class)->instances())->toHaveKey('donnees', 'default');
 });
+
+it('lit la version de chaque instance, et rend celles qui diffèrent pour que la version attendue ne les égale pas', function (): void {
+    Config::set('database.redis.default.host', 'redis');
+    Config::set('database.redis.default.port', '6379');
+    Config::set('database.redis.default.url');
+    Config::set('database.redis.cache.host', 'redis');
+    Config::set('database.redis.cache.port', '6379');
+    Config::set('database.redis.cache.url');
+    Config::set('database.redis.sessions.host', 'redis-sessions');
+    Config::set('database.redis.sessions.port', '6379');
+    Config::set('database.redis.sessions.url');
+
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+        'sessions' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+    ]);
+
+    expect(app(LecteurDesVersionsDesServices::class)->redis())->toBe('8.10.3');
+
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+        'sessions' => RedisQuiRepond::info(['redis_version' => '8.10.2']),
+    ]);
+
+    $lue = app(LecteurDesVersionsDesServices::class)->redis();
+
+    expect($lue)->toBe('8.10.3 / 8.10.2')
+        ->and(VersionsDesServicesCheck::correspond('8.10.3', (string) $lue))->toBeFalse();
+});
+
+it('ne compte pas une instance du cache ou des sessions muette ou sans version, et lève pour celle des données', function (): void {
+    Config::set('database.redis.default.host', 'redis');
+    Config::set('database.redis.default.port', '6379');
+    Config::set('database.redis.default.url');
+    Config::set('database.redis.cache.host', 'redis-cache');
+    Config::set('database.redis.cache.port', '6379');
+    Config::set('database.redis.cache.url');
+    Config::set('database.redis.sessions.host', 'redis-sessions');
+    Config::set('database.redis.sessions.port', '6379');
+    Config::set('database.redis.sessions.url');
+
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+        'cache' => new RuntimeException('Connection refused'),
+        'sessions' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+    ]);
+
+    expect(app(LecteurDesVersionsDesServices::class)->redis())->toBe('8.10.3');
+
+    $sansVersion = RedisQuiRepond::info();
+    unset($sansVersion['redis_version']);
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+        'cache' => $sansVersion,
+        'sessions' => new RuntimeException('Connection refused'),
+    ]);
+
+    expect(app(LecteurDesVersionsDesServices::class)->redis())->toBe('8.10.3');
+
+    RedisQuiRepond::repond([
+        'default' => new RuntimeException('Connection refused'),
+        'cache' => RedisQuiRepond::info(),
+        'sessions' => RedisQuiRepond::info(),
+    ]);
+
+    expect(fn () => app(LecteurDesVersionsDesServices::class)->redis())->toThrow(RuntimeException::class);
+});

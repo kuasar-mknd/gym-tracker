@@ -81,21 +81,21 @@ class LecteurDeRedis
 
     /**
      * Les instances à lire, par rôle : celle des données (connexion
-     * `default` : file, sessions, verrous), et celle du cache seulement
-     * quand la connexion `cache` mène ailleurs. Tant qu'elles partagent
-     * l'adresse, c'est la même instance, lue une fois.
+     * `default` : file, verrous, limiteurs), et celles du cache et des
+     * sessions seulement quand leur connexion (`cache`, `sessions`) mène
+     * ailleurs. Tant qu'elles partagent l'adresse, c'est la même instance,
+     * lue une fois.
      *
      * @return array<string, string> le nom de la connexion, par rôle
      */
     public function instances(): array
     {
-        $instances = ['donnees' => 'default'];
+        $apart = array_filter(
+            ['cache' => 'cache', 'sessions' => 'sessions'],
+            fn (string $connexion): bool => $this->adresse('default') !== $this->adresse($connexion),
+        );
 
-        if ($this->adresse('default') !== $this->adresse('cache')) {
-            $instances['cache'] = 'cache';
-        }
-
-        return $instances;
+        return ['donnees' => 'default', ...$apart];
     }
 
     /**

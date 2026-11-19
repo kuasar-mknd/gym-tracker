@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Providers\SanteServiceProvider;
 use App\Support\JournalDuDiagnostic;
 use App\Support\MagasinDurable;
+use Illuminate\Session\CacheBasedSessionHandler;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Checks\QueueCheck;
@@ -16,9 +17,12 @@ use Symfony\Component\Yaml\Yaml;
  * Un seul Redis sous `allkeys-lru` partageait l'éviction entre le cache, la
  * file, les sessions, les verrous et les limiteurs : remplir le cache
  * emportait une session ou un compteur de tentatives (#2151). La composition
- * en lance deux : `redis` (`noeviction`, persisté) porte tout ce qui ne doit
+ * en lance trois : `redis` (`noeviction`, persisté) porte tout ce qui ne doit
  * pas disparaître, `redis-cache` (`allkeys-lru`, sans persistance ni volume)
- * le cache seul.
+ * le cache seul, `redis-sessions` (`volatile-lru`, instantané) les sessions :
+ * une requête sans cookie en ouvre une, et un afflux depuis beaucoup
+ * d'adresses remplissait l'instance des données, qui refuse alors toute
+ * écriture, file et verrous compris.
  */
 
 /**
@@ -74,6 +78,22 @@ it('range la file, les sessions et les verrous sous noeviction, et le cache sous
         ->and(deuxRedisOptions(deuxRedisService('redis-cache')))->toHaveKey('--maxmemory-policy', 'allkeys-lru');
 });
 
+it('range les sessions sous volatile-lru, évinçables parce que chacune porte une échéance', function (): void {
+    expect(deuxRedisOptions(deuxRedisService('redis-sessions')))->toHaveKey('--maxmemory-policy', 'volatile-lru');
+});
+
+it('garde les sessions par un instantané et un volume à elles, sans AOF', function (): void {
+    $sessions = deuxRedisService('redis-sessions');
+    $commande = (string) preg_replace('/\s+/', ' ', deuxRedisTexte($sessions, 'command'));
+
+    expect(deuxRedisOptions($sessions))->toHaveKey('--appendonly', 'no')
+        ->and(deuxRedisOptions($sessions))->toHaveKey('--stop-writes-on-bgsave-error', 'no')
+        ->and($commande)->toContain('--save 300 1')
+        ->and($sessions['volumes'] ?? [])->toBe(['redis_sessions_data:/data'])
+        ->and(array_keys((array) data_get(Yaml::parseFile(base_path('docker-compose.prod.yml')), 'volumes')))->toContain('redis_sessions_data')
+        ->and(deuxRedisService('redis')['volumes'] ?? [])->not->toContain('redis_sessions_data:/data');
+});
+
 it('ne persiste pas le cache, et ne lui donne aucun volume', function (): void {
     $cache = deuxRedisService('redis-cache');
     $options = deuxRedisOptions($cache);
@@ -102,9 +122,10 @@ it('plafonne chaque instance, avec la marge d’un conteneur au-dessus', functio
 })->with([
     'les données : la copie d’un fork compte dans le conteneur' => ['redis', 128],
     'le cache : fragmentation et modules de l’image' => ['redis-cache', 64],
+    'les sessions : fragmentation, modules de l’image et copie de l’instantané' => ['redis-sessions', 64],
 ]);
 
-it('exige le mot de passe de Redis, sur les deux instances, et le teste par un PONG', function (string $service): void {
+it('exige le mot de passe de Redis, sur les trois instances, et le teste par un PONG', function (string $service): void {
     $composition = deuxRedisService($service);
     $sonde = deuxRedisTexte($composition, 'healthcheck.test.1');
 
@@ -116,27 +137,39 @@ it('exige le mot de passe de Redis, sur les deux instances, et le teste par un P
         ->and(deuxRedisTexte($composition, 'environment.REDISCLI_AUTH'))->toBe('${REDIS_PASSWORD}')
         ->and($sonde)->toContain('PONG')
         ->and($sonde)->not->toContain('-a ');
-})->with(['redis', 'redis-cache']);
+})->with(['redis', 'redis-cache', 'redis-sessions']);
 
-it('ne publie aucun port et ne joint que le réseau backend, pour les deux instances', function (string $service): void {
+it('ne publie aucun port et ne joint que le réseau backend, pour les trois instances', function (string $service): void {
     $composition = deuxRedisService($service);
 
     expect($composition)->not->toHaveKey('ports')
         ->and($composition)->not->toHaveKey('expose')
         ->and($composition['networks'] ?? [])->toBe(['backend']);
-})->with(['redis', 'redis-cache']);
+})->with(['redis', 'redis-cache', 'redis-sessions']);
 
-it('branche le cache et les magasins durables sur app, worker et scheduler', function (string $service): void {
+it('branche le cache, les sessions et les magasins durables sur app, worker et scheduler', function (string $service): void {
     $composition = deuxRedisService($service);
 
     expect(deuxRedisTexte($composition, 'environment.REDIS_CACHE_HOST'))->toBe('redis-cache')
         ->and(deuxRedisTexte($composition, 'environment.REDIS_CACHE_PORT'))->toBe('6379')
-        ->and(deuxRedisTexte($composition, 'environment.CACHE_DURABLE_STORE'))->toBe('redis-durable');
+        ->and(deuxRedisTexte($composition, 'environment.CACHE_DURABLE_STORE'))->toBe('redis-durable')
+        ->and(deuxRedisTexte($composition, 'environment.SESSION_DRIVER'))->toBe('redis')
+        ->and(deuxRedisTexte($composition, 'environment.SESSION_CONNECTION'))->toBe('sessions')
+        ->and(deuxRedisTexte($composition, 'environment.REDIS_SESSIONS_HOST'))->toBe('redis-sessions')
+        ->and(deuxRedisTexte($composition, 'environment.REDIS_SESSIONS_PORT'))->toBe('6379');
 
     foreach (['redis', 'redis-cache'] as $dependance) {
         expect(deuxRedisTexte($composition, "depends_on.{$dependance}.condition"))->toBe('service_healthy');
     }
 })->with(['app', 'worker', 'scheduler']);
+
+it('n’attend l’instance des sessions que dans app, le seul service qui ouvre une session', function (string $service, string $attendu): void {
+    expect(deuxRedisTexte(deuxRedisService($service), 'depends_on.redis-sessions.condition'))->toBe($attendu);
+})->with([
+    'app' => ['app', 'service_healthy'],
+    'worker' => ['worker', ''],
+    'scheduler' => ['scheduler', ''],
+]);
 
 it('range les limiteurs et les battements sur la connexion des données quand le magasin durable est posé', function (): void {
     config()->set('cache.limiter', 'redis-durable');
@@ -145,10 +178,38 @@ it('range les limiteurs et les battements sur la connexion des données quand le
         ->and(config('cache.stores.redis.connection'))->toBe('cache');
 });
 
-it('retombe sur une seule instance quand REDIS_CACHE_HOST et REDIS_CACHE_PORT manquent', function (): void {
+it('retombe sur une seule instance quand REDIS_CACHE_HOST, REDIS_SESSIONS_HOST et leurs ports manquent', function (): void {
     expect(config('database.redis.cache.host'))->toBe(config('database.redis.default.host'))
-        ->and(config('database.redis.cache.port'))->toBe(config('database.redis.default.port'));
+        ->and(config('database.redis.cache.port'))->toBe(config('database.redis.default.port'))
+        ->and(config('database.redis.sessions.host'))->toBe(config('database.redis.default.host'))
+        ->and(config('database.redis.sessions.port'))->toBe(config('database.redis.default.port'))
+        ->and(config('database.redis.sessions.password'))->toBe(config('database.redis.default.password'));
 });
+
+it('nomme la connexion des sessions sur leur magasin sans déplacer celle du cache (le comportement de Laravel que la composition suppose ; la connexion elle-même ne s’ouvre pas, la suite n’a pas de Redis)', function (): void {
+    config()->set('session.driver', 'redis');
+    config()->set('session.connection', 'sessions');
+    config()->set('session.store');
+
+    $cacheAvant = deuxRedisConnexionDuMagasin(Cache::store('redis')->getStore());
+    $magasin = app('session')->driver()->getHandler();
+
+    expect($magasin)->toBeInstanceOf(CacheBasedSessionHandler::class);
+    assert($magasin instanceof CacheBasedSessionHandler);
+
+    expect(deuxRedisConnexionDuMagasin($magasin->getCache()->getStore()))->toBe('sessions')
+        ->and($cacheAvant)->toBe('cache')
+        ->and(deuxRedisConnexionDuMagasin(Cache::store('redis')->getStore()))->toBe('cache');
+});
+
+/**
+ * La connexion nommée d'un magasin Redis, lue sans l'ouvrir (la suite n'a pas
+ * de Redis).
+ */
+function deuxRedisConnexionDuMagasin(object $magasin): mixed
+{
+    return new ReflectionProperty($magasin, 'connection')->getValue($magasin);
+}
 
 it('range ce qui doit survivre au cache sur le magasin que nomme cache.limiter', function (): void {
     config()->set('cache.stores.durable-essai', ['driver' => 'array']);
