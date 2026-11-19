@@ -126,9 +126,9 @@ L'application s'ouvre par le proxy inverse HTTPS, jamais directement sur le port
 
 ### Vérifier le port local
 
-À faire après tout déploiement qui recrée `app` (la mise à jour de la pile le fait). Dans l'ordre :
+À faire une fois, quand le port passe sur la boucle locale (voir [la mise à niveau](mise-a-niveau.md#port-de-lapplication-sur-la-boucle-locale)), avec un proxy inverse sur le même hôte. Dans l'ordre :
 
 1. Ouvrir le site par son adresse HTTPS habituelle, donc par le proxy inverse. Résultat attendu : la page de connexion répond.
 2. Depuis un autre appareil du réseau local, ouvrir `http://IP-DE-L-HÔTE:8888`. Résultat attendu : la connexion est refusée ou expire, sans réponse de l'application.
 
-Si l'étape 1 échoue : remettre `8888:80` dans la composition et redéployer.
+Si l'étape 1 échoue : le proxy inverse ne joint pas le port. Remettre `8888:80` dans la composition et redéployer ouvre le port au réseau local, donc seulement si le proxy est sur un autre hôte (voir ci-dessus) ; sinon, corriger le proxy pour qu'il vise `localhost:8888`.

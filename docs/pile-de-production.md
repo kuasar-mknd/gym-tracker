@@ -38,7 +38,7 @@ Sans `scheduler`, les tâches planifiées ne tournent pas : ni les sauvegardes, 
 
 ## Deux instances de Redis
 
-Le cache ne partage plus l'éviction de la file, des sessions et des verrous.
+Le cache a sa propre instance, pour que son éviction n'atteigne ni la file, ni les sessions, ni les verrous.
 
 | Instance | Contenu | Politique |
 | --- | --- | --- |
@@ -54,9 +54,7 @@ Le cache ne partage plus l'éviction de la file, des sessions et des verrous.
 
 La composition ne passe aucun secret en argument ni dans une sonde.
 
-Avant, la sonde de `db` passait `-p${DB_PASSWORD}` à `mysqladmin`, et `redis` comme `redis-cache` recevaient `--requirepass ${REDIS_PASSWORD}`. La valeur se lisait dans `docker inspect` (la commande et la sonde du conteneur), `docker ps --no-trunc` et `ps` sur l'hôte.
-
-Désormais :
+Un mot de passe passé en argument (`-p…` à `mysqladmin`, `--requirepass …` à Redis) se lit dans `docker inspect` (la commande et la sonde du conteneur), `docker ps --no-trunc` et `ps` sur l'hôte. La pile les passe donc autrement :
 
 - La sonde de `db` lit `MYSQL_PWD` (`DB_ROOT_PASSWORD`).
 - Chaque Redis démarre par `sh -c`, qui lui donne `requirepass` par une configuration sur l'entrée standard, sous les guillemets que Redis demande, puis `exec docker-entrypoint.sh redis-server -`. Redis reste le premier processus, sous l'utilisateur `redis`, et s'arrête proprement.
@@ -126,7 +124,7 @@ L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le 
 - Le proxy inverse doit donc tourner sur le même hôte. Les exigences et les vérifications sont dans [Déploiement](deploiement.md#proxy-inverse-et-port-de-lapplication).
 - L'ouverture directe ne marche d'ailleurs pas : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session, la connexion échoue.
 - Le conteneur voit la passerelle du pont, ni `127.0.0.1` ni l'adresse de l'hôte : c'est pourquoi un `TRUSTED_PROXIES` resserré doit contenir cette passerelle.
-- Laravel fait confiance par défaut aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+- Par défaut (`config/trustedproxy.php` et la composition), l'application fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
 
 **L'historique du navigateur.** `X-Forwarded-Proto` décide du chiffrement de l'historique : les pages d'un compte sont chiffrées dans l'historique du navigateur, et la déconnexion en jette la clé, pour que le bouton Retour ne réaffiche rien du compte parti.
 

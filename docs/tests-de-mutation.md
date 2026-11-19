@@ -6,7 +6,7 @@ Cette page dit comment mesurer le score de mutation d'une classe en local, et po
 
 Le seuil n'est appliqué que par `vendor/bin/pest`. `artisan test --mutate --min` accepte l'option et l'ignore : c'est le `--min` de la **couverture**, silencieusement absorbé.
 
-1. Si les bases par processus n'existent pas, lancer une fois `artisan test -p` : il les crée au passage.
+1. Si les bases par processus n'existent pas, lancer une fois `./vendor/bin/sail artisan test -p` : il les crée au passage.
 2. Lancer la mutation d'une classe ou d'un espace de noms :
 
    ```bash
