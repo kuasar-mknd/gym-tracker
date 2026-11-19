@@ -77,7 +77,7 @@ final class CreateSetAction
         /** @var int|null $dernierRang */
         $dernierRang = $workoutLine->sets()->max('order');
 
-        $attributs['order'] ??= $dernierRang === null ? 0 : $dernierRang + 1;
+        $attributs['order'] ??= ($dernierRang ?? -1) + 1;
 
         $set = $workoutLine->sets()->make(
             $attributs
