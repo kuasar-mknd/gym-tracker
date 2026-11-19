@@ -48,9 +48,9 @@ echo "base64:$(openssl rand -base64 32)"
 **Changer `APP_KEY` a deux effets**, quelle que soit la raison (rotation, remplacement d'une clé publiée) :
 
 - les liens déjà envoyés par courriel cessent de valoir : ouverture d'un compte, vérification ou confirmation d'adresse, réinitialisation du mot de passe ;
-- **toutes les sessions se ferment**, avec ou sans `APP_PREVIOUS_KEYS` : l'empreinte du mot de passe que porte chaque session, comme le cookie « se souvenir de moi », est signée par `APP_KEY` seule ;
+- **toutes les sessions se ferment**, avec ou sans `APP_PREVIOUS_KEYS` : l'empreinte du mot de passe que porte chaque session, comme le cookie « se souvenir de moi », est signée par `APP_KEY` seule.
 
-`APP_PREVIOUS_KEYS` garde lisibles les cookies chiffrés, et valides l'adresse des liens de courriel et les liens signés d'une ancienne clé. Une clé publiée n'y a pas sa place.
+`APP_PREVIOUS_KEYS` garde lisibles les cookies chiffrés, et valides les liens de courriel et les liens signés d'une ancienne clé. Une clé publiée n'y a pas sa place.
 
 Le contrôle « Clé de l'application » de la page « Santé » passe au rouge en production quand la clé est l'une de celles dont `config/app.php` (`cles_publiees`) garde l'empreinte SHA-256 parce qu'elles ont été lisibles dans l'historique du dépôt. Pour la remplacer : [la mise à niveau](mise-a-niveau.md#remplacer-une-clé-app_key-publiée).
 
