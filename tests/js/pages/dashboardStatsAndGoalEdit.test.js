@@ -264,7 +264,7 @@ describe('Dashboard', () => {
     /*
      * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
      * objectifs (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent,
-     * plutôt que de disparaître comme pour un compte qui n'a rien noté.
+     * plutôt que d'afficher un état vide comme pour un compte qui n'a rien noté.
      */
     it('sur une copie hors ligne, dit le dernier poids et les objectifs indisponibles', () => {
         pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }

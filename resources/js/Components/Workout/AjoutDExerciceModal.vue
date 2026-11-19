@@ -215,7 +215,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         :loading="createExerciseForm.processing"
                         dusk="submit-new-exercise"
                     >
-                        Créer et Ajouter
+                        Créer et ajouter
                     </GlassButton>
                 </form>
             </div>

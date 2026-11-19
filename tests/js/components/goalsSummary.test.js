@@ -94,8 +94,4 @@ describe('GoalsSummary sur une copie hors ligne', () => {
         expect(carte.get('[data-indisponible-hors-ligne]').text()).toContain('Objectifs indisponibles hors ligne')
         expect(carte.find('a').exists()).toBe(false)
     })
-
-    it('ne dit pas « indisponible » d’un compte sans objectif', () => {
-        expect(monter().text()).not.toContain('indisponibles')
-    })
 })

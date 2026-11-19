@@ -10,7 +10,7 @@ defineProps({
     /**
      * Les objectifs manquent parce que la page est une copie hors ligne, qui
      * ne garde jamais rien d'eux (#2048) : la carte le dit, plutôt que de
-     * disparaître comme pour un compte sans objectif. Sans lien vers les
+     * proposer d'en fixer un comme pour un compte sans objectif. Sans lien vers les
      * objectifs, qu'aucune copie ne garde non plus.
      */
     indisponible: { type: Boolean, default: false },

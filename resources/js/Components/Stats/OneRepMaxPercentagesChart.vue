@@ -18,7 +18,7 @@ const labels = computed(() => donneesTriees.value.map((d) => `${d.percent}%`))
 
 const datasets = computed(() => [
     {
-        label: 'Poids Estimé (kg)',
+        label: 'Poids estimé (kg)',
         data: donneesTriees.value.map((d) => d.value),
         backgroundColor: (context) => {
             const chart = context.chart

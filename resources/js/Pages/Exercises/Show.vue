@@ -236,7 +236,7 @@ const scatterData = computed(() => {
                     <GlassCard>
                         <div class="mb-4">
                             <h3 class="titre-carte">Endurance</h3>
-                            <p class="text-text-muted text-xs font-semibold">Max Reps par série</p>
+                            <p class="text-text-muted text-xs font-semibold">Max répétitions par série</p>
                         </div>
                         <div class="h-64">
                             <MaxRepsChart :data="maxRepsData" />

@@ -72,7 +72,7 @@
                 <div v-if="oneRepMax > 0">
                     <GlassCard class="stagger-2 animate-slide-up h-full shadow-2xl">
                         <div class="p-6">
-                            <h2 class="titre-carte mb-4">Pourcentages d'Entraînement</h2>
+                            <h2 class="titre-carte mb-4">Pourcentages d'entraînement</h2>
 
                             <!-- Chart Component -->
                             <div class="mb-6 h-48 w-full">
