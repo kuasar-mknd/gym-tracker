@@ -151,7 +151,7 @@ onUnmounted(() => {
                 >
                     <div
                         :class="[
-                            'glass-panel-light flex items-center gap-3 rounded-2xl border-l-[6px] p-4 shadow-lg backdrop-blur-xl',
+                            'verre-regulier flex items-center gap-3 rounded-2xl border-l-[6px] p-4 shadow-lg backdrop-blur-xl',
                             type === 'success' ? 'border-l-accent-state' : 'border-l-accent-danger',
                         ]"
                     >

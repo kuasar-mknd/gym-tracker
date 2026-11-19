@@ -62,6 +62,15 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * Le titre de l'en-tête mobile en casse de phrase (`titre-ecran`), au lieu
+     * des capitales italiques : les pages qui ont pris le verre le demandent,
+     * les autres gardent leur titre, que des parcours Dusk lisent en capitales.
+     */
+    titrePlat: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
@@ -231,7 +240,7 @@ onUnmounted(() => {
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-accent-primary-deep border-surface-card bg-surface-card/60 hover:bg-surface-card relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition hover:shadow-md"
+                            class="verre-regulier text-text-muted hover:text-text-main rounded-capsule relative flex size-11 shrink-0 items-center justify-center transition"
                             :aria-label="
                                 $page.props.auth.user.unread_notifications_count > 0
                                     ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -258,7 +267,7 @@ onUnmounted(() => {
                                         class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex max-w-full items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
-                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black"
+                                            class="bg-surface-glass-strong text-text-main flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
                                         >
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
@@ -295,22 +304,22 @@ onUnmounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/80 border-surface-card/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between border-b pb-4 backdrop-blur-xl"
+            class="bg-surface-page/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between pb-4 backdrop-blur-xl"
         >
             <div class="flex min-w-0 items-center gap-4">
                 <Link
                     v-if="showBack"
                     v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
-                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="verre-regulier text-text-muted hover:text-text-main rounded-capsule flex size-11 shrink-0 items-center justify-center transition-colors"
                     aria-label="Retour"
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
                 <h1
                     v-if="pageTitle"
-                    class="titre-carte truncate"
-                    :class="pageTitle.length > 12 ? 'text-xl' : 'text-2xl'"
+                    class="truncate"
+                    :class="titrePlat ? 'titre-ecran' : ['titre-carte', pageTitle.length > 12 ? 'text-xl' : 'text-2xl']"
                 >
                     {{ pageTitle }}
                 </h1>
@@ -320,7 +329,7 @@ onUnmounted(() => {
                 <Link
                     v-press
                     :href="route('notifications.index')"
-                    class="text-text-muted border-surface-card bg-surface-card/60 relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition"
+                    class="verre-regulier text-text-muted rounded-capsule relative flex size-11 shrink-0 items-center justify-center transition"
                     :aria-label="
                         $page.props.auth.user.unread_notifications_count > 0
                             ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`

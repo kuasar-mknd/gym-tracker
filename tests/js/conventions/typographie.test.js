@@ -9,7 +9,7 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * phrase, d'un écran à l'autre (#1783). La charte porte trois tailles, plus le
  * sur-titre : un titre en choisit une, et n'écrit plus sa typographie.
  */
-const ROLES = ['titre-page', 'titre-section', 'titre-carte', 'sur-titre']
+const ROLES = ['titre-page', 'titre-section', 'titre-carte', 'sur-titre', 'titre-ecran', 'titre-plat', 'etiquette']
 
 /**
  * Ce qui place ou colore, par opposition à ce qui compose. `sr-only` cache aux
@@ -22,6 +22,11 @@ const MISE_EN_PAGE =
 const COULEUR =
     /^(text-(text|accent|surface)-|text-transparent|bg-clip-text|bg-linear|from-|via-|to-|text-gradient|drop-shadow)/
 
+/**
+ * `titre-ecran`, `titre-plat` et `etiquette` sont les rôles du verre : casse de
+ * phrase, graisse 600. Les quatre premiers restent ceux des autres pages, que
+ * des parcours Dusk lisent en capitales.
+ */
 it('ne compose un titre que par un rôle de la charte', () => {
     const fautifs = collectSourceFiles({ extensions: ['.vue'] }).flatMap((fichier) => {
         const source = readFileSync(fichier, 'utf8')
@@ -44,7 +49,7 @@ it('ne compose un titre que par un rôle de la charte', () => {
             )
     })
 
-    expect(fautifs, `un titre porte titre-page, titre-section, titre-carte ou sur-titre, et rien d'autre`).toEqual([])
+    expect(fautifs, `un titre porte un rôle de la charte (titre-*, sur-titre, etiquette), et rien d'autre`).toEqual([])
 })
 
 /**

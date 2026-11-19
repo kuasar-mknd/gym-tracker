@@ -146,7 +146,7 @@ onUnmounted(() => {
         <div class="relative z-10 flex items-center gap-4 p-5">
             <!-- Icon -->
             <div
-                class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
+                class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm"
             >
                 <GlassIcon name="fitness_center" size="lg" fill class="text-text-on-dark-accent" />
             </div>
