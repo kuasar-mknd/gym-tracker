@@ -248,7 +248,10 @@ final class AppServiceProvider extends ServiceProvider
                 $reglage = config('webpush.automatic_padding');
                 $remplissage = is_numeric($reglage) ? (int) $reglage : (bool) $reglage;
 
-                return new \Minishlink\WebPush\WebPush($authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
+                $budget = config('webpush.budget_secondes');
+
+                return new \App\Support\WebPushBorne($authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
+                    ->setBudgetEnSecondes(is_numeric($budget) ? (float) $budget : 25.0)
                     ->setReuseVAPIDHeaders(true)
                     ->setAutomaticPadding($remplissage);
             });

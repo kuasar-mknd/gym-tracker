@@ -38,4 +38,11 @@ return [
      */
     'automatic_padding' => env('WEBPUSH_AUTOMATIC_PADDING', true),
 
+    /**
+     * Le temps, en secondes, qu'une notification passe à joindre les appareils
+     * d'un compte : passé ce budget, les appareils restants ne la reçoivent
+     * pas (`App\Support\WebPushBorne`). Sous les 60 s d'Horizon.
+     */
+    'budget_secondes' => 25,
+
 ];
