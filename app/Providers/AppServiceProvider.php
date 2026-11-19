@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Middleware\ExigeLaDoubleAuthentificationDuPanneau;
 use App\Http\Middleware\IpWhitelist;
 use App\Http\Middleware\OuvreLaSession;
 use App\Models\Admin;
@@ -674,8 +675,8 @@ final class AppServiceProvider extends ServiceProvider
      */
     private function refuserLesEnvoisDeFichiersDeLivewire(): void
     {
-        config(['livewire.temporary_file_upload.middleware' => [IpWhitelist::class, 'auth:admin', 'throttle:60,1']]);
-        FilePreviewController::$middleware = ['web', IpWhitelist::class, 'auth:admin'];
+        config(['livewire.temporary_file_upload.middleware' => [IpWhitelist::class, 'auth:admin', ExigeLaDoubleAuthentificationDuPanneau::class, 'throttle:60,1']]);
+        FilePreviewController::$middleware = ['web', IpWhitelist::class, 'auth:admin', ExigeLaDoubleAuthentificationDuPanneau::class];
 
         \Livewire\on('call', static function (object $composant, string $methode, array $parametres): void {
             if (! in_array($methode, ['_startUpload', '_finishUpload', '_removeUpload', '_uploadErrored'], true)) {

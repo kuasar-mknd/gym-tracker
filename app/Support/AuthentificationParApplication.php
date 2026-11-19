@@ -62,7 +62,7 @@ final class AuthentificationParApplication extends AppAuthentication
     {
         parent::saveSecret($user, $secret);
 
-        if ($user instanceof Admin && $secret !== null && Filament::auth()->user()?->is($user) === true) {
+        if ($user instanceof Admin && Filament::auth()->user()?->is($user) === true) {
             AssuranceDuSecondFacteur::marquer($user);
         }
     }

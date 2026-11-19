@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Filament\Resources\ActivityLogs\Pages\ListActivityLogs;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Support\AssuranceDuSecondFacteur;
 use Filament\Facades\Filament;
 use Filament\Notifications\Livewire\Notifications;
 use Filament\Pages\Dashboard;
@@ -70,6 +71,16 @@ it('ferme la route d’envoi à qui n’est pas administrateur connecté', funct
 
     $this->postJson(adresseSigneeDEnvoi('livewire.upload-file'), ['files' => [UploadedFile::fake()->image('a.png')]])
         ->assertUnauthorized();
+});
+
+it('ferme la route d’envoi à la session d’un administrateur sans la preuve du second facteur', function (): void {
+    Storage::fake('tmp-for-tests');
+    $admin = FilamentAdminPanel::admin();
+
+    $this->actingAs($admin, 'admin')
+        ->withSession(['_token' => 'jeton', AssuranceDuSecondFacteur::CLE => 'jamais-passe'])
+        ->postJson(adresseSigneeDEnvoi('livewire.upload-file'), ['files' => [UploadedFile::fake()->image('a.png')]], ['X-CSRF-TOKEN' => 'jeton'])
+        ->assertRedirect();
 });
 
 it('ferme la route d’aperçu à qui n’est pas administrateur connecté', function (): void {

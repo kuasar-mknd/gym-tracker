@@ -19,6 +19,8 @@ use Livewire\Livewire;
 use PragmaRX\Google2FA\Google2FA;
 use Spatie\Permission\Models\Role;
 
+use function Livewire\trigger;
+
 /*
  * Le second facteur du panneau, durci (audit, notes 5.0, 5.1, 5.2, 5.4) : la
  * régénération des codes exige le code de l'application, le marqueur anti-rejeu
@@ -130,6 +132,56 @@ describe('l’assurance du second facteur portée par la session (5.2)', functio
         $this->actingAs($administrateur->refresh(), 'admin')
             ->withSession([AssuranceDuSecondFacteur::CLE => $empreinteDeLaSession])
             ->get('/backoffice')
+            ->assertRedirect(route('filament.admin.auth.login'));
+    });
+});
+
+describe('la réinitialisation sans changement de secret (5.2)', function (): void {
+    it('ferme la session ouverte au seul mot de passe, alors que le secret reste vide', function (): void {
+        $administrateur = Admin::factory()->sansDoubleAuthentification()->create();
+        $administrateur->assignRole(Role::findOrCreate(Admin::roleDuSuperAdministrateur(), 'admin'));
+        $this->actingAs($administrateur, 'admin')->get('/backoffice')->assertRedirect();
+        $preuveDeLaSession = AssuranceDuSecondFacteur::empreinte($administrateur);
+
+        new ReinitialiseLaDoubleAuthentificationAction()->execute($administrateur);
+
+        expect(AssuranceDuSecondFacteur::empreinte($administrateur))->not->toBe($preuveDeLaSession);
+        $this->actingAs($administrateur->refresh(), 'admin')
+            ->withSession([AssuranceDuSecondFacteur::CLE => $preuveDeLaSession])
+            ->get('/backoffice')
+            ->assertRedirect(route('filament.admin.auth.login'));
+    });
+});
+
+describe('la désactivation depuis le profil (5.2)', function (): void {
+    it('garde la session, qui est renvoyée à l’enrôlement et non déconnectée', function (): void {
+        $administrateur = administrateurDuSecondFacteur();
+        Filament::setCurrentPanel('admin');
+        $this->actingAs($administrateur, 'admin');
+
+        AuthentificationParApplication::make()->saveSecret($administrateur, null);
+
+        $this->get('/backoffice')->assertRedirect((string) Filament::getSetUpRequiredMultiFactorAuthenticationUrl());
+        expect(auth('admin')->check())->toBeTrue();
+    });
+});
+
+describe('une vraie mise à jour Livewire (5.2)', function (): void {
+    it('refuse la requête d’une session qui ne porte pas la preuve', function (): void {
+        $administrateur = administrateurDuSecondFacteur();
+        /** @var string $page */
+        $page = $this->actingAs($administrateur, 'admin')->get('/backoffice')->assertOk()->getContent();
+        expect(preg_match('/wire:snapshot="([^"]+)"/', $page, $trouvaille))->toBe(1);
+
+        trigger('flush-state');
+
+        $this->actingAs($administrateur, 'admin')
+            ->withSession(['_token' => 'jeton', AssuranceDuSecondFacteur::CLE => 'jamais-passe'])
+            ->postJson(
+                route('default-livewire.update', absolute: false),
+                ['components' => [['snapshot' => html_entity_decode($trouvaille[1] ?? '', ENT_QUOTES), 'updates' => [], 'calls' => []]]],
+                ['X-Livewire' => 'true', 'X-CSRF-TOKEN' => 'jeton'],
+            )
             ->assertRedirect(route('filament.admin.auth.login'));
     });
 });

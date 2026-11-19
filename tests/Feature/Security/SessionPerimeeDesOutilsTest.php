@@ -99,8 +99,15 @@ it('ouvre chaque outil à la même session tant que le mot de passe n’a pas ch
     ($json ? getJson($chemin) : get($chemin))->assertOk();
 })->with(sessionPerimeeOutils());
 
-it('refuse chaque outil à la session qui n’a jamais passé le second facteur (5.2)', function (string $chemin, bool $json): void {
+it('refuse chaque outil à la session qui n’a jamais passé le second facteur (5.2)', function (string $chemin, bool $json, int $statut): void {
     sessionPerimeeOuverteAuPanneau(motDePasseChangeDepuis: false, avecLaPreuveDuSecondFacteur: false);
 
-    expect(($json ? getJson($chemin) : get($chemin))->getStatusCode())->not->toBe(200);
-})->with(sessionPerimeeOutils());
+    expect(($json ? getJson($chemin) : get($chemin))->getStatusCode())->toBe($statut);
+})->with([
+    'le panneau' => ['/backoffice', false, 302],
+    'Pulse' => ['/backoffice/pulse', false, 403],
+    'le lecteur de journaux' => ['/backoffice/journaux', false, 403],
+    'l’API du lecteur de journaux' => ['/backoffice/journaux/api/folders', true, 403],
+    'Horizon' => ['/horizon', false, 403],
+    'l’API d’Horizon' => ['/horizon/api/masters', true, 403],
+]);
