@@ -95,8 +95,8 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
                 <p class="text-text-muted mb-1 px-3 text-sm">Records</p>
                 <ul class="bg-surface-sunken/60 rounded-2xl p-1">
                     <li
-                        v-for="record in records"
-                        :key="record.exercice"
+                        v-for="(record, index) in records"
+                        :key="`${index}-${record.exercice}`"
                         class="flex items-baseline justify-between gap-3 px-3 py-2"
                     >
                         <span class="text-text-main min-w-0 text-sm break-words">{{ record.exercice }}</span>
@@ -104,7 +104,16 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
                     </li>
                 </ul>
             </div>
-            <div class="mt-6 flex flex-col-reverse gap-3">
+            <div class="mt-6 flex flex-col gap-3">
+                <GlassButton
+                    variant="primary"
+                    class="bouton-de-bilan w-full"
+                    dusk="bilan-de-fin-fermer"
+                    :disabled="enCours"
+                    @click="emit('fermer')"
+                >
+                    Fermer
+                </GlassButton>
                 <GlassButton
                     v-if="peutReprendre"
                     variant="secondary"
@@ -114,15 +123,6 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
                     @click="emit('reprendre')"
                 >
                     Reprendre
-                </GlassButton>
-                <GlassButton
-                    variant="primary"
-                    class="bouton-de-bilan w-full"
-                    dusk="bilan-de-fin-fermer"
-                    :disabled="enCours"
-                    @click="emit('fermer')"
-                >
-                    Fermer
                 </GlassButton>
             </div>
         </div>

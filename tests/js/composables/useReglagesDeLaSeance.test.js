@@ -449,6 +449,22 @@ describe('la fin en file, suivie par la page', () => {
         wrapper.unmount()
     })
 
+    it('ferme le bilan « sur cet appareil » quand la fin en file part ou est refusée', async () => {
+        const { wrapper, reglages } = monterSurLaPage()
+        reglages.bilanDeFin.value = {
+            enAttente: true,
+            records: [],
+            peutReprendre: false,
+            repriseJusqua: null,
+            proposer: false,
+        }
+
+        await annoncer('sync:replayed', { queueId: 'qF', url: FIN, data: { id: 5, ended_at: 'x' } })
+
+        expect(reglages.bilanDeFin.value).toBeNull()
+        wrapper.unmount()
+    })
+
     it('rouvre la séance que le serveur a refusé de clore, et le dit', async () => {
         const { wrapper, reglages } = monterSurLaPage()
 

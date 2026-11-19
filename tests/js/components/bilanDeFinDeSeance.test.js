@@ -109,7 +109,7 @@ describe('le bilan de fin de séance', () => {
     it('offre « Reprendre » et « Fermer », et ne dit plus qu’une séance enregistrée ne se rouvre pas', async () => {
         const wrapper = monter()
 
-        expect(boutons(wrapper)).toEqual(['Reprendre', 'Fermer'])
+        expect(boutons(wrapper)).toEqual(['Fermer', 'Reprendre'])
         expect(wrapper.text()).not.toContain('ne se rouvre')
         expect(wrapper.text()).not.toMatch(/appareil/i)
 

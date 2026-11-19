@@ -456,6 +456,11 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
 
         delete localWorkout.value._finEnAttente
 
+        // « Enregistrée sur cet appareil » n'est plus vrai : la fin est partie, ou refusée (#2434).
+        if (bilanDeFin.value?.enAttente) {
+            bilanDeFin.value = null
+        }
+
         if (event.type === 'sync:replayed') {
             localWorkout.value.ended_at = detail.data?.ended_at ?? localWorkout.value.ended_at
 
