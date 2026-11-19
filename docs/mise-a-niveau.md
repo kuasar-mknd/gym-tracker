@@ -56,3 +56,9 @@ docker compose -f docker-compose.prod.yml exec redis redis-cli -n 1 FLUSHDB ASYN
 - À chaque release, la pile reçoit la composition de son tag ; « Versions des services », dans la page « Santé », dit ensuite si `db` et `redis` servent la version attendue.
 - Une release qui monte `redis` ou MySQL se déploie par la marche de `.ai/rules/dependencies.md`, à une heure creuse.
 - Après la mise à jour : `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis` et `redis-cache` en `healthy`, et la page « Santé » reste verte.
+
+## Retour arrière
+
+- Avec retour : le port sur la boucle locale (remettre `8888:80`), les sessions chiffrées (`SESSION_ENCRYPT=false`, chacun se reconnecte une fois de plus), les deux instances de Redis (composition d'avant, `--remove-orphans`), `dns_opt` (composition d'avant).
+- Sans retour : les sessions fermées par le cookie `__Host-` et les copies hors ligne effacées (rien ne les rend), les administrateurs déconnectés et la double authentification enrôlée (on ne redevient pas sans second facteur d'un geste ; `admin:reinitialiser-mfa` efface un secret), la clé `APP_KEY` remplacée (les liens et sessions d'avant ne reviennent pas).
+- Dans tous les cas : remettre la composition d'avant **et** épingler l'image sur la version exacte d'avant ; les migrations déjà jouées restent, et une migration destructrice demande la restauration de la sauvegarde.

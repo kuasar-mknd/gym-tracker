@@ -18,7 +18,7 @@ declare(strict_types=1);
  * et les trois plages privées —, pour qu'une installation qui ne la règle pas
  * garde la détection de HTTPS derrière son proxy inverse. En production, elle
  * se règle sur l'adresse précise sous laquelle le proxy inverse joint
- * l'application (README, « Variables d'environnement »).
+ * l'application (docs/variables-d-environnement.md).
  */
 
 $configurees = env('TRUSTED_PROXIES');
