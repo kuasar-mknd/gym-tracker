@@ -227,7 +227,6 @@ CREATE TABLE `habit_logs` (
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `habit_logs_habit_id_date_unique` (`habit_id`,`date`),
-  KEY `habit_logs_habit_id_index` (`habit_id`),
   KEY `habit_logs_date_index` (`date`),
   CONSTRAINT `habit_logs_habit_id_foreign` FOREIGN KEY (`habit_id`) REFERENCES `habits` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -247,7 +246,6 @@ CREATE TABLE `habits` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `habits_user_id_index` (`user_id`),
   KEY `habits_user_id_archived_index` (`user_id`,`archived`),
   CONSTRAINT `habits_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -603,7 +601,6 @@ CREATE TABLE `sets` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `sets_workout_line_id_index` (`workout_line_id`),
   KEY `sets_workout_line_id_weight_reps_index` (`workout_line_id`,`weight`,`reps`),
   CONSTRAINT `sets_workout_line_id_foreign` FOREIGN KEY (`workout_line_id`) REFERENCES `workout_lines` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -788,8 +785,6 @@ CREATE TABLE `workout_lines` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `workout_lines_workout_id_index` (`workout_id`),
-  KEY `workout_lines_exercise_id_index` (`exercise_id`),
   KEY `workout_lines_workout_id_order_index` (`workout_id`,`order`),
   KEY `workout_lines_exercise_workout_idx` (`exercise_id`,`workout_id`),
   CONSTRAINT `workout_lines_exercise_id_foreign` FOREIGN KEY (`exercise_id`) REFERENCES `exercises` (`id`),
