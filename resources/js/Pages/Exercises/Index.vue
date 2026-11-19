@@ -187,7 +187,7 @@ const typeLabel = (type) => {
 <template>
     <Head title="Bibliothèque" />
 
-    <AuthenticatedLayout liquid-variant="subtle" page-title="La Bibliothèque" titre-dans-la-page>
+    <AuthenticatedLayout page-title="La Bibliothèque" titre-dans-la-page>
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <div class="pb-main-safe space-y-6">
             <!-- Header -->

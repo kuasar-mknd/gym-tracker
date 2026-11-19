@@ -9,7 +9,7 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * phrase, d'un écran à l'autre (#1783). La charte porte trois tailles, plus le
  * sur-titre : un titre en choisit une, et n'écrit plus sa typographie.
  */
-const ROLES = ['titre-page', 'titre-section', 'titre-carte', 'sur-titre']
+const ROLES = ['titre-page', 'titre-section', 'titre-carte', 'sur-titre', 'titre-plat', 'etiquette']
 
 /**
  * Ce qui place ou colore, par opposition à ce qui compose. `sr-only` cache aux

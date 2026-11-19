@@ -133,7 +133,7 @@ const installationProposee = ref(false)
             >
                 <div class="relative z-10 mb-6">
                     <p class="text-text-muted etiquette mb-1">Visualisation</p>
-                    <p class="titre-plat">Progression des objectifs</p>
+                    <h3 class="titre-plat">Progression des objectifs</h3>
                 </div>
                 <div class="relative -mx-2 mt-2 h-48 w-auto">
                     <ActiveGoalsChart :data="activeGoals" />

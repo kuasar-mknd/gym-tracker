@@ -14,7 +14,7 @@ defineProps({
     <section class="stagger-3 animate-slide-up carte-plate rounded-2xl p-6">
         <div class="relative z-10 mb-6">
             <p class="text-text-muted etiquette mb-1">Répartition</p>
-            <p class="titre-plat">Durée séances</p>
+            <h3 class="titre-plat">Durée séances</h3>
         </div>
 
         <!-- Duration Chart -->

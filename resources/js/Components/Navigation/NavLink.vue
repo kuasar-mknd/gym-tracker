@@ -20,7 +20,7 @@ const classes = computed(() =>
 </script>
 
 <template>
-    <Link v-press :href="href" :class="classes">
+    <Link v-press :href="href" :class="classes" :aria-current="active ? 'page' : undefined">
         <slot />
     </Link>
 </template>

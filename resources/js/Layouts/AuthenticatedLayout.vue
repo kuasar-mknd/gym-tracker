@@ -35,10 +35,6 @@ defineProps({
         type: String,
         default: '',
     },
-    liquidVariant: {
-        type: String,
-        default: 'default',
-    },
     /**
      * La largeur du contenu sur grand écran.
      *
