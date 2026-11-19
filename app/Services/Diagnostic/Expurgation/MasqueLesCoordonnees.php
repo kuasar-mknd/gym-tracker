@@ -72,8 +72,8 @@ final class MasqueLesCoordonnees
         '/(?<![\w.@-])(?:'.self::LABEL.'\.){1,8}(?!'.self::EXTENSIONS_DE_FICHIER.'(?![\w-]))'.self::DERNIER_LABEL_CONNU.self::FIN_DE_L_HOTE.'/iu' => '[hôte]',
         '/(?<![\w.@-])(?:'.self::LABEL.'\.){2,8}(?!'.self::EXTENSIONS_DE_FICHIER.'(?![\w-]))\p{L}{2,24}'.self::FIN_DE_L_HOTE.'/iu' => '[hôte]',
         '/(?<=\/\/|@|host |host=|host:|host: |hôte |hôte : )'.self::LABEL.'\.(?!'.self::EXTENSIONS_DE_FICHIER.'(?![\w-]))\p{L}{2,24}'.self::FIN_DE_L_HOTE.'/iu' => '[hôte]',
-        '/(?<=host=|host:|host: |hôte : )[\p{L}\p{N}][\p{L}\p{N}-]{0,62}(?![\w.-])(?::\d{1,5}(?!\d))?/iu' => '[hôte]',
-        '/(?<=host |hôte )(?=[\p{L}\p{N}]*[-\d])[\p{L}\p{N}][\p{L}\p{N}-]{0,62}(?![\w.-])(?::\d{1,5}(?!\d))?/iu' => '[hôte]',
+        '/(?<![\w-])(?:host|hôte)\\\\?["\']?\s{0,2}(?:=>|[:=])\s{0,2}\\\\?["\']?\K[\p{L}\p{N}][\p{L}\p{N}-]{0,62}(?![\w.-])(?::\d{1,5}(?!\d))?/iu' => '[hôte]',
+        '/(?<![\w-])(?:host|hôte) \K(?=[\p{L}\p{N}]*-|\p{L}+\d|\d+\p{L})[\p{L}\p{N}][\p{L}\p{N}-]{0,62}(?![\w.-])(?::\d{1,5}(?!\d))?/iu' => '[hôte]',
         '/(?<=[\w\/\]])\?[^\s#\'"<>]{1,2048}/' => '?[requête]',
         '/(?<=[\w\/\]])#[^\s\'"<>]{1,2048}/' => '#[fragment]',
     ];
