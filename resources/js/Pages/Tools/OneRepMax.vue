@@ -23,7 +23,7 @@
                                 <GlassBigNumber
                                     id="orm-weight"
                                     v-model="weight"
-                                    label="Poids Soulevé"
+                                    label="Poids soulevé"
                                     unite="kg"
                                     placeholder="100"
                                     min="0"
@@ -89,7 +89,7 @@
                                         <tr>
                                             <th class="px-6 py-3 font-medium">Pourcentage</th>
                                             <th class="px-6 py-3 font-medium">Poids</th>
-                                            <th class="px-6 py-3 font-medium">Reps Est.</th>
+                                            <th class="px-6 py-3 font-medium">Reps est.</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-border divide-y bg-transparent">

@@ -195,6 +195,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                             v-model="createExerciseForm.type"
                             label="Type"
                             :options="EXERCISE_TYPES"
+                            :error="createExerciseForm.errors.type"
                             dusk="new-exercise-type"
                         />
                         <GlassSelect
@@ -202,6 +203,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                             label="Catégorie"
                             :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
                             empty-label="— Aucune —"
+                            :error="createExerciseForm.errors.category"
                             dusk="new-exercise-category"
                         />
                     </div>

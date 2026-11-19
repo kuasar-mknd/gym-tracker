@@ -431,7 +431,7 @@ describe('the habit form', () => {
         await byLabel(wrapper, 'Ajouter une habitude').trigger('click')
 
         await fieldLabelled(wrapper, 'Nom').find('input').setValue('Lecture')
-        await fieldLabelled(wrapper, 'Description (optionnel)').find('input').setValue('20 pages le soir')
+        await fieldLabelled(wrapper, 'Description (facultatif)').find('input').setValue('20 pages le soir')
         await fieldLabelled(wrapper, 'Objectif (fois par semaine)').find('input').setValue('4')
 
         expect(forms[0].name).toBe('Lecture')

@@ -8,11 +8,24 @@ use App\Http\Middleware\AuthentifieLaSessionDuCompte;
 use App\Http\Requests\DeletePushSubscriptionRequest;
 use App\Http\Requests\UpdatePushSubscriptionRequest;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use NotificationChannels\WebPush\PushSubscription;
 
 class PushSubscriptionController extends Controller
 {
+    /**
+     * Le nombre d'appareils qu'un compte garde abonnés. Chaque notification
+     * les joint en série dans une seule tâche de la file `default` : sans
+     * plafond, un compte qui en enregistre des centaines occupe un processus
+     * pendant des minutes. Le plus ancien cède sa place plutôt que de refuser
+     * le nouveau : un refus fermerait l'appareil que la personne vient
+     * d'activer, quand les abonnements les plus anciens sont ceux d'un
+     * navigateur réinstallé ou d'un appareil rendu.
+     */
+    public const int ABONNEMENTS_MAX = 10;
+
     /**
      * Enregistre l'abonnement push de l'appareil, si sa session tient encore
      * au moment d'écrire.
@@ -34,7 +47,7 @@ class PushSubscriptionController extends Controller
      */
     public function update(UpdatePushSubscriptionRequest $request, AuthentifieLaSessionDuCompte $verificationDeLaSession): JsonResponse
     {
-        /** @var array{endpoint: string, keys: array{auth: string, p256dh: string}} $donneesValidees */
+        /** @var array{endpoint: string, ancien_endpoint?: string|null, keys: array{auth: string, p256dh: string}} $donneesValidees */
         $donneesValidees = $request->validated();
         $compte = $this->user();
 
@@ -44,14 +57,59 @@ class PushSubscriptionController extends Controller
                 User::query()->whereKey($compte->getKey())->lockForUpdate()->first(['id', 'password']),
             );
 
-            $compte->updatePushSubscription(
+            $abonnement = $compte->updatePushSubscription(
                 $donneesValidees['endpoint'],
                 $donneesValidees['keys']['p256dh'],
                 $donneesValidees['keys']['auth']
             );
+
+            $this->detacherLAppareilDesAutresComptes($abonnement, $donneesValidees['keys']['p256dh'], $donneesValidees['ancien_endpoint'] ?? null);
+
+            $gardes = $compte->pushSubscriptions()
+                ->whereKeyNot($abonnement->getKey())
+                ->latest('id')
+                ->limit(self::ABONNEMENTS_MAX - 1)
+                ->pluck('id');
+
+            $compte->pushSubscriptions()
+                ->whereKeyNot($abonnement->getKey())
+                ->whereNotIn('id', $gardes)
+                ->delete();
         });
 
         return response()->json(['message' => 'Abonnement enregistré avec succès.']);
+    }
+
+    /**
+     * Un appareil n'appartient qu'à un compte : le navigateur qui passe d'un
+     * compte à l'autre ne laisse pas au premier ses notifications. Partent
+     * les abonnements qui portent la même clef publique, ou l'adresse que le
+     * renouvellement remplace (`ancien_endpoint`). La même adresse change de
+     * compte d'elle-même (`updatePushSubscription()`).
+     */
+    private function detacherLAppareilDesAutresComptes(PushSubscription $abonnement, string $clePublique, ?string $ancienneAdresse): void
+    {
+        /*
+         * La clef publique n'est pas indexée : un DELETE qui la filtre
+         * verrouillerait toute la table, et deux comptes qui s'abonnent
+         * ensemble s'attendraient l'un l'autre. La lecture ne verrouille rien,
+         * et la suppression ne vise que des identifiants. `public_key` est en
+         * `utf8mb4_unicode_ci` : la comparaison se fait en binaire.
+         */
+        $identifiants = PushSubscription::query()
+            ->whereKeyNot($abonnement->getKey())
+            ->where(static function (Builder $requete) use ($clePublique, $ancienneAdresse): void {
+                $requete->whereRaw('cast(`public_key` as binary) = cast(? as binary)', [$clePublique]);
+
+                if ($ancienneAdresse !== null) {
+                    $requete->orWhere('endpoint', $ancienneAdresse);
+                }
+            })
+            ->pluck('id');
+
+        if ($identifiants->isNotEmpty()) {
+            PushSubscription::query()->whereKey($identifiants->all())->delete();
+        }
     }
 
     /**

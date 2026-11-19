@@ -69,6 +69,7 @@ class TempsDuServeur
     private const array ESPACES_D_AUTHENTIFICATION = [
         'App\\Http\\Controllers\\Auth\\',
         'Filament\\Auth\\',
+        'App\\Filament\\Connexion\\',
     ];
 
     /**

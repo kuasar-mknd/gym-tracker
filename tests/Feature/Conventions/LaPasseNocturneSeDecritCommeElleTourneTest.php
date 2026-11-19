@@ -10,7 +10,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * Quatre textes disaient que la passe de mutation tournait à 03h17 UTC sur la
  * pointe de `main`, et en déduisaient qu'un tag posé après cette heure n'était
- * pas couvert : le README, les messages de la promotion de `ci.yml` et de
+ * pas couvert : docs/publication-des-versions.md, les messages de la promotion de `ci.yml` et de
  * `release.yml`, et le commentaire de `mutation.yml`. GitHub ne garantit pas
  * l'heure d'un événement planifié : la passe est partie entre 07h42 et
  * 10h31 UTC du 1er septembre au 5 octobre 2026, et elle prend la pointe de
@@ -65,14 +65,14 @@ function passeNocturneScriptDePromotion(string $workflow): string
  */
 function passeNocturneTextes(): array
 {
-    $readme = (string) file_get_contents(base_path('README.md'));
-    $section = preg_match('/^## [^\n]*Mise en production\n(.*?)(?=^## )/msu', $readme, $trouvee) === 1 ? $trouvee[1] : '';
+    $publication = (string) file_get_contents(base_path('docs/publication-des-versions.md'));
+    $section = preg_match('/^## Publication d\'un tag\n(.*?)(?=^## |\z)/msu', $publication, $trouvee) === 1 ? $trouvee[1] : '';
 
     $mutation = (string) file_get_contents(base_path('.github/workflows/mutation.yml'));
     $commentaire = preg_match('/^\s*schedule:\n((?:\s*#[^\n]*\n)+)\s*- cron:/m', $mutation, $trouve) === 1 ? $trouve[1] : '';
 
     $textes = [
-        'README.md, « Mise en production »' => $section,
+        'docs/publication-des-versions.md, « Publication d\'un tag »' => $section,
         'ci.yml, job promotion' => passeNocturneScriptDePromotion('ci.yml'),
         'release.yml, job promotion' => passeNocturneScriptDePromotion('release.yml'),
         'mutation.yml, commentaire du cron' => $commentaire,

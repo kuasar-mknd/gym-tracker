@@ -53,7 +53,7 @@ const emit = defineEmits(['startWorkout'])
         <Link
             v-press
             :href="route('templates.index')"
-            aria-label="Voir mes programmes d'entraînement"
+            aria-label="Voir mes modèles d'entraînement"
             class="hover:shadow-glow-violet/70 group shadow-glow-violet focus-visible:ring-accent-primary relative h-52 overflow-hidden rounded-3xl transition duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
             <div class="bg-surface-card/60 absolute inset-0 z-0 backdrop-blur-md"></div>
@@ -72,7 +72,7 @@ const emit = defineEmits(['startWorkout'])
                 <span
                     class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
                 >
-                    Mes<br />Programmes
+                    Mes<br />Modèles
                 </span>
             </div>
         </Link>

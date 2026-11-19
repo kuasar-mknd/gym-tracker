@@ -10,6 +10,7 @@ use Filament\Actions\Testing\TestAction;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -128,6 +129,26 @@ it('n’écrit plus rien au-delà du plafond par jour, et répond toujours 204',
     $this->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport('Boum de trop'))->assertNoContent();
 
     expect(collecteDesErreursGardees($compte))->toBe(ErreurNavigateur::RAPPORTS_PAR_JOUR);
+});
+
+it('plafonne par adresse, tous comptes confondus, et répond toujours 204', function (): void {
+    foreach (range(1, ErreurNavigateur::RAPPORTS_PAR_ADRESSE_PAR_MINUTE + 5) as $envoi) {
+        $this->actingAs(User::factory()->create())
+            ->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport("Boum {$envoi}"))
+            ->assertNoContent();
+    }
+
+    expect(ErreurNavigateur::query()->count())->toBe(ErreurNavigateur::RAPPORTS_PAR_ADRESSE_PAR_MINUTE);
+});
+
+it('n’écrit plus rien une fois le plafond global du jour atteint, et répond toujours 204', function (): void {
+    RateLimiter::increment(md5(ErreurNavigateur::LIMITEUR.'global|jour'), 86_400, ErreurNavigateur::RAPPORTS_GLOBAUX_PAR_JOUR);
+
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())
+        ->assertNoContent();
+
+    expect(ErreurNavigateur::query()->count())->toBe(0);
 });
 
 it('ne touche pas un autre compte, ni par le plafond ni par le regroupement du premier', function (): void {

@@ -172,7 +172,7 @@ const submit = () => {
                 <GlassInput
                     v-model="form.name"
                     label="Nom"
-                    placeholder="Ex: Boire 2L d'eau"
+                    placeholder="Ex. : Boire 2L d'eau"
                     :error="form.errors.name"
                     required
                 />
@@ -180,7 +180,7 @@ const submit = () => {
                 <!-- La limite de la colonne habits.description, la même que la validation. -->
                 <GlassInput
                     v-model="form.description"
-                    label="Description (optionnel)"
+                    label="Description (facultatif)"
                     placeholder="Détails..."
                     maxlength="255"
                     :error="form.errors.description"
@@ -240,9 +240,9 @@ const submit = () => {
 
                 <div class="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end">
                     <GlassButton type="button" variant="secondary" block @click="$emit('close')">Annuler</GlassButton>
-                    <GlassButton type="submit" variant="primary" block :loading="form.processing"
-                        >Enregistrer</GlassButton
-                    >
+                    <GlassButton type="submit" variant="primary" block :loading="form.processing">{{
+                        habitude ? 'Enregistrer' : 'Créer'
+                    }}</GlassButton>
                 </div>
             </form>
         </div>

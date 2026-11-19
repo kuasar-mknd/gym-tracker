@@ -100,14 +100,24 @@ final class PersonalRecordService
      */
     protected function update(User $user, int $idExercice, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): ?PersonalRecord
     {
-        if ($pr !== null && round($value, 2) <= round((float) $pr->value, 2)) {
+        /*
+         * À valeur arrondie égale, le 1RM revient à la série la plus ancienne
+         * (plus petit identifiant), comme la reconstruction : le détenteur ne
+         * dépend alors pas de l'ordre dans lequel les séries arrivent. Ce
+         * changement de détenteur n'est pas un record battu : rien n'est annoncé.
+         */
+        $parLAnciennete = (int) ($type === 'max_1rm');
+
+        if ($pr !== null && [round($value, 2), -$set->id * $parLAnciennete] <= [round((float) $pr->value, 2), -(int) $pr->set_id * $parLAnciennete]) {
             return null;
         }
+
+        $battu = round($value, 2) > round((float) $pr?->value, 2);
 
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => $set->workoutLine->workout->debutALHeureMurale()])->save();
 
-        return $pr;
+        return $battu ? $pr : null;
     }
 
     /**
@@ -139,15 +149,22 @@ final class PersonalRecordService
      *
      * Trois requetes `ORDER BY … LIMIT 1` seraient trois balayages : aucun index
      * ne couvre un tri sur une expression, donc chacune relit tout. Les fonctions
-     * de fenetrage classent les trois criteres en une lecture et ne rendent que
-     * les lignes qui gagnent — trois au plus.
+     * de fenetrage classent les criteres en une lecture et ne rendent que les
+     * lignes qui gagnent, plus les ex aequo du 1RM.
+     *
+     * Le 1RM est preselectionne, pas classe (#2358) : `gagnantes()` departage
+     * en PHP, dont l'arrondi fait foi. `cle_1rm` vaut trente fois la valeur en
+     * centimes, sans division ; deux valeurs arrondies au centieme ne sont a
+     * egalite ou a l'envers que si les valeurs exactes different de moins de
+     * 30 unites (31 par prudence).
      */
     private const string CLASSEMENT = <<<'SQL'
         select * from (
             select sets.id, sets.weight, sets.reps, workouts.started_at as obtenu,
                    workout_lines.workout_id,
                    row_number() over (order by sets.weight desc, sets.id asc) as rang_max_weight,
-                   row_number() over (order by (case when sets.reps <= 1 then sets.weight else sets.weight * (1 + sets.reps / 30) end) desc, sets.id asc) as rang_max_1rm,
+                   sets.weight * 100 * (30 + case when sets.reps <= 1 then 0 else sets.reps end) as cle_1rm,
+                   max(sets.weight * 100 * (30 + case when sets.reps <= 1 then 0 else sets.reps end)) over () as cle_1rm_max,
                    row_number() over (order by sets.weight * sets.reps desc, sets.id asc) as rang_max_volume_set
               from sets
               join workout_lines on workout_lines.id = sets.workout_line_id
@@ -159,7 +176,7 @@ final class PersonalRecordService
                and sets.weight > 0
                and sets.reps > 0
         ) as classees
-        where rang_max_weight = 1 or rang_max_1rm = 1 or rang_max_volume_set = 1
+        where rang_max_weight = 1 or rang_max_volume_set = 1 or cle_1rm >= cle_1rm_max - 31
         SQL;
 
     /**
@@ -330,6 +347,11 @@ final class PersonalRecordService
         /** @var list<int> $aSupprimer */
         $aSupprimer = [];
 
+        // Les records en place dont une valeur change partent eux aussi en une
+        // seule instruction : un `save()` par type coutait une ecriture chacun.
+        /** @var list<PersonalRecord> $aReecrire */
+        $aReecrire = [];
+
         /** @var array<int, array{record: PersonalRecord, avant: float|null}> $aAnnoncer */
         $aAnnoncer = [];
 
@@ -388,7 +410,16 @@ final class PersonalRecordService
                 'workout_id' => $meilleure['seance'],
                 'set_id' => $meilleure['id'],
                 'achieved_at' => $meilleure['obtenu'],
-            ])->save();
+            ]);
+
+            // Un record cree s'insere tout de suite, son identifiant sert a
+            // l'annonce ; un record en place qui change attend l'instruction
+            // groupee, et un record inchange ne s'ecrit pas.
+            if (! $record->exists) {
+                $record->save();
+            } elseif ($record->isDirty()) {
+                $aReecrire[] = $record;
+            }
 
             // Donné à une série qui ne le tenait pas, au-dessus de ce qu'il
             // portait, ou créé : sa synchronisation n'a pas écrit, et ne
@@ -398,11 +429,64 @@ final class PersonalRecordService
             }
         }
 
+        $this->reecrire($aReecrire);
+
         if ($aSupprimer !== []) {
             PersonalRecord::query()->whereKey($aSupprimer)->delete();
         }
 
         return $aAnnoncer;
+    }
+
+    /**
+     * Ecrit en une seule instruction les records en place dont une valeur
+     * change : chaque colonne prend, par `CASE`, la valeur de son record, et
+     * garde la sienne pour ceux qu'elle ne change pas.
+     *
+     * Les valeurs sont celles que `save()` aurait envoyees : les attributs
+     * castes par `fill()`, la valeur arrondie a deux decimales comprise.
+     *
+     * @param  list<PersonalRecord>  $records  Remplis, au moins une colonne modifiee chacun.
+     */
+    private function reecrire(array $records): void
+    {
+        if ($records === []) {
+            return;
+        }
+
+        $maintenant = $records[0]->freshTimestampString();
+        $affectations = [];
+        $liaisons = [];
+
+        foreach (['value', 'secondary_value', 'workout_id', 'set_id', 'achieved_at'] as $colonne) {
+            $cas = '';
+            $liaisonsDeLaColonne = [];
+
+            foreach ($records as $record) {
+                if ($record->isDirty($colonne)) {
+                    $cas .= ' when ? then ?';
+                    $liaisonsDeLaColonne[] = $record->id;
+                    $liaisonsDeLaColonne[] = $record->getAttributes()[$colonne];
+                }
+            }
+
+            if ($cas !== '') {
+                $affectations[] = "`{$colonne}` = case `id`{$cas} else `{$colonne}` end";
+                $liaisons = [...$liaisons, ...$liaisonsDeLaColonne];
+            }
+        }
+
+        $ids = array_map(static fn (PersonalRecord $record): int => $record->id, $records);
+
+        DB::update(
+            'update `personal_records` set '.implode(', ', $affectations).', `updated_at` = ? where `id` in ('.implode(', ', array_fill(0, count($ids), '?')).')',
+            [...$liaisons, $maintenant, ...$ids],
+        );
+
+        foreach ($records as $record) {
+            $record->setAttribute('updated_at', $maintenant);
+            $record->syncOriginal();
+        }
     }
 
     /**
@@ -437,6 +521,9 @@ final class PersonalRecordService
     {
         $par = [];
 
+        /** @var array<int, array{0: array{id: int, poids: float, repetitions: int, seance: int, obtenu: string}, 1: float}> $candidats */
+        $candidats = [];
+
         foreach (DB::select(self::CLASSEMENT, [$idUtilisateur, $idExercice]) as $workoutLine) {
             if (! is_object($workoutLine)) {
                 continue;
@@ -444,18 +531,33 @@ final class PersonalRecordService
 
             $champs = get_object_vars($workoutLine);
 
-            foreach (PersonalRecordType::SUIVIS as $type) {
-                if (self::entier($champs['rang_'.$type] ?? null) !== 1) {
-                    continue;
-                }
+            $serie = [
+                'id' => self::entier($champs['id'] ?? null),
+                'poids' => self::flottant($champs['weight'] ?? null),
+                'repetitions' => self::entier($champs['reps'] ?? null),
+                'seance' => self::entier($champs['workout_id'] ?? null),
+                'obtenu' => self::texte($champs['obtenu'] ?? null),
+            ];
 
-                $par[$type] = [
-                    'id' => self::entier($champs['id'] ?? null),
-                    'poids' => self::flottant($champs['weight'] ?? null),
-                    'repetitions' => self::entier($champs['reps'] ?? null),
-                    'seance' => self::entier($champs['workout_id'] ?? null),
-                    'obtenu' => self::texte($champs['obtenu'] ?? null),
-                ];
+            foreach (['max_weight', 'max_volume_set'] as $type) {
+                if (self::entier($champs['rang_'.$type] ?? null) === 1) {
+                    $par[$type] = $serie;
+                }
+            }
+
+            $candidats[$serie['id']] = [$serie, $this->calculate1RM($serie['poids'], $serie['repetitions'])];
+        }
+
+        // Le flottant PHP fait foi : la valeur arrondie la plus haute, et à
+        // valeur égale la série la plus ancienne, comme la synchronisation, qui
+        // cède à une valeur arrondie plus haute, et à valeur égale à la plus ancienne.
+        ksort($candidats);
+        $valeur1rm = -INF;
+
+        foreach ($candidats as [$serie, $valeur]) {
+            if ($valeur > $valeur1rm) {
+                $par['max_1rm'] = $serie;
+                $valeur1rm = $valeur;
             }
         }
 

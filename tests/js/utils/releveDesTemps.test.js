@@ -504,8 +504,8 @@ describe('quand le serveur mesure', () => {
 
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
         installe = installerLeReleveDesTemps({ routeur: routeurSimule(), fenetre: simulee.fenetre })
-        await http.post(`${ORIGINE}/api/v1/sets`, { reps: 8 })
-        await http.delete(`${ORIGINE}/api/v1/sets/41`)
+        await http.post('/api/v1/sets', { reps: 8 })
+        await http.delete('/api/v1/sets/41')
         simulee.recevoir(
             entreeDeRequete('/api/v1/sets/41', { initiatorType: 'fetch' }),
             entreeDeRequete('/api/v1/sets', { initiatorType: 'fetch' }),
@@ -894,7 +894,7 @@ describe('le relevé à l’écran', () => {
     })
 
     /*
-     * Le minuteur de repos se pose au bas de l'écran, et le README demande le
+     * Le minuteur de repos se pose au bas de l'écran, et docs/releve-des-temps.md demande le
      * relevé de la séance en cours : posé à sa place et sur sa couche, le
      * panneau en cachait le bas. Déplié, il dépassait le haut d'un téléphone
      * en paysage, titre compris : plus rien ne le repliait, et « Fermer »

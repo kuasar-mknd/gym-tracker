@@ -28,6 +28,12 @@ function documentsSurveillesPourLaDerive(): array
     return array_values(array_filter($fichiers, fn (string $f): bool => basename($f) !== 'CHANGELOG.md'));
 }
 
+it('surveille aussi les documents de docs/ qui portent le détail du README', function (): void {
+    $surveilles = array_map(static fn (string $f): string => str_replace(base_path().'/', '', $f), documentsSurveillesPourLaDerive());
+
+    expect($surveilles)->toContain('README.md', 'docs/README.md', 'docs/variables-d-environnement.md', 'docs/deploiement.md', 'docs/exploitation.md', 'docs/mise-a-niveau.md', 'docs/developpement.md');
+});
+
 /**
  * @return array<string, mixed>
  */

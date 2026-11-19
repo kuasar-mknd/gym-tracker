@@ -819,3 +819,23 @@ it('interdit la gestion des objectifs à un admin sans les permissions Goal', fu
         ->and(GoalResource::canEdit($goal))->toBeFalse()
         ->and(GoalResource::canDelete($goal))->toBeFalse();
 });
+
+it("refuse, au panneau, l'exercice privé d'un autre compte pour l'objectif d'un compte", function (): void {
+    $proprietaire = User::factory()->create();
+    $exerciceDAutrui = Exercise::factory()->create(['user_id' => User::factory()->create()->id]);
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $proprietaire->getKey(),
+            'title' => 'Développé couché',
+            'type' => 'weight',
+            'target_value' => 100,
+            'current_value' => 0,
+            'start_value' => 0,
+            'exercise_id' => $exerciceDAutrui->getKey(),
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['exercise_id']);
+
+    expect(Goal::query()->where('exercise_id', $exerciceDAutrui->getKey())->exists())->toBeFalse();
+});

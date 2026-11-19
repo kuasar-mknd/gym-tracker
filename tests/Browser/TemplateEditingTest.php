@@ -50,7 +50,7 @@ class TemplateEditingTest extends DuskTestCase
                 .'field.dispatchEvent(new Event("input", {bubbles: true}));'
             );
 
-            // Two reasons this is not press('Mettre à jour le modèle'): Dusk
+            // Two reasons this is not press('Enregistrer'): Dusk
             // matches a button on its own text and the label lives in
             // GlassButton's slot, and at the page's resting scroll position the
             // round floating action button sits over the submit button's centre,

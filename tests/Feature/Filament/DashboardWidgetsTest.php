@@ -15,7 +15,7 @@ use Tests\Support\FilamentAdminPanel;
 use Tests\Support\HorlogeQuiPasseMinuit;
 
 beforeEach(function (): void {
-    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:User']), 'admin');
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:User', 'ViewAny:Workout', 'ViewAny:Exercise']), 'admin');
 });
 
 /**
@@ -292,4 +292,26 @@ it('range l’encart par date d’inscription, et son titre le dit', function ()
     expect($inscritIlYATroisJours->refresh()->estEnAttente())->toBeFalse()
         ->and($encart->getTable()->getHeading())->toBe('Derniers inscrits parmi les comptes ouverts')
         ->and(collect($affiches->items())->pluck('id')->all())->toBe($inscritsDepuis->pluck('id')->all());
+});
+
+it('ne montre les tuiles de séances et d’exercices qu’à qui peut lister les séances et les exercices', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:User']), 'admin');
+
+    $values = filamentStatsOverviewValues();
+
+    expect($values)->not->toHaveKey('Séances du jour')
+        ->and($values)->not->toHaveKey('Exercices communs')
+        ->and($values)->toHaveKey('Comptes');
+
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:Workout']), 'admin');
+
+    $values = filamentStatsOverviewValues();
+    expect($values)->toHaveKey('Séances du jour')
+        ->and($values)->not->toHaveKey('Exercices communs');
+
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:Exercise']), 'admin');
+
+    $values = filamentStatsOverviewValues();
+    expect($values)->toHaveKey('Exercices communs')
+        ->and($values)->not->toHaveKey('Séances du jour');
 });

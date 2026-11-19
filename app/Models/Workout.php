@@ -110,6 +110,19 @@ class Workout extends Model
     }
 
     /**
+     * La fin que la personne a choisie en terminant une séance oubliée
+     * (#2319) : une heure absolue, que la requête a déjà jugée, et que
+     * l'instant de l'opération borne encore, au plus tard maintenant, au plus
+     * tôt le début. Comparée en instants, comme `finBornee()`.
+     */
+    public function finChoisieBornee(CarbonInterface $fin, CarbonInterface $maintenant): Carbon
+    {
+        $borne = $fin->greaterThan($maintenant) ? $maintenant : $fin;
+
+        return Carbon::instance($borne->lessThan($this->started_at) ? $this->started_at : $borne);
+    }
+
+    /**
      * Les exercices dont les records devront etre recalcules apres la cascade.
      *
      * Releves pendant `deleting`, consommes pendant `deleted` : entre les deux,
@@ -153,6 +166,26 @@ class Workout extends Model
     public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(WorkoutLine::class)->orderBy('order')->orderBy('id');
+    }
+
+    /**
+     * Les séances qui portent une série de travail cochée : ni l'échauffement
+     * ni une série décochée ne comptent (#2333). La définition vit ici, pour
+     * `User::seancesFaites()` (qui y ajoute la fin) et le rappel du soir (qui
+     * n'attend pas la fin).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $requete
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeAvecUneSerieDeTravailCochee(\Illuminate\Database\Eloquent\Builder $requete): \Illuminate\Database\Eloquent\Builder
+    {
+        return $requete->whereExists(fn (\Illuminate\Database\Query\Builder $seriesCochees): \Illuminate\Database\Query\Builder => $seriesCochees
+            ->selectRaw('1')
+            ->from('workout_lines')
+            ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->whereColumn('workout_lines.workout_id', 'workouts.id')
+            ->where('sets.is_completed', true)
+            ->where('sets.is_warmup', false));
     }
 
     /**

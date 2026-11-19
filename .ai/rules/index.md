@@ -17,11 +17,11 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Jobs/**, app/Notifications/**, app/Listeners/**, app/Mail/**, resources/views/vendor/notifications/**, config/queue.php, config/horizon.php | .ai/rules/jobs.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/**, public/*.svg, public/manifest.webmanifest, pwa-assets.config.js | .ai/rules/js.md |
 | bootstrap/app.php, app/Http/Middleware/**, app/Support/Csp/**, app/Support/Sessions/**, app/Support/CleDesCopiesEnSession.php, app/Support/RappelDeLAppareil.php, app/Support/EcheanceDuCookie.php, config/sanctum.php, app/Providers/Filament/AdminPanelProvider.php, app/Http/Controllers/SanteController.php, resources/views/errors/** | .ai/rules/middleware.md |
-| app/Models/**, app/Support/TexteSansJeton.php | .ai/rules/models.md |
+| app/Models/**, app/Support/TexteSansJeton.php, app/Support/AdmissionDesExceptions.php | .ai/rules/models.md |
 | app/Actions/**, app/Services/**, app/Policies/** | .ai/rules/mutation.md |
 | app/Providers/**, routes/console.php, config/backup.php, lang/vendor/health/**, resources/views/vendor/health/**, app/Console/Commands/PurgerLesJournaux.php, app/Support/FichiersDuJour.php, app/Support/Courriels/**, app/Support/TexteSansAdresse.php, app/Support/Sante/**, app/Console/Commands/ReleverLesCompteursDeRedis.php | .ai/rules/providers.md |
-| README.md, .env.example, docker-compose.prod.yml, compose.yaml, Dockerfile, entrypoint.sh, docker/**, config/**, app/Support/Journaux/** | .ai/rules/readme.md |
-| app/Http/Requests/**, app/Rules/**, app/Support/AdresseCanonique.php, lang/fr.json, lang/fr/** | .ai/rules/requests.md |
+| README.md, docs/*.md, .env.example, docker-compose.prod.yml, compose.yaml, Dockerfile, entrypoint.sh, docker/**, config/**, app/Support/Journaux/** | .ai/rules/readme.md |
+| app/Http/Requests/**, app/Rules/**, app/Support/AdresseCanonique.php, app/Support/AppareilConnu.php, app/Support/AppareilConnuDeLAdresse.php, app/Support/PlafondParAdresse.php, lang/fr.json, lang/fr/** | .ai/rules/requests.md |
 | routes/web.php, app/Support/IdentifiantsDesRoutes.php, app/Http/Controllers/ErreurNavigateurController.php, app/Http/Requests/ErreurNavigateurStoreRequest.php, app/Models/ErreurNavigateur.php | .ai/rules/routes.md |
 | app/Services/** | .ai/rules/services.md |
 | app/Services/Stats/**, app/Support/VersionDeCache.php, app/Services/RecommendedValuesService.php, app/Models/Exercise.php | .ai/rules/stats.md |

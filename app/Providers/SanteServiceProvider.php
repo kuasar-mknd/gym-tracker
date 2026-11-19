@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Support\Sante\AccesDeDiagnosticCheck;
 use App\Support\Sante\AnnonceDeVersion;
+use App\Support\Sante\CleDeLApplicationCheck;
 use App\Support\Sante\DossierDesSauvegardesCheck;
 use App\Support\Sante\ProxysDeConfianceCheck;
 use App\Support\Sante\ReglagesDeLaBaseCheck;
@@ -72,13 +73,14 @@ final class SanteServiceProvider extends ServiceProvider
             TachesPlanifieesCheck::new(),
             AccesDeDiagnosticCheck::new(),
             ProxysDeConfianceCheck::new(),
+            CleDeLApplicationCheck::new(),
             HorizonCheck::new()->label('Travailleurs Horizon'),
             VersionsDesConteneursCheck::new(),
             VersionsDesServicesCheck::new(),
             UsedDiskSpaceCheck::new()->label('Espace disque utilisé')->warnWhenUsedSpaceIsAbovePercentage(70)->failWhenUsedSpaceIsAbovePercentage(90),
             // Le délai du script de démarrage : au-delà, le partage est tenu pour endormi.
             DossierDesSauvegardesCheck::new()->delai(DossierDesSauvegardesCheck::DELAI_EN_SECONDES),
-            // La sauvegarde nocturne tombe à 02 h 30 : vingt-six heures laissent une
+            // La sauvegarde nocturne tombe à 01 h 55 : vingt-six heures laissent une
             // nuit de marge. La date est prise au démarrage du processus, ce qui
             // convient à `health:check`, lancé à neuf par le planificateur. Par
             // chemin plutôt que par `onDisk()`, qui résoudrait le disque à chaque

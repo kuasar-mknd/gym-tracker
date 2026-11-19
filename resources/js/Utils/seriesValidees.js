@@ -24,6 +24,21 @@ export function seriesValidees(series) {
 }
 
 /**
+ * Les séries validées hors échauffement : ce que toute la fiche exercice lit
+ * (#2333), « Charge max » exceptée, qui lit en plus `peutEtablirUnRecord()`
+ * (poids et répétitions positifs). Un échauffement validé compte dans le volume
+ * de la séance, mais ni dans le record ni dans la fiche : il gonflait la charge
+ * moyenne et n'avait rien d'un effort de travail. Une série au poids du corps
+ * (sans charge) reste comptée, ses répétitions sont un effort.
+ *
+ * @param {Array<{is_completed?: boolean, is_warmup?: boolean}>} series
+ * @returns {Array<Object>}
+ */
+export function seriesDeTravail(series) {
+    return seriesValidees(series).filter((serie) => serie.is_warmup !== true)
+}
+
+/**
  * La série peut établir un record : les conditions de `PersonalRecordService`
  * — validée, hors échauffement, avec un poids et des répétitions.
  *
@@ -43,4 +58,17 @@ export function peutEtablirUnRecord(serie) {
  */
 export function volumeDesSeriesValidees(series) {
     return seriesValidees(series).reduce((total, serie) => total + (serie.weight || 0) * (serie.reps || 0), 0)
+}
+
+/**
+ * Le volume de travail : celui de la fiche exercice, sans les échauffements
+ * validés que `volumeDesSeriesValidees()` garde, comme
+ * `Workout::recalculerLeVolume()`, dont le volume de la séance, des objectifs
+ * et des statistiques globales est tiré côté serveur.
+ *
+ * @param {Array<{is_completed?: boolean, is_warmup?: boolean, weight?: number|null, reps?: number|null}>} series
+ * @returns {number}
+ */
+export function volumeDesSeriesDeTravail(series) {
+    return volumeDesSeriesValidees(seriesDeTravail(series))
 }

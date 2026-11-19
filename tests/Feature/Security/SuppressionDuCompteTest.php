@@ -422,6 +422,7 @@ it("garde la session de l'administrateur qui porte l'identifiant du compte suppr
     $this->withSession([
         $garde->getName() => $administrateur->getAuthIdentifier(),
         'password_hash_admin' => $garde->hashPasswordForCookie($administrateur->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($administrateur),
     ])->get('/backoffice')->assertOk();
 
     expect(DB::table('sessions')->where('user_id', $identifiant)->count())->toBe(1);
@@ -915,14 +916,22 @@ function compteSupprimeLesFichiersDuJourApresLaPurge(string $dossier): array
  * soixante jours, et ses traces d'un compte supprimé, tant que quatorze jours
  * plus récents n'avaient pas été écrits (#1938). La purge planifiée
  * (`journaux:purger`, #2053) les efface chaque nuit à quatorze jours de
- * calendrier, et le README le dit : il ne parle plus des « quatorze derniers
+ * calendrier, et docs/exploitation.md le dit : il ne parle plus des « quatorze derniers
  * jours où le conteneur a écrit ». La prémisse reste vérifiée : le jour où
  * Monolog bornerait lui-même par la durée, la purge deviendrait redondante.
  */
-it('efface du volume `journaux` ce que le canal `daily` y garde au-delà de quatorze jours de calendrier, comme le dit le README', function (): void {
+it('efface du volume `journaux` ce que le canal `daily` y garde au-delà de quatorze jours de calendrier, comme le dit docs/exploitation.md', function (): void {
     $dossier = sys_get_temp_dir().'/journaux-du-jour-'.bin2hex(random_bytes(6));
     $aujourdhui = new DateTimeImmutable();
-    $readme = (string) preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('README.md')));
+    $exploitation = (string) preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('docs/exploitation.md')));
+    $documents = glob(base_path('docs/*.md'));
+    $toutesLesDocs = (string) file_get_contents(base_path('README.md'));
+
+    foreach ($documents === false ? [] : $documents as $document) {
+        $toutesLesDocs .= ' '.file_get_contents($document);
+    }
+
+    $toutesLesDocs = (string) preg_replace('/\s+/', ' ', $toutesLesDocs);
 
     try {
         File::ensureDirectoryExists($dossier.'/peu');
@@ -940,12 +949,12 @@ it('efface du volume `journaux` ce que le canal `daily` y garde au-delà de quat
 
         expect(compteSupprimeLesFichiersDuJourApresLaPurge($dossier.'/peu'))->toBe([compteSupprimeLeFichierDuJour($aujourdhui, 0)])
             ->and(compteSupprimeLesFichiersDuJourApresLaPurge($dossier.'/chaque-jour'))->toBe($chaqueJour)
-            ->and(str_contains($readme, 'quatorze jours dans le volume `journaux`'))
-            ->toBeTrue('Le README doit dire ce que garde le volume `journaux` : quatorze jours, que tient la purge planifiée.')
-            ->and(str_contains($readme, '`journaux:purger`'))
-            ->toBeTrue('Le README doit nommer la purge planifiée qui borne le volume `journaux`.')
-            ->and(preg_match_all('/derniers jours où le conteneur a écrit|pas quatorze jours de calendrier/', $readme))
-            ->toBe(0, 'Le README dit encore que le volume `journaux` garde les quatorze derniers jours où le conteneur a écrit : la purge planifiée le borne à quatorze jours de calendrier.');
+            ->and(str_contains($exploitation, 'quatorze jours dans le volume `journaux`'))
+            ->toBeTrue('docs/exploitation.md doit dire ce que garde le volume `journaux` : quatorze jours, que tient la purge planifiée.')
+            ->and(str_contains($exploitation, '`journaux:purger`'))
+            ->toBeTrue('docs/exploitation.md doit nommer la purge planifiée qui borne le volume `journaux`.')
+            ->and(preg_match_all('/derniers jours où le conteneur a écrit|pas quatorze jours de calendrier/', $toutesLesDocs))
+            ->toBe(0, 'docs/exploitation.md dit encore que le volume `journaux` garde les quatorze derniers jours où le conteneur a écrit : la purge planifiée le borne à quatorze jours de calendrier.');
     } finally {
         File::deleteDirectory($dossier);
     }

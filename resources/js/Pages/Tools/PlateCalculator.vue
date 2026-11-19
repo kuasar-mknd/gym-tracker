@@ -21,7 +21,7 @@
                         <GlassBigNumber
                             id="plate-target-weight"
                             v-model="targetWeight"
-                            label="Poids Cible"
+                            label="Poids cible"
                             unite="kg"
                             placeholder="100"
                             step="0.5"
@@ -29,7 +29,7 @@
                         <GlassBigNumber
                             id="plate-bar-weight"
                             v-model="barWeight"
-                            label="Poids Barre"
+                            label="Poids barre"
                             unite="kg"
                             placeholder="20"
                         />
@@ -87,13 +87,13 @@
                         <!-- Weight Info -->
                         <div class="mt-6 text-center">
                             <p class="text-text-main text-lg font-bold">
-                                Poids Total:
+                                Poids total :
                                 <span class="font-display text-accent-primary-deep text-2xl font-black">{{
                                     poids(actualWeight)
                                 }}</span>
                             </p>
                             <p class="text-text-muted mt-2 text-sm">
-                                Plaques par côté:
+                                Plaques par côté :
                                 <span class="font-bold">{{
                                     calculatedPlates.map((p) => poids(p.weight)).join(' + ')
                                 }}</span>
@@ -180,7 +180,7 @@
                                     {{ nombre(plate.weight, 2) }}
                                 </div>
                                 <div class="mt-1 text-xs font-bold tracking-wider uppercase opacity-70">
-                                    x {{ plate.quantity }}
+                                    × {{ plate.quantity }}
                                 </div>
                                 <!--
                                     `compact` : la vignette reste à 24 px pour ne
@@ -246,16 +246,16 @@
                         :disabled="surUneCopie"
                         :aria-describedby="raisonDUneEcriture"
                         @click="savePlate"
-                        >Enregistrer</GlassButton
+                        >Créer</GlassButton
                     >
                 </div>
             </div>
         </Modal>
         <ConfirmDialog
             :ouvert="suppressionDemandee"
-            titre="Retirer ce disque de ton inventaire ?"
+            titre="Retirer cette plaque de ton inventaire ?"
             :description="
-                disqueASupprimer?.weight ? `Le disque de ${nombre(disqueASupprimer.weight, 2)} kg sera retiré.` : ''
+                disqueASupprimer?.weight ? `La plaque de ${nombre(disqueASupprimer.weight, 2)} kg sera retirée.` : ''
             "
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"

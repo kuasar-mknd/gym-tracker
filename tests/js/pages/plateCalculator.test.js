@@ -158,7 +158,7 @@ describe('PlateCalculator inventory', () => {
     it('shows how many of each plate are owned', () => {
         const wrapper = mountCalculator([{ id: 1, weight: '20', quantity: 4 }])
 
-        expect(wrapper.text()).toContain('x 4')
+        expect(wrapper.text()).toContain('× 4')
     })
 
     it('says the inventory is empty rather than showing a bare grid', () => {
@@ -208,7 +208,7 @@ describe('PlateCalculator — sur une copie hors ligne', () => {
     const boutonDisant = (wrapper, texte) => wrapper.findAll('button').find((bouton) => bouton.text().includes(texte))
     const boutonsDEcriture = (wrapper) => [
         boutonDisant(wrapper, 'Ajouter'),
-        boutonDisant(wrapper, 'Enregistrer'),
+        boutonDisant(wrapper, 'Créer'),
         wrapper.get('[aria-label="Supprimer la plaque"]'),
     ]
 

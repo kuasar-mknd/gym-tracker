@@ -207,6 +207,21 @@ final class GoalService
         }
     }
 
+    /**
+     * Un objectif de mensuration à départ 0 qui change de mensuration ou de
+     * type repart de la dernière mesure de la nouvelle partie du corps : sa
+     * valeur stockée est celle de l'ancienne mesure (#2348), et la lire comme
+     * « déjà suivi » le laissait à 0, atteint d'emblée.
+     */
+    public function repartirSiLaMesureChange(Goal $goal): void
+    {
+        if ($goal->start_value > 0 || ! $goal->isDirty(['type', 'measurement_type'])) {
+            return;
+        }
+
+        $this->partirDeLaDerniereMesure($goal);
+    }
+
     protected function updateProgressPercentage(Goal $goal): void
     {
         if ($this->neSuitRien($goal)) {

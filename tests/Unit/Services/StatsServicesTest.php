@@ -243,21 +243,21 @@ class StatsServicesTest extends TestCase
         $user = User::factory()->create();
 
         // Workout 1: 60 minutes
-        Workout::factory()->create([
+        Workout::factory()->faite()->create([
             'user_id' => $user->id,
             'started_at' => now()->subDays(2)->hour(10)->minute(0),
             'ended_at' => now()->subDays(2)->hour(11)->minute(0),
         ]);
 
         // Workout 2: 90 minutes
-        Workout::factory()->create([
+        Workout::factory()->faite()->create([
             'user_id' => $user->id,
             'started_at' => now()->subDay()->hour(10)->minute(0),
             'ended_at' => now()->subDay()->hour(11)->minute(30),
         ]);
 
         // Workout 3: 45 minutes, ended_at before started_at (should be handled as absolute)
-        Workout::factory()->create([
+        Workout::factory()->faite()->create([
             'user_id' => $user->id,
             'started_at' => now()->hour(10)->minute(45),
             'ended_at' => now()->hour(10)->minute(0),
@@ -290,7 +290,7 @@ class StatsServicesTest extends TestCase
     {
         $user = User::factory()->create();
 
-        Workout::factory()->create([
+        Workout::factory()->faite()->create([
             'user_id' => $user->id,
             'started_at' => now()->subDay()->hour(10)->minute(0)->second(0),
             'ended_at' => now()->subDay()->hour(10)->minute(1)->second(30),

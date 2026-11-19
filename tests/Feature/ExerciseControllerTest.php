@@ -25,7 +25,8 @@ test('authenticated user can view an exercise they own', function (): void {
             ->component('Exercises/Show')
             ->has('exercise')
             ->has('progress')
-            ->has('history')
+            ->missing('history')
+            ->loadDeferredProps(fn (Assert $page): Assert => $page->has('history'))
         );
 });
 

@@ -78,13 +78,11 @@ final class ExerciseStatsService
             $volumes[$cle] = ($volumes[$cle] ?? 0.0) + (is_numeric($workoutLine->volume) ? (float) $workoutLine->volume : 0.0);
         }
 
-        $repartition = [];
-
-        foreach ($volumes as $categorie => $volume) {
-            $repartition[] = new MuscleDistributionStat($categorie, $volume);
-        }
-
-        return $repartition;
+        return array_map(
+            fn (string|int $categorie, float $volume): MuscleDistributionStat => new MuscleDistributionStat((string) $categorie, $volume),
+            array_keys($volumes),
+            $volumes,
+        );
     }
 
     /**

@@ -9,9 +9,11 @@ use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use App\Support\AdresseCanonique;
+use Closure;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Password;
 
 class UserForm
 {
@@ -65,6 +67,10 @@ class UserForm
              * l'état brut, que `mutateDehydratedStateUsing()` convertit à son
              * tour. L'adresse actuelle du compte, reçue telle quelle, ne
              * change pas : convertie, elle passerait pour une nouvelle.
+             *
+             * L'unicité se juge par la base (même collation, donc sans égard
+             * à la casse), l'enregistrement courant écarté : sans elle,
+             * l'index unique levait une exception, rendue en 500.
              */
             TextInput::make('email')
                 ->label('Adresse e-mail')
@@ -75,7 +81,9 @@ class UserForm
                 ->mutateDehydratedStateUsing(self::formeCanonique(...))
                 ->rule('email', static fn (?User $record, mixed $state): bool => $state !== $record?->email)
                 ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email))
-                ->rule(fn (?User $record): AdresseQueLaMessagerieSaitEcrire => new AdresseQueLaMessagerieSaitEcrire($record?->email)),
+                ->rule(fn (?User $record): AdresseQueLaMessagerieSaitEcrire => new AdresseQueLaMessagerieSaitEcrire($record?->email))
+                ->unique(User::class, 'email', ignoreRecord: true)
+                ->validationMessages(['unique' => 'Un compte utilise déjà cette adresse e-mail.']),
             TextInput::make('default_rest_time')->label('Repos par défaut (s)')->required()->integer()->minValue(0)->maxValue(Exercise::REPOS_MAX_SECONDES)->default(90),
             /*
              * Montres, jamais ecrits.
@@ -114,7 +122,6 @@ class UserForm
                 ->dehydrated(false),
             TextInput::make('provider')->label('Fournisseur de connexion')->disabled()->dehydrated(false),
             TextInput::make('provider_id')->label('Identifiant chez le fournisseur')->disabled()->dehydrated(false),
-            TextInput::make('avatar')->label('Avatar')->maxLength(255),
             /*
              * Le champ ne s'ecrit que lorsqu'il porte quelque chose.
              *
@@ -141,6 +148,12 @@ class UserForm
             TextInput::make('password')->label('Mot de passe')
                 ->password()
                 ->autocomplete('new-password')
+                ->rule(Password::defaults())
+                ->rule(static fn (): Closure => static function (string $attribute, mixed $valeur, Closure $echec): void {
+                    if (is_string($valeur) && strlen($valeur) > 72) {
+                        $echec('Le mot de passe ne doit pas dépasser 72 octets.');
+                    }
+                })
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->required(fn (string $operation): bool => $operation === 'create'),
             /*

@@ -65,7 +65,7 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
             ->icon('/pwa-192x192.png')
             /** @phpstan-ignore-next-line */
             ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
-            ->action('Voir mes badges', url('/achievements'))
+            ->action('Voir mes badges', route('achievements.index', absolute: false))
             ->data(['url' => '/achievements']);
     }
 

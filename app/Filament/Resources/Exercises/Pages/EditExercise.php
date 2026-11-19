@@ -47,9 +47,6 @@ class EditExercise extends EditRecord
      */
     public static function modifier(Exercise $record, array $data): Exercise
     {
-        /** @var int|string|null $identifiant */
-        $identifiant = $data['user_id'];
-
         /*
          * La liste vient de la ressource, elle n'est pas recopiee ici : c'est
          * la meme que celle que le garde de convention lit pour verifier qu'un
@@ -59,7 +56,12 @@ class EditExercise extends EditRecord
         /** @var array<string, mixed> $attributs */
         $attributs = Arr::except($data, ExerciseResource::CHAMPS_ASSIGNES_EXPLICITEMENT);
 
-        $record->user_id = ValeurLue::entier($identifiant);
+        if (array_key_exists('user_id', $data)) {
+            /** @var int|string|null $identifiant */
+            $identifiant = $data['user_id'];
+            $record->user_id = ValeurLue::entier($identifiant);
+        }
+
         $record->fill($attributs);
         $record->save();
 

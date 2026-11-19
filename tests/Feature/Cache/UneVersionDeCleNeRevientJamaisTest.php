@@ -56,7 +56,7 @@ function evincerLaVersionDeCache(string $cleDeVersion): void
  */
 function seanceTermineePourLesVersions(User $user, string $debut): void
 {
-    Workout::withoutEvents(fn (): Workout => Workout::factory()->create([
+    Workout::withoutEvents(fn (): Workout => Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => $debut,
         'ended_at' => Carbon::parse($debut)->addHour(),

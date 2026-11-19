@@ -96,13 +96,34 @@ class Exercise extends Model
      */
     public function invalidateCache(): void
     {
-        if ($this->user_id !== null) {
-            Cache::forget(self::cleDeListe($this->user_id));
+        /** @var list<int|null> $proprietaires */
+        $proprietaires = [$this->user_id];
 
-            return;
+        if ($this->wasChanged('user_id')) {
+            $ancien = $this->getOriginal('user_id');
+            $proprietaires[] = is_numeric($ancien) ? (int) $ancien : null;
         }
 
-        VersionDeCache::renouveler('exercises_catalogue_revision');
+        foreach (array_unique($proprietaires) as $proprietaire) {
+            if ($proprietaire !== null) {
+                Cache::forget(self::cleDeListe($proprietaire));
+            }
+        }
+
+        if (in_array(null, $proprietaires, true)) {
+            VersionDeCache::renouveler('exercises_catalogue_revision');
+        }
+    }
+
+    /**
+     * Un objectif, une ligne de gabarit ou une ligne de séance vise-t-il cet
+     * exercice ? Son propriétaire ne change plus alors.
+     */
+    public function estReference(): bool
+    {
+        return Goal::query()->where('exercise_id', $this->id)->exists()
+            || WorkoutTemplateLine::query()->where('exercise_id', $this->id)->exists()
+            || $this->workoutLines()->exists();
     }
 
     /**
@@ -143,6 +164,15 @@ class Exercise extends Model
     protected static function booted(): void
     {
         parent::booted();
+
+        static::updating(function (self $exercise): void {
+            if ($exercise->isDirty('user_id') && $exercise->estReference()) {
+                throw new \LogicException(sprintf(
+                    'Le propriétaire de l’exercice %d ne change pas tant qu’un objectif, un gabarit ou une séance le vise.',
+                    $exercise->id,
+                ));
+            }
+        });
 
         static::saved(fn (Exercise $exercise) => $exercise->invalidateCache());
         static::deleted(fn (Exercise $exercise) => $exercise->invalidateCache());

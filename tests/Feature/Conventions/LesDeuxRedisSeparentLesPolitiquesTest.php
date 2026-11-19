@@ -40,6 +40,10 @@ function deuxRedisTexte(array $service, string $chemin): string
 {
     $valeur = data_get($service, $chemin);
 
+    if (is_array($valeur)) {
+        return implode(' ', array_filter($valeur, is_string(...)));
+    }
+
     return is_scalar($valeur) ? (string) $valeur : '';
 }
 
@@ -52,7 +56,7 @@ function deuxRedisTexte(array $service, string $chemin): string
  */
 function deuxRedisOptions(array $service): array
 {
-    $jetons = explode(' ', (string) preg_replace('/\s+/', ' ', trim(deuxRedisTexte($service, 'command'))));
+    $jetons = explode(' ', (string) preg_replace('/\s+/', ' ', trim(str_replace('\\', ' ', deuxRedisTexte($service, 'command')))));
     $options = [];
 
     foreach ($jetons as $rang => $jeton) {
@@ -104,7 +108,11 @@ it('exige le mot de passe de Redis, sur les deux instances, et le teste par un P
     $composition = deuxRedisService($service);
     $sonde = deuxRedisTexte($composition, 'healthcheck.test.1');
 
-    expect(preg_replace('/\s+/', ' ', deuxRedisTexte($composition, 'command')))->toContain('--requirepass ${REDIS_PASSWORD:?mot de passe de Redis}')
+    $commande = (string) preg_replace('/\s+/', ' ', deuxRedisTexte($composition, 'command'));
+
+    expect($commande)->toContain('requirepass "$$mot_de_passe"')
+        ->and($commande)->not->toContain('--requirepass')
+        ->and(deuxRedisTexte($composition, 'environment.REDIS_PASSWORD'))->toBe('${REDIS_PASSWORD:?mot de passe de Redis}')
         ->and(deuxRedisTexte($composition, 'environment.REDISCLI_AUTH'))->toBe('${REDIS_PASSWORD}')
         ->and($sonde)->toContain('PONG')
         ->and($sonde)->not->toContain('-a ');

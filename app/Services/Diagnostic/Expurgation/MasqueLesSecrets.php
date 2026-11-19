@@ -59,6 +59,18 @@ final class MasqueLesSecrets
     private const string MOTIF_D_UN_NOM_DE_SECRET = '/(?<![A-Za-z0-9])[A-Za-z0-9_-]{0,32}(?:key|secret|token|jeton|password|passwd|pwd|signature)\\\\?["\']?\]?\s{0,4}(?:=>|[:=])\s{0,4}\\\\?(?:"\K[^"\n]{8,4096}|\'\K[^\'\n]{8,4096}|\K[^\s"\'<>]{8,4096})/iu';
 
     /**
+     * Le schéma Basic : sa valeur derrière `Authorization:` (ou
+     * `Proxy-Authorization`), ou, sans l'en-tête, une valeur en base64 qui
+     * finit par `=` ou, de douze caractères au moins, porte un chiffre ; puis l'identifiant d'un `curl -u` ou `--user`, sur la
+     * même ligne que `curl`.
+     */
+    private const string MOTIF_BASIC_EN_ENTETE = '/Authorization\\\\?["\']?\s{0,4}(?:=>|[:=])\s{0,4}\\\\?["\']?Basic\s{1,8}\K[^\s"\'<>\\\\]{1,4096}/i';
+
+    private const string MOTIF_BASIC_SEUL = '/\bBasic\s{1,8}\K(?:(?=[A-Za-z0-9+\/_-]*\d)[A-Za-z0-9+\/_-]{12,4096}={0,2}|[A-Za-z0-9+\/_-]{4,4096}={1,2})/';
+
+    private const string MOTIF_D_UN_CURL_AVEC_IDENTIFIANTS = '/\bcurl\b[^\n]{0,512}?\s(?:--user(?:\s{1,8}|=)|-[A-Za-z]{0,8}u\s{0,8})\K(?:"[^"\n]{1,512}"|\'[^\'\n]{1,512}\'|[^\s"\']{1,512})/i';
+
+    /**
      * Chaque motif et sa marque, dans l'ordre où ils s'appliquent.
      *
      * @var array<string, string>
@@ -66,6 +78,9 @@ final class MasqueLesSecrets
     private const array MOTIFS = [
         self::MOTIF_BEARER => 'Bearer [secret]',
         self::MOTIF_DU_JETON => '[secret]',
+        self::MOTIF_BASIC_EN_ENTETE => '[secret]',
+        self::MOTIF_BASIC_SEUL => '[secret]',
+        self::MOTIF_D_UN_CURL_AVEC_IDENTIFIANTS => '[secret]',
         self::MOTIF_D_UN_NOM_DE_SECRET => '[secret]',
         '/(?<![\w-])eyJ[\w-]{2,4096}\.[\w-]{2,4096}\.[\w-]{0,4096}/' => '[secret]',
         '/(?<![\w+\/-])(?=[\w+-]{0,4096}[a-z])(?=[\w+-]{0,4096}[A-Z])(?=[\w+-]{0,4096}\d)[\w+-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',

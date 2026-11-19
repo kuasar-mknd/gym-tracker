@@ -136,7 +136,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                             type="number"
                             step="0.01"
                             label="Valeur"
-                            placeholder="0.00"
+                            placeholder="0,00"
                             :error="form.errors.value"
                             inputmode="decimal"
                             required

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Filament\Connexion\ConnexionDuPanneau;
 use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\Admin;
 use App\Models\User;
 use App\Support\DureeDesReponsesDAuthentification;
 use App\Support\LiensDesCourriels;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
-use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Mail\Transport\ArrayTransport;
@@ -423,7 +423,7 @@ it('rend la main sans attendre à une connexion réussie', function (): void {
  */
 it('fait attendre le plancher à chaque étape d’une connexion réussie au panneau', function (bool $doubleAuthentification): void {
     $duree = DureeSimulee::demarrer();
-    $admin = FilamentAdminPanel::admin(['ViewAny:User']);
+    $admin = FilamentAdminPanel::admin(['ViewAny:User'], avecLaDoubleAuthentification: false);
     $application = AppAuthentication::make();
 
     if ($doubleAuthentification) {

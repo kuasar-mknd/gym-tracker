@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use PragmaRX\Google2FA\Google2FA;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Admin>
@@ -45,6 +47,37 @@ class AdminFactory extends Factory
             'email_verified_at' => now(),
             'password' => 'password',
             'remember_token' => str()->random(10),
+            /*
+             * Un administrateur a sa double authentification (#2353) : le panneau
+             * l'exige de chaque page, et un compte sans elle n'y entre que par
+             * l'enrôlement. `sansDoubleAuthentification()` rend celui qui n'y
+             * est pas encore passé.
+             */
+            'app_authentication_secret' => (new Google2FA())->generateSecretKey(),
         ];
+    }
+
+    /**
+     * L'administrateur qui n'a pas encore enrôlé son application.
+     */
+    public function sansDoubleAuthentification(): static
+    {
+        return $this->state(fn (): array => [
+            'app_authentication_secret' => null,
+            'app_authentication_recovery_codes' => null,
+        ]);
+    }
+
+    /**
+     * Des codes de récupération, tels que le panneau les range (hachés), à
+     * côté des codes en clair que l'administrateur a notés.
+     *
+     * @param  list<string>  $codes
+     */
+    public function avecCodesDeRecuperation(array $codes): static
+    {
+        return $this->state(fn (): array => [
+            'app_authentication_recovery_codes' => array_map(Hash::make(...), $codes),
+        ]);
     }
 }

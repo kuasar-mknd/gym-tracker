@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use App\Actions\CreateUserAction;
+use App\Models\Plate;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
@@ -88,4 +89,20 @@ it('garde telle quelle l empreinte que l inscription a calculee', function (): v
 
     expect($user->refresh()->getAuthPassword())->toBe($empreinte)
         ->and(Hash::check('un-mot-de-passe-pose', $user->getAuthPassword()))->toBeTrue();
+});
+
+it('ne laisse ni compte ni annonce quand les plaques ne peuvent pas être créées', function (): void {
+    Event::fake([Registered::class]);
+    Event::listen('eloquent.creating: '.Plate::class, static function (): never {
+        throw new RuntimeException('plaques indisponibles');
+    });
+
+    expect(fn () => app(CreateUserAction::class)->execute([
+        'name' => 'Ada Lovelace',
+        'email' => 'ada@example.test',
+        'password' => 'un-mot-de-passe-pose',
+    ]))->toThrow(RuntimeException::class);
+
+    $this->assertDatabaseMissing(User::class, ['email' => 'ada@example.test']);
+    Event::assertNotDispatched(Registered::class);
 });

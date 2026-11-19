@@ -51,7 +51,8 @@ class ExerciseForm
                     ->options(array_column(ExerciseCategory::cases(), 'value', 'value')),
                 Select::make('user_id')->label('Compte')
                     ->relationship('user', 'name')
-                    ->searchable(),
+                    ->searchable()
+                    ->disabled(fn (?Exercise $record): bool => $record?->estReference() === true),
             ]);
     }
 }

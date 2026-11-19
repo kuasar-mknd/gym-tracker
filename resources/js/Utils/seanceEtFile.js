@@ -446,7 +446,10 @@ const appliquer = (seance, entree, { exercices, produites, seancesEnFile }) => {
      */
     if (ecriture.sorte === 'terminerLaSeance') {
         if (!seance.ended_at && nommeLaSeance(charge.workout_id, seance, seancesEnFile)) {
-            seance.ended_at = typeof charge.ended_at === 'string' ? charge.ended_at : entree.timestamp
+            // L'heure choisie pour une séance oubliée (#2319), sinon celle du geste.
+            const fin = typeof charge.fin_choisie === 'string' ? charge.fin_choisie : charge.ended_at
+
+            seance.ended_at = typeof fin === 'string' ? fin : entree.timestamp
             seance._finEnAttente = entree.id
         }
 

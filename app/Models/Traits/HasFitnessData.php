@@ -27,7 +27,8 @@ trait HasFitnessData
     }
 
     /**
-     * Les séances FAITES : terminées, avec au moins une série cochée (#2110).
+     * Les séances FAITES : terminées, avec au moins une série de travail
+     * cochée (#2110, #2333) : un échauffement coché ne suffit plus.
      *
      * Ce que comptent les succès de séances (`AchievementService`, type
      * `count`) et les objectifs de fréquence (`GoalService`), par cette seule
@@ -49,15 +50,10 @@ trait HasFitnessData
      * `withCount('seancesFaites')` rend le même compte sous
      * `seances_faites_count`, l'attribut que `GoalService` retient.
      *
-     * Mesuré sur 8.4.11 et 9.7.2 (deltas de `Handler_read%`, 100 puis 400
-     * séances terminées de quatre lignes de quatre séries, trois comptes
-     * voisins de 400 séances) : une semi-jointure qui parcourt les séances du
-     * compte par `(user_id, started_at)` et s'arrête, pour chacune, à sa
-     * première série cochée. Quand c'est la première série de la première
-     * ligne, 2N + 1 lectures d'index et N lectures suivantes ; au pire, une
-     * séance terminée sans aucune série cochée lit toutes ses lignes et
-     * toutes ses séries (5N + 1 et 21N). Le compte de toutes les séances en
-     * faisait 1 et N.
+     * Une semi-jointure qui parcourt les séances du compte par
+     * `(user_id, started_at)` et s'arrête, pour chacune, à sa première série
+     * de travail cochée ; les lectures mesurées sont dans
+     * `.ai/rules/services.md`.
      *
      * @return HasMany<Workout, $this>
      */
@@ -65,12 +61,7 @@ trait HasFitnessData
     {
         return $this->hasMany(Workout::class)
             ->whereNotNull('workouts.ended_at')
-            ->whereExists(fn (\Illuminate\Database\Query\Builder $seriesCochees): \Illuminate\Database\Query\Builder => $seriesCochees
-                ->selectRaw('1')
-                ->from('workout_lines')
-                ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
-                ->whereColumn('workout_lines.workout_id', 'workouts.id')
-                ->where('sets.is_completed', true));
+            ->avecUneSerieDeTravailCochee();
     }
 
     /** @return HasManyThrough<WorkoutLine, Workout, $this> */

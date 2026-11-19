@@ -6,6 +6,7 @@ namespace App\Http\Requests\Auth;
 
 use App\Actions\Auth\ConnecterLeCompte;
 use App\Support\AdresseCanonique;
+use App\Support\PlafondParAdresse;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    private ?PlafondParAdresse $plafond = null;
+
     public function authorize(): bool
     {
         return true;
@@ -57,12 +60,16 @@ class LoginRequest extends FormRequest
         if (! app(ConnecterLeCompte::class)->execute($identifiants, $this->boolean('remember'), $this->session())) {
             RateLimiter::hit($this->throttleKey());
 
+            $this->plafond()->compterUnEchec();
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        $this->plafond()->remettreAZeroSiExempte();
     }
 
     /**
@@ -70,6 +77,8 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
+        $this->plafond()->refuserSiAtteint($this);
+
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }
@@ -103,5 +112,14 @@ class LoginRequest extends FormRequest
     private function adresseCanonique(): string
     {
         return AdresseCanonique::de($this->string('email')->value());
+    }
+
+    /**
+     * Le plafond des échecs de l'adresse saisie (#2310), jugé une fois pour
+     * l'appareil de cette requête.
+     */
+    private function plafond(): PlafondParAdresse
+    {
+        return $this->plafond ??= PlafondParAdresse::de($this, $this->adresseCanonique());
     }
 }

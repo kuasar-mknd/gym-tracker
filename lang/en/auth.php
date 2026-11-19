@@ -18,6 +18,7 @@ return [
     // Écrit aussi pour un compte qui attend son lien d’ouverture : son refus ne se distingue pas.
     'failed' => 'These credentials do not match our records. If you have just signed up, first follow the link sent to your address, then sign in on this device: a new link is sent there, at most one every quarter of an hour.',
     'password' => 'The provided password is incorrect.',
+    'plafond' => 'Too many failed attempts on this address from several devices. Use "Forgot password" to regain access, or try again later.',
     'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
 
     // Écrits pour les deux cas : l'adresse a déjà un compte, ou non.

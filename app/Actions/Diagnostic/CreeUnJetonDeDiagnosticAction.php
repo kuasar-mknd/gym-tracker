@@ -8,8 +8,8 @@ use App\Enums\PorteeDeDiagnostic;
 use App\Models\Admin;
 use App\Models\JetonDeDiagnostic;
 use App\Support\AlertesDeDiagnostic;
+use App\Support\AuthentificationParApplication;
 use Carbon\CarbonInterface;
-use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -73,6 +73,9 @@ final readonly class CreeUnJetonDeDiagnosticAction
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::ADRESSE_DES_ALERTES_VIDE);
         }
 
+        $nom = trim($this->sansCaracteresDeControle($nom));
+        throw_if($nom === '', new CreationDeJetonRefusee(CreationDeJetonRefusee::NOM_INVALIDE));
+
         $this->verifierLaDemande($portees, $jours);
 
         $instant = now();
@@ -108,13 +111,23 @@ final readonly class CreeUnJetonDeDiagnosticAction
         $jeton = JetonDeDiagnostic::query()->create([
             'identifiant' => $identifiant,
             'empreinte' => JetonDeDiagnostic::empreinteDe($secret),
-            'nom' => Str::limit(trim($nom), 80, ''),
+            'nom' => Str::limit($nom, 80, ''),
             'portees' => array_map(static fn (PorteeDeDiagnostic $portee): string => $portee->value, $portees),
             'cree_par_admin_id' => $createur->id,
             'expire_le' => $instant->copy()->addDays($jours),
         ]);
 
         return ['jeton' => $jeton, 'en_clair' => JetonDeDiagnostic::composer($identifiant, $secret)];
+    }
+
+    /**
+     * Un saut de ligne dans le nom forgerait une ligne de l'audit : les
+     * caractères de contrôle, U+2028 et U+2029 s'en vont, un texte qui n'est
+     * pas de l'UTF-8 aussi.
+     */
+    private function sansCaracteresDeControle(string $nom): string
+    {
+        return preg_replace('/[\p{Cc}\x{2028}\x{2029}]/u', '', $nom) ?? '';
     }
 
     private function adresseDesAlertesVide(): bool
@@ -144,13 +157,11 @@ final readonly class CreeUnJetonDeDiagnosticAction
     {
         $cle = 'diagnostic:creation:'.$createur->id;
 
-        if (RateLimiter::tooManyAttempts($cle, self::ESSAIS_PAR_MINUTE)) {
+        if (RateLimiter::hit($cle, 60) > self::ESSAIS_PAR_MINUTE) {
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::TROP_D_ESSAIS);
         }
 
-        RateLimiter::hit($cle, 60);
-
-        if (! AppAuthentication::make()->verifyCode($codeTotp, $secretTotp, shouldPreventCodeReuse: true)) {
+        if (! AuthentificationParApplication::make()->verifyCode($codeTotp, $secretTotp, shouldPreventCodeReuse: true)) {
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::CODE_REFUSE);
         }
     }

@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Le compte que l'inscription crée, en attente de la preuve de son adresse.
@@ -35,9 +36,11 @@ final readonly class CreateUserAction
             'password' => $input['password'],
         ]);
 
-        $user->forceFill(['en_attente_depuis' => $user->freshTimestamp()])->save();
+        DB::transaction(function () use ($user): void {
+            $user->forceFill(['en_attente_depuis' => $user->freshTimestamp()])->save();
 
-        $this->plaquesParDefaut->execute($user);
+            $this->plaquesParDefaut->execute($user);
+        });
 
         event(new Registered($user));
 

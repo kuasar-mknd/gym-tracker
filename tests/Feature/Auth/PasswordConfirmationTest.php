@@ -43,4 +43,19 @@ class PasswordConfirmationTest extends TestCase
 
         $response->assertSessionHasErrors();
     }
+
+    public function test_five_wrong_passwords_lock_confirmation_even_for_the_right_one(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (range(1, 5) as $essai) {
+            $this->actingAs($user)->post('/confirm-password', ['password' => 'wrong-password'])
+                ->assertSessionHasErrors('password');
+        }
+
+        $this->actingAs($user)->post('/confirm-password', ['password' => 'password'])
+            ->assertSessionHasErrors('password');
+
+        $this->assertNull(session('auth.password_confirmed_at'));
+    }
 }

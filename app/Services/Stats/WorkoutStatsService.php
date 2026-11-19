@@ -50,10 +50,8 @@ final class WorkoutStatsService
              *
              * @return array<int, DurationHistoryPoint>
              */
-            fn (): array => Workout::query()
+            fn (): array => $user->seancesFaites()
                 ->select(['name', 'started_at', 'started_at_offset', 'ended_at', 'ended_at_offset'])
-                ->where('user_id', $user->id)
-                ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
@@ -92,10 +90,10 @@ final class WorkoutStatsService
                  * durée se lit sur les instants qu'ils désignent
                  * (`InstantAvecSonDecalage::lire()`), comme le modèle les lit.
                  */
-                $workouts = $user->workouts()
+                $workouts = $user->seancesFaites()
                     ->toBase()
-                    ->select(['started_at', 'started_at_offset', 'ended_at', 'ended_at_offset'])
-                    ->where('started_at', '>=', now()->subDays($jours))
+                    ->select(['workouts.started_at', 'workouts.started_at_offset', 'workouts.ended_at', 'workouts.ended_at_offset'])
+                    ->where('workouts.started_at', '>=', now()->subDays($jours))
                     ->get();
 
                 $durationBuckets = [

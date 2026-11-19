@@ -45,6 +45,10 @@ class UpdatePushSubscriptionRequest extends FormRequest
             // Voir App\Rules\PublicPushEndpoint. La longueur est celle de la
             // colonne : au-delà, la base refusait l'écriture et rendait un 500.
             'endpoint' => ['required', 'url', 'max:'.PushSubscription::ENDPOINT_MAX_LENGTH, new PublicPushEndpoint()],
+            // L'adresse que ce renouvellement remplace : le worker l'envoie,
+            // et le serveur la retire de tout compte, la session courante
+            // pouvant être celle d'un autre que le propriétaire de l'ancienne.
+            'ancien_endpoint' => ['nullable', 'string', 'max:'.PushSubscription::ENDPOINT_MAX_LENGTH, 'regex:/^[\x21-\x7E]+$/'],
             'keys' => ['required', 'array'],
             'keys.auth' => ['bail', 'required', 'string', 'max:'.self::CLEF_MAX],
             'keys.p256dh' => ['bail', 'required', 'string', 'max:'.self::CLEF_MAX],
