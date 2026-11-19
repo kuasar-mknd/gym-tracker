@@ -212,6 +212,38 @@ describe('les réglages de la séance', () => {
             expect(inertia.visit).not.toHaveBeenCalled()
         })
 
+        it.each([
+            ['onHttpException', { status: 403 }],
+            ['onHttpException', { status: 422 }],
+            ['onError', { cle: 'message' }],
+        ])(
+            'un refus du serveur (%s) retire « Reprendre » et dit pourquoi, sans page d’erreur',
+            async (rappel, reponse) => {
+                file.patch.mockResolvedValue(bilanDuServeur())
+                const reglages = monter()
+                await reglages.confirmFinishWorkout()
+
+                reglages.reprendreLaSeance()
+                const refus = inertia.post.mock.calls[0][2][rappel](reponse)
+                inertia.post.mock.calls[0][2].onFinish()
+
+                expect(refus === false || rappel === 'onError').toBe(true)
+                expect(reglages.bilanDeFin.value).toMatchObject({ peutReprendre: false, reprisePerimee: true })
+                expect(reglages.repriseEnCours.value).toBe(false)
+            },
+        )
+
+        it('laisse à Inertia une réponse autre que 403 et 422', async () => {
+            file.patch.mockResolvedValue(bilanDuServeur())
+            const reglages = monter()
+            await reglages.confirmFinishWorkout()
+
+            reglages.reprendreLaSeance()
+
+            expect(inertia.post.mock.calls[0][2].onHttpException({ status: 500 })).toBeUndefined()
+            expect(reglages.bilanDeFin.value.peutReprendre).toBe(true)
+        })
+
         it('passé le délai du serveur, « Reprendre » disparaît sans l’appeler', async () => {
             file.patch.mockResolvedValue(bilanDuServeur())
             const reglages = monter()
@@ -221,7 +253,7 @@ describe('les réglages de la séance', () => {
             reglages.reprendreLaSeance()
 
             expect(inertia.post).not.toHaveBeenCalled()
-            expect(reglages.bilanDeFin.value.peutReprendre).toBe(false)
+            expect(reglages.bilanDeFin.value).toMatchObject({ peutReprendre: false, reprisePerimee: true })
         })
 
         it('une fin en file dit « enregistrée sur cet appareil » : ni records ni reprise, et « Fermer » reste sur la séance', async () => {

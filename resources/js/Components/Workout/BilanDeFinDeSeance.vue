@@ -104,6 +104,14 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
                     </li>
                 </ul>
             </div>
+            <p
+                v-if="bilan?.reprisePerimee"
+                role="status"
+                class="text-text-muted mt-4 text-sm"
+                dusk="bilan-de-fin-reprise-perimee"
+            >
+                Le délai pour reprendre est passé.
+            </p>
             <div class="mt-6 flex flex-col gap-3">
                 <GlassButton
                     variant="primary"

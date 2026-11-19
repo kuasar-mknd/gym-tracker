@@ -209,6 +209,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
         }
 
         bilan.peutReprendre = false
+        bilan.reprisePerimee = true
 
         return true
     }
@@ -241,9 +242,29 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
                 // Une autre séance déjà ouverte reçoit la personne à sa place : sa page repart de zéro.
                 preserveState: false,
                 onSuccess: () => (bilanDeFin.value = null),
+                onHttpException: (reponse) => retirerLaRepriseRefusee(reponse?.status),
+                onError: () => retirerLaRepriseRefusee(422),
                 onFinish: () => (repriseEnCours.value = false),
             },
         )
+    }
+
+    /**
+     * Le serveur refuse la reprise (403 : le délai est passé, ou l'horloge de
+     * l'appareil retardait ; 422) : « Reprendre » disparaît du bilan, qui en dit
+     * la raison en une phrase, au lieu de la page d'erreur brute. Un autre échec
+     * garde sa réponse ordinaire.
+     *
+     * @returns {boolean|void} Faux garde l'erreur loin de la page d'erreur d'Inertia.
+     */
+    const retirerLaRepriseRefusee = (statut) => {
+        if (![403, 422].includes(statut) || bilanDeFin.value === null) {
+            return
+        }
+
+        bilanDeFin.value = { ...bilanDeFin.value, peutReprendre: false, reprisePerimee: true }
+
+        return false
     }
 
     /** Ce que `BilanDeFinDeSeance` reçoit : son état, la séance close, et ses deux gestes. */

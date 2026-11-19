@@ -126,6 +126,14 @@ describe('le bilan de fin de séance', () => {
         expect(boutons(wrapper)).toEqual(['Fermer'])
     })
 
+    it('dit en une phrase pourquoi « Reprendre » n’est plus offert', () => {
+        const wrapper = monter({ bilan: { ...DU_SERVEUR, peutReprendre: false, reprisePerimee: true } })
+
+        expect(lire(wrapper, 'bilan-de-fin-reprise-perimee')).toBe('Le délai pour reprendre est passé.')
+        expect(boutons(wrapper)).toEqual(['Fermer'])
+        expect(monter().find('[dusk="bilan-de-fin-reprise-perimee"]').exists()).toBe(false)
+    })
+
     it('occupe « Reprendre » le temps de l’aller-retour, et retient « Fermer »', () => {
         const wrapper = monter({ enCours: true })
 

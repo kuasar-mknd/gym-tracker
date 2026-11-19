@@ -91,16 +91,24 @@ const raisonDuModele = computed(() => {
                 >Terminer</GlassButton
             >
         </div>
-        <GlassButton
-            variant="secondary"
-            @click="emit('enregistrer-comme-modele')"
-            :loading="enregistrementDuModele"
-            :disabled="!joignable || surUneCopie || seanceEnAttente"
-            :aria-describedby="raisonDuModele"
-            class="w-full"
-            dusk="enregistrer-comme-modele"
-            >Modèle</GlassButton
-        >
+        <!--
+            « Modèle » enregistre une séance et quitte la page : sur téléphone, il
+            n'occupe plus la largeur, que l'on touche pour fermer le clavier. Petit,
+            effacé, à droite et à distance de la liste, un toucher dans le vide ne
+            l'atteint plus (#2434). Sur bureau, la colonne d'avant.
+        -->
+        <div class="bureau:block flex justify-end pt-6">
+            <GlassButton
+                variant="ghost"
+                @click="emit('enregistrer-comme-modele')"
+                :loading="enregistrementDuModele"
+                :disabled="!joignable || surUneCopie || seanceEnAttente"
+                :aria-describedby="raisonDuModele"
+                class="bureau:w-full"
+                dusk="enregistrer-comme-modele"
+                >Modèle</GlassButton
+            >
+        </div>
         <p v-if="!joignable" id="modele-sans-reseau" class="text-text-muted text-center text-sm font-medium">
             Il faut le réseau pour enregistrer la séance comme modèle.
         </p>
