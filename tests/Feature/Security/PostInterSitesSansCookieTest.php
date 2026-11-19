@@ -52,7 +52,7 @@ function interSitesCookiesPoses(TestResponse $reponse): array
 it('ne pose aucun cookie sur le 419 d\'un POST arrivé sans cookie de session', function (): void {
     interSitesProtegerCommeEnProduction();
 
-    $reponse = (new Appareil())->envoyer('POST', '/logout', [], ['Sec-Fetch-Site' => 'cross-site']);
+    $reponse = new Appareil()->envoyer('POST', '/logout', [], ['Sec-Fetch-Site' => 'cross-site']);
 
     $reponse->assertStatus(419);
     expect(interSitesCookiesPoses($reponse))->not->toContain(config()->string('session.cookie'));
@@ -74,7 +74,7 @@ it('garde le cookie du compte connecté face à un POST inter-sites', function (
 });
 
 it('pose toujours le cookie de session sur une page vue sans cookie', function (): void {
-    $reponse = (new Appareil())->envoyer('GET', '/login');
+    $reponse = new Appareil()->envoyer('GET', '/login');
 
     expect(interSitesCookiesPoses($reponse))->toContain(config()->string('session.cookie'));
     expect(interSitesCookiesPoses($reponse))->toContain('XSRF-TOKEN');

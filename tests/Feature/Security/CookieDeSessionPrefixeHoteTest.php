@@ -57,7 +57,7 @@ it('pose le cookie de session prefixé avec Secure, sur /, sans domaine', functi
     config(['session.secure' => true, 'session.cookie' => '__Host-gymtracker-session']);
     $compte = User::factory()->create();
 
-    $reponse = (new Appareil())->envoyer('POST', 'https://gym.example.org/login', ['email' => $compte->email, 'password' => 'password']);
+    $reponse = new Appareil()->envoyer('POST', 'https://gym.example.org/login', ['email' => $compte->email, 'password' => 'password']);
 
     $cookie = collect($reponse->headers->getCookies())->first(fn ($c): bool => $c->getName() === '__Host-gymtracker-session');
     expect($cookie)->not->toBeNull()
