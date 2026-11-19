@@ -61,6 +61,11 @@ export const classifySyncError = (error) => {
         return SYNC_OFFLINE
     }
 
+    // Une adresse hors de l'origine de la page ne deviendra jamais valide : refus définitif.
+    if (error?.name === 'ErreurHorsOrigine') {
+        return SYNC_PERMANENT
+    }
+
     const status = error?.response?.status
 
     if (typeof status !== 'number') {

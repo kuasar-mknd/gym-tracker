@@ -358,6 +358,18 @@ describe('une adresse sans copie', () => {
         expect(fenetre.Ziggy).toEqual(routesDe('/dashboard'))
     })
 
+    it.each([
+        ['une autre origine', 'https://autre.example'],
+        ['une adresse qui n’en est pas une', 'pas une adresse'],
+    ])('laisse la coquille quand la table des routes nomme %s', async (_nom, url) => {
+        await ecrire(pageDe({ nom: 'Le plus récent' }), { routes: { ...routesDe('/dashboard'), url } })
+
+        const demarrage = await demarrer('/dashboard')
+
+        expect(demarrage.resultat).toEqual({ montee: false, raison: 'sans-routes' })
+        expect(demarrage.fenetre.Ziggy).toBeUndefined()
+    })
+
     it('prend le auth et les routes de la copie la plus récente, quel que soit son chemin', async () => {
         const debut = instant
 

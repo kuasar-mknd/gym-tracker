@@ -161,6 +161,21 @@ const ENTETE_DU_COMPTE = 'X-Compte-De-L-Ecriture'
  */
 export const ENTETE_DE_L_HEURE_DE_L_APPAREIL = 'X-Heure-De-L-Appareil'
 
+const ENTETES_REJOUABLES = ['idempotency-key', ENTETE_DE_L_HEURE_DE_L_APPAREIL.toLowerCase()]
+
+/** Vrai quand l'adresse d'une entrée mène hors de l'origine de la page, ou n'est pas une adresse. */
+const sortDeLOrigine = (url) => {
+    try {
+        return new URL(String(url), window.location.origin).origin !== window.location.origin
+    } catch {
+        return true
+    }
+}
+
+/** Les seuls en-têtes qu'une entrée rejouée garde : sa clé d'idempotence, et l'heure que le départ repose. */
+const entetesRejouables = (entetes) =>
+    Object.fromEntries(Object.entries(entetes ?? {}).filter(([nom]) => ENTETES_REJOUABLES.includes(nom.toLowerCase())))
+
 /**
  * La requête telle qu'elle part maintenant : avec l'heure de l'appareil à son
  * départ (`ENTETE_DE_L_HEURE_DE_L_APPAREIL`).
@@ -985,14 +1000,17 @@ class SyncService {
          */
         const delai =
             typeof delaiDeLaTentative === 'number' ? delaiDeLaTentative : garderEnFile ? DELAI_DE_REJEU_MS : null
-        const tentative = delai === null || stamped.timeout !== undefined ? stamped : { ...stamped, timeout: delai }
-
         /*
          * Le compte qui fait l'écriture, pris à son départ : une écriture
          * partie juste avant que la session se ferme, et tombée sur un réseau
          * absent juste après, reste à celui qui l'a faite.
          */
         const compte = this.compte
+        const avecLeDelai = delai === null || stamped.timeout !== undefined ? stamped : { ...stamped, timeout: delai }
+        const tentative =
+            compte === null || !this.isMutation(stamped)
+                ? avecLeDelai
+                : { ...avecLeDelai, headers: { ...avecLeDelai.headers, [ENTETE_DU_COMPTE]: compte } }
         const oublis = this.oublisDe(compte)
 
         /*
@@ -1989,6 +2007,17 @@ class SyncService {
 
         for (let config = this.teteDeFile(); config !== undefined; config = this.teteDeFile()) {
             /*
+             * Une entrée dont l'adresse mène hors de l'origine de la page (un
+             * stockage altéré) ne part pas : classée refusée, elle ne reste
+             * pas en tête à bloquer le vidage du compte.
+             */
+            if (sortDeLOrigine(config.url)) {
+                this.sortirRefusee(config, null)
+
+                continue
+            }
+
+            /*
              * Une erreur passagère a fixé l'heure du prochain essai. Un autre
              * déclencheur (une écriture directe, `online`, le retour au premier
              * plan) ne la devance pas : sans cela, une rafale de saisies
@@ -2042,7 +2071,7 @@ class SyncService {
                 method: config.method,
                 url: config.url,
                 data: config.data,
-                headers: { ...config.headers, [ENTETE_DU_COMPTE]: config.compte },
+                headers: { ...entetesRejouables(config.headers), [ENTETE_DU_COMPTE]: config.compte },
                 timeout: config.timeout ?? DELAI_DE_REJEU_MS,
             }
 

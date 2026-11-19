@@ -130,7 +130,7 @@ it('termine par une seule requête, mène à l’accueil, et l’invitation aux 
     const { 'X-Heure-De-L-Appareil': auDepart, ...autresEntetes } = reseau.serveur.requetes[0].entetes
     const ageDuGeste = Date.parse(auDepart) - Date.parse('2026-10-19T06:42:00.000Z')
 
-    expect(autresEntetes).toEqual({})
+    expect(autresEntetes).toEqual({ 'X-Compte-De-L-Ecriture': expect.any(String) })
     expect(auDepart).toMatch(/^2026-10-19T06:42:\d{2}\.\d{3}Z$/)
     expect(ageDuGeste).toBeGreaterThanOrEqual(0)
     expect(ageDuGeste).toBeLessThan(1000)
