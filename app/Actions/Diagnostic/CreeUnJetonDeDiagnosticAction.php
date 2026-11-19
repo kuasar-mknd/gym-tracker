@@ -154,11 +154,9 @@ final readonly class CreeUnJetonDeDiagnosticAction
     {
         $cle = 'diagnostic:creation:'.$createur->id;
 
-        if (RateLimiter::tooManyAttempts($cle, self::ESSAIS_PAR_MINUTE)) {
+        if (RateLimiter::hit($cle, 60) > self::ESSAIS_PAR_MINUTE) {
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::TROP_D_ESSAIS);
         }
-
-        RateLimiter::hit($cle, 60);
 
         if (! AppAuthentication::make()->verifyCode($codeTotp, $secretTotp, shouldPreventCodeReuse: true)) {
             throw new CreationDeJetonRefusee(CreationDeJetonRefusee::CODE_REFUSE);

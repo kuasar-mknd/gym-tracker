@@ -9,9 +9,11 @@ use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use App\Support\AdresseCanonique;
+use Closure;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Password;
 
 class UserForm
 {
@@ -120,7 +122,6 @@ class UserForm
                 ->dehydrated(false),
             TextInput::make('provider')->label('Fournisseur de connexion')->disabled()->dehydrated(false),
             TextInput::make('provider_id')->label('Identifiant chez le fournisseur')->disabled()->dehydrated(false),
-            TextInput::make('avatar')->label('Avatar')->maxLength(255),
             /*
              * Le champ ne s'ecrit que lorsqu'il porte quelque chose.
              *
@@ -147,6 +148,12 @@ class UserForm
             TextInput::make('password')->label('Mot de passe')
                 ->password()
                 ->autocomplete('new-password')
+                ->rule(Password::defaults())
+                ->rule(static fn (): Closure => static function (string $attribute, mixed $valeur, Closure $echec): void {
+                    if (is_string($valeur) && strlen($valeur) > 72) {
+                        $echec('Le mot de passe ne doit pas dépasser 72 octets.');
+                    }
+                })
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->required(fn (string $operation): bool => $operation === 'create'),
             /*

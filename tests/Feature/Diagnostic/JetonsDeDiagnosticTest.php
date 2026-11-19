@@ -458,3 +458,46 @@ it('retire les caractères de contrôle du nom du jeton, pour qu’il ne forge p
     'un octet nul et une séquence ANSI' => ["a\0b\e[31mc", 'ab[31mc'],
     'un nom ordinaire' => ['Agent de maintenance', 'Agent de maintenance'],
 ]);
+
+it('compte l’essai avant de le juger : un refus pour trop d’essais compte aussi, sans fenêtre entre la lecture et le compte', function (): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+    $cle = 'diagnostic:creation:'.$admin->id;
+    RateLimiter::clear($cle);
+
+    foreach (range(1, CreeUnJetonDeDiagnosticAction::ESSAIS_PAR_MINUTE) as $essai) {
+        RateLimiter::hit($cle, 60);
+    }
+
+    expect(fn (): array => jetonsDeDiagnosticCreer($admin, $secretTotp, code: '000000'))
+        ->toThrow(new CreationDeJetonRefusee(CreationDeJetonRefusee::TROP_D_ESSAIS))
+        ->and(RateLimiter::attempts($cle))->toBe(CreeUnJetonDeDiagnosticAction::ESSAIS_PAR_MINUTE + 1);
+});
+
+/**
+ * Une écriture en masse sur la table des administrateurs, qui n'émet aucun
+ * évènement de modèle : les jetons de leur créateur resteraient actifs.
+ */
+function jetonsDeDiagnosticEcritureEnMasseSurLesAdministrateurs(string $source): bool
+{
+    return preg_match('/(?:Admin::(?:query\(\)|where\w*\()|DB::table\([\'"]admins[\'"]\))[^;]*->(?:update|upsert|updateOrInsert|increment|decrement)\(/s', $source) === 1;
+}
+
+it('reconnaît une écriture en masse sur les administrateurs', function (string $source): void {
+    expect(jetonsDeDiagnosticEcritureEnMasseSurLesAdministrateurs($source))->toBeTrue();
+})->with([
+    'constructeur de modèle' => ["Admin::query()->update(['password' => \$hash]);"],
+    'clause et mise à jour' => ["Admin::query()->whereKey(1)->update(['app_authentication_secret' => null]);"],
+    'table brute' => ["DB::table('admins')->where('id', 1)->update(['password' => \$hash]);"],
+]);
+
+it('n’écrit aucun mot de passe ni secret d’administrateur par une mise à jour en masse', function (): void {
+    $fichiers = [];
+
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path(), FilesystemIterator::SKIP_DOTS)) as $fichier) {
+        if ($fichier instanceof SplFileInfo && $fichier->getExtension() === 'php' && jetonsDeDiagnosticEcritureEnMasseSurLesAdministrateurs((string) file_get_contents($fichier->getPathname()))) {
+            $fichiers[] = $fichier->getPathname();
+        }
+    }
+
+    expect($fichiers)->toBe([]);
+});
