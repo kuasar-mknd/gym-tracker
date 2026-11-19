@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\AdmissionDesExceptions;
 use App\Support\TexteSansAdresse;
 use App\Support\TexteSansJeton;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
@@ -76,7 +77,13 @@ use Illuminate\Support\Str;
  * trente jours, par la purge que le paquet planifie (`modelPruneInterval()`
  * du panneau), comme les lignes écrites avant la colonne.
  *
+ * Au plus une ligne complète par empreinte et par fenêtre
+ * (`AdmissionDesExceptions`) : `occurrences` compte les répétitions que la
+ * fenêtre a passées sous silence.
+ *
  * @property int|null $user_id
+ * @property string|null $empreinte
+ * @property int $occurrences
  */
 final class ExceptionEnregistree extends Exception
 {
@@ -178,6 +185,13 @@ final class ExceptionEnregistree extends Exception
     {
         self::creating(function (self $exception): void {
             $exception->user_id ??= self::compteDeLaRequete();
+            $exception->empreinte ??= app(AdmissionDesExceptions::class)->empreinteEnCours();
+        });
+
+        self::created(function (self $exception): void {
+            if (is_string($exception->empreinte)) {
+                app(AdmissionDesExceptions::class)->retenir($exception->empreinte, $exception->id);
+            }
         });
 
         self::saving(function (self $exception): void {
