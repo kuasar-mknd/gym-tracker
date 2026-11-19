@@ -211,7 +211,7 @@ const formatDateFull = (dateStr) => {
 <template>
     <Head title="Calendrier" />
 
-    <AuthenticatedLayout show-back back-route="profile.index" page-title="Calendrier">
+    <AuthenticatedLayout show-back back-route="workouts.index" page-title="Calendrier">
         <div class="space-y-6">
             <!-- Calendar Navigation -->
             <div class="flex items-center justify-between">

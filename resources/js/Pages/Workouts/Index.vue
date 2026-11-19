@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
+import { Head, Link, useForm, Deferred, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
@@ -150,17 +150,34 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
         <div class="space-y-6">
             <!-- Les actions de l'en-tête de bureau, qui ne se montre qu'à partir de 1 024 px. -->
-            <div class="bureau:hidden flex items-center gap-2">
-                <GlassButton variant="primary" class="flex-1" :loading="demarrageEnCours" @click="createWorkout">
+            <div class="bureau:hidden space-y-3">
+                <GlassButton variant="primary" class="w-full" :loading="demarrageEnCours" @click="createWorkout">
                     <GlassIcon name="add" size="sm" class="mr-2" />
                     Démarrer une séance
                 </GlassButton>
-                <GlassButton :href="route('templates.index')" class="min-w-touch" aria-label="Modèles">
-                    <GlassIcon name="inventory_2" size="sm" />
-                </GlassButton>
-                <GlassButton :href="route('calendar.index')" class="min-w-touch" aria-label="Calendrier">
-                    <GlassIcon name="calendar_month" size="sm" />
-                </GlassButton>
+                <nav
+                    aria-label="Séances"
+                    class="border-glass-border bg-surface-card/50 flex rounded-xl border p-1 text-sm font-bold"
+                >
+                    <span
+                        aria-current="page"
+                        class="bg-text-main text-text-on-dark-accent min-h-touch flex flex-1 items-center justify-center rounded-lg px-3"
+                    >
+                        Historique
+                    </span>
+                    <Link
+                        :href="route('templates.index')"
+                        class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                        Modèles
+                    </Link>
+                    <Link
+                        :href="route('calendar.index')"
+                        class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                        Calendrier
+                    </Link>
+                </nav>
             </div>
 
             <!-- Stats Row -->

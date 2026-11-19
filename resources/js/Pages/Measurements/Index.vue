@@ -154,7 +154,7 @@ const latestBodyFat = computed(() => {
 <template>
     <Head title="Poids" />
 
-    <AuthenticatedLayout show-back back-route="profile.index" page-title="Poids">
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Poids">
         <template #header-actions>
             <!--
                 Le variant suit l'ÉTAT : ce bouton bascule, et il dit

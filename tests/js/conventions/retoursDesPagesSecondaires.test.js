@@ -7,18 +7,21 @@ import { jsRoot } from './sourceFiles'
  * Hors des quatre racines (accueil, séances, progrès, profil), une page n'a ni
  * onglet actif ni retour par la barre du bas : sans `show-back`, elle n'offre
  * aucune sortie au pouce (#2434). Chaque page secondaire dit où elle revient ;
- * sans `back-route`, le retour remonte l'historique.
+ * chacune nomme sa route : sans `back-route`, le retour remonte l'historique, qui peut être vide.
  */
 const RETOURS = {
-    'Achievements/Index': 'profile.index',
-    'Calendar/Index': 'profile.index',
+    'Achievements/Index': 'stats.index',
+    'Calendar/Index': 'workouts.index',
+    'Exercises/Index': 'stats.index',
+    'Exercises/Show': 'exercises.index',
     'Goals/Edit': 'goals.index',
-    'Goals/Index': 'profile.index',
+    'Goals/Index': 'stats.index',
     'Habits/Index': 'profile.index',
     'Journal/Index': 'profile.index',
-    'Measurements/Index': 'profile.index',
-    'Measurements/Parts/Index': 'profile.index',
-    'Notifications/Index': null,
+    'Measurements/Index': 'stats.index',
+    'Measurements/Parts/Index': 'stats.index',
+    // Sans historique (ouverture à froid, clic sur une notification push), `history.back()` ne ferait rien.
+    'Notifications/Index': 'dashboard',
     'Supplements/Index': 'profile.index',
 }
 
@@ -33,18 +36,14 @@ describe('les pages secondaires', () => {
 
         expect(attributs).toMatch(/\sshow-back[\s=>]/)
 
-        if (route === null) {
-            expect(attributs).not.toContain('back-route')
-        } else {
-            expect(attributs).toContain(`back-route="${route}"`)
-        }
+        expect(attributs).toContain(`back-route="${route}"`)
     })
 })
 
 describe('Workouts/Index sur mobile', () => {
     const source = readFileSync(`${jsRoot}/Pages/Workouts/Index.vue`, 'utf8')
 
-    it('garde le démarrage, les modèles et le calendrier hors du seul créneau de bureau', () => {
+    it('garde le démarrage et le segment Historique / Modèles / Calendrier hors du seul créneau de bureau', () => {
         const contenu = source.slice(source.indexOf('</template>', source.indexOf('<template #header>')))
 
         expect(contenu).toContain('bureau:hidden')
