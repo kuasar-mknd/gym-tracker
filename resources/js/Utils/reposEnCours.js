@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
 
 /**
  * Le repos d'une séance que la page de séance a laissé derrière elle (#2434).
@@ -24,6 +25,8 @@ import { reactive } from 'vue'
  * @property {number|null} echeance l'instant où il finit (ms), null en pause
  * @property {number|null} restantEnPause ce qu'il reste en pause, en secondes
  * @property {string} adresse l'adresse de la séance, où le repos se reprend
+ * @property {number|string|null} [seance] l'identifiant que le serveur a donné à la séance, ou null sans lui
+ * @property {boolean} [annonce] « Repos terminé » a déjà été dit : un bandeau remonté ne le redit pas
  * @property {string} intitule le nom de la séance
  * @property {number|string|null} compte le compte à qui le repos appartient
  */
@@ -61,6 +64,75 @@ export const reposDuCompte = (compte) => {
 }
 
 /**
+ * Ce dépôt est-il celui de cette séance ? Son identifiant, ou, pour une séance
+ * démarrée sans réseau, l'adresse de sa clé (`useSeanceEnAttente`).
+ *
+ * @param {ReposDepose} repos
+ * @param {{ id?: number|string|null, idempotency_key?: string|null }|null|undefined} seance
+ * @returns {boolean}
+ */
+export const estLeReposDeLaSeance = (repos, seance) => {
+    if (!seance) {
+        return false
+    }
+
+    if (repos.seance != null && seance.id != null && String(repos.seance) === String(seance.id)) {
+        return true
+    }
+
+    const adresseEnAttente = adresseDUneSeanceEnAttente(seance.idempotency_key)
+
+    return adresseEnAttente !== null && repos.adresse === adresseEnAttente
+}
+
+/**
+ * Le repos que le bandeau de CETTE séance en cours peut montrer : celui du
+ * compte, déposé par cette séance, et que le bandeau n'a pas déjà annoncé fini.
+ * Un dépôt d'une autre séance (supprimée, ou quittée sans clôture avant qu'une
+ * nouvelle ne démarre) ne se montre jamais, et ne s'annonce jamais.
+ *
+ * @param {number|string|null|undefined} compte
+ * @param {object|null|undefined} seance la séance en cours que le bandeau montre
+ * @returns {ReposDepose|null}
+ */
+export const reposAMontrer = (compte, seance) => {
+    const repos = reposDuCompte(compte)
+
+    if (repos === null || !estLeReposDeLaSeance(repos, seance)) {
+        return null
+    }
+
+    return repos.annonce === true && secondesRestantes(repos) === 0 ? null : repos
+}
+
+/**
+ * Efface le dépôt du compte qui n'est pas celui de la séance en cours (`null`
+ * sans séance en cours) : il ne reviendrait jamais, et resterait là à
+ * attendre qu'une autre séance l'annonce.
+ *
+ * @param {number|string|null|undefined} compte
+ * @param {object|null|undefined} seance
+ */
+export const oublierLeReposDUneAutreSeance = (compte, seance) => {
+    const repos = reposDuCompte(compte)
+
+    if (repos !== null && !estLeReposDeLaSeance(repos, seance)) {
+        effacerLeRepos()
+    }
+}
+
+/**
+ * Note que « Repos terminé » a été dit : un bandeau remonté sur une autre page
+ * ne le redit pas. Un repos encore en cours n'est pas annoncé : un dépôt neuf,
+ * arrivé après l'annonce, ne se note pas.
+ */
+export const noterLAnnonceDuRepos = () => {
+    if (memoire.repos !== null && secondesRestantes(memoire.repos) === 0) {
+        memoire.repos.annonce = true
+    }
+}
+
+/**
  * Les secondes qu'il reste au repos déposé : le reste figé d'une pause, ou
  * l'écart à l'échéance, arrondi au-dessus comme le minuteur de la page. Zéro
  * une fois l'échéance passée.
@@ -82,7 +154,8 @@ export const secondesRestantes = (repos, maintenant = Date.now()) => {
  * est celui de ce compte, de cette adresse, et pas fini.
  *
  * @param {{ compte: number|string|null|undefined, adresse: string }} options
- * @returns {{ duree: number, restant: number, enPause: boolean }|null}
+ * @returns {{ duree: number, restant: number, enPause: boolean, echeance: number|null }|null} `echeance`
+ *   est celle du dépôt, rendue telle quelle : la page la reprend sans l'arrondir, pour qu'un aller-retour n'ajoute rien
  */
 export const reprendreLeRepos = ({ compte, adresse }) => {
     const repos = reposDuCompte(compte)
@@ -99,7 +172,7 @@ export const reprendreLeRepos = ({ compte, adresse }) => {
         return null
     }
 
-    return { duree: repos.duree, restant, enPause: repos.echeance === null }
+    return { duree: repos.duree, restant, enPause: repos.echeance === null, echeance: repos.echeance }
 }
 
 /**

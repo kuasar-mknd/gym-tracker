@@ -20,7 +20,7 @@ import { compte, entier } from '@/Utils/nombre'
 import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
 import { jourEtMois } from '@/Utils/date'
 import { SEUIL_D_UNE_SEANCE_OUBLIEE_S } from '@/Utils/seanceOubliee'
-import { DELAI_DE_L_ANNONCE_MS, effacerLeRepos, secondesRestantes } from '@/Utils/reposEnCours'
+import { DELAI_DE_L_ANNONCE_MS, effacerLeRepos, noterLAnnonceDuRepos, secondesRestantes } from '@/Utils/reposEnCours'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 const props = defineProps({
@@ -77,6 +77,7 @@ const reposAffiche = computed(() => {
 const reposTermine = computed(() => resteDuRepos.value === 0)
 
 let fermetureDuRepos = null
+let annonceCommencee = false
 
 /*
  * La fin se dit une fois : le retour haptique ne part qu'au passage à zéro
@@ -95,8 +96,11 @@ watch(
             triggerHaptic('timer')
         }
 
+        annonceCommencee = true
+
         fermetureDuRepos = setTimeout(() => {
             fermetureDuRepos = null
+            annonceCommencee = false
 
             if (reposTermine.value) {
                 effacerLeRepos()
@@ -133,6 +137,11 @@ onMounted(() => {
 onUnmounted(() => {
     if (intervalId) clearInterval(intervalId)
     clearTimeout(fermetureDuRepos)
+
+    // Partie avant l'effacement : le bandeau de la page suivante ne redit pas « Repos terminé ».
+    if (annonceCommencee) {
+        noterLAnnonceDuRepos()
+    }
 })
 </script>
 

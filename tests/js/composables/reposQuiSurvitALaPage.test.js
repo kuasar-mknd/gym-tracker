@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, ref } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 import { mount } from '@vue/test-utils'
 
 const inertia = vi.hoisted(() => ({ utilisateur: { id: 7, auto_rest_timer: true, default_rest_time: 90 } }))
@@ -32,7 +32,7 @@ const monterLaPage = (etat = {}) => {
                     sortieAudio: useSortieAudio(),
                     memoire: etat.sansMemoire
                         ? undefined
-                        : memoireDeLaPage({ page, localWorkout: ref({ name: 'Pousser' }), estClose }),
+                        : memoireDeLaPage({ page, localWorkout: ref({ id: 5, name: 'Pousser' }), estClose }),
                 })
 
                 return () => h('div')
@@ -68,6 +68,7 @@ describe('un repos qui quitte la page avec elle', () => {
             echeance: MAINTENANT.getTime() + 90_000,
             restantEnPause: null,
             adresse: '/workouts/5',
+            seance: 5,
             intitule: 'Pousser',
         })
     })
@@ -125,6 +126,36 @@ describe('un repos qui quitte la page avec elle', () => {
         expect(reposDuCompte(7)).toMatchObject({ echeance: MAINTENANT.getTime() + 40_000, restantEnPause: null })
     })
 
+    it('garde l’échéance exacte à travers les allers-retours : le repos ne s’allonge pas', () => {
+        const premiere = monterLaPage()
+
+        premiere.minuteur().openRestTimer()
+        const echeance = MAINTENANT.getTime() + 90_000
+        vi.setSystemTime(new Date(MAINTENANT.getTime() + 20_300))
+        premiere.page.url = '/dashboard'
+        premiere.wrapper.unmount()
+
+        for (let allerRetour = 0; allerRetour < 3; allerRetour++) {
+            const page = monterLaPage()
+
+            page.page.url = '/dashboard'
+            page.wrapper.unmount()
+        }
+
+        expect(reposDuCompte(7).echeance).toBe(echeance)
+    })
+
+    it('ne dépose pas un repos qui a fini avant le départ de la page', () => {
+        const { wrapper, minuteur, page } = monterLaPage()
+
+        minuteur().openRestTimer()
+        vi.setSystemTime(new Date(MAINTENANT.getTime() + 91_000))
+        page.url = '/dashboard'
+        wrapper.unmount()
+
+        expect(reposDuCompte(7)).toBeNull()
+    })
+
     it('ne reprend pas un repos que l’horloge a fini', () => {
         const premiere = monterLaPage()
 
@@ -167,6 +198,18 @@ describe('un repos qui quitte la page avec elle', () => {
         wrapper.unmount()
 
         expect(reposDuCompte(7)).toBeNull()
+    })
+
+    it('ferme la carte du repos quand la séance se termine sur la page (le bilan reste à l’écran)', async () => {
+        const { minuteur, estClose } = monterLaPage()
+
+        minuteur().openRestTimer()
+        expect(minuteur().showTimer.value).toBe(true)
+
+        estClose.value = true
+        await nextTick()
+
+        expect(minuteur().showTimer.value).toBe(false)
     })
 
     it('ne touche à rien sans mémoire : le minuteur d’avant', () => {

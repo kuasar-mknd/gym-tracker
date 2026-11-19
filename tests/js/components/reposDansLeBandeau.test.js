@@ -1,9 +1,10 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed, defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
-import { deposerLeRepos, effacerLeRepos, reposDuCompte } from '@/Utils/reposEnCours'
+import { deposerLeRepos, effacerLeRepos, reposAMontrer, reposDuCompte } from '@/Utils/reposEnCours'
 
 /*
  * Le repos qui continue ailleurs dans l'application (#2434) : le bandeau de la
@@ -94,6 +95,88 @@ describe('le repos dans le bandeau de la séance', () => {
         await vi.advanceTimersByTimeAsync(1_000)
         expect(annonce()).toBe('Repos terminé')
         expect(duree(wrapper)).toContain('10 min')
+    })
+
+    /*
+     * Le bandeau reçoit son repos du layout (`reposAMontrer`), réactif : l'annonce
+     * ne doit pas le faire disparaître elle-même (le dépôt change quand elle part).
+     */
+    const monterAvecLeLayout = () =>
+        mount(
+            defineComponent({
+                setup: () => {
+                    const repos = computed(() => reposAMontrer(7, { id: 12 }))
+
+                    return () =>
+                        h(ActiveWorkoutBanner, {
+                            workout: {
+                                id: 12,
+                                name: 'Push A',
+                                started_at: new Date(MAINTENANT.getTime() - 600_000).toISOString(),
+                            },
+                            compact: true,
+                            repos: repos.value,
+                        })
+                },
+            }),
+            {
+                global: {
+                    directives: { press: {} },
+                    mocks: { route: (nom, parametres) => `/${nom}/${parametres.workout}` },
+                    stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
+                },
+            },
+        )
+
+    it('garde « Repos terminé » à l’écran pendant toute l’annonce, puis efface le dépôt (avec le layout réel)', async () => {
+        deposerLeRepos(depot({ echeance: MAINTENANT.getTime() + 1_000, seance: 12 }))
+
+        const wrapper = monterAvecLeLayout()
+        const annonce = () => wrapper.get('[role="status"]').text()
+
+        expect(duree(wrapper)).toContain('Repos 0:01')
+        await vi.advanceTimersByTimeAsync(1_000)
+        expect(annonce()).toBe('Repos terminé')
+
+        await vi.advanceTimersByTimeAsync(3_000)
+        expect(annonce()).toBe('Repos terminé')
+        expect(reposDuCompte(7)).not.toBeNull()
+
+        await vi.advanceTimersByTimeAsync(1_000)
+        expect(reposDuCompte(7)).toBeNull()
+        expect(annonce()).toBe('')
+    })
+
+    it('note l’annonce au départ du bandeau : celui de la page suivante ne redit pas « Repos terminé »', async () => {
+        deposerLeRepos(depot({ echeance: MAINTENANT.getTime() + 1_000, seance: 12 }))
+
+        const wrapper = monterAvecLeLayout()
+
+        await vi.advanceTimersByTimeAsync(1_000)
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
+        wrapper.unmount()
+
+        // La page change dans la seconde : le nouveau bandeau ne reçoit plus ce repos.
+        expect(reposAMontrer(7, { id: 12 })).toBeNull()
+        expect(reposDuCompte(7)).not.toBeNull()
+    })
+
+    it('ne marque pas comme annoncé un repos neuf arrivé après l’annonce', async () => {
+        deposerLeRepos(depot({ echeance: MAINTENANT.getTime() + 1_000, seance: 12 }))
+
+        const wrapper = monterAvecLeLayout()
+
+        await vi.advanceTimersByTimeAsync(5_000)
+        deposerLeRepos(depot({ echeance: Date.now() + 600_000, seance: 12 }))
+        wrapper.unmount()
+
+        expect(reposAMontrer(7, { id: 12 })).not.toBeNull()
+    })
+
+    it('ne laisse pas un dépôt périmé annoncer « Repos terminé » à un bandeau qui n’est pas le sien', () => {
+        deposerLeRepos(depot({ echeance: MAINTENANT.getTime() - 5_000, seance: 3 }))
+
+        expect(reposAMontrer(7, { id: 12 })).toBeNull()
     })
 
     it('efface le dépôt après l’annonce, et pas avant', async () => {

@@ -13,12 +13,12 @@ import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
 import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
-import { reposDuCompte } from '@/Utils/reposEnCours'
+import { oublierLeReposDUneAutreSeance, reposAMontrer } from '@/Utils/reposEnCours'
 import { useSeanceEnCoursDeLAppareil } from '@/composables/useSeanceEnCoursDeLAppareil'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { messageDesEcrituresAbandonnees, reprendreLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
@@ -93,8 +93,10 @@ const page = usePage()
  */
 const { seanceEnCours: activeWorkout, ouvrir: ouvrirLaSeanceEnCours } = useSeanceEnCoursDeLAppareil({ page })
 const isWorkoutShow = computed(() => page.component === 'Workouts/Show')
-// Le repos que la page de séance a laissé en partant (#2434) : le bandeau le montre à la place de la durée.
-const reposLaisse = computed(() => reposDuCompte(page.props.auth?.user?.id))
+// Le repos que la page de CETTE séance a laissé en partant (#2434) : le bandeau le montre à la place de la durée.
+const reposLaisse = computed(() => reposAMontrer(page.props.auth?.user?.id, activeWorkout.value))
+// Celui d'une autre séance (supprimée, ou quittée sans clôture), ou sans séance en cours : il ne reviendrait pas.
+watch(activeWorkout, (seance) => oublierLeReposDUneAutreSeance(page.props.auth?.user?.id, seance), { immediate: true })
 // La grande bannière n'a sa place que là où la séance est le sujet ; ailleurs, une ligne.
 const banniereCompacte = computed(() => !route().current('dashboard') && !route().current('workouts.index'))
 

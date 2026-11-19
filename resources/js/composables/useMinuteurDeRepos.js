@@ -1,9 +1,10 @@
-import { computed, getCurrentInstance, onUnmounted, ref } from 'vue'
+import { computed, getCurrentInstance, onUnmounted, ref, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { useVerrouDEcran } from '@/composables/useVerrouDEcran'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 import { deposerLeRepos, reprendreLeRepos } from '@/Utils/reposEnCours'
+import { isTemporaryId } from '@/Utils/pendingIds'
 
 /**
  * Ce que dit un réglage du repos automatique resté sans réponse (#2048). Pas
@@ -25,9 +26,11 @@ export const memoireDeLaPage = ({ page, localWorkout, estClose }) => {
 
     return {
         adresse,
+        seance: () => (isTemporaryId(localWorkout.value.id) ? null : localWorkout.value.id),
         compte: page.props.auth?.user?.id ?? null,
         intitule: () => localWorkout.value.name || 'Séance',
         depart: () => page.url !== adresse && !estClose.value,
+        estClose,
     }
 }
 
@@ -50,7 +53,7 @@ export const memoireDeLaPage = ({ page, localWorkout, estClose }) => {
  *
  * @param {{
  *   sortieAudio: ReturnType<typeof import('@/composables/useSortieAudio').useSortieAudio>,
- *   memoire?: { adresse: string, compte: number|string|null, intitule: () => string, depart: () => boolean },
+ *   memoire?: { adresse: string, compte: number|string|null, seance: () => number|string|null, intitule: () => string, depart: () => boolean, estClose: import('vue').Ref<boolean> },
  * }} options `memoire.depart` dit que la page s'en va pour une autre et laisse sa séance ouverte
  * @throws {TypeError} sans la sortie de la page
  */
@@ -118,15 +121,19 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
      * Pas un geste : la sortie audio ne s'ouvre pas ici, et un repos qui a fini
      * dans l'intervalle ne se reprend pas.
      *
-     * @param {{ duree: number, restant: number, enPause: boolean }} repos
+     * L'échéance du dépôt se garde telle quelle : la recalculer depuis les
+     * secondes restantes, arrondies au-dessus, allongeait le repos d'une
+     * seconde à chaque aller-retour.
+     *
+     * @param {{ duree: number, restant: number, enPause: boolean, echeance?: number|null }} repos
      */
-    const reprendreUnRepos = ({ duree, restant, enPause }) => {
+    const reprendreUnRepos = ({ duree, restant, enPause, echeance: echeanceDuDepot = null }) => {
         verrouDEcran.garder()
         timerDuration.value = duree
         timerRun.value += 1
         restantInitial.value = restant
         demarrageEnPause.value = enPause
-        echeance = enPause ? null : Date.now() + restant * 1000
+        echeance = enPause ? null : (echeanceDuDepot ?? Date.now() + restant * 1000)
         restantEnPause = enPause ? restant : null
         carteOuverte.value = true
     }
@@ -145,12 +152,18 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
 
     /**
      * Ce que le repos ouvert tient à déposer quand la page part, ou null sans
-     * repos ouvert ni reste. L'échéance, jamais un compte à rebours.
+     * repos ouvert ni reste, ou quand il a fini (une échéance passée serait
+     * annoncée une seconde fois, sans retour haptique). L'échéance, jamais un
+     * compte à rebours.
      *
      * @returns {{ duree: number, echeance: number|null, restantEnPause: number|null }|null}
      */
     const instantane = () => {
         if (!carteOuverte.value || (echeance === null && restantEnPause === null)) {
+            return null
+        }
+
+        if (echeance !== null && echeance <= Date.now()) {
             return null
         }
 
@@ -242,6 +255,13 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
             reprendreUnRepos(repris)
         }
 
+        // Une séance close, que le bilan laisse à l'écran, n'a plus de repos à tenir : la carte se ferme.
+        watch(memoire.estClose, (close) => {
+            if (close) {
+                showTimer.value = false
+            }
+        })
+
         if (getCurrentInstance()) {
             onUnmounted(() => {
                 const repos = memoire.depart() ? instantane() : null
@@ -250,6 +270,7 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
                     deposerLeRepos({
                         ...repos,
                         adresse: memoire.adresse,
+                        seance: memoire.seance(),
                         intitule: memoire.intitule(),
                         compte: memoire.compte,
                     })
