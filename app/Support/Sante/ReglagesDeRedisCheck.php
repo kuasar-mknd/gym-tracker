@@ -13,15 +13,20 @@ use Throwable;
 /**
  * La mémoire, les évictions, les refus d'écriture et la persistance de
  * Redis, relus dans `INFO` en production (#2151). La production en lance
- * deux : l'instance des données (file, sessions, verrous, limiteurs, en
- * `noeviction`) et celle du cache (`allkeys-lru`). Une pile qui n'a pas
- * encore la bascule n'en a qu'une, qui porte tout sous `allkeys-lru` : un
- * cache plein y évince sessions et verrous, et rien ne le disait.
+ * trois : l'instance des données (file, verrous, limiteurs, battements, en
+ * `noeviction`), celle du cache (`allkeys-lru`) et celle des sessions
+ * (`volatile-lru`). Une pile qui n'a pas encore la bascule n'en a qu'une, qui
+ * porte tout sous `allkeys-lru` : un cache plein y évince sessions et
+ * verrous, et rien ne le disait.
  *
  * Rouge quand l'instance des données évince une clé, refuse une écriture
  * faute de mémoire, dépasse 75 % de son plafond, ne persiste plus, ne répond
- * pas, ou, une fois le cache à part, évince encore ; orange au-delà de 50 %,
- * sans plafond, quand le cache à part évince, quand l'AOF diffère ses
+ * pas, ou, une fois le cache à part, évince encore ; l'instance des sessions
+ * ne passe au rouge que pour un refus d'écriture, une persistance en échec
+ * ou une absence de réponse. Orange au-delà de 50 % pour les données, sans
+ * plafond, quand le cache ou les sessions évincent (c'est leur métier : pour
+ * les sessions, le signe d'un afflux), quand les sessions ne sont pas en
+ * `volatile-lru`, quand l'AOF diffère ses
  * synchronisations ou quand `INFO` ne rend pas de quoi juger. Les compteurs
  * courent depuis le démarrage de Redis : le contrôle garde ceux du passage
  * précédent dans le cache et ne juge que ce qui a changé depuis, un
@@ -71,9 +76,23 @@ final class ReglagesDeRedisCheck extends Check
     ];
 
     /** @var array<string, string> */
-    private const array NOMS = ['donnees' => 'L\'instance des données', 'cache' => 'L\'instance du cache'];
+    private const array NOMS = ['donnees' => 'L\'instance des données', 'cache' => 'L\'instance du cache', 'sessions' => 'L\'instance des sessions'];
 
-    private const string RELEVER_LE_PLAFOND = 'Relever --maxmemory dans la commande du service redis, et la limite de mémoire de son conteneur avec lui.';
+    /** @var array<string, string> */
+    private const array SERVICES = ['donnees' => 'redis', 'cache' => 'redis-cache', 'sessions' => 'redis-sessions'];
+
+    /** @var array<string, string> */
+    private const array CONSEQUENCES_DU_REFUS = [
+        'donnees' => 'sessions et mises en file échouent alors',
+        'cache' => 'sessions et mises en file échouent alors',
+        'sessions' => 'les connexions et toute requête qui ouvre une session échouent alors',
+    ];
+
+    /** @var array<string, string> */
+    private const array EVICTIONS_COURANTES = [
+        'cache' => 'Le cache a évincé %s %s : relever --maxmemory de son instance si le taux de réussite baisse.',
+        'sessions' => 'L\'instance des sessions a évincé %s %s : des sessions les moins récentes se sont fermées pour faire place à d\'autres (afflux de visiteurs, ou plafond trop bas) ; si cela se répète, relever --maxmemory du service redis-sessions.',
+    ];
 
     /**
      * Le libellé de la page « Santé » et du courriel d'alerte, qui
@@ -185,8 +204,8 @@ final class ReglagesDeRedisCheck extends Check
     }
 
     /**
-     * Sur l'instance des données, une éviction emporte file, sessions ou
-     * verrous : rouge. Sur le cache à part, c'est son métier : orange.
+     * Sur l'instance des données, une éviction emporte file ou verrous :
+     * rouge. Sur le cache et les sessions à part, c'est leur métier : orange.
      *
      * @param  array{nombre: int, depuis: string}|null  $ecart
      * @return array{0: list<string>, 1: list<string>}
@@ -197,21 +216,15 @@ final class ReglagesDeRedisCheck extends Check
             return [[], []];
         }
 
-        if ($role === 'cache') {
-            $message = sprintf(
-                'Le cache a évincé %s %s : relever --maxmemory de son instance si le taux de réussite baisse.',
-                $this->compte($ecart['nombre'], 'clé', 'clés'),
-                $ecart['depuis'],
-            );
-
-            return [[], [$message]];
+        if ($role !== 'donnees') {
+            return [[], [sprintf(self::EVICTIONS_COURANTES[$role], $this->compte($ecart['nombre'], 'clé', 'clés'), $ecart['depuis'])]];
         }
 
         $message = sprintf(
-            'L\'instance des données a évincé des clés (%s %s) : file, sessions et verrous y vivent, et partent avec elles. %s',
+            'L\'instance des données a évincé des clés (%s %s) : file, verrous et, sans instance des sessions à part, sessions y vivent, et partent avec elles. %s',
             $this->compte($ecart['nombre'], 'clé évincée', 'clés évincées'),
             $ecart['depuis'],
-            self::RELEVER_LE_PLAFOND,
+            $this->relever($role),
         );
 
         return [[$message], []];
@@ -228,11 +241,12 @@ final class ReglagesDeRedisCheck extends Check
         }
 
         $message = sprintf(
-            '%s : %s faute de mémoire %s (errorstat_OOM) ; sessions et mises en file échouent alors. %s',
+            '%s : %s faute de mémoire %s (errorstat_OOM) ; %s. %s',
             self::NOMS[$role],
             $this->compte($ecart['nombre'], 'écriture refusée', 'écritures refusées'),
             $ecart['depuis'],
-            self::RELEVER_LE_PLAFOND,
+            self::CONSEQUENCES_DU_REFUS[$role],
+            $this->relever($role),
         );
 
         return [[$message], []];
@@ -255,6 +269,11 @@ final class ReglagesDeRedisCheck extends Check
         return $role === 'donnees' && $part !== null ? $this->partDesDonnees($part) : [[], []];
     }
 
+    private function relever(string $role): string
+    {
+        return sprintf('Relever --maxmemory dans la commande du service %s, et la limite de mémoire de son conteneur avec lui.', self::SERVICES[$role]);
+    }
+
     /**
      * @return array{0: list<string>, 1: list<string>}
      */
@@ -264,7 +283,7 @@ final class ReglagesDeRedisCheck extends Check
             $message = sprintf(
                 'L\'instance des données occupe %d %% de son plafond (maxmemory) : au-delà, elle évince ou refuse des écritures. %s',
                 $this->pourcent($part),
-                self::RELEVER_LE_PLAFOND,
+                $this->relever('donnees'),
             );
 
             return [[$message], []];
@@ -311,7 +330,9 @@ final class ReglagesDeRedisCheck extends Check
 
     /**
      * Une fois le cache à part, l'instance des données refuse une écriture
-     * plutôt que de perdre une session ou un travail.
+     * plutôt que de perdre un travail. Les sessions, elles, évincent la moins
+     * récente plutôt que de refuser : leur plafond ne doit pas bloquer les
+     * connexions.
      *
      * @param  array<string, string>  $champs
      * @return array{0: list<string>, 1: list<string>}
@@ -320,16 +341,17 @@ final class ReglagesDeRedisCheck extends Check
     {
         $politique = $champs['maxmemory_policy'] ?? 'noeviction';
 
-        if ($role !== 'donnees' || ! $cacheAPart || $politique === 'noeviction') {
-            return [[], []];
-        }
-
-        $message = sprintf(
-            'L\'instance des données évince encore (politique %s) : le cache à part, elle doit refuser une écriture plutôt que perdre une session ou un travail. Poser --maxmemory-policy noeviction dans la commande du service redis.',
-            $politique,
-        );
-
-        return [[$message], []];
+        return match (true) {
+            $role === 'sessions' && $politique !== 'volatile-lru' => [[], [sprintf(
+                'L\'instance des sessions suit la politique %s au lieu de volatile-lru : pleine, elle ne ferait pas de place aux sessions neuves. Poser --maxmemory-policy volatile-lru dans la commande du service redis-sessions.',
+                $politique,
+            )]],
+            $role === 'donnees' && $cacheAPart && $politique !== 'noeviction' => [[sprintf(
+                'L\'instance des données évince encore (politique %s) : le cache à part, elle doit refuser une écriture plutôt que perdre un travail. Poser --maxmemory-policy noeviction dans la commande du service redis.',
+                $politique,
+            )], []],
+            default => [[], []],
+        };
     }
 
     /**
@@ -537,7 +559,32 @@ final class ReglagesDeRedisCheck extends Check
             is_int($evictions) ? $this->compte($evictions, 'éviction', 'évictions') : '? éviction',
         ];
 
-        return implode(' · ', $cacheAPart ? [...$morceaux, ...$this->resumeDuCache($jugements['cache'] ?? null)] : $morceaux);
+        return implode(' · ', [
+            ...$morceaux,
+            ...($cacheAPart ? $this->resumeDuCache($jugements['cache'] ?? null) : []),
+            ...(isset($jugements['sessions']) ? $this->resumeDesSessions($jugements['sessions']) : []),
+        ]);
+    }
+
+    /**
+     * @param  array{meta: array<string, mixed>|null, rouges: list<string>, oranges: list<string>, plafond: string, compteurs: mixed}  $jugement
+     * @return list<string>
+     */
+    private function resumeDesSessions(array $jugement): array
+    {
+        $meta = $jugement['meta'];
+
+        if ($meta === null) {
+            return ['sessions ne répond pas'];
+        }
+
+        $evictions = $meta['evictions'];
+
+        return [
+            'sessions '.str_replace(' du plafond', '', $jugement['plafond']),
+            $this->politiqueLue($meta),
+            is_int($evictions) ? $this->compte($evictions, 'éviction', 'évictions') : '? éviction',
+        ];
     }
 
     /**

@@ -40,12 +40,23 @@ class LecteurDesVersionsDesServices
     }
 
     /**
-     * `redis_version` de l'instance des données, par la liste blanche de
-     * `LecteurDeRedis`, résolu à chaque lecture comme les contrôles le
-     * résolvent.
+     * `redis_version` de chaque instance que lit `LecteurDeRedis` (données,
+     * et cache et sessions quand elles sont à part), par sa liste blanche,
+     * résolu à chaque lecture comme les contrôles le résolvent. Trois
+     * instances de même version rendent cette version ; sinon les versions
+     * lues, séparées par une barre, que la version attendue ne peut pas
+     * égaler.
      */
     public function redis(): ?string
     {
-        return app(LecteurDeRedis::class)->lire('default')['redis_version'] ?? null;
+        $lecteur = app(LecteurDeRedis::class);
+        $versions = array_map(
+            fn (string $connexion): ?string => $lecteur->lire($connexion)['redis_version'] ?? null,
+            $lecteur->instances(),
+        );
+
+        $distinctes = array_values(array_unique($versions));
+
+        return count($distinctes) === 1 ? $distinctes[0] : implode(' / ', array_map(fn (?string $version): string => $version ?? '?', $versions));
     }
 }

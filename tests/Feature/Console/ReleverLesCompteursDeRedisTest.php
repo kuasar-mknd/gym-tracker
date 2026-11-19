@@ -22,6 +22,8 @@ beforeEach(function (): void {
     Config::set('database.redis.default.port', '6379');
     Config::set('database.redis.cache.host', 'redis');
     Config::set('database.redis.cache.port', '6379');
+    Config::set('database.redis.sessions.host', 'redis');
+    Config::set('database.redis.sessions.port', '6379');
 });
 
 it('n’imprime que les champs de sa liste blanche, la mémoire en pourcentage du plafond', function (): void {
@@ -88,6 +90,19 @@ it('relève aussi le cache quand il vit sur une autre instance', function (): vo
     expect($sortie)->toContain("Instance des données (connexion default)\nredis_version: 8.10.3\nmemoire: 10 % du plafond\n")
         ->toContain("\n\nInstance du cache (connexion cache)\nredis_version: 8.10.3\nmemoire: 40 % du plafond\n")
         ->toContain("maxmemory_policy: noeviction\n");
+});
+
+it('relève aussi les sessions quand elles vivent sur leur instance', function (): void {
+    Config::set('database.redis.sessions.host', 'redis-sessions');
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['maxmemory_policy' => 'noeviction']),
+        'sessions' => RedisQuiRepond::info(['maxmemory_policy' => 'volatile-lru', 'used_memory' => intdiv(134_217_728 * 25, 100)]),
+    ]);
+
+    expect(Artisan::call('redis:relever'))->toBe(0);
+
+    expect(Artisan::output())->toContain("\n\nInstance des sessions (connexion sessions)\nredis_version: 8.10.3\nmemoire: 25 % du plafond\n")
+        ->toContain('maxmemory_policy: volatile-lru');
 });
 
 it('échoue en le disant quand Redis ne répond pas', function (): void {

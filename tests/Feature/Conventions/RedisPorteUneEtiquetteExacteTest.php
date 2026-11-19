@@ -154,6 +154,7 @@ it('refuse un autre service de Redis à une étiquette flottante ou à une autre
 })->with([
     'redis-cache flottant' => ['redis-cache', 'redis:8-alpine', 'redis-cache lance redis:8-alpine, une étiquette qui n\'est pas exacte'],
     'redis-cache à une autre version' => ['redis-cache', 'redis:8.10.2-alpine', 'redis-cache lance redis:8.10.2-alpine, redis lance {production}'],
+    'redis-sessions à une autre version' => ['redis-sessions', 'redis:8.10.2-alpine', 'redis-sessions lance redis:8.10.2-alpine, redis lance {production}'],
     'image qualifiée sous un autre nom' => ['cache', 'docker.io/library/redis:alpine', 'cache lance docker.io/library/redis:alpine, une étiquette qui n\'est pas exacte'],
 ]);
 

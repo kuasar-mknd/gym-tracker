@@ -20,10 +20,13 @@ x-app-env: &app-env
     REDIS_HOST: redis
     REDIS_PASSWORD: ${REDIS_PASSWORD}
     REDIS_PORT: 6379
-    # Le cache a sa propre instance ; les limiteurs et les battements de santé
-    # restent sur celle des données (#2151).
+    # Le cache a sa propre instance, les sessions la leur ; les limiteurs et les
+    # battements de santé restent sur celle des données (#2151).
     REDIS_CACHE_HOST: redis-cache
     REDIS_CACHE_PORT: 6379
+    REDIS_SESSIONS_HOST: redis-sessions
+    REDIS_SESSIONS_PORT: 6379
+    SESSION_CONNECTION: sessions
     CACHE_DURABLE_STORE: redis-durable
     SESSION_DRIVER: redis
     # Les sessions s'écrivent chiffrées dans Redis (#2353) : elles portent la
@@ -183,6 +186,8 @@ services:
             redis:
                 condition: service_healthy
             redis-cache:
+                condition: service_healthy
+            redis-sessions:
                 condition: service_healthy
 
     db:
@@ -349,6 +354,59 @@ services:
         networks:
             - backend
 
+    # L'instance des sessions : une session par visiteur, avec ou sans compte.
+    # Une requête sans cookie en ouvre une, donc un afflux la remplit : pleine,
+    # elle évince la session la moins récemment servie (`volatile-lru`, et
+    # chaque session porte une échéance) au lieu de refuser une écriture, et ni
+    # la file, ni les verrous, ni les limiteurs, qui vivent sur `redis`, n'en
+    # souffrent. Les sessions survivent à un redémarrage par un instantané
+    # (`--save 300 1`, écrit aussi à l'arrêt propre), sans AOF : sa
+    # synchronisation chaque seconde coûte cher sur le disque de production, et
+    # un plantage ne perd que cinq minutes de sessions. Même mot de passe que
+    # `redis`.
+    redis-sessions:
+        image: redis:8.10.3-alpine
+        restart: always
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        cap_add:
+            - CHOWN
+            - SETGID
+            - SETUID
+        # Le mot de passe entre comme pour `redis`, par la configuration lue
+        # sur l'entrée standard et non par un argument (#2353).
+        command:
+            - sh
+            - -c
+            - |
+              mot_de_passe=$$(printf %s "$$REDIS_PASSWORD" | sed 's/[\\"]/\\&/g')
+              exec docker-entrypoint.sh redis-server - \
+                  --maxmemory 64mb \
+                  --maxmemory-policy volatile-lru \
+                  --appendonly no \
+                  --save 300 1 <<CONFIGURATION
+              requirepass "$$mot_de_passe"
+              CONFIGURATION
+        environment:
+            REDIS_PASSWORD: ${REDIS_PASSWORD:?mot de passe de Redis}
+            REDISCLI_AUTH: ${REDIS_PASSWORD}
+        volumes:
+            - redis_sessions_data:/data
+        deploy:
+            resources:
+                limits:
+                    memory: 128M
+        healthcheck:
+            test: ['CMD-SHELL', '[ "$$(redis-cli ping)" = PONG ]']
+            interval: 15s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
+        networks:
+            - backend
+
     worker:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
         dns_opt: *app-dns-opt
@@ -395,6 +453,8 @@ services:
             redis:
                 condition: service_healthy
             redis-cache:
+                condition: service_healthy
+            redis-sessions:
                 condition: service_healthy
 
     # Rien n'executait les taches planifiees.
@@ -460,6 +520,8 @@ services:
                 condition: service_healthy
             redis-cache:
                 condition: service_healthy
+            redis-sessions:
+                condition: service_healthy
 
 networks:
     # Le réseau de app, par lequel passe ce qui arrive sur son port publié.
@@ -485,6 +547,7 @@ networks:
 volumes:
     db_data:
     redis_data:
+    redis_sessions_data:
     # Un volume nommé neuf reprend le contenu et le propriétaire (www-data) du
     # dossier de l'image, sans le problème de droits d'un dossier de l'hôte.
     journaux:

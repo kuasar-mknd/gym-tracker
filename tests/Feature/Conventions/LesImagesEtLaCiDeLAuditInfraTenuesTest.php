@@ -87,6 +87,7 @@ it('ferme les privilèges de chaque service de production (no-new-privileges sau
         'db' => ['CHOWN', 'DAC_OVERRIDE', 'SETGID', 'SETUID'],
         'redis' => ['CHOWN', 'SETGID', 'SETUID'],
         'redis-cache' => ['CHOWN', 'SETGID', 'SETUID'],
+        'redis-sessions' => ['CHOWN', 'SETGID', 'SETUID'],
         'worker' => [],
         'scheduler' => [],
     ];

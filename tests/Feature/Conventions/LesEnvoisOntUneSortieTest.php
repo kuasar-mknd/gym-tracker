@@ -181,12 +181,12 @@ it('donne une sortie au serveur web, à Horizon et au planificateur', function (
     ));
 });
 
-it('ne donne de sortie à aucun autre service, db et les deux redis compris', function (): void {
+it('ne donne de sortie à aucun autre service, db et les trois redis compris', function (): void {
     [, $autres] = envoisServicesSelonLEnvoi();
     $composition = envoisComposition();
     $internes = envoisReseauxInternes($composition);
 
-    expect(array_keys($autres))->toContain('db', 'redis', 'redis-cache');
+    expect(array_keys($autres))->toContain('db', 'redis', 'redis-cache', 'redis-sessions');
 
     $avecSortie = array_keys(array_filter(
         $autres,

@@ -239,3 +239,32 @@ it('lit la version de Redis par le lecteur d’INFO, sur l’instance des donné
         ->and(app(LecteurDesVersionsDesServices::class))->toBeInstanceOf(LecteurDesVersionsDesServices::class)
         ->and(app(LecteurDeRedis::class)->instances())->toHaveKey('donnees', 'default');
 });
+
+it('lit la version de chaque instance, et rend celles qui diffèrent pour que la version attendue ne les égale pas', function (): void {
+    Config::set('database.redis.default.host', 'redis');
+    Config::set('database.redis.default.port', '6379');
+    Config::set('database.redis.default.url');
+    Config::set('database.redis.cache.host', 'redis');
+    Config::set('database.redis.cache.port', '6379');
+    Config::set('database.redis.cache.url');
+    Config::set('database.redis.sessions.host', 'redis-sessions');
+    Config::set('database.redis.sessions.port', '6379');
+    Config::set('database.redis.sessions.url');
+
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+        'sessions' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+    ]);
+
+    expect(app(LecteurDesVersionsDesServices::class)->redis())->toBe('8.10.3');
+
+    RedisQuiRepond::repond([
+        'default' => RedisQuiRepond::info(['redis_version' => '8.10.3']),
+        'sessions' => RedisQuiRepond::info(['redis_version' => '8.10.2']),
+    ]);
+
+    $lue = app(LecteurDesVersionsDesServices::class)->redis();
+
+    expect($lue)->toBe('8.10.3 / 8.10.2')
+        ->and(VersionsDesServicesCheck::correspond('8.10.3', (string) $lue))->toBeFalse();
+});

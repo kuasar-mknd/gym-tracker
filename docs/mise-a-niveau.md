@@ -41,6 +41,14 @@ Le proxy inverse doit tourner sur le même hôte et viser `localhost:8888`. Sur 
 
 Le contrôle « Clé de l'application » de la page « Santé » passe au rouge en production quand `APP_KEY` est l'une des clés qui ont été lisibles dans l'historique du dépôt. La remplacer : `echo "base64:$(openssl rand -base64 32)"`, puis recréer les conteneurs. Effets : **toutes les sessions se ferment**, avec ou sans `APP_PREVIOUS_KEYS` (l'empreinte du mot de passe en session et le cookie « se souvenir de moi » ne sont signés que par `APP_KEY`), et les liens déjà envoyés par courriel (ouverture d'un compte, vérification ou confirmation d'adresse, réinitialisation du mot de passe) cessent de valoir. `APP_PREVIOUS_KEYS` garde lisibles les cookies chiffrés et valides les liens signés d'une ancienne clé : une clé publiée n'y a pas sa place.
 
+## Les sessions ont leur instance Redis : tout le monde se reconnecte une fois
+
+Un troisième service, `redis-sessions` (64 Mo, `volatile-lru`), porte les sessions : un afflux de visiteurs sans compte ne peut plus remplir `redis` et lui faire refuser la file, les verrous et les connexions. `app`, `worker` et `scheduler` sont recréés, avec `SESSION_CONNECTION`, `REDIS_SESSIONS_HOST` et `REDIS_SESSIONS_PORT` ; aucune variable n'est à poser, `REDIS_PASSWORD` sert aux trois Redis.
+
+- **Toutes les sessions s'ouvrent de nouveau** : chacun se reconnecte une fois, hors les appareils dont le cookie « Se souvenir de moi » le fait seul. Les copies hors ligne de chaque appareil s'effacent une fois, comme à chaque fermeture de session ; les modifications qui attendaient leur envoi restent.
+- L'image de la release (celle qui connaît la connexion `sessions`) est publiée et son `APP_VERSION` vérifié avant de poser la composition : l'ancienne image avec la nouvelle composition échoue sur toute requête qui ouvre une session.
+- La mise à jour est un `docker compose -f docker-compose.prod.yml up -d`. Vérifications et retour arrière : `docs/deploiement.md`, « Les sessions sur leur instance ».
+
 ## Depuis une version d'avant les deux instances de Redis
 
 Le cache a sa propre instance (`redis-cache`). Avant de s'en servir, l'image de la release (celle qui connaît `REDIS_CACHE_HOST` et `CACHE_DURABLE_STORE`) est publiée et son `APP_VERSION` vérifié (« Versions des conteneurs »). La bascule se fait en trois commandes, dans cet ordre (détail et retour arrière : `docs/deploiement.md`, « Deux instances de Redis ») :
@@ -55,10 +63,10 @@ docker compose -f docker-compose.prod.yml exec redis redis-cli -n 1 FLUSHDB ASYN
 
 - À chaque release, la pile reçoit la composition de son tag ; « Versions des services », dans la page « Santé », dit ensuite si `db` et `redis` servent la version attendue.
 - Une release qui monte `redis` ou MySQL se déploie par la marche de `.ai/rules/dependencies.md`, à une heure creuse.
-- Après la mise à jour : `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis` et `redis-cache` en `healthy`, et la page « Santé » reste verte.
+- Après la mise à jour : `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis`, `redis-cache` et `redis-sessions` en `healthy`, et la page « Santé » reste verte.
 
 ## Retour arrière
 
-- Avec retour : le port sur la boucle locale (remettre `8888:80`), les sessions chiffrées (`SESSION_ENCRYPT=false`, chacun se reconnecte une fois de plus), les deux instances de Redis (composition d'avant, `--remove-orphans`), `dns_opt` (composition d'avant).
+- Avec retour : le port sur la boucle locale (remettre `8888:80`), les sessions chiffrées (`SESSION_ENCRYPT=false`, chacun se reconnecte une fois de plus), les instances de Redis du cache et des sessions (composition d'avant **et** image d'avant, `--remove-orphans` ; chacun se reconnecte une fois de plus), `dns_opt` (composition d'avant).
 - Sans retour : les sessions fermées par le cookie `__Host-` et les copies hors ligne effacées (rien ne les rend), les administrateurs déconnectés et la double authentification enrôlée (on ne redevient pas sans second facteur d'un geste ; `admin:reinitialiser-mfa` efface un secret), la clé `APP_KEY` remplacée (les liens et sessions d'avant ne reviennent pas).
 - Dans tous les cas : remettre la composition d'avant **et** épingler l'image sur la version exacte d'avant ; les migrations déjà jouées restent, et une migration destructrice demande la restauration de la sauvegarde.
