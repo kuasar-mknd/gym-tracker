@@ -95,11 +95,16 @@ function horizonGardeDuPanneau(): SessionGuard
  * L'empreinte du mot de passe que la connexion au panneau pose en session
  * (`SessionGuard::login()`), et que `AuthenticateSession` y tient à jour.
  *
- * @return array{password_hash_admin: string}
+ * et la preuve du second facteur (`AssuranceDuSecondFacteur`).
+ *
+ * @return array<string, string>
  */
 function horizonEmpreinteDuPanneau(Admin $admin): array
 {
-    return ['password_hash_admin' => horizonGardeDuPanneau()->hashPasswordForCookie($admin->getAuthPassword())];
+    return [
+        'password_hash_admin' => horizonGardeDuPanneau()->hashPasswordForCookie($admin->getAuthPassword()),
+        \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($admin),
+    ];
 }
 
 /**
@@ -245,7 +250,7 @@ it('ouvre Horizon juste après que la page de profil a changé le mot de passe',
     $admin = horizonSuperAdministrateur();
     $admin->forceFill(['password' => 'Un-autre-mot-de-passe-2026!'])->save();
 
-    withSession([horizonGardeDuPanneau()->getName() => $admin->getAuthIdentifier(), 'password_hash_admin' => $admin->getAuthPassword()]);
+    withSession([horizonGardeDuPanneau()->getName() => $admin->getAuthIdentifier(), 'password_hash_admin' => $admin->getAuthPassword(), \App\Support\AssuranceDuSecondFacteur::CLE => \App\Support\AssuranceDuSecondFacteur::empreinte($admin)]);
 
     get('/horizon')->assertOk();
 });

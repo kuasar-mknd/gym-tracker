@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
@@ -147,6 +148,39 @@ class PlafondDEssaisParAdresseTest extends TestCase
         $this->connecterDepuis($compte->email, null)->assertSessionHasErrors(['email' => trans('auth.plafond')]);
 
         $this->assertGuest();
+    }
+
+    /**
+     * @return array<string, array{array<string, mixed>, array<string, mixed>}>
+     */
+    public static function pairesDeComptes(): array
+    {
+        return [
+            'deux comptes sans mot de passe' => [['password' => null], ['password' => null]],
+            'deux comptes au même hash' => [[], []],
+            'deux comptes aux hash distincts' => [['password' => 'un-mot-de-passe'], ['password' => 'un-autre-mot-de-passe']],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $premier
+     * @param  array<string, mixed>  $second
+     */
+    #[DataProvider('pairesDeComptes')]
+    public function test_le_cookie_d_un_compte_ne_se_forge_pas_pour_un_autre(array $premier, array $second): void
+    {
+        $premier = User::factory()->create($premier);
+        $second = User::factory()->create($second);
+        AppareilConnu::poser($premier);
+        $cookie = collect(Cookie::getQueuedCookies())->first(fn ($c): bool => $c->getName() === AppareilConnu::NOM);
+        $this->assertNotNull($cookie);
+        $empreinte = explode('|', (string) $cookie->getValue(), 2)[1];
+
+        $propre = Request::create('/login', 'POST', [], [AppareilConnu::NOM => (string) $cookie->getValue()]);
+        $forge = Request::create('/login', 'POST', [], [AppareilConnu::NOM => $second->id.'|'.$empreinte]);
+
+        $this->assertTrue(AppareilConnu::vautPour($propre, $premier));
+        $this->assertFalse(AppareilConnu::vautPour($forge, $second));
     }
 
     public function test_un_appareil_connu_le_reste_apres_sa_deconnexion(): void

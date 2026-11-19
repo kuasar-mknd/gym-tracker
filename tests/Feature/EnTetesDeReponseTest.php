@@ -189,8 +189,9 @@ function enTetesAllumerLeTempsServeur(): void
 }
 
 beforeEach(function (): void {
-    // Comme en production : le cookie de session y porte l'attribut `secure`.
-    config(['session.secure' => true]);
+    // Comme en production : le cookie de session y porte l'attribut `secure`
+    // et le préfixe `__Host-`.
+    config(['session.secure' => true, 'session.cookie' => '__Host-'.config()->string('session.cookie')]);
 
     // Toujours le manifeste construit, jamais le serveur de développement : un
     // `npm run dev` ouvert remplacerait les préchargements par une seule

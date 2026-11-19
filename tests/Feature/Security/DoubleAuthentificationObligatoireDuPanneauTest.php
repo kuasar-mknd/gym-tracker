@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Filament\Connexion\ConnexionDuPanneau;
 use App\Models\Admin;
+use App\Support\AssuranceDuSecondFacteur;
 use Filament\Actions\Testing\TestAction;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\Pages\SetUpRequiredMultiFactorAuthentication;
-use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
@@ -124,6 +125,7 @@ it('refuse aussi les mises à jour Livewire d’un composant du panneau ouvert a
     $envoyer()->assertOk();
 
     $administrateur->forceFill(['app_authentication_secret' => null])->save();
+    $this->withSession([AssuranceDuSecondFacteur::CLE => AssuranceDuSecondFacteur::empreinte($administrateur)]);
 
     $envoyer()->assertRedirect(adresseDeLEnrolement());
 });
