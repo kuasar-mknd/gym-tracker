@@ -448,10 +448,10 @@
     --radius-2xl: 2rem;
     --radius-3xl: 2.5rem;
 
-    /* La plus petite taille de la charte ; le sur-titre s'écrit en casse de phrase, à peine espacé. */
+    /* Le sur-titre : la plus petite taille de la charte, en capitales espacées. */
     --text-2xs: 0.625rem;
     --text-2xs--line-height: 0.875rem;
-    --tracking-sur-titre: 0.01em;
+    --tracking-sur-titre: 0.2em;
 
     --spacing-touch: 44px;
     --spacing-nav: 70px;
@@ -691,11 +691,13 @@
  */
 @utility titre-page {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
     /* Les tailles sont écrites : seules les valeurs déclarées dans @theme static sortent en variables. */
     font-size: 1.875rem;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.05em;
     color: var(--color-text-main);
 
     @variant sm {
@@ -705,6 +707,46 @@
 
 @utility titre-section {
     font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    font-size: 1.5rem;
+    line-height: 2rem;
+    letter-spacing: -0.025em;
+    color: var(--color-text-main);
+}
+
+@utility titre-carte {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    color: var(--color-text-main);
+}
+
+@utility sur-titre {
+    font-size: var(--text-2xs);
+    line-height: var(--text-2xs--line-height);
+    font-weight: 900;
+    letter-spacing: var(--tracking-sur-titre);
+    text-transform: uppercase;
+}
+
+/* Une surface plate : fond de carte et liseré, sans verre, sans ombre. */
+@utility carte-plate {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border);
+}
+
+/*
+ * Les deux rôles de texte de l'accueil épuré (#2434) : un titre de carte en
+ * casse de phrase et une étiquette sans capitales. Les rôles titre-* et
+ * sur-titre restent ceux des autres écrans, que la passe n'a pas encore atteints.
+ */
+@utility titre-plat {
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 1.5rem;
     line-height: 2rem;
@@ -712,25 +754,10 @@
     color: var(--color-text-main);
 }
 
-@utility titre-carte {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-    color: var(--color-text-main);
-}
-
-@utility sur-titre {
+@utility etiquette {
     font-size: 0.75rem;
     line-height: 1rem;
     font-weight: 500;
-    letter-spacing: var(--tracking-sur-titre);
-}
-
-/* Une surface plate : fond de carte et liseré, sans verre, sans ombre. */
-@utility carte-plate {
-    background: var(--color-surface-card);
-    border: 1px solid var(--color-border);
 }
 
 /* La cascade d'apparition : six pas de 50 ms, au lieu d'un délai inline par élément. */

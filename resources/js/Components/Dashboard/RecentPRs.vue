@@ -15,8 +15,8 @@ defineProps({
     <!-- Recent PRs -->
     <section v-if="recentPRs.length > 0" class="stagger-6 animate-slide-up carte-plate rounded-2xl p-6">
         <div class="relative z-10 mb-6">
-            <h3 class="text-text-muted sur-titre mb-1">Réussites</h3>
-            <p class="titre-section">Records personnels</p>
+            <p class="text-text-muted etiquette mb-1">Réussites</p>
+            <p class="titre-plat">Records personnels</p>
         </div>
 
         <!-- PR Bar Chart -->

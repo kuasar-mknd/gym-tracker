@@ -132,8 +132,8 @@ const installationProposee = ref(false)
                 class="stagger-6 animate-slide-up relative overflow-hidden"
             >
                 <div class="relative z-10 mb-6">
-                    <h3 class="text-text-muted sur-titre mb-1">Visualisation</h3>
-                    <p class="titre-section">Progression des objectifs</p>
+                    <p class="text-text-muted etiquette mb-1">Visualisation</p>
+                    <p class="titre-plat">Progression des objectifs</p>
                 </div>
                 <div class="relative -mx-2 mt-2 h-48 w-auto">
                     <ActiveGoalsChart :data="activeGoals" />

@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
-import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
@@ -155,8 +154,6 @@ onUnmounted(() => {
             Aller au contenu principal
         </a>
 
-        <LiquidBackground :variant="liquidVariant" />
-
         <!--
             Local only, and deliberately not dismissible: a database behind the
             code fails at the write, never at the read, so the app looks healthy
@@ -239,7 +236,7 @@ onUnmounted(() => {
                             <GlassIcon name="notifications" />
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
-                                class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
+                                class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-semibold"
                             >
                                 {{ $page.props.auth.user.unread_notifications_count }}
                             </span>
@@ -328,7 +325,7 @@ onUnmounted(() => {
                     <GlassIcon name="notifications" />
                     <span
                         v-if="$page.props.auth.user.unread_notifications_count > 0"
-                        class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
+                        class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-semibold"
                     >
                         {{ $page.props.auth.user.unread_notifications_count }}
                     </span>

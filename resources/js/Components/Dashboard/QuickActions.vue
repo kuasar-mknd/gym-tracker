@@ -24,12 +24,12 @@ const emit = defineEmits(['startWorkout'])
             aria-label="Démarrer une nouvelle séance d'entraînement"
             id="start-workout-button"
             dusk="start-workout-button"
-            class="accent-fill focus-visible:ring-accent-primary flex h-44 flex-col items-center justify-center gap-3 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            class="accent-fill focus-visible:ring-accent-primary flex h-30 flex-col items-center justify-center gap-3 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             :class="{ 'cursor-wait': processing }"
         >
-            <GlassIcon v-if="processing" name="autorenew" size="xl" class="animate-spin" />
-            <GlassIcon v-else name="fitness_center" size="xl" />
-            <span class="font-display text-center text-xl leading-tight font-semibold">Démarrer<br />séance</span>
+            <GlassIcon v-if="processing" name="autorenew" size="lg" class="animate-spin" />
+            <GlassIcon v-else name="fitness_center" size="lg" />
+            <span class="text-center text-base leading-tight font-medium">Démarrer une séance</span>
         </button>
 
         <!-- Modèles -->
@@ -37,12 +37,10 @@ const emit = defineEmits(['startWorkout'])
             v-press
             :href="route('templates.index')"
             aria-label="Voir mes modèles d'entraînement"
-            class="carte-plate focus-visible:ring-accent-primary flex h-44 flex-col items-center justify-center gap-3 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            class="carte-plate focus-visible:ring-accent-primary flex h-30 flex-col items-center justify-center gap-3 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-            <GlassIcon name="assignment_add" size="xl" class="text-text-muted" />
-            <span class="font-display text-text-main text-center text-xl leading-tight font-semibold">
-                Mes<br />modèles
-            </span>
+            <GlassIcon name="assignment_add" size="lg" class="text-text-muted" />
+            <span class="text-text-main text-center text-base leading-tight font-medium">Mes modèles</span>
         </Link>
     </section>
 </template>

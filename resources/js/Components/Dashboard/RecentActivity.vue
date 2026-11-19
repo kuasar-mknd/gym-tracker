@@ -23,7 +23,7 @@ const emit = defineEmits(['startWorkout'])
     <!-- Recent Activity -->
     <section class="stagger-4 animate-slide-up">
         <div class="mb-5 flex items-center justify-between px-1">
-            <h3 class="text-text-muted sur-titre">Activité récente</h3>
+            <p class="text-text-muted etiquette">Activité récente</p>
             <Link
                 :href="route('workouts.index')"
                 class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary relative rounded-md text-xs font-medium transition-colors before:absolute before:-inset-x-2 before:-inset-y-3.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
@@ -49,44 +49,19 @@ const emit = defineEmits(['startWorkout'])
         <!-- Activity Cards and Chart -->
         <div v-else class="flex flex-col gap-3">
             <div class="carte-plate relative mb-2 overflow-hidden rounded-2xl p-4">
-                <div class="sur-titre text-text-muted mb-4">Durée des séances</div>
+                <div class="etiquette text-text-muted mb-4">Durée des séances</div>
                 <RecentWorkoutsTimelineChart :data="recentWorkouts" />
             </div>
 
             <Link
-                v-for="(workout, index) in recentWorkouts"
+                v-for="workout in recentWorkouts"
                 :key="workout.id"
                 v-press
                 :href="route('workouts.show', { workout: workout.id })"
                 class="focus-visible:ring-accent-primary carte-plate hover:bg-surface-sunken relative flex items-center justify-between rounded-2xl p-4 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
-                <!-- Color indicator -->
-                <div
-                    class="absolute top-1/2 left-0 h-10 w-1.5 -translate-y-1/2 rounded-r-md"
-                    :class="[
-                        index === 0
-                            ? 'bg-accent-tertiary'
-                            : index === 1
-                              ? 'bg-accent-primary'
-                              : index === 2
-                                ? 'bg-accent-secondary'
-                                : index === 3
-                                  ? 'bg-accent-info'
-                                  : 'bg-accent-state',
-                    ]"
-                ></div>
-
-                <div class="flex items-center gap-4 pl-3">
-                    <div
-                        :class="[
-                            'flex size-12 items-center justify-center rounded-xl border',
-                            index === 0
-                                ? 'text-accent-tertiary-deep border-accent-tertiary/20 bg-accent-tertiary/10'
-                                : index === 1
-                                  ? 'text-accent-primary-deep border-accent-primary/20 bg-accent-primary/10'
-                                  : 'text-accent-secondary-deep border-accent-secondary/20 bg-accent-secondary/10',
-                        ]"
-                    >
+                <div class="flex items-center gap-4">
+                    <div class="bg-surface-sunken text-text-muted flex size-12 items-center justify-center rounded-xl">
                         <GlassIcon :name="(workout.workout_lines_count || 0) > 3 ? 'timer' : 'fitness_center'" />
                     </div>
                     <div>

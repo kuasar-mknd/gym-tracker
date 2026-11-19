@@ -54,7 +54,7 @@ const streakLabel = computed(() => {
                 {{ user.name?.charAt(0).toUpperCase() }}
             </div>
             <div class="min-w-0">
-                <p class="sur-titre text-text-muted mb-0.5" dusk="dashboard-welcome">Bon retour</p>
+                <p class="etiquette text-text-muted mb-0.5" dusk="dashboard-welcome">Bon retour</p>
                 <!--
                     Le prénom n'est pas le titre de la page : c'est une salutation.
                     Le titre est « Accueil », et la barre collante le porte — deux

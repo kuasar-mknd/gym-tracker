@@ -19,12 +19,12 @@ defineProps({
 <template>
     <!-- Goals Summary (Compact) -->
     <section v-if="indisponible" class="stagger-5 animate-slide-up" dusk="objectifs-indisponibles">
-        <h3 class="text-text-muted sur-titre mb-4 px-1">Objectifs en cours</h3>
+        <p class="text-text-muted etiquette mb-4 px-1">Objectifs en cours</p>
         <IndisponibleHorsLigne texte="Objectifs indisponibles hors ligne" />
     </section>
     <section v-else-if="activeGoals.length > 0" class="stagger-5 animate-slide-up">
         <div class="mb-4 flex items-center justify-between px-1">
-            <h3 class="text-text-muted sur-titre">Objectifs en cours</h3>
+            <p class="text-text-muted etiquette">Objectifs en cours</p>
             <Link
                 :href="route('goals.index')"
                 class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary rounded-md text-xs font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
