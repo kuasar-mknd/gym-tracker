@@ -16,7 +16,7 @@ import { useSeriesDeLaSeance } from '@/composables/useSeriesDeLaSeance'
 import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
-import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { memoireDeLaPage, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useSortieAudio } from '@/composables/useSortieAudio'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
@@ -83,8 +83,10 @@ watch(
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const sortieAudio = useSortieAudio()
-const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
-    useMinuteurDeRepos({ sortieAudio })
+const { showTimer, liaisonDuMinuteur, openRestTimer, apresValidation } = useMinuteurDeRepos({
+    sortieAudio,
+    memoire: memoireDeLaPage({ page, localWorkout, estClose: isFinished }),
+})
 // Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
@@ -345,7 +347,7 @@ onUnmounted(() => {
                 v-if="localWorkout.workout_lines.length > 0 && !lectureSeule"
                 :enregistrement-du-modele="savingTemplate"
                 :seance-en-attente="seanceProvisoire"
-                @ajouter-un-exercice="showAddExercise = true"
+                @ajouter-un-exercice="handleFabAddExercise"
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"
                 @terminer="finishWorkout"
@@ -386,14 +388,12 @@ onUnmounted(() => {
 
         <RestTimer
             v-if="showTimer"
-            :key="timerRun"
-            :duration="timerDuration"
-            :auto-rest-timer="autoRestTimer"
+            v-bind="liaisonDuMinuteur"
+            class="bureau:translate-y-0 -translate-y-18"
             :reglage-desactive="surUneCopie"
             :raison-du-reglage="raisonDUneEcriture"
             :sortie-audio="sortieAudio"
             @close="showTimer = false"
-            @update:auto-rest-timer="setAutoRestTimer"
             dusk="rest-timer"
         />
     </AuthenticatedLayout>
