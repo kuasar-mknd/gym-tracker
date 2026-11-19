@@ -355,7 +355,7 @@ function chiffreesAppareilDontLaSessionAExpire(): Appareil
  * expirée : une session illisible est une session absente. Chaque requête que
  * la file hors ligne et le préchauffage envoient reçoit la même réponse
  * (statut, renvoi, cookies posés et effacés) que sous une session expirée,
- * dont le README dit ce qu'elle fait des copies et des écritures en attente.
+ * dont docs/hors-ligne.md dit ce qu'elle fait des copies et des écritures en attente.
  */
 it('répond à la bascule comme à une session expirée, pour chaque requête que l’appareil envoie hors du parcours de la page', function (string $methode, string $chemin, array $entetes): void {
     /** @var array<string, string> $entetes */

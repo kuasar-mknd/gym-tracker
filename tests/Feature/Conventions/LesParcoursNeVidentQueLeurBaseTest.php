@@ -11,7 +11,7 @@ use Tests\Support\GardeDesParcours;
  * sur `localhost` (#1909). `GardeDesParcours` refuse désormais ces deux
  * dispositions au début de chaque parcours. Ces gardes tiennent ce qui
  * l'entoure : la CI doit la passer, sinon les trois éclats `browser-shard`
- * tombent et seule la CI le verrait ; la recette Sail du README aussi ; la
+ * tombent et seule la CI le verrait ; la recette Sail de docs/developpement.md aussi ; la
  * base qu'elles nomment doit exister ; et phpunit.dusk.xml ne doit plus
  * prétendre régler ce que le .env décide.
  */
@@ -42,15 +42,15 @@ function parcoursDuskEnvDeLaCi(): array
 }
 
 /**
- * Les valeurs que la recette Sail du README pose dans .env.dusk.local.
+ * Les valeurs que la recette Sail de docs/developpement.md pose dans .env.dusk.local.
  *
  * @return array<string, string>
  */
-function parcoursDuskRecetteDuReadme(): array
+function parcoursDuskRecetteDesParcours(): array
 {
-    $readme = (string) file_get_contents(base_path('README.md'));
+    $recette = (string) file_get_contents(base_path('docs/developpement.md'));
 
-    preg_match_all('/s#\^([A-Z][A-Z0-9_]*)=\.\*#\1=([^#]+)#/', $readme, $remplacements, PREG_SET_ORDER);
+    preg_match_all('/s#\^([A-Z][A-Z0-9_]*)=\.\*#\1=([^#]+)#/', $recette, $remplacements, PREG_SET_ORDER);
 
     return array_column($remplacements, 2, 1);
 }
@@ -68,14 +68,14 @@ it('laisse passer la disposition du job browser-shard', function (): void {
 });
 
 it('donne une recette Sail que la garde laisse passer', function (): void {
-    $recette = parcoursDuskRecetteDuReadme();
+    $recette = parcoursDuskRecetteDesParcours();
 
     expect($recette)->toHaveKeys(['DB_DATABASE', 'APP_URL', 'DUSK_DRIVER_URL', 'DB_HOST'])
         ->and($recette['DB_HOST'])->toBe('mysql')
         ->and(GardeDesParcours::motifsDeRefus($recette['DB_DATABASE'], $recette['APP_URL'], $recette['DUSK_DRIVER_URL']))
         ->toBe([])
         ->and($recette['DB_DATABASE'])->toBe(parcoursDuskEnvDeLaCi()['DB_DATABASE'] ?? null)
-        ->and((string) file_get_contents(base_path('README.md')))->toContain('.env > .env.dusk.local');
+        ->and((string) file_get_contents(base_path('docs/developpement.md')))->toContain('.env > .env.dusk.local');
 });
 
 /**
@@ -84,29 +84,29 @@ it('donne une recette Sail que la garde laisse passer', function (): void {
  * laissait entendre, passe la garde mais prive le serveur de sa clé et de sa
  * connexion : le refus renvoie donc à la recette, par le titre de sa section.
  */
-it('renvoie chaque refus à la recette du README, par une section qui existe', function (): void {
+it('renvoie chaque refus à la recette de docs/developpement.md, par une section qui existe', function (): void {
     $motifs = GardeDesParcours::motifsDeRefus('gym_tracker', 'http://localhost', 'http://selenium:4444/wd/hub');
 
-    preg_match_all('/^#{2,4} (.+)$/mu', (string) file_get_contents(base_path('README.md')), $titres);
+    preg_match_all('/^#{2,4} (.+)$/mu', (string) file_get_contents(base_path('docs/developpement.md')), $titres);
 
     expect($motifs)->toHaveCount(2)
         ->and($motifs[0])->toContain('à la place du .env');
 
     foreach ($motifs as $motif) {
-        expect(preg_match('/README, « ([^»]+) »/u', $motif, $section))->toBe(1)
+        expect(preg_match('/docs\/developpement\.md, « ([^»]+) »/u', $motif, $section))->toBe(1)
             ->and($titres[1])->toContain($section[1] ?? null);
     }
 });
 
 it('fait créer la base des parcours par le MySQL de Sail, et l’ouvre à son utilisateur', function (): void {
-    $base = parcoursDuskRecetteDuReadme()['DB_DATABASE'] ?? 'absente du README';
+    $base = parcoursDuskRecetteDesParcours()['DB_DATABASE'] ?? 'absente de docs/developpement.md';
     $script = (string) file_get_contents(base_path('docker/mysql/create-parallel-testing-databases.sh'));
     $composition = (string) file_get_contents(base_path('compose.yaml'));
 
     expect($script)->toContain("CREATE DATABASE IF NOT EXISTS \\`{$base}\\`;")
         ->and($script)->toContain("GRANT ALL PRIVILEGES ON \\`{$base}\\`.* TO '\$MYSQL_USER'@'%';")
         ->and($composition)->toContain('./docker/mysql/create-parallel-testing-databases.sh:/docker-entrypoint-initdb.d/20-create-parallel-testing-databases.sh')
-        ->and((string) file_get_contents(base_path('README.md')))
+        ->and((string) file_get_contents(base_path('docs/developpement.md')))
         ->toContain('sail exec mysql bash /docker-entrypoint-initdb.d/20-create-parallel-testing-databases.sh');
 });
 

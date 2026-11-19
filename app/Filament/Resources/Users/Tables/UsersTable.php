@@ -60,7 +60,6 @@ class UsersTable
             TextColumn::make('en_attente_depuis')->label('En attente du lien')->badge()->color('warning')->dateTime()->sortable(),
             TextColumn::make('provider')->label('Fournisseur de connexion')->searchable(),
             TextColumn::make('provider_id')->label('Identifiant chez le fournisseur')->searchable(),
-            TextColumn::make('avatar')->label('Avatar')->searchable(),
         ];
     }
 

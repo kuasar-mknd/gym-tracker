@@ -20,7 +20,7 @@ declare(strict_types=1);
  * `10.0.0.0/8` et `192.168.0.0/16` n'y sont plus : un appareil du réseau local
  * pris pour un proxy faisait lire l'entrée qu'il forge dans `X-Forwarded-For`.
  * En production, elle se règle sur l'adresse précise sous laquelle le proxy inverse joint
- * l'application (README, « Variables d'environnement »).
+ * l'application (docs/variables-d-environnement.md).
  */
 
 $configurees = env('TRUSTED_PROXIES');

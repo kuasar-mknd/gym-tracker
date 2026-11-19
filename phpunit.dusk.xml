@@ -17,7 +17,7 @@
              que Laravel lit en premier. Une valeur posée ici ne vaudrait donc que pour un Pest
              lancé à la main, et séparerait alors le parcours du serveur qui répond au navigateur,
              qui lit le .env : le navigateur agirait sur les comptes de l'autre base. La CI les pose
-             dans le .env du job browser-shard, Sail dans .env.dusk.local (README), et
+             dans le .env du job browser-shard, Sail dans .env.dusk.local (docs/developpement.md), et
              tests/Support/GardeDesParcours.php refuse une base dont le nom ne finit pas par _dusk. -->
         <env name="APP_ENV" value="testing"/>
         <env name="DB_CONNECTION" value="mysql"/>

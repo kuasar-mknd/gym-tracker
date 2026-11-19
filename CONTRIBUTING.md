@@ -4,7 +4,7 @@ Merci de contribuer à GymTracker ! 🎉 Voici comment participer.
 
 ## 🚀 Démarrer
 
-L'installation est décrite une seule fois, dans la section [Installation du README](README.md#-installation-via-laravel-sail). Elle passe par un `docker run` avant tout appel à Sail : `vendor/` n'est pas versionné, donc `./vendor/bin/sail` n'existe pas sur un clone neuf, et Sail ne transmet une commande qu'à des conteneurs déjà démarrés. Elle crée aussi le compte de démonstration (`migrate --seed`).
+L'installation est décrite une seule fois, dans la section [Installation du README](README.md#installation). Elle passe par un `docker run` avant tout appel à Sail : `vendor/` n'est pas versionné, donc `./vendor/bin/sail` n'existe pas sur un clone neuf, et Sail ne transmet une commande qu'à des conteneurs déjà démarrés. Elle crée aussi le compte de démonstration (`migrate --seed`).
 
 Les commandes de ce guide supposent cette installation faite et les conteneurs lancés (`./vendor/bin/sail up -d`). Pour développer :
 
@@ -141,7 +141,7 @@ La CI rejoue exactement ces portes (`.github/workflows/ci.yml`) ; les passer en 
 - [ ] Insights aux seuils de la CI (`vendor/bin/sail bin phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90`)
 - [ ] Dépendances Composer toutes utilisées et sans avis (`vendor/bin/sail bin composer-unused`, `vendor/bin/sail composer audit`)
 - [ ] Diagnostics Doctor et Checkpoint (`vendor/bin/sail artisan doctor`, `vendor/bin/sail artisan checkpoint:scan`)
-- [ ] Tests navigateur si l'interface change. La première fois, dériver `.env.dusk.local` du `.env` comme le dit la section [Parcours navigateur du README](README.md#parcours-navigateur) : sans lui, les parcours viseraient la base de développement, et leur garde refuse la passe avant toute écriture. Puis, `composer dev` arrêté (Selenium ne joint pas le serveur de Vite qu'il lance, et la passe refuse de partir tant que le fichier public/hot existe) : `vendor/bin/sail npm run build`, et `vendor/bin/sail artisan dusk`
+- [ ] Tests navigateur si l'interface change. La première fois, dériver `.env.dusk.local` du `.env` comme le dit la section [Parcours navigateur](docs/developpement.md#parcours-navigateur) : sans lui, les parcours viseraient la base de développement, et leur garde refuse la passe avant toute écriture. Puis, `composer dev` arrêté (Selenium ne joint pas le serveur de Vite qu'il lance, et la passe refuse de partir tant que le fichier public/hot existe) : `vendor/bin/sail npm run build`, et `vendor/bin/sail artisan dusk`
 - [ ] `actionlint` si un workflow change (`docker run --rm -v "$PWD":/repo:ro -w /repo rhysd/actionlint:1.7.12`)
 - [ ] Pas de `console.log` ou `dd()` oubliés
 - [ ] Documentation mise à jour si nécessaire

@@ -5,441 +5,29 @@
 <h1 align="center">GymTracker</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Laravel-13-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13" />
-  <img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
-  <img src="https://img.shields.io/badge/Inertia.js-3-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
-  <img src="https://img.shields.io/badge/PHPStan-level%20max-blue?style=for-the-badge" alt="PHPStan level max" />
-</p>
-
-<p align="center">
-  <strong>Une application de suivi de musculation moderne, élégante et performante.</strong>
+  Une application de suivi de musculation : séances, records, statistiques, mesures, habitudes.
   <br />
-  <em>Suis tes entraînements, mesure tes progrès, atteins tes objectifs.</em>
+  Laravel 13, Vue 3, Inertia 3, Tailwind CSS 4, Filament 5 (panneau d'administration).
 </p>
 
-<p align="center">
-  <a href="#-fonctionnalités">Fonctionnalités</a> •
-  <a href="#-qualité">Qualité</a> •
-  <a href="#-mise-en-production">Mise en production</a> •
-  <a href="#-variables-denvironnement">Variables d'environnement</a> •
-  <a href="#-installation-via-laravel-sail">Installation</a> •
-  <a href="#-développement">Développement</a> •
-  <a href="#-contribution">Contribution</a>
-</p>
+## Fonctionnalités
 
----
+- **Séances et modèles** : démarre depuis un modèle ou une séance libre ; records personnels (poids, 1RM, volume) détectés seuls ; série de jours consécutifs.
+- **Statistiques et santé** : graphiques de progression, habitudes, mesures et composition corporelle.
+- **Outils** : calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles, jeûne.
+- **Hors ligne** : l'application installée (PWA) s'ouvre et enregistre séries et séances sans réseau.
+- **Connexion** par courriel, ou par Google, GitHub et Apple ; notifications Web Push.
 
-## ✨ Fonctionnalités
+## Installation
 
-### 🏋️ Suivi d'Entraînement
-- **Séances & Modèles** — Démarre rapidement avec tes routines favorites ou crée des séances libres.
-- **Records personnels (PR)** — Détection automatique de tes nouveaux records (Poids, 1RM, Volume).
-- **Streak counter** — Maintiens ta motivation avec le suivi des jours consécutifs.
-- **Liquid Glass UI** — Une interface mobile-first pensée pour l'entraînement.
-
-### 📊 Statistiques & Santé
-- **Graphiques de progression** — Visualisation interactive de ton volume et de tes max.
-- **Habits Tracking** — Suivi de tes routines (Créatine, Méditation, Sommeil...).
-- **Composition corporelle** — Saisis ton % de masse grasse avec tes mesures et suis-le en graphique.
-- **Mesures corporelles** — Suivi complet de ton évolution physique.
-
-### 🔐 Sécurité & Outils
-- **OAuth Social** — Connexion via Google, GitHub et Apple, dès que l'identité OAuth du fournisseur est complète ; pour Apple, l'application signe elle-même le secret client à chaque échange, avec la clé `.p8` (#1911).
-- **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
-- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce neuf à chaque requête, Octane compris). La CSP n'admet d'autre origine que les services push des navigateurs, et le panneau, Horizon, Pulse et Telescope ne font plus rien charger à un autre site : les logos de connexion sont servis par l'application, les avatars du panneau, de Pulse et de Telescope sont des initiales qu'elle dessine, et Horizon, Pulse et Telescope s'affichent dans la police du système, sans leur fonte en ligne. La sonde de santé `/up` répond en JSON, sans page ni ressource d'un autre site (#2072).
-- **Compte ouvert par le lien** — L'inscription et le changement d'adresse répondent de la même façon, dans le même temps, qu'une adresse ait déjà un compte ou non. Un compte ne s'ouvre, et une nouvelle adresse ne remplace l'ancienne, qu'une fois suivi le lien envoyé à cette adresse ; après l'inscription, on suit le lien puis on se connecte sur le même appareil. Le titulaire d'une adresse déjà prise en est prévenu par courriel. Un compte jamais ouvert s'efface au bout de sept jours ; les comptes créés avant ce changement, ou depuis le panneau, ne sont pas concernés. Le panneau montre les comptes en attente pour ce qu'ils sont : colonne « En attente du lien », dont le badge affiche la date de l'inscription, et filtre du même nom dans la liste des utilisateurs, mention sur la fiche ; ses tuiles, son graphique des inscriptions et l'encart « Derniers inscrits parmi les comptes ouverts » ne lisent que les comptes ouverts, et la tuile « Comptes » dit combien attendent.
-
----
-
-## 🏆 Qualité
-
-Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont posés au niveau mesuré et montent par cliquets — un seuil qu'on n'atteint pas finit désactivé.
-
-| Contrôle | Seuil | Où |
-| --- | --- | --- |
-| **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 5 963 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.4, et 16 contre un vrai Redis à l'image de la production (groupe `redis`, étape à part) | bloquant par PR |
-| **Tests frontend** | 4 292 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
-| **Tests navigateur** | 192 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.4 | bloquant par PR |
-| **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
-| **Rector / Pint** | aucun changement en attente | bloquant par PR |
-| **Mutation testing** | ≥ 82 % `App\Services\PersonalRecordService`, 94 % le reste d'`App\Services`, 83 % `App\Services\Stats`, 88 % le reste d'`App\Services\Diagnostic`, 91 % `App\Services\Diagnostic\Projections`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
-
-S'y ajoutent plus de quarante **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur, variables d'environnement documentées.
-
-Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](docs/charte.html). La feuille de route vit dans les issues GitHub et le journal des modifications, pas dans un document qui vieillit.
-
----
-
-## 📦 Mise en production
-
-La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml up -d` (ou la mise à jour de la pile) : `pull_policy: always` retélécharge l'image et recrée les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé, et un simple redémarrage ne télécharge rien (#1813). Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
-
-La base et Redis ne suivent pas `v1` : `db` et `redis` lancent l'étiquette de la composition (`redis:8.10.3-alpine`, une version exacte), et retélécharger l'image de l'application ne les change pas. **À chaque release, la pile reçoit la composition de son tag** (`docker-compose.prod.yml`), puis se met à jour ; « Versions des services », dans la page « Santé », dit ensuite si `db` et `redis` servent la version qu'elle attend. Une release qui monte `redis` se déploie par la marche « Redis » de `.ai/rules/dependencies.md`, à une heure creuse : application arrêtée, Redis arrêté, copie du volume de données de redis, mise à jour, vérification, et retour par la copie si besoin ; la version d'avant ne relit plus le volume une fois l'AOF réécrit par la nouvelle. Une bascule de MySQL a sa propre marche, dans le même fichier.
-
-**Deux instances de Redis (#2151).** Le cache ne partage plus l'éviction de la file, des sessions et des verrous. Deux conditions avant de s'en servir : l'image de la release, celle qui connaît `REDIS_CACHE_HOST` et `CACHE_DURABLE_STORE`, est publiée et son `APP_VERSION` vérifié (« Versions des conteneurs ») avant de poser la nouvelle composition ; et un retour en arrière remet la composition d'avant, jamais l'image seule : l'ancienne image avec la nouvelle composition range le cache sur la base 1 de `redis`, en `noeviction`, qui refuse alors les écritures dès 128 Mo.
-
-La bascule se fait en trois commandes, dans cet ordre :
-
-```sh
-docker compose -f docker-compose.prod.yml exec app php artisan cache:clear
-docker compose -f docker-compose.prod.yml up -d -t 60
-docker compose -f docker-compose.prod.yml exec redis redis-cli -n 1 FLUSHDB ASYNC
-```
-
-La première vide l'ancien cache avant que `redis` ne passe en `noeviction` : sans elle, il recharge jusqu'à 128 Mo d'ancien cache depuis son AOF et refuse sessions et mises en file. La deuxième met la pile à jour ; dès lors `app` écrit son cache sur `redis-cache`. La troisième vide la base 1 de `redis`, où les anciens conteneurs ont pu écrire pendant la bascule (jamais `FLUSHALL`, jamais sans `-n 1`) ; elle seule la vide, un `cache:clear` lancé après la mise à jour ne vide que `redis-cache`. Les compteurs des limiteurs repartent de zéro, et « Planificateur » comme « File d'attente » peuvent passer au rouge une fois, le temps du battement suivant. Pour revenir en arrière, remettre la composition de la release d'avant puis `docker compose -f docker-compose.prod.yml up -d --remove-orphans` (sans `--remove-orphans`, `redis-cache` reste lancé) : sessions et file restent dans `redis_data`, le cache repart vide. Revenir ensuite à la nouvelle composition, c'est refaire ces trois commandes : le cache a rempli la base 1 entre-temps.
-
-**Secrets hors des lignes de commande et sessions chiffrées (#2353).** Deux changements de `docker-compose.prod.yml`, décidés ensemble :
-
-- *Plus de secret en argument.* La sonde de `db` passait `-p${DB_PASSWORD}` à `mysqladmin`, et `redis` comme `redis-cache` recevaient `--requirepass ${REDIS_PASSWORD}` : la valeur se lisait dans `docker inspect` (la commande et la sonde du conteneur), `docker ps --no-trunc` et `ps` sur l'hôte. La sonde lit désormais `MYSQL_PWD` (`DB_ROOT_PASSWORD`), et chaque Redis démarre par `sh -c` qui lui donne `requirepass` par une configuration sur l'entrée standard, sous les guillemets que Redis demande, puis `exec docker-entrypoint.sh redis-server -` : Redis reste le premier processus, sous l'utilisateur `redis`, et s'arrête proprement. `AucunSecretNEstUnArgumentDeLaPileTest` (tests/Feature/Conventions) refuse tout secret dans la `command`, l'`entrypoint` ou la sonde d'un service. **Ce que cela ne cache pas** : l'environnement d'un conteneur (`REDIS_PASSWORD`, `DB_PASSWORD`, `APP_KEY`…) reste lisible par `docker inspect` et par `root`, et le fichier de la pile aussi ; un mot de passe lu dans un fichier (`*_FILE`, `secrets:`) demanderait que l'entrée et la configuration de l'application le lisent, ce qui n'est pas fait. Un mot de passe de Redis peut porter espaces, `"`, `\`, `$` et `#` (essayé avec `p@ss w"or\d $x #y`), pas de retour à la ligne.
-- *Sessions chiffrées.* `SESSION_ENCRYPT` vaut `true` par défaut et dans la composition : la session, qui porte la clé AES des copies hors ligne, s'écrit chiffrée (`APP_KEY`) dans Redis. Mesuré le 16/11/2026 (AES-256-CBC, PHP 8.5, aarch64) : 9 µs pour chiffrer et 8 µs pour déchiffrer une session de 450 octets, 45 et 42 µs pour une de 4 Ko ; elle occupe 2,2 fois plus de place (996 octets au lieu de 449), soit environ un mégaoctet pour mille sessions, dans les 128 Mo de `redis`. Sur le serveur de production, comptez quelques fois plus par requête : sans mesure, c'est une estimation, négligeable devant les 0,35 à 1,7 s que coûte chaque écriture SQL. Une session écrite en clair ne se déchiffre pas, et Laravel la lit comme vide : son titulaire devient un invité **une seule fois** (une page du compte le renvoie vers la connexion, sa session s'écrit chiffrée sous le même identifiant, aucune erreur), sauf l'appareil qui se souvient du compte, que son cookie de rappel reconnecte sans rien faire. Sa clé des copies hors ligne est neuve : les copies d'avant s'effacent à la première vérification de la page « hors ligne », et les modifications qui attendaient leur envoi restent pour le retour du compte (« Ce que l'appareil garde hors ligne »). Les sessions en clair encore dans Redis (et dans son AOF, jusqu'à sa prochaine réécriture) y restent jusqu'à `SESSION_LIFETIME` minutes sans visite, ou jusqu'à ce que leur titulaire revienne ; une rotation d'`APP_KEY` sans `APP_PREVIOUS_KEYS` ferme de même toutes les sessions. `SessionsChiffreesTest` (tests/Feature/Security) joue la bascule dans les deux sens.
-
-La manœuvre, à une heure creuse, une seule fois, avec la composition de la release :
-
-```sh
-docker compose -f docker-compose.prod.yml stop worker scheduler
-docker compose -f docker-compose.prod.yml exec app php artisan down
-docker compose -f docker-compose.prod.yml up -d -t 300
-```
-
-`up -d` recrée `db` (sa sonde a changé : MySQL s'arrête proprement, `stop_grace_period` de cinq minutes, et repart sur le même volume), `redis` et `redis-cache` (leur commande a changé : `redis` écrit son AOF en s'arrêtant et la relit, les sessions et la file y sont ; `redis-cache` repart vide, comme toujours), puis `app`, `worker` et `scheduler`. Les variables de la pile, `REDIS_PASSWORD` comprise, ne changent pas. Si `up -d` n'a pas recréé `app`, `docker compose -f docker-compose.prod.yml exec app php artisan up` le rouvre. À vérifier ensuite : `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis` et `redis-cache` en `healthy` ; `docker inspect <projet>-redis-1 --format '{{json .Config.Cmd}} {{json .Config.Healthcheck}}'` (et `<projet>-db-1`) ne montre aucun mot de passe ; `docker compose -f docker-compose.prod.yml exec redis redis-cli ping` répond `PONG` ; « Réglages de Redis » et « Versions des services », dans « Santé », restent verts ; la connexion marche, et seules les personnes sans « Se souvenir de moi » se reconnectent une fois. Si `redis` ne démarre pas, `docker logs <projet>-redis-1` le dit (le plus probable : un retour à la ligne dans `REDIS_PASSWORD`). Pour revenir en arrière sur les sessions seules : `SESSION_ENCRYPT=false` dans la pile, puis `up -d` : les sessions chiffrées se lisent alors comme vides, et chacun se reconnecte une fois de plus. Pour tout défaire : la composition d'avant et `up -d`, même suite.
-
-**Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
-
-1. les tests backend, frontend et navigateur, le lint, l'audit et la construction multi-architecture sont verts ;
-2. l'image démarre sur une base MySQL vide, en 8.4 comme en 9.7.4, et répond sur `/up` (job `demarrage`) ;
-3. la **passe nocturne** est verte, chacune de ses parts, seuils de mutation compris (job `promotion`).
-
-La release GitHub exige en plus la CI entière, `semgrep`, `secrets` et `workflows` compris.
-
-La passe nocturne est planifiée à 03h17 UTC, mais GitHub la lance plusieurs heures plus tard (entre 07h42 et 10h31 UTC du 1er septembre au 5 octobre 2026), sur la pointe de `main` au moment où elle part. Un tag est donc couvert par la prochaine passe planifiée si son commit est encore la pointe de `main` quand elle part : l'attendre, puis relancer la promotion. Pour ne pas attendre, ou si `main` a avancé, la lancer sur le tag lui-même :
+Il faut Docker Desktop : PHP et Composer tournent dans des conteneurs (Laravel Sail).
 
 ```bash
-gh run list --workflow mutation.yml --commit <sha>   # une passe couvre-t-elle déjà ce commit ?
-gh workflow run mutation.yml --ref v1.2.3
-```
-
-Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), ce qui rejoue `promotion`, puis le run de `release.yml`.
-
-Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow. Un run annulé aussi, par la limite de temps d'une part ou à la main : il ne compte pas comme vert pour la promotion. Seul le run de CI remplacé par un push plus récent avant d'avoir commencé n'en ouvre pas : il n'a rien testé.
-
-La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul sur le serveur de production ; comme les autres contrôles, ces cinq-là écrivent à `HEALTH_TO_ADDRESS` quand ils passent au rouge :
-
-- **Dossier des sauvegardes** écrit puis efface une sonde dans le partage monté (#1812). Chaque accès est borné à dix secondes : un partage qui ne répond plus met le contrôle au rouge (« Sans réponse ») et suspend « Archives des sauvegardes », dont le parcours des archives n'a pas de délai, au lieu de figer tous les contrôles. Au démarrage, chaque conteneur fait la même vérification, bornée elle aussi, et, en cas d'échec, écrit dans `docker logs` « ATTENTION : le dossier des sauvegardes … n'est pas inscriptible par uid … » sans s'arrêter. Les tâches de sauvegarde planifiées tournent chacune dans son propre processus, sans chevauchement (le démarrage de `scheduler` rend les verrous qu'un arrêt en pleine sauvegarde a laissés), et la page « Sauvegardes » du panneau sonde le dossier, cinq secondes au plus, avant de le lister (#1929) : un partage endormi laisse ces tâches en retard dans « Tâches planifiées » et la page dit qu'il ne répond pas, sans figer le planificateur ni le serveur web.
-- **Versions des conteneurs** compare l'image qu'exécutent `app`, `worker` et `scheduler`, chacun l'annonçant à son démarrage (#1813). Un conteneur garde l'image avec laquelle il a été créé : au rouge, mettre à jour la pile en retéléchargeant l'image. `docker exec <conteneur> printenv APP_VERSION APP_REVISION` donne la version d'un conteneur ; pour une image plus ancienne, l'étiquette `org.opencontainers.image.revision` de `docker inspect`.
-- **Versions des services** compare la version que rendent MySQL (`@@version_with_update` quand le serveur la donne, avec son rang de mise à jour, `VERSION()` sinon) et Redis (`redis_version`) à celle que la composition attend, `VERSION_ATTENDUE_DE_MYSQL` et `VERSION_ATTENDUE_DE_REDIS`, tirées de l'étiquette `image:` de `db` et de `redis` (#2152). Une étiquette de ligne (`mysql:8.4`) admet chacun de ses correctifs, une étiquette exacte elle seule. Rouge quand un écart dure plus de dix minutes, le temps d'une mise à jour ; orange avant, quand un serveur ne rend pas sa version, ou quand les deux variables manquent : la pile a reçu l'image de la release sans sa composition. Retélécharger l'image de l'application ne change ni `db` ni `redis` : seule la ligne `image:` de la composition de la release le fait.
-- **Réglages de la base** relit en production `innodb_flush_log_at_trx_commit` et `log_bin` dans MySQL, et l'état de Pulse (#1668) : rouge si une écriture repaie la synchronisation du disque, orange si Pulse enregistre ou si MySQL ne rend pas l'un des deux réglages.
-- **Réglages de Redis** relit en production `INFO` sur l'instance des données (connexion `default`), et sur celle du cache quand elle vit ailleurs (#2151). Rouge quand l'instance des données évince une clé (tant que le cache partage l'instance, la file, les sessions et les verrous partagent son éviction ; une fois le cache à part, elle doit être en `noeviction`), refuse une écriture faute de mémoire, dépasse 75 % de son plafond, ne persiste plus (AOF ou instantané en échec) ou ne répond pas ; orange au-delà de 50 %, sans plafond, quand l'AOF diffère ses synchronisations ou quand `INFO` ne rend pas de quoi juger. Les compteurs se comparent au passage précédent, gardé dans le cache : un redémarrage de Redis, reconnu à son `run_id` même quand deux se suivent entre deux passages, les remet à zéro sans fausse alerte. La page n'affiche que le message, ou le résumé quand il n'y en a pas : le résumé donne donc la version, la mémoire en pourcentage du plafond, la politique d'éviction et les évictions de chaque instance. `php artisan redis:relever` imprime les mêmes compteurs, et eux seuls, à recopier tels quels dans une issue : ni la mémoire ni le système de l'hôte, ni aucun nom de clé, la mémoire en pourcentage du plafond. La sortie d'`INFO` sans ce filtre, ou celle de `redis-cli --bigkeys`, ne se recopie jamais.
-
-`docker-compose.prod.yml` déclare six services : `app`, `db`, `redis`, `redis-cache`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge. `scheduler` porte `init: true` : ses tâches d'arrière-plan (les sauvegardes) sont orphelines dès leur lancement, et `schedule:work`, qui ne récolte pas les enfants qu'il n'a pas lancés, les laisserait en processus zombies jusqu'à la recréation du conteneur (#1929). `worker` prend un travail neuf dès sa mise en file : la lecture d'une file vide attend sur Redis deux secondes au plus (`block_for`), et aucun processus de Horizon ne dort entre deux lectures (`sleep` à 0) ; jusqu'ici, un travail attendait jusqu'à trois secondes dans une file vide (#2151). `scheduler` lance `horizon:snapshot` toutes les cinq minutes : la page « Metrics » de Horizon montre le débit et la durée des travaux des deux dernières heures.
-
-La sonde de santé de `app` (le `HEALTHCHECK` de l'image et celui de la composition, toutes les trente secondes) demande `/up` avec `curl -f` : `{"status":"up"}` et 200, ou `{"status":"down"}` et 500 quand un écouteur de `DiagnosingHealth` lève, l'exception partant dans les journaux (#2072). La même réponse JSON pour tout client, sans session ni cookie, que ni le navigateur ni le service worker de la PWA ne gardent (`Cache-Control: no-store`), et `/up` répond aussi pendant une maintenance. Le sondage ne lit pas la base : il réécrit seulement l'annonce de version de `app` dans le cache, comme avant. Un outil de surveillance qui cherchait un mot dans l'ancienne page HTML de Laravel cherche désormais `"status":"up"`.
-
-Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668). `stop_grace_period: 5m` laisse au serveur cinq minutes pour s'arrêter proprement, au lieu des dix secondes après lesquelles Docker le coupe net ; il rend la main dès qu'il a fini.
-
-**Mesurer la base.** `php artisan base:mesurer`, dans le conteneur `app`, rejoue la mesure du 03/09 (#1668) sans outil extérieur et sans rien écrire : un relevé des réglages et des compteurs de verrou et de synchronisation de la base, une attente pendant laquelle on saisit une dizaine de séries (`--pendant=200` secondes par défaut, de 10 à 3 600), un second relevé, puis les écarts : attentes de verrou, millisecondes par attente, maximum, fsync par seconde. `--json` rend la mesure seule, sur une ligne. Le verdict se lit ainsi : **convoi de verrous** à partir de 10 attentes de 200 ms en moyenne finies dans la fenêtre (une attente en cours à l'un des relevés est dite dans les raisons : sa durée ne compte qu'à sa fin, y compris la part d'avant la fenêtre) (le 03/09 avant réglage, 145 attentes de 1 349 ms en 205 s, venues de l'ingestion de Pulse) : chercher ce qui tient le verrou ; **coût de validation** quand la base a attendu le stockage (`Innodb_log_waits`, `Innodb_buffer_pool_wait_free`) ou que chaque validation s'y synchronise (`innodb_flush_log_at_trx_commit` à 1, ou `log_bin` avec `sync_binlog` à 1) : revoir les options du service `db` ci-dessus (Sail et la CI gardent les défauts de MySQL, et y concluent donc ainsi dès qu'on écrit) ; **rien à signaler** sinon, comme le 03/09 après réglage (aucune attente en 69 s), en précisant quand la fenêtre n'a vu aucune écriture, donc rien mesuré. Un redémarrage de la base pendant la fenêtre fait refuser la mesure, et un nom que la version de MySQL ne rend pas est dit « non rendu ».
-
-Les journaux des trois conteneurs de l'application vont dans `docker logs` et, un fichier par conteneur (`app`, `worker`, `scheduler`), dans le volume `journaux` que lit la page « Journaux » du panneau. Le fichier est indispensable au planificateur, qui envoie la sortie de chaque tâche dans /dev/null. Le volume garde quatorze jours de chaque conteneur : chaque nuit à 00:10, la tâche planifiée `journaux:purger` y efface les fichiers du jour de quatorze jours et plus, de tous les conteneurs, durée lue dans `days` du canal `daily` (#2053). Seuls ces fichiers partent (`nom-AAAA-MM-JJ.log`), jamais celui du jour, que le canal tient ouvert : une ligne y reste quatorze jours de calendrier au plus, plus les dix minutes qui séparent minuit de la purge, et une heure de plus quand ces quatorze jours couvrent le passage à l'heure d'hiver. Le canal seul n'y suffisait pas : il garde les quatorze fichiers les plus récents de chaque conteneur, quel que soit leur âge, et n'efface le plus ancien qu'en ouvrant le fichier d'un nouveau jour ; un conteneur qui écrit peu y gardait des fichiers bien plus vieux, et le volume survit à la recréation des conteneurs (#1938). La copie de `docker logs` tourne par taille, pas par durée (#1938) : la composition pose à `app`, `worker` et `scheduler` le pilote `json-file` avec `max-size: 10m` et `max-file: 3`, soit trois fichiers de 10 Mo et environ 30 Mo au plus par conteneur, dont les plus anciennes lignes partent à mesure que d'autres s'écrivent, au bout d'un temps qui dépend du trafic. Posé dans le service, ce réglage prend le pas sur le pilote de journaux réglé pour tout le démon (`log-driver` et `log-opts` de `daemon.json`) : le pilote et ses deux limites valent quel que soit le réglage du serveur. `db` et `redis` gardent celui du démon.
-
-**Ce qui reste d'un compte supprimé.** La suppression efface, dans une seule transaction, le compte, ses données, ce qui le désigne sans clé étrangère (notifications, abonnements push, jetons, rôles, audit, jeton de réinitialisation du mot de passe), les erreurs que son navigateur a rapportées et les exceptions levées par ses requêtes (#1935, #1938). Restent : les exceptions levées sans compte connecté (avant l'authentification, sous le panneau, en file, en console) et celles écrites avant ce lien, qui peuvent porter son identifiant ou ce qu'il a saisi (en-têtes, paramètres de route, message), trente jours ; les tâches en file qui ont échoué, dont la charge porte le destinataire d'une notification, adresse de courriel comprise, et que rien d'autre ne rattache au compte, trente jours dans `failed_jobs` (purgée chaque nuit par `queue:prune-failed`) et sept jours dans Horizon (une tâche qui attendait encore son tour pour le compte, l'une de ses séries ou l'un de ses records ne s'y ajoute pas : elle se supprime sans échouer, #2109) ; les entrées d'audit d'avant #1670 (2026-09-03) sur les données du compte, quand leur cause est un administrateur ou personne, 180 jours après leur écriture, donc jusqu'au début de mars 2027 pour les dernières, selon la date à laquelle #1670 a été déployé ; quand c'est un administrateur qui supprime, l'entrée d'audit qui le dit, sans sujet ni rien du compte, 180 jours ; les journaux de l'application, quatorze jours dans le volume `journaux` (purgé chaque nuit par `journaux:purger`, #2053), et dans `docker logs` jusqu'à ce que d'autres lignes les remplacent, sans durée garantie : cette copie, où chaque exception porte l'identifiant du compte connecté, tourne par taille et non par durée, environ 30 Mo au plus par conteneur, et disparaît avec le conteneur ; et les archives de la base, sept mois au plus : toutes celles des sept derniers jours, puis une par jour sur seize jours, une par semaine sur huit semaines et une par mois sur quatre mois, sans archive annuelle. La page de profil annonce ces durées à qui supprime son compte, quatorze jours pour les journaux du serveur, et dit de la copie de `docker logs`, bornée par sa taille, qu'elle en garde des traces sans durée garantie, le temps que de nouvelles lignes les remplacent.
-
-**Ce que l'appareil garde hors ligne.** Les modifications faites sans réseau attendent dans le stockage du navigateur, en clair, au nom de leur compte, et ne partent que sous sa session (#1964). Une séance démarrée, terminée ou lancée d'un modèle sans réseau y attend de même, avec l'heure du geste et, pour la démarrer, une clé tirée par l'appareil, que le serveur garde avec la séance pour qu'un envoi rejoué ne la crée jamais deux fois (#2049). La déconnexion qui en trouve, ou qui part pendant qu'une modification attend encore sa réponse, le dit d'abord, avec leur nombre : « Rester connecté » les garde, « Se déconnecter quand même » les efface de l'appareil, avec les refus, les brouillons de séries et la dernière recherche d'exercice, et l'écran de connexion dit combien (#2050). Un autre onglet resté ouvert sur le compte le dit aussi : ce qu'on y modifie ensuite sans réseau n'est plus gardé, et la valeur d'avant revient, avec un message. Une session que le serveur ferme les laisse pour le retour du compte ; la recherche d'exercice, rangée avec son compte, n'est lue par aucun autre, et la première page de connexion l'efface. Aucune n'attend plus de trente jours : au-delà, elle est abandonnée et effacée, et le compte le lit, avec le nombre et la date, à sa prochaine ouverture sur cet appareil s'il revient dans les trente jours qui suivent ; l'avis, qui ne garde que l'identifiant du compte, ce nombre et cette date, est effacé passé ce délai, et un compte qui revient plus tard n'en voit rien ; s'il se déconnecte avant de l'avoir vu, l'écran de connexion le dit. La suppression faite depuis l'appareil les efface aussitôt ; celles d'un compte supprimé depuis un autre appareil ou depuis le panneau partent à la première ouverture de l'application sur l'appareil passé trente jours, aucune réponse du serveur ne disant qu'un compte n'existe plus. Toute réponse faite à un compte connecté pose aussi le cookie `__Host-gt_copies` (`gt_copies` quand `SESSION_SECURE_COOKIE` est faux), que la page lit : une clé tirée au hasard pour la session, que le serveur garde dans la session et que toute réponse qui en dit la fin efface (déconnexion, depuis l'application comme depuis le panneau, dont la session est la même ; mot de passe changé ailleurs ; compte supprimé ; session expirée). Il expire avec elle, au bout de `SESSION_LIFETIME` minutes sans requête, ou de douze heures quand l'appareil se souvient du compte (« Se souvenir de moi »).
-
-**Les copies des pages de salle.** Pour s'ouvrir plus tard sans réseau, l'application garde sur l'appareil une copie des pages utiles en salle, telles que le serveur les a rendues (#2048) : l'accueil, la séance en cours et les trois dernières séances closes visitées, la liste des séances, celle des modèles, avec de quoi lancer chacun sans réseau (#2049), la bibliothèque d'exercices, le profil, les outils, le minuteur d'intervalles, les disques, le 1RM et l'échauffement. Jamais le journal, les mesures, la santé, les habitudes, les compléments, les notifications, les objectifs, ni un formulaire, ni une page d'invité ; et la copie de l'accueil ne garde ni le dernier poids ni les objectifs en cours qu'il affiche ; aucune ne garde le message qu'une page affiche après un enregistrement. Elles vivent dans la base IndexedDB du navigateur (`gym-tracker-copies`), pour le seul compte connecté, chiffrées (AES-GCM 256) par la clé que porte ce cookie : en clair n'y restent que l'adresse de chaque page, son nom de composant, deux dates, une empreinte de la clé qui ne permet pas de la retrouver, et l'identifiant du compte. La clé ne vit que dans le cookie : la session finie, quelle qu'en soit la cause, les copies ne se lisent plus, même application fermée. Elles sont effacées avant l'envoi de la déconnexion, même quand elle échoue faute de réseau, et avant celui de la suppression du compte, la clé de la session fermée avec elles jusqu'à la fin de la session, sauf quand le serveur refuse la suppression (le mot de passe) ; quand un autre compte ou un invité ouvre l'application sur l'appareil ; quand le serveur dit la fin de la session ; et, à chaque ouverture, après sept jours. Après une réponse du serveur, l'application demande elle-même les pages de cette liste qui lui manquent ou ont plus de deux heures, huit requêtes au plus, une fois par demi-heure, et la séance en cours dès qu'une modification faite sans réseau y est enfin enregistrée ; ces requêtes ne prolongent pas la session et ne posent aucun cookie, et une réponse revenue après une copie plus récente ne la remplace pas ; l'ensemble tient sous 1,5 Mo. La page de séance y verse la séance telle qu'elle est enregistrée, et une note, en clair, garde l'identifiant du compte et l'heure de la dernière modification acceptée de chaque séance, effacée avec les copies. Un compte supprimé, ou dont le mot de passe a changé ailleurs, pendant que l'appareil est hors ligne, reste lisible par l'application sur cet appareil jusqu'au premier contact avec le serveur, ou jusqu'à l'échéance du cookie. Dans l'application ouverte, un lien vers l'une de ces pages ouvre sa copie quand le réseau ne répond pas, tout de suite sans réseau, au bout de cinq secondes sur un réseau qui ne répond plus, et seulement une copie du compte de la page affichée, sa clé présente jusqu'au moment où elle s'affiche : un bandeau la date (« Hors ligne · copie du … »), avec « Réessayer » ; ce qu'elle n'a pas, le dernier poids, les objectifs, les graphiques, ce que la page charge après elle, s'y dit indisponible hors ligne ; les boutons qui enregistreraient se désactivent et disent pourquoi : rien ne part d'une copie, sauf la déconnexion et ce qui passe par la file, démarrer ou terminer une séance et lancer un modèle tel que la copie le montre (#2049) ; la séance, elle, garde ses modifications en file, comme avant. À la première réponse du serveur, la copie affichée se recharge d'elle-même, la séance une fois ses modifications enregistrées : ses formulaires et la bibliothèque d'exercices de la séance reprennent les valeurs du serveur, sauf ce que la personne y a changé, et ses graphiques se dessinent ; un formulaire qui se remplirait des valeurs de la copie, comme la modification d'un préréglage du minuteur, ne s'ouvre pas sur elle. Une réponse arrivée avant les cinq secondes passe toujours devant la copie. Un lien vers une autre page laisse la page en place et dit qu'elle n'est pas disponible sans réseau. Pour qu'elles s'affichent, le service worker garde à l'installation les fichiers de l'application et de ces pages, sauf leurs graphiques, et, le temps d'une mise à jour, ceux de la version précédente : des fichiers construits, les mêmes pour tous, jamais une copie ni une donnée de compte. Un stockage à court de place n'empêche pas la nouvelle version de s'installer : seuls les fichiers de la précédente manquent alors.
-
-**À l'ouverture sans réseau.** L'accueil, une séance, les séances, les modèles, les exercices, le profil et les outils attendent le serveur huit secondes au plus ; passé ce délai, ou sans réseau, le service worker sert la page « hors ligne », que les autres pages reçoivent aussi sans réseau. Il la sert sous les mêmes protections que les pages du serveur (politique de contenu, cadrage, origine, et `no-store`, comme les pages d'un compte), et ne la donne jamais au retour d'un fournisseur de connexion, au panneau, à ses tableaux de bord ni aux quatre liens des courriels (trois signés : vérification de l'adresse, ouverture du compte, confirmation d'une nouvelle adresse ; et celui du nouveau mot de passe, porteur d'un jeton), qui attendent le serveur sans délai. Cette page vérifie d'abord la clé du cookie, le compte de l'appareil et la version des copies, et les efface à la première vérification qui échoue ; puis elle démarre l'application sur la copie de la page demandée, avec le même bandeau : l'accueil, la séance en cours, dont les séries qui attendent leur envoi restent marquées comme telles (les minuteurs, qui ne vivaient qu'en mémoire, sont perdus), les séances, les modèles, les exercices, le profil et les outils. Une séance démarrée sans réseau s'y rouvre aussi, depuis ce qui attend son envoi, à l'adresse de sa clé (#2049). Une adresse sans copie montre ce qui s'ouvre sans réseau. Sans aucune copie lisible, la page dit « Pas de réseau », et : « Ouvre l'application une fois avec du réseau avant la salle : l'accueil, la séance en cours, les séances, les exercices et les outils resteront disponibles pendant la durée de ta session. » Elle se recharge au retour du réseau ; quand le serveur a seulement tardé, elle propose « Attendre la réponse », et l'adresse attend alors le serveur sans délai pendant une minute. Une copie ouverte ainsi se recharge en entier à la première réponse du serveur, et d'elle-même quand la page demandée arrive après le délai : le serveur était lent, pas absent, et l'adresse l'attend alors sans délai pendant une minute. Ce démarrage ne vient que de la page que le service worker sert : le même fichier ouvert à sa propre adresse ne montre rien d'un compte. **Les copies vivent le temps de la session** : elles ne se lisent que tant que vit le cookie qui porte leur clé, `SESSION_LIFETIME` minutes après la dernière réponse du serveur (deux heures par défaut), douze heures quand l'appareil se souvient du compte, et aucune n'est servie au-delà de sept jours. S'entraîner le soir sans réseau après avoir ouvert l'application chez soi l'après-midi suppose donc « Se souvenir de moi » coché, ou une réponse du serveur dans ce délai ; la case est décochée par défaut, et la connexion par un fournisseur ne la coche jamais. Ces parcours se vérifient dans Chrome ; sur iOS, IndexedDB, le precache et leur éviction dans l'application installée restent à vérifier sur un appareil.
-
-L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le port 8888 publié par `app`, qui n'écoute que sur la boucle locale de l'hôte (`127.0.0.1:8888:80`, #2309) : le proxy inverse doit tourner sur le même hôte et viser `localhost:8888`, et aucun autre appareil du réseau ne joint ce port, donc aucun ne peut forger `X-Forwarded-For` (liste blanche du panneau, limiteurs par adresse). Un proxy inverse sur un autre hôte ne joint plus le port : remettre `8888:80` et régler `TRUSTED_PROXIES` sur son adresse. Si `TRUSTED_PROXIES` est resserré, il doit contenir l'adresse de la passerelle du réseau de conteneurs, pas seulement l'adresse du réseau local : le conteneur voit la passerelle du pont, ni `127.0.0.1` ni l'adresse de l'hôte. L'ouverture directe ne marche d'ailleurs pas : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session, la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance par défaut à la boucle locale et aux ponts Docker (`172.16.0.0/12`), non aux réseaux locaux (`10.0.0.0/8`, `192.168.0.0/16`) : si le réseau de conteneurs de l'hôte tombe dans l'une de ces plages, la passerelle est à ajouter à `TRUSTED_PROXIES`, faute de quoi HTTPS n'est plus détecté. `X-Forwarded-Proto` décide aussi du chiffrement de l'historique (#1965) : les pages d'un compte sont chiffrées dans l'historique du navigateur, et la déconnexion en jette la clé, pour que le bouton Retour ne réaffiche rien du compte parti ; le navigateur ne sait chiffrer qu'en HTTPS ou sur la boucle locale, et l'application ne le lui demande que là. Sans l'en-tête, les pages restent servies, mais l'historique en clair. Les pages d'un compte sortent en outre en `Cache-Control: no-store`.
-
-**Manœuvre de déploiement du port local (#2309).** Redéployer la pile (`docker compose -f docker-compose.prod.yml up -d`) recrée `app` avec le port sur la boucle locale. Puis, dans l'ordre : (1) ouvrir le site par son adresse HTTPS habituelle, donc par le proxy inverse : la page de connexion répond ; (2) depuis un autre appareil du réseau local, ouvrir `http://IP-DE-L-HÔTE:8888` : la connexion doit être refusée ou expirer, sans réponse de l'application. Retour arrière si (1) échoue : remettre `8888:80` dans la composition et redéployer.
-
-### Double authentification du panneau
-
-Le panneau (`/backoffice`) exige la double authentification de chaque administrateur (#2353) : une application de codes à usage unique (TOTP), et des codes de récupération. Le mot de passe et la liste d'adresses (`ADMIN_ALLOWED_IPS`) ne suffisent plus, alors qu'un super administrateur fixe le mot de passe de tout compte et télécharge les sauvegardes.
-
-- **Première connexion** : un administrateur qui n'a pas enrôlé son application (le premier, créé par `AdminSeeder`, ou tout compte créé depuis) entre avec son mot de passe, puis le panneau le conduit à la page d'enrôlement avant toute autre page : QR code, code de l'application, puis codes de récupération à noter, qui ne s'affichent qu'une fois. Les connexions suivantes demandent le code de l'application.
-- **Perte de l'application** : à la connexion, « utiliser un code de récupération » remplace le code de l'application ; chaque code ne sert qu'une fois. Les codes se régénèrent depuis le profil, ce que doit faire un administrateur enrôlé avant l'activation des codes (il a un secret et aucun code : son choix d'un code de récupération est refusé comme un code faux).
-- **Perte de l'application et des codes** : depuis le conteneur `app`, `php artisan admin:reinitialiser-mfa adresse@example.org` efface le secret et les codes de cet administrateur ; à sa prochaine connexion, le panneau lui fait enrôler un nouveau secret. L'accès au serveur remplace donc le second facteur : à réserver à qui administre la pile. La commande n'ouvre pas de session et ne ferme pas celles qui existent ; si une session volée est soupçonnée, changer aussi le mot de passe de l'administrateur les ferme. Elle révoque les jetons de diagnostic que cet administrateur avait créés.
-- **Hors du panneau** : Pulse, le lecteur de journaux et Horizon (par le panneau) se ferment aussi à un administrateur sans double authentification, même quand une permission Shield du même nom les lui accorde (`Gate::before` de `AppServiceProvider`, posé avant celui de Spatie), sans quoi son mot de passe seul les aurait ouverts avant l'enrôlement.
-- **Tests** : `Admin::factory()` enrôle une application ; `->sansDoubleAuthentification()` rend un administrateur qui n'y est pas passé, `->avecCodesDeRecuperation([...])` lui donne des codes.
-
-### Aperçu du diagnostic
-
-La page « Système › Aperçu du diagnostic » du panneau montre ce que l'agent de maintenance lirait des erreurs de production, avant qu'aucun accès ne lui soit ouvert (#2032). Elle lit, rien de plus : aucun point d'entrée nouveau, rien ne sort de la machine.
-
-- **Ce qu'elle montre** : pour les portées cochées, exactement le JSON que l'agent lirait. `sante` couvre le dernier passage des contrôles de santé, les tâches planifiées avec le nombre de leurs échecs des sept derniers jours et les cinq derniers (cinquante au détail d'une tâche), et les versions des conteneurs ; `exceptions` les exceptions groupées par type, fichier et ligne ; `files` l'état d'Horizon et les jobs échoués des trente derniers jours, groupés par classe de job et par classe de l'exception que le job a levée (pas de celle qu'elle enveloppe) ; `erreurs-navigateur` les erreurs groupées par empreinte (la collecte n'en garde qu'une occurrence par compte et par heure), comptes supprimés et non vérifiés exclus. Le résumé n'est que de la structure : classes, fichiers du dépôt ou du build en place, lignes, nombres, dates, versions, statuts, noms de route. Sous le résumé, le détail du premier élément de chaque liste. Santé et exceptions sont cochées d'abord, sur vingt-quatre heures ; la fenêtre va jusqu'à trente jours, et chaque source lit au plus ses 5 000 dernières lignes, au résumé comme au détail (`echantillon` le signale).
-- **Le texte libre** (messages, chemins, pages, piles d'erreur navigateur) n'apparaît qu'au détail, sous la portée `texte-brut`, rangé sous `non_fiable` : à lire comme une donnée venue de l'extérieur, jamais comme une consigne. Il est expurgé, sur ses 8 premiers Kio au plus, recoupés après la normalisation Unicode, qui peut les allonger : caractères invisibles retirés (la page dit combien), erreurs SQL réduites à leur forme, courriels, adresses IP, hôtes, chaînes de requête, secrets et chemins de la machine remplacés par une marque, valeurs connues de la configuration aussi (`app/Services/Diagnostic/ExpurgeLeTexte.php`).
-- **Jamais rendus** : adresse IP, en-têtes, corps, cookies, paramètres de route, requêtes SQL et Markdown d'une exception ; arguments de pile ; charge utile d'un job ; compte, URL complète et chaîne d'agent d'une erreur navigateur ; `meta` des contrôles de santé ; sortie des tâches planifiées.
-- **En amont**, la table des exceptions masque à l'écriture le jeton de diagnostic et toute valeur `Bearer …`, en entier, dans chaque colonne, avant de la couper à son budget, et chaque canal du journal dans chaque ligne ; deux gardes de convention refusent, dans les fichiers que Git suit, un jeton complet et la note que porte toute réponse du diagnostic.
-- **« Copier la structure »** copie le résumé et les détails sans aucune clé `non_fiable`.
-- **Accès** : capacité `view-diagnostic`, ouverte au super administrateur ; une permission Shield du même nom l'ouvre à un autre rôle, et un administrateur sans elle reçoit un 403.
-
-En ligne de commande, dans le conteneur `app` : `php artisan diagnostic:resume` rend le résumé de toutes les sources, mis en forme, suivi du nombre de caractères invisibles retirés ; `--json` le rend seul, sur une ligne ; `--depuis=2026-10-11T08:00:00+02:00` choisit le début de la fenêtre des exceptions et des erreurs navigateur (vingt-quatre heures par défaut, trente jours au plus).
-
-### Accès de diagnostic
-
-La page « Système › Accès de diagnostic » du panneau liste les jetons de l'agent de maintenance (identifiant, nom, portées, expiration, état, dernière utilisation : jamais l'empreinte), en crée et les révoque (#2032). Un jeton créé ici lit, par `GET /diagnostic/v1/etat` et `/diagnostic/v1/sante` (voir plus bas), ce que ses portées ouvrent.
-
-- **Accès** : le rôle de super administrateur, la double authentification activée et la capacité `view-diagnostic` ; la page est invisible et sa route refusée pour tout autre. `AppServiceProvider::ouvrirLesOutilsAuSuperAdministrateur()` ouvre la capacité au super administrateur, mais `Gate::allows()` peut être vrai pour un administrateur ordinaire qui en aurait la permission : `canAccess()` exige en plus le rôle.
-- **Création** : un nom, des portées, une durée de 1, 7 (par défaut) ou 30 jours (un jour au plus avec `texte-brut`), et le code du moment de l'application d'authentification, que `CreeUnJetonDeDiagnosticAction` vérifie côté serveur. Un refus s'affiche par une phrase écrite dans la page, jamais par un texte venu de l'extérieur.
-- **Le jeton en clair** est rangé chiffré (`encrypt()`) en cache cinq minutes au plus, sous une clef tirée au hasard que seule la fenêtre porte, et déchiffré au rendu pour l'administrateur qui l'a créé. Fermer la fenêtre dans l'interface l'oublie aussitôt (et seul son créateur peut l'effacer) ; après un rechargement, une navigation ou un onglet fermé, il reste relisible par son créateur, avec la clef, jusqu'à la fin des cinq minutes. Il n'entre ni dans un champ de formulaire, ni dans la session, ni dans une notification, ni dans un journal, ni dans l'état du composant que la table des exceptions copie.
-- **Révocation** : par ligne, ou « Tout révoquer », par `RevoqueLesJetonsDeDiagnosticAction`. Les jetons d'un administrateur se révoquent aussi d'eux-mêmes quand il change de mot de passe, retire ou remplace sa double authentification, ou est supprimé ; un jeton dont le créateur n'a plus de double authentification est de toute façon refusé comme un chemin inconnu.
-- **Les routes** (`routes/diagnostic.php`, hors des groupes `web` et `api` : ni session, ni cookie) sont en lecture seule, GET et HEAD. `GET /diagnostic/v1/etat`, ouvert à tout jeton, rend l'application, le jeton (les quatre derniers caractères de son identifiant, ses portées, son expiration) et, selon ses portées, le plus court résumé des vingt-quatre dernières heures de chaque source, quelques groupes seulement, sans texte libre et sous 8 Kio, et le nombre de lignes de chaque source sur sept jours (au plus 5 000, lu sous la borne de temps de la base, gardé soixante secondes sous une clef par source : jamais par jeton) ; `GET /diagnostic/v1/files`, sous la portée `files`, rend l'état d'Horizon et de chaque file, les jobs échoués des trente derniers jours comptés par file (au plus cinquante) et groupés par classe de job et d'exception (au plus cinquante groupes, lus sur les 5 000 derniers échecs), l'âge du plus ancien job en attente de chaque file, et les cinq derniers échecs (la charge utile n'est jamais envoyée : la base n'en extrait que le nom du job, et la lecture de l'âge lit en mémoire la charge de tête de chaque file, dont seule la date de création sort ; cet âge est approximatif, la tête de la liste étant le prochain job pris, et un job relâché ou rejoué garde sa date d'origine mais passe en queue ; `echecs_par_file` ne compte que les 5 000 échecs lus, ce que dit `echantillon`), le message de chacun sous `non_fiable` pour un jeton `texte-brut` seulement ; `GET /diagnostic/v1/sante`, sous la portée `sante`, rend les contrôles et les versions annoncées, avec leur texte sous `non_fiable` pour un jeton `texte-brut` ; `GET /diagnostic/v1/taches` et `/diagnostic/v1/taches/{identifiant}`, sous la même portée, rendent les tâches planifiées (au plus cinquante), leur état à l'instant de la lecture et leurs derniers échecs des sept derniers jours (jamais la sortie d'une commande), le message de chaque échec au détail seulement, sous `non_fiable`, pour un jeton `texte-brut` ; `GET /diagnostic/v1/erreurs-navigateur` et `/diagnostic/v1/erreurs-navigateur/{empreinte}`, sous la portée `erreurs-navigateur`, rendent les erreurs du navigateur des vingt-quatre dernières heures groupées par empreinte (au plus cinquante groupes, lus sur les 5 000 dernières lignes des comptes vérifiés : type, nombre, comptes touchés, familles de navigateurs, fichier du build, ligne, colonne) et un groupe de cette même fenêtre ; le message, la page (réduite à son chemin sous un hôte masqué, les identifiants numériques masqués) et les premières lignes de la pile de sa dernière occurrence ne sortent qu'au détail, sous `non_fiable`, pour un jeton `texte-brut`, jamais le compte, l'URL complète ni la chaîne d'agent. Le jeton se présente dans `Authorization: Bearer`, nulle part ailleurs. Interrupteur coupé, HTTPS absent en production, jeton absent, mal formé, inconnu, expiré ou révoqué, créateur supprimé, sans la capacité ou sans double authentification : toute route répond exactement comme un chemin inconnu (404). Après un jeton valide seulement : 403 `portee-non-accordee`, 429 avec `Retry-After` au-delà de 30 requêtes par minute ou 300 par heure et par jeton, 500 sans détail. Une ligne d'audit par appel servi part dans le canal `diagnostic` (stderr et un fichier quotidien du dossier le sous-dossier diagnostic de storage/logs, 90 jours), avant la réponse ; les refus vont dans `diagnostic_refus` (14 jours), une ligne par identifiant connu et par minute, une synthèse par minute pour les autres.
-
-### Relevé des temps
-
-`SERVER_TIMING_ENABLED` sert au relevé chiffré de ce que coûte chaque écran, avant puis après un changement de performance (#1315, #2148). Le reste du temps, la variable reste à `false`.
-
-1. Poser `SERVER_TIMING_ENABLED=true` dans l'environnement de la pile, puis recréer le service `app` : la variable se lit au démarrage.
-2. Ouvrir l'application connecté, par un chargement complet de la page (après la connexion, un rechargement). Chaque réponse faite à un compte porte alors `Server-Timing` : `app`, `routage`, `controleur` et `rendu`, puis `sql` et `cache`, durée cumulée et nombre. Jamais pour un invité, une authentification ou un 404.
-3. **Sur un ordinateur** : l'onglet Réseau des outils du navigateur (Timing) montre l'en-tête de chaque requête ; dans la console, `releverLesTemps()` rend le relevé en tableaux Markdown. Chaque navigation y est aussi une mesure de l'onglet Performance, `navigation /chemin`, du toucher à la première image peinte.
-4. **Sur un téléphone, sans outils** : ouvrir une page de l'application dans le navigateur avec `#releve-des-temps` au bout de l'adresse, puis la recharger. Le relevé s'affiche replié en haut de l'écran, sous l'en-tête, loin du minuteur de repos ; un toucher sur son titre le déplie ou le replie. Replié, il ne calcule rien ; déplié, il se tient à jour au plus une fois par seconde, jamais pendant une navigation, qu'il allongerait. « Copier le tableau » le copie ; « Fermer » le retire et oublie ce réglage, gardé sur l'appareil seulement. L'application installée peut ne pas voir un réglage fait dans le navigateur (sur iOS, elle garde son propre stockage) : faire alors le relevé dans le navigateur.
-5. Relever une dizaine de fois chaque écran : l'accueil (sa page puis sa prop différée), les séances, les statistiques, la séance en cours, l'ajout d'une série (`POST /api/v1/sets`) et sa modification (`PATCH /api/v1/sets/{id}`). Le tableau donne, par requête, en médiane et p95 : le TTFB ; l'écart entre le TTFB et `app`, « hors de l'app », ce qui entoure l'application (réseau à l'aller et au retour, proxy inverse, attente d'un worker libre) ; `app` et ses étapes `routage`, `controleur` et `rendu` ; `sql` et `cache`, avec leurs nombres ; le passage par le service worker. Et, par destination, la durée des navigations. L'écart hors de l'app compte l'aller-retour du réseau : le comparer à celui des requêtes dont `app` est le plus court, pour en ôter l'aller-retour avant d'y lire une attente de worker. Une écriture d'Inertia que le serveur redirige (302 ou 303 vers la page suivante) s'écrit « → redirigée » : la page suit la redirection dans la même requête, si bien que ses colonnes sont celles de la page d'arrivée, et la colonne « redirection » donne le temps de l'écriture elle-même, réponse de redirection comprise. Le `Server-Timing` de cette réponse ne se lit pas dans la page : sur un ordinateur, l'onglet Réseau la montre à part.
-6. Publier le tableau tel qu'il sort, en commentaire de l'issue : il ne porte que des chemins relatifs, sans chaîne de requête, chaque identifiant devenu `{id}`. Jamais d'adresse complète, d'en-têtes bruts, de capture de l'onglet Réseau ni de fichier HAR : ils nommeraient le domaine ou ce qui précède l'application.
-7. Remettre `SERVER_TIMING_ENABLED=false`, recréer le service, et le dire dans le commentaire.
-
-Rien ne quitte l'appareil : le relevé vit en mémoire, se perd au rechargement, et dort tant que la page complète ne porte pas l'en-tête (`resources/js/Utils/releveDesTemps.js`).
-
----
-
-## 🔧 Variables d'environnement
-
-Une variable se déclare dans `.env.example` pour le développement et se documente ici, dans la PR qui l'ajoute, la renomme, la retire ou en change le rôle. `LeReadmeDocumenteLesVariablesTest` refuse une variable de `docker-compose.prod.yml`, de `.env.example` ou un secret de CI que cette section ne nomme pas, et une variable du tableau « Production » que la composition ne transmet pas.
-
-### Production : à poser dans la pile
-
-Elles se posent dans l'environnement de la pile : les variables de la pile, ou un fichier `.env` à côté de `docker-compose.prod.yml`. Trois règles valent pour toutes :
-
-- **Seules celles que `docker-compose.prod.yml` transmet atteignent les conteneurs.** Une variable lue par `config/` mais absente de ce fichier garde son défaut, quoi qu'on pose dans la pile (voir « Lues par l'application, non transmises »).
-- **Une variable oubliée arrive vide, pas absente.** Compose avertit et la remplace par une chaîne vide ; Laravel retient cette chaîne vide, pas le défaut de sa configuration. La colonne « Défaut » dit ce que reçoit le conteneur quand la variable manque. Seules `BACKUP_ARCHIVE_PASSWORD` et `BACKUP_HOST_PATH` empêchent la pile de démarrer ; les autres obligatoires la laissent démarrer, puis un service tombe.
-- **La configuration est figée au démarrage du conteneur** : `entrypoint.sh` lance `php artisan config:cache`. Une variable changée n'agit qu'une fois les conteneurs recréés (`docker compose -f docker-compose.prod.yml up -d`, ou la mise à jour de la pile) ; un redémarrage garde l'ancien environnement, et `docker exec -e` ne change pas la configuration.
-
-#### Application
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `APP_KEY` | oui | vide : chaque page échoue (`MissingAppKeyException`) | Clé de chiffrement des cookies, des URL signées et de l'adresse que portent les liens des courriels, au format `base64:…` : `echo "base64:$(openssl rand -base64 32)"` en produit une. En changer invalide les liens déjà envoyés par courriel (ouverture d'un compte, vérification ou confirmation d'adresse, réinitialisation du mot de passe), et déconnecte tout le monde, `APP_PREVIOUS_KEYS` ou non : l'empreinte du mot de passe que porte chaque session, comme le cookie « se souvenir de moi », est signée par `APP_KEY` seule (#1940). `APP_PREVIOUS_KEYS`, transmise par `docker-compose.prod.yml`, garde lisibles les cookies chiffrés et valides les liens signés d'une ancienne clé ; une clé publiée n'y a pas sa place. Le contrôle « Clé de l'application » de la page « Santé » passe au rouge en production quand la clé est l'une de celles dont `config/app.php` (`cles_publiees`) garde l'empreinte SHA-256 parce qu'elles ont été lisibles dans l'historique du dépôt. |
-| `APP_URL` | oui | vide | Adresse publique en `https://`, celle du proxy inverse. La composition la recopie dans `ASSET_URL` : une adresse fausse fait charger CSS et JavaScript depuis une mauvaise origine, et la page s'affiche sans style ni script. Les liens des courriels de réinitialisation du mot de passe et de vérification d'adresse se bâtissent toujours sur elle, quel que soit l'hôte de la requête qui les envoie ; le second est signé sur l'URL complète, et changer `APP_URL` invalide ceux déjà envoyés. Elle sert aussi aux liens produits hors d'une requête (worker, planificateur), à l'origine CORS de l'API et d'identité Web Push quand `VAPID_SUBJECT` est vide. |
-| `APP_DEBUG` | non | `false` | Pages d'erreur détaillées : code source, requêtes SQL avec leurs valeurs, en-têtes (cookies compris) et champs envoyés, mots de passe saisis compris. Jamais en production, où le contrôle « Mode debug » de la page « Santé » passe alors au rouge. Le `Dockerfile` pose aussi `false`. |
-| `TRUSTED_PROXIES` | conseillé | `127.0.0.1,172.16.0.0/12` | Pairs dont l'application croit les en-têtes `X-Forwarded-*` (adresse cliente, HTTPS, hôte, port), séparés par des virgules : adresses exactes ou sous-réseaux CIDR, IPv4 et IPv6. Le défaut accepte la boucle locale et les ponts Docker (`172.16.0.0/12`), pas les réseaux locaux : un appareil de `192.168.x.x` ou `10.x.x.x` n'est plus pris pour un proxy, donc l'entrée de `X-Forwarded-For` qu'il forge n'est plus lue pour son adresse. À régler sur l'adresse précise, ou le plus petit sous-réseau, sous laquelle le proxy inverse joint `app` : l'adresse que l'application voit comme pair, pas l'adresse publique. Une valeur qui ne la couvre pas fait lire l'adresse du proxy pour tous les clients (une seule limite de débit pour tous, `ADMIN_ALLOWED_IPS` sans effet) et perdre HTTPS (liens et redirections en `http://`). Vide ou absente : le défaut, que le contrôle « Proxys de confiance » de la page « Santé » signale en orange en production (plage trop large, entrée invalide ou `*`). Transmise à `app` seul. |
-
-#### Base de données
-
-Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_PASSWORD` sous les noms `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` et `MYSQL_ROOT_PASSWORD`, et ne les lit **qu'à l'initialisation d'un volume vide** : les changer ensuite ne modifie ni la base ni ses comptes, et un `DB_PASSWORD` changé dans la pile sans `ALTER USER` dans MySQL coupe l'application.
-
-**Mots de passe de MySQL : évitez l'apostrophe (`'`) et l'antislash (`\`)** dans `DB_PASSWORD` et `DB_ROOT_PASSWORD`. L'image `mysql:8.4` recopie ces valeurs telles quelles dans ses instructions d'initialisation (constaté sur des conteneurs jetables, #2397) : une apostrophe fait échouer l'initialisation (`ERROR 1064`) et laisse des comptes faux, sans que la sonde de santé de `db` le dise (`mysqladmin ping` rend 0 tant que `mysqld` répond, accès refusé compris) ; un antislash final casse l'initialisation (root et utilisateur) ; un antislash au milieu de `DB_ROOT_PASSWORD` donne « Access denied » ; un antislash au milieu de `DB_PASSWORD` enregistre **sans erreur un autre mot de passe** (`Ab\c1` devient `Abc1`), et l'application ne se connecte plus. Les guillemets doubles seuls n'ont pas cassé l'initialisation (non reproduit). Prenez des lettres, des chiffres et des signes simples. Aucun test ne le vérifie.
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `DB_DATABASE` | oui | vide : aucune base n'est créée, la migration échoue et `app` s'arrête | Nom de la base de l'application. |
-| `DB_USERNAME` | oui | vide : aucun utilisateur n'est créé | Utilisateur MySQL de l'application, créé au premier démarrage. Pas `root` : l'image mysql refuse `MYSQL_USER=root` et le service `db` s'arrête. |
-| `DB_PASSWORD` | oui | vide : l'utilisateur n'est pas créé | Mot de passe de cet utilisateur. Faux ou vide, `app`, `worker` et `scheduler` attendent la base vingt minutes (« Waiting for DB ») puis s'arrêtent. |
-| `DB_ROOT_PASSWORD` | au premier démarrage | vide : `db` refuse d'initialiser un volume neuf | Mot de passe root de MySQL. L'application ne s'en sert jamais ; la sonde de santé de `db` le lit, par `MYSQL_PWD` et non par un argument de `mysqladmin` (#2353). |
-
-#### Redis
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `REDIS_PASSWORD` | oui | vide : la mise à jour de la pile est refusée | Mot de passe imposé aux services `redis` et `redis-cache`, que chacun lit dans son environnement et passe à Redis par une configuration sur l'entrée standard (`requirepass`), jamais par un argument (#2353), et utilisé par `app`, `worker` et `scheduler` pour les sessions, le cache, les files et Horizon. Absent ou vide, Compose refuse la mise à jour (`${REDIS_PASSWORD:?…}`) plutôt que de lancer un Redis sans authentification (`requirepass` vide) : c'est désormais le seul garde-fou. |
-
-#### Courriel
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `MAIL_HOST`, `MAIL_PORT` | oui | vides : aucun courriel ne part | Serveur SMTP de tous les courriels : vérification d'adresse, lien qui ouvre un compte après l'inscription, lien qui confirme une nouvelle adresse, avis au titulaire d'une adresse qu'une inscription ou un autre compte a voulu prendre, mot de passe oublié, avis de changement d'adresse envoyé à la dernière adresse vérifiée du compte, alertes de santé, notifications des sauvegardes manuelles. L'inscription et le changement d'adresse, comme le lien de mot de passe oublié (#1951), sont traités par `worker` (Horizon), d'où partent leurs courriels : Horizon arrêté, aucun compte ne se crée et aucun lien ne part, alors que la page a répondu. `MAIL_PORT` décide aussi du chiffrement quand `MAIL_SCHEME` est vide. |
-| `MAIL_USERNAME`, `MAIL_PASSWORD` | si le relais l'exige | vides : pas d'authentification | Authentification SMTP. |
-| `MAIL_SCHEME` | non | vide : déduit du port | `smtps` (TLS implicite) ou `smtp` (STARTTLS quand le serveur le propose). Vide : `smtps` sur le port 465, `smtp` ailleurs. Remplace `MAIL_ENCRYPTION`, que Laravel ne lit plus : une pile qui la pose encore n'en tire rien. |
-| `MAIL_FROM_ADDRESS` | oui | vide : l'envoi échoue | Expéditeur de tous les courriels, et destinataire des notifications de sauvegarde faute de `BACKUP_NOTIFICATION_EMAIL`. Elle reçoit aussi les réponses : l'avis de changement d'adresse invite à y répondre qui n'est pas à l'origine du changement, et elle doit donc être lue. |
-| `MAIL_FROM_NAME` | conseillé | vide : courriels sans nom d'expéditeur | Nom de l'expéditeur. Le défaut de la configuration ne s'applique pas : la composition transmet une chaîne vide. |
-
-#### Notifications Web Push
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | pour les notifications | vides : aucune notification | Clés VAPID, générées une fois par `npx web-push generate-vapid-keys`. Sans la clé publique, la page Profil affiche « Le service de notifications n'est pas encore configuré sur le serveur. » ; la clé privée signe chaque envoi du worker. En changer invalide tous les abonnements existants. |
-| `VAPID_SUBJECT` | non | `APP_URL` | Identité de l'expéditeur auprès du service push : une adresse `mailto:` ou une URL. |
-
-L'adresse d'un abonnement doit désigner `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `push.apple.com` ou `notify.windows.com` (ou un de leurs sous-domaines), à l'enregistrement comme à l'envoi ; un abonnement stocké chez un autre hôte est ignoré. Le client de l'envoi attend 10 s au plus, 5 s pour se connecter, et ne suit aucune redirection. Un nouveau service push se déclare dans `PublicPushEndpoint::HOTES_ADMIS`.
-
-#### Sauvegardes
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `BACKUP_ARCHIVE_PASSWORD` | oui, la pile refuse de démarrer | aucun | Mot de passe AES-256 des archives, transmis à `app`, `worker` et `scheduler`. Sans lui, aucune archive n'est écrite, que la sauvegarde vienne du planificateur, du panneau ou de `backup:run` : une archive en clair sur une autre machine serait une fuite. Le perdre rend les archives illisibles. |
-| `BACKUP_HOST_PATH` | oui, la pile refuse de démarrer | aucun | Dossier de l'hôte monté sur `/app/storage/app/sauvegardes` dans `app`, `worker` et `scheduler` : un dossier partagé d'une autre machine, monté sur l'hôte, jamais un volume Docker. Il doit être inscriptible par l'utilisateur du conteneur, `www-data` (uid 33), sans quoi aucune archive ne s'écrit (#1812). |
-
-#### Connexion sociale
-
-Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur ; vides, rien ne change. Apple accepte, à la place du secret, le trio qui le signe. L'URL de rappel à déclarer chez le fournisseur est `APP_URL` suivie de `/auth/google/callback`, `/auth/github/callback` ou `/auth/apple/callback`. Un échange refusé par le fournisseur (`redirect_uri_mismatch`, `invalid_client`…) laisse une ligne « Connexion sociale refusée par le fournisseur » dans les journaux.
-
-Apple renvoie l'utilisateur par un POST depuis son site, sans cookie de session : son rappel est la seule route exclue de la vérification CSRF, et c'est un nonce, posé au départ dans un cookie chiffré `SameSite=None` et signé par Apple dans le jeton d'identité, qui le lie au navigateur parti. Ce cookie ne voyage qu'en HTTPS. Chez Apple (compte Apple Developer) : un Services ID avec « Sign in with Apple », le domaine d'`APP_URL` et l'URL de rappel déclarés, et une clé « Sign in with Apple » dont on télécharge le fichier `.p8`.
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | pour proposer Google | vides : bouton masqué | Client OAuth « Application Web » de la console Google Cloud. Transmises à `app` seul. |
-| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | pour proposer GitHub | vides : bouton masqué | OAuth App de GitHub (Settings › Developer settings). Transmises à `app` seul. |
-| `APPLE_CLIENT_ID` | pour proposer Apple | vide : bouton masqué | Le Services ID (`org.example.gym.web`), pas l'identifiant de l'app. Transmise à `app` seul. |
-| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | pour proposer Apple, à défaut d'`APPLE_CLIENT_SECRET` | vides : bouton masqué | L'identifiant d'équipe, celui de la clé, et le contenu du `.p8` en clair, en-têtes `BEGIN`/`END PRIVATE KEY` compris : sur une ligne, `\n` à la place des retours. L'application en signe un secret neuf, valable une heure, à chaque échange. Les trois sont nécessaires : tant qu'il en manque une, la clé est ignorée et seul `APPLE_CLIENT_SECRET` peut servir. Transmises à `app` seul. |
-| `APPLE_CLIENT_SECRET` | non | vide | Un secret déjà signé (jeton ES256), lu seulement quand le trio est incomplet : complet, il signe à sa place. Il expire au plus tard six mois après sa signature, et le bouton reste affiché après : chaque connexion échoue alors en `invalid_client`. Transmise à `app` seul. |
-
-#### Administration et supervision
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `ADMIN_ALLOWED_IPS` | pour ouvrir le panneau | vide : le panneau, Pulse et le lecteur de journaux répondent 404, et Horizon reste fermé à l'administrateur du panneau (403) | Adresses autorisées sur le panneau `/backoffice` et sur les outils qui vivent sous lui, Pulse (`/backoffice/pulse`) et le lecteur de journaux (`/backoffice/journaux`, API comprise), et d'où l'administrateur du panneau ouvre Horizon (`/horizon`), séparées par des virgules : adresses exactes ou plages CIDR, IPv4 et IPv6 (`198.51.100.0/24,203.0.113.32`). Transmise à `app` seul. |
-| `HORIZON_ALLOWED_EMAILS` | pour ouvrir Horizon à un compte de l'application | vide : fermé aux comptes de l'application | Adresses des comptes **utilisateurs** de l'application admis sur `/horizon`, séparées par des virgules ; ces comptes n'y entrent qu'une fois leur adresse confirmée par le lien de vérification, ne passent pas par `ADMIN_ALLOWED_IPS`, et une session que le changement de leur mot de passe a fermée n'y entre plus. L'administrateur du panneau qui voit le lien « Horizon » de son menu (capacité `view-outils`, celle du super administrateur) n'a pas à y figurer : il y entre avec sa session du panneau, tant qu'un changement de son mot de passe ne l'a pas invalidée, depuis une adresse de `ADMIN_ALLOWED_IPS`. Transmise à `app` seul. |
-| `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | vide : le seeder échoue | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` dans le conteneur `app` (`docker exec`). Le seeder ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. Le compte enrôle sa double authentification à sa première connexion (« Double authentification du panneau »). Transmise à `app` seul. |
-| `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge ; le courriel et la page « Santé » nomment chacun par son libellé : « Connexion à la base », « Réglages de la base », « Connexion à Redis », « Réglages de Redis », « Cache de l'application », « File d'attente », « Planificateur », « Tâches planifiées », « Accès de diagnostic », « Travailleurs Horizon », « Versions des conteneurs », « Versions des services », « Espace disque utilisé », « Dossier des sauvegardes », « Archives des sauvegardes », « Mode debug », « Environnement », « Application optimisée ». L'objet, le titre et l'introduction du courriel sont en français, comme les messages fixes des contrôles du paquet (« Horizon ne tourne pas. ») ; un message qui porte une valeur (pourcentage du disque, erreur de connexion, minutes de retard) reste celui du paquet, en anglais. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
-| `DIAGNOSTIC_ENABLED` | non | `false` | Ouvre l'accès de diagnostic en lecture seule (#2032) : tant qu'il est faux, aucun jeton ne se crée, et chaque démarrage de `app` révoque ceux qui restent (raison `interrupteur`). Vrai, un super administrateur qui a activé sa double authentification crée un jeton à portées et à durée bornée ; la création exige que `HEALTH_TO_ADDRESS` ne soit pas vide, et chaque création et chaque révocation, automatique comprise, y écrit un courriel qui ne nomme le jeton que par les quatre derniers caractères de son identifiant. La garde de `/diagnostic/v1` y écrit aussi au premier usage d'un jeton, quand un jeton révoqué ou expiré est présenté (un courriel par jeton et par quinze minutes jusqu'à la dixième présentation ; dès la onzième, le compteur du jeton étant gardé quatre-vingt-dix jours, un par jour civil dans le fuseau de l'application, et jamais plus d'un par quinze minutes) et quand son débit est dépassé (une fois par heure et par jeton). Un créneau est pris dès que le courriel est mis en file : sans adresse valide ou si la mise en file échoue, il est rendu et le prochain appel réessaie ; un envoi qui échoue ensuite dans le worker est tenté cinq fois en tout, à 60 s, 5 min, 15 min puis 15 min d'écart, et le créneau reste pris. Seule une adresse seule et bien formée compte : une chaîne qui en réunit deux (« a@example.org, b@example.org ») ou un texte quelconque n'en est pas une, et la création est refusée tant qu'aucune n'est valide. Le contrôle « Accès de diagnostic » de la page « Santé » dit « Fermé », « N jeton(s) actif(s) jusqu'au … » (la plus lointaine des expirations) ou « Ouvert, aucun jeton actif », et passe à l'orange vingt-quatre heures après la présentation d'un jeton mort, si l'accès est ouvert sans `HEALTH_TO_ADDRESS`, ou s'il reste des jetons actifs alors que l'accès est fermé. `php artisan diagnostic:revoquer --tous` révoque tout, interrupteur ou non. Les refus de la garde ne sont comptés ni journalisés qu'avec un magasin de cache autre que `database` (Redis en production) ; sur `database`, ou sur un magasin `failover` qui le nomme, ils restent silencieux. Sur `database` aussi, les comptes sur sept jours de `etat` (soixante secondes, une clef par source) sont une écriture SQL par minute et par source, et une lecture coupée à la borne de temps n'est pas mise en cache : `etat` relance la lecture de deux secondes à chaque appel, dans la limite de 30 par minute. Sur ce pilote aussi, un jeton révoqué ou expiré présenté avec son secret exact est alerté au plus une fois par minute et par jeton quand l'envoi aboutit (sans adresse valide, ou si la mise en file échoue, la marque de la minute n'est pas posée et la présentation suivante réessaie) : la cadence « dixième présentation, onzième » compte alors des minutes. |
-| `LOG_LEVEL` | non | `info` | Niveau minimal des journaux : `debug` pour un dépannage, `warning` pour n'écrire que les incidents. |
-| `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; en production, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable par le super administrateur, depuis une adresse de `ADMIN_ALLOWED_IPS`, sans nouvelles données tant qu'il est coupé : ses cartes disent « No results ». Les sauvegardes gardent ses tables, pas leurs lignes. |
-| `SERVER_TIMING_ENABLED` | non | `false` | En-tête `Server-Timing` sur les réponses d'un utilisateur connecté ou d'un administrateur du panneau : durée de l'application, découpée en `routage`, `controleur` et `rendu`, puis nombre et durée cumulée des requêtes SQL (`sql;dur=12.4;desc="7 requetes"`) et des lectures du cache, une par clé (`cache;dur=1.9;desc="8 lectures"`), lisibles dans l'onglet réseau du navigateur et par le relevé des temps de la page (section « Relevé des temps », plus haut), qui ne s'arme que si l'en-tête arrive. Jamais pour un invité, ni sur une réponse d'authentification ou un 404 : une durée ou un nombre dirait si un compte ou une ressource existe. Seule une valeur vraie (`true`, `1`) l'allume, vide ou absente le coupe. À allumer le temps d'un relevé (#1315, #2148), puis à couper. |
-| `SESSION_ENCRYPT` | non | `true` | Les sessions s'écrivent chiffrées dans Redis (clé `APP_KEY`, comme les cookies) : elles portent la clé des copies hors ligne, qu'un accès en lecture à Redis ne doit pas livrer (#2353). `false` ne sert qu'à revenir en arrière : seuls `false`, `(false)`, `0`, `off` et `no` éteignent le chiffrement (casse et espaces ignorés), une valeur vide ou mal écrite le laisse (#2397). Dans les deux sens, une session écrite dans l'autre format se lit comme vide : son titulaire en ouvre une neuve, une fois (« Secrets hors des lignes de commande et sessions chiffrées », dans « Mise en production »). |
-
-### Fixées par la composition
-
-Écrites en dur dans `docker-compose.prod.yml` : les poser dans la pile ne change rien. L'image pose de son côté `APP_ENV=production`, `APP_DEBUG=false` et `SERVER_NAME=:80` ; cette dernière est sans effet, le Caddyfile de l'application lisant l'adresse qu'Octane lui passe.
-
-| Variable | Valeur | Rôle |
-| --- | --- | --- |
-| `APP_ENV` | `production`, aussi posée par le `Dockerfile` | Cookie de session réservé à HTTPS, panneau fermé sans `ADMIN_ALLOWED_IPS`, Horizon fermé hors liste et hors administrateur du panneau, mots de passe à casse mixte et absents des fuites connues. Telescope, dépendance de développement, n'est pas dans l'image. |
-| `ASSET_URL` | la valeur d'`APP_URL` | Les actifs se servent depuis l'adresse publique. |
-| `DB_CONNECTION`, `DB_HOST`, `DB_PORT` | `mysql`, `db`, `3306` | Le service `db` ; `entrypoint.sh` l'attend jusqu'à vingt minutes avant d'abandonner. |
-| `REDIS_HOST`, `REDIS_PORT` | `redis`, `6379` | Le service `redis` : l'instance des données (file, Horizon, sessions, verrous, limiteurs, battements de santé), en `noeviction`, persistée dans `redis_data`. |
-| `REDIS_CACHE_HOST`, `REDIS_CACHE_PORT` | `redis-cache`, `6379` | Le service `redis-cache` : l'instance du cache, en `allkeys-lru`, sans persistance ni volume (elle repart vide). Absentes, la connexion `cache` retombe sur `REDIS_HOST` et `REDIS_PORT` : Sail et la CI gardent une seule instance. Le mot de passe est celui de `REDIS_PASSWORD`. |
-| `CACHE_DURABLE_STORE` | `redis-durable` | Le magasin des limiteurs de tentatives et des battements de « File d'attente » et « Planificateur » : la connexion des données, que le cache à part ne vide pas. Vide, il suit le magasin par défaut. |
-| `VERSION_ATTENDUE_DE_MYSQL`, `VERSION_ATTENDUE_DE_REDIS` | l'étiquette de `image:` de `db` et de `redis`, sans sa variante : `8.4` et `8.10.3` | Les versions que « Versions des services » attend des deux serveurs (#2152). Elles montent avec l'étiquette, dans la même PR (`LesVersionsAttenduesSuiventLesImagesTest`) ; une pile qui ne les a pas n'a pas reçu la composition de la release. |
-| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions, cache, résultats des contrôles de santé, versions annoncées par les conteneurs et file d'Horizon, partagés par les trois conteneurs de l'application. |
-| `MAIL_MAILER` | `smtp` | Les courriels partent par le serveur de `MAIL_HOST`. |
-| `GOMAXPROCS` | `2` | Plafonne les threads Go de FrankenPHP dans `app` ; `worker` et `scheduler`, en PHP CLI, l'ignorent. |
-| `OCTANE_SERVER` | `frankenphp`, dans `app` seulement | Serveur que visent `octane:status` et `octane:reload` ; l'image lance `octane:frankenphp` directement. |
-| `LOG_CHANNEL`, `LOG_STACK` | `stack`, `stderr,daily` | Chaque ligne va dans `docker logs`, environ 30 Mo au plus par conteneur en rotation par taille, sans durée garantie (#1938), et dans le fichier du jour du conteneur, dans le volume `journaux`, que `journaux:purger` efface chaque nuit à quatorze jours (#1907, #2053). |
-| `LOG_DAILY_NAME` | `app`, `worker` ou `scheduler`, selon le service | Nom du fichier de journal du conteneur : la page « Journaux » du panneau dit ainsi qui a écrit quoi. |
-| `PHP_INI_SCAN_DIR` | `:/app/docker/php-cli`, dans `worker` et `scheduler` seulement | Charge `docker/php-cli/zz-cli.ini` après les ini de l'image : OPcache actif en ligne de commande, sans JIT, avec un cache fichier dans /tmp/opcache que l'image crée. Chaque commande artisan, tâche planifiée et sonde de santé reprend ainsi le code déjà compilé au lieu de tout recompiler (#1968). Le `:` de tête garde le dossier par défaut de l'image (extensions, `docker/php-prod.ini`) ; posée dans `app`, elle couperait le JIT du serveur web. Le fichier répète aussi `zend.exception_ignore_args`, que pose `docker/php-prod.ini` : aucune pile d'exception ne garde les arguments de ses appels (#2032). |
-| `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` | Variables de l'image mysql du service `db`, lues à l'initialisation d'un volume vide. |
-
-### Fixées par l'image
-
-Posées par le `Dockerfile` à partir des arguments que la CI passe au build : les poser dans la pile ne change rien, et un conteneur dit ainsi l'image qu'il exécute, pas celle qu'on croit avoir déployée.
-
-| Variable | Valeur | Rôle |
-| --- | --- | --- |
-| `APP_VERSION` | le tag construit (`v1.5.20`), `main` sur `main` ; `dev` hors CI | Version que chaque conteneur annonce à son démarrage, la même que l'étiquette `org.opencontainers.image.version` de l'image ; le contrôle « Versions des conteneurs » compare celles d'`app`, `worker` et `scheduler` (#1813). |
-| `APP_REVISION` | le commit construit ; `inconnue` hors CI | Révision annoncée avec la version : deux images de `main` portent la même version et ne diffèrent que par elle. |
-
-### Lues par l'application, non transmises en production
-
-`config/` les lit, mais la composition ne les transmet pas : la production applique leur défaut, quoi qu'on pose dans la pile. Pour en régler une, l'ajouter à `docker-compose.prod.yml` avec un défaut (`${NOM:-valeur}`), puis la déplacer dans le tableau « Production ».
-
-| Variable | Défaut appliqué | Effet |
-| --- | --- | --- |
-| `APP_NAME` | `GymTracker` ; `laravel` pour les préfixes | Nom de l'application et du dossier des archives que vérifie la page « Santé ». Les préfixes des clés Redis, du cache et d'Horizon et le nom du cookie de session se calculent, eux, sur `laravel` : transmettre `APP_NAME` les changerait tous — déconnexion générale, cache et métriques d'Horizon repartis de zéro. |
-| `APP_TIMEZONE` | `Europe/Paris` | Fuseau de l'application et des heures du planificateur : rappel d'entraînement à 18 h, sauvegarde à 01 h 55. |
-| `APP_PREVIOUS_KEYS` | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY`, pour déchiffrer les cookies et l'adresse des liens de courriel émis avant, et vérifier les liens signés. Elle n'évite pas la déconnexion : une rotation ferme toutes les sessions avec ou sans elle, l'empreinte du mot de passe en session et le cookie « se souvenir de moi » n'étant signés que par `APP_KEY` (#1940). |
-| `SESSION_SECURE_COOKIE` | `true` en production | Le cookie de session n'est envoyé qu'en HTTPS : d'où le passage obligé par le proxy inverse. Le témoin des copies hors ligne la suit, et non le protocole de la requête : vraie, il s'appelle `__Host-gt_copies` et porte l'attribut `Secure` ; fausse, il s'appelle `gt_copies`, sans `Secure`, même servi en HTTPS (#2048). |
-| `SESSION_LIFETIME` | `120` | Minutes d'inactivité avant que la session expire ; « Se souvenir de moi » reconnecte ensuite sans mot de passe. Elle fixe aussi l'échéance du témoin des copies hors ligne, repoussée à chaque réponse ; avec `SESSION_EXPIRE_ON_CLOSE` vraie (fausse par défaut), il finit, comme le cookie de session, avec le navigateur ; dans les deux cas, douze heures quand l'appareil se souvient du compte (#2048). Elle borne aussi le temps pendant lequel le serveur se souvient qu'une session a été fermée (#2088). |
-| `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
-| `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |
-| `AUTH_TIMEBOX_DURATION` | `1000000` (une seconde, en microsecondes) | Durée minimale des réponses d'authentification, pour qu'elles ne durent pas plus longtemps quand l'adresse a un compte : toute inscription ou demande de lien de mot de passe oublié, et tout refus de connexion (site et panneau) ou de réinitialisation, lien de réinitialisation refusé dès l'ouverture de sa page compris. Une connexion ou une réinitialisation réussie sur le site répond sans attendre, de même que l'ouverture d'un lien de réinitialisation qui vaut, le refus du limiteur de la connexion et la demande de changement d'adresse du profil, qui ne lit pas l'adresse demandée. Au panneau, chaque étape de la connexion, mot de passe puis code de double authentification, dure le plancher, réussie ou non : Filament ne dit pas ainsi quel compte a activé la double authentification. Elle doit dépasser un hachage bcrypt au coût de `BCRYPT_ROUNDS` (environ 0,25 s à 12, le double à chaque unité) : relever les deux ensemble au-delà de 13. Chaque réponse ainsi retenue occupe l'un des quatre processus de `app` (`--workers=4` du Dockerfile, passé de deux à quatre pour cette raison : une attente ne consomme pas de processeur, seulement un processus) jusqu'au bout : le limiteur des routes d'authentification, commun à toutes, n'en laisse que six par minute à une adresse IP, et celui de l'ouverture du lien de réinitialisation, à part parce qu'un envoi refusé du formulaire rouvre la page, douze de plus (le panneau, ouvert aux seules adresses d'`ADMIN_ALLOWED_IPS`, a le sien, cinq essais par minute), mais des refus venus de nombreuses adresses IP ralentissent tout le site. Une valeur vide ou non numérique donne le défaut ; phpunit.xml la met à 0, et les tests de durée reposent la seconde. |
-| `HORIZON_HEARTBEAT_URL`, `SCHEDULE_HEARTBEAT_URL` | vides | URL qu'un contrôle réussi d'Horizon ou du planificateur appellerait, pour qu'une surveillance externe s'alarme quand les appels cessent — y compris planificateur arrêté, ce que `HEALTH_TO_ADDRESS` ne peut pas signaler. |
-| `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI`, `APPLE_REDIRECT_URI` | `APP_URL` suivie de `/auth/google/callback`, `/auth/github/callback` ou `/auth/apple/callback` | L'URL de rappel à déclarer chez le fournisseur. |
-
-### Front : variables de build
-
-Vite recopie les variables `VITE_*` dans les fichiers servis au navigateur : elles sont **publiques** et ne portent jamais de secret. L'image se construit sans `.env` : en production, chacune prend le repli du code.
-
-| Variable | Obligatoire en production | Défaut | Rôle |
-| --- | --- | --- | --- |
-| `VITE_APP_NAME` | non, et non réglable : figée au build de l'image | `GymTracker` | Suffixe du titre de chaque page. En développement, `.env.example` la recopie d'`APP_NAME`. |
-
-### Développement local
-
-Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `compose.yaml` (`mysql`, `redis`, `mailpit`, `selenium`).
-
-| Variable | Valeur du gabarit | Rôle |
-| --- | --- | --- |
-| `APP_NAME` | `GymTracker` | Nom de l'application ; `VITE_APP_NAME` et `MAIL_FROM_NAME` le recopient. |
-| `APP_ENV`, `APP_DEBUG` | `local`, `true` | Pages d'erreur détaillées ; panneau, Horizon et Telescope ouverts ; connexion de développement par `/__dev-login`. |
-| `APP_KEY`, `APP_URL` | vide, `http://localhost` | `sail artisan key:generate` remplit la clé. |
-| `APP_LOCALE`, `APP_FALLBACK_LOCALE`, `APP_FAKER_LOCALE` | `fr`, `en`, `fr_FR` | Langue de l'interface, langue de repli, langue des données factices. |
-| `APP_MAINTENANCE_DRIVER`, `APP_MAINTENANCE_STORE` | `file`, commentée | Où se mémorise le mode maintenance. |
-| `PHP_CLI_SERVER_WORKERS` | commentée | Processus de `artisan serve`, que Sail lance pour servir l'application. |
-| `BCRYPT_ROUNDS` | `12` | Coût du hachage des mots de passe ; phpunit.xml le baisse à 4. |
-| `AUTH_TIMEBOX_DURATION` | commentée | Durée minimale des réponses d'authentification, une seconde par défaut ; phpunit.xml la met à 0. Voir « Lues par l'application, non transmises en production ». |
-| `LOG_CHANNEL`, `LOG_STACK`, `LOG_LEVEL`, `LOG_DEPRECATIONS_CHANNEL` | `stack`, `single`, `debug`, `null` | Journaux dans storage/logs/laravel.log, dépréciations ignorées. Avec `LOG_STACK=daily`, `LOG_DAILY_NAME` (défaut `laravel`) nomme le fichier du jour. |
-| `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | `mysql`, `mysql`, `3306`, `gym_tracker`, `sail`, `password` | Le MySQL de Sail, qui crée la base et l'utilisateur au premier démarrage du volume. Les tests gardent l'hôte mais visent la base `gym_tracker_testing`, les parcours navigateur la base `gym_tracker_dusk` par `.env.dusk.local` ; le premier démarrage du volume crée les deux. |
-| `SESSION_DRIVER`, `SESSION_LIFETIME`, `SESSION_ENCRYPT`, `SESSION_PATH`, `SESSION_DOMAIN` | `database`, `120`, `true`, `/`, `null` | Sessions en base, chiffrées comme en production (#2353). |
-| `CACHE_STORE`, `CACHE_PREFIX`, `QUEUE_CONNECTION`, `FILESYSTEM_DISK` | `database`, commentée, `database`, `local` | Cache et file en base, fichiers sur le disque local. Les tâches en file attendent `queue:listen` (lancé par `sail composer dev`) : Horizon ne sert que la connexion `redis`. |
-| `REDIS_CLIENT`, `REDIS_HOST`, `REDIS_PASSWORD`, `REDIS_PORT` | `phpredis`, `redis`, `null`, `6379` | Le Redis de Sail, dont Horizon a besoin. |
-| `MAIL_MAILER`, `MAIL_SCHEME`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Mailpit | Les courriels arrivent dans Mailpit, sur le port 8025. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_CLIENT_SECRET`, `APPLE_REDIRECT_URI` | vides, URL de rappel dérivées d'`APP_URL` | Connexion sociale : un bouton n'apparaît qu'avec l'identifiant et le secret de son fournisseur, ou pour Apple le trio qui signe son secret. L'URL de rappel à déclarer chez lui est `APP_URL` suivie de `/auth/{fournisseur}/callback`. Apple n'accepte qu'une URL de rappel en HTTPS, et son cookie de nonce n'en revient qu'en HTTPS. |
-| `OCTANE_SERVER` | `frankenphp` | Serveur que visent les commandes `octane:*` ; Sail, lui, sert l'application par `artisan serve`. |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vides | Comme en production : sans clés, pas de notifications. |
-| `SERVER_TIMING_ENABLED` | `false` | `true` ajoute l'en-tête `Server-Timing` aux pages d'un compte connecté, comme en production : le temps serveur se lit dans l'onglet réseau du navigateur, et le relevé des temps de la page s'arme (`releverLesTemps()` dans la console, `#releve-des-temps` à l'écran). |
-| `APP_PORT` | `80` | Port de l'hôte publié par Sail. |
-| `DUSK_DRIVER_URL` | `http://selenium:4444/wd/hub` | Le Selenium de Sail, pour `sail artisan dusk`. Le navigateur tourne alors dans le conteneur `selenium` : `APP_URL` doit y désigner l'application, ce que ne font ni `localhost` ni `127.0.0.1` (voir « Parcours navigateur »). |
-| `ADMIN_ALLOWED_IPS`, `HORIZON_ALLOWED_EMAILS`, `ADMIN_INITIAL_PASSWORD`, `HEALTH_TO_ADDRESS`, `BACKUP_ARCHIVE_PASSWORD` | vides | Celles de la production. Vides en local : panneau et Horizon ouverts, aucun courriel de santé, et une sauvegarde échoue faute de mot de passe d'archive. |
-
-`compose.yaml` lit aussi les réglages propres à Sail, à ajouter au `.env` au besoin : `FORWARD_DB_PORT`, `FORWARD_REDIS_PORT`, `FORWARD_MAILPIT_PORT`, `FORWARD_MAILPIT_DASHBOARD_PORT`, `VITE_PORT`, `SAIL_XDEBUG_MODE`, `SAIL_XDEBUG_CONFIG` et `MYSQL_EXTRA_OPTIONS`. Le script sail pose lui-même `WWWUSER` et `WWWGROUP`.
-
-### Secrets de CI
-
-| Secret | Obligatoire | Rôle |
-| --- | --- | --- |
-| `GITHUB_TOKEN` | fourni par GitHub | Publie l'image sur ghcr.io, crée les releases, ouvre les issues d'échec de `main`, ferme les issues inactives, et crée les labels que `.github/dependabot.yml` demande et qui manquent sur le dépôt (`.github/workflows/labels-dependabot.yml`, #1905). Une fusion ou une PR faites avec lui ne déclenchent aucun workflow. |
-| `AUTO_MERGE_TOKEN` | non | Jeton personnel à granularité fine du job `dependabot` de `.github/workflows/auto-merge.yml`. Une fusion faite avec lui relance la CI sur `main`, ce que `GITHUB_TOKEN` ne fait pas (#1672) ; absent, le workflow retombe sur `GITHUB_TOKEN`. |
-| `AVIS_HORS_LIGNE_TOKEN` | non | Jeton personnel limité à ce dépôt — Contents et Pull requests en lecture et écriture, surtout pas Workflows — qui laisse `.github/workflows/avis-hors-ligne.yml` ouvrir lui-même la PR de rafraîchissement de `roave/security-advisories`, avec une CI qui tourne. Absent, le workflow se contente d'avertir, puis échoue passé quatorze jours. |
-
----
-
-## 🛠️ Stack Technique
-
-| Catégorie | Technologies |
-| --- | --- |
-| **Backend** | Laravel 13, PHP 8.5 (8.5.12 au moins, que l'image et `composer.json` exigent, Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.4, la LTS suivante), Redis 8.10.3 et Laravel Horizon |
-| **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4, Vite 8 |
-| **Backoffice** | Filament 5 |
-| **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |
-| **DevOps** | Docker (image multi-architecture sur ghcr.io), Laravel Sail en développement, GitHub Actions |
-| **Monitoring** | Le panneau (santé, exceptions, tâches planifiées, journaux, erreurs navigateur), Horizon, Laravel Pulse (coupé par défaut en production) ; Telescope en développement seulement |
-
----
-
-## 🎨 Charte graphique
-
-Toutes les couleurs de l'application vivent dans **`resources/css/app.css`**, et nulle part ailleurs.
-Un composant y nomme un **rôle** — un accent, un danger, une catégorie — jamais une couleur.
-
-📄 **[docs/charte.html](docs/charte.html)** — les jetons, les surfaces appariées et leurs contrastes mesurés.
-La page est générée : `php artisan charte:publier`.
-
-Deux règles valent d'être connues avant de toucher au style :
-
-- **ne choisissez pas la couleur du texte posé sur un fond.** Employez un utilitaire apparié
-  (`accent-fill`, `state-fill`, `category-fill-*`…) : il pose les deux, et sa valeur est calculée.
-  Un jeton de texte unique ne peut pas convenir — l'orange porte du blanc à 4,7:1 et de l'encre à
-  3,8:1, le vert d'état exactement l'inverse ;
-- **une nuance Tailwind brute est refusée par les tests.** `bg-slate-800`, `#ff5500`, `rgba(…)` :
-  neuf gardes dans `tests/Feature/Conventions/` les interdisent et vérifient les contrastes à chaque
-  exécution.
-
----
-
-## 🚀 Installation (via Laravel Sail)
-
-### Prérequis
-- Docker Desktop : PHP et Composer tournent dans des conteneurs.
-
-### Installation Rapide
-```bash
-# Clone le repo
 git clone https://github.com/kuasar-mknd/gym-tracker.git
 cd gym-tracker
 
-# Installation des dépendances via Docker. Il n'existe pas d'image
-# laravelsail/…-composer à la version de PHP du projet : celle-ci ne sert
-# qu'à amorcer Sail, sans exécuter les scripts de Composer.
+# Il n'existe pas d'image laravelsail/…-composer à la version de PHP du projet :
+# celle-ci ne sert qu'à amorcer Sail, sans exécuter les scripts de Composer.
 docker run --rm \
     -u "$(id -u):$(id -g)" \
     -v "$(pwd):/var/www/html" \
@@ -447,7 +35,6 @@ docker run --rm \
     laravelsail/php84-composer:latest \
     composer install --ignore-platform-reqs --no-scripts
 
-# Configuration
 cp .env.example .env
 ./vendor/bin/sail up -d
 ./vendor/bin/sail composer install   # rejoue les scripts, à la bonne version de PHP
@@ -457,92 +44,44 @@ cp .env.example .env
 ./vendor/bin/sail npm run build
 ```
 
-`migrate --seed` crée un compte de démonstration, `test@example.com` / `password` ; en local, `/__dev-login` s'y connecte d'un clic. Le premier démarrage du MySQL de Sail crée aussi les bases des tests, `gym_tracker_testing` et `gym_tracker_dusk`. Sur un volume plus ancien, le script d'initialisation se rejoue sans toucher aux données de développement :
+`migrate --seed` crée un compte de démonstration, `test@example.com` / `password` ; en local, `/__dev-login` s'y connecte d'un clic. Les courriels arrivent dans Mailpit, sur le port 8025.
 
-```bash
-./vendor/bin/sail exec mysql bash /docker-entrypoint-initdb.d/20-create-parallel-testing-databases.sh
-```
+## Commandes courantes
 
----
+- `./vendor/bin/sail up -d` lance les conteneurs (application, MySQL, Redis, Mailpit, Selenium).
+- `./vendor/bin/sail composer dev` lance Vite avec rechargement à chaud, la file (`queue:listen`) et les journaux (`pail`).
+- `./vendor/bin/sail artisan test -p` : suite backend, en parallèle.
+- `./vendor/bin/sail npx vitest run` : suite frontend.
+- `./vendor/bin/sail artisan dusk` : parcours navigateur, après avoir dérivé `.env.dusk.local` (recette : [Parcours navigateur](docs/developpement.md#parcours-navigateur)).
+- `./vendor/bin/sail bin pint` formate le code.
+- `./vendor/bin/sail php vendor/bin/phpstan analyse --memory-limit=2G` : analyse statique, `level: max`.
+- `./vendor/bin/sail php vendor/bin/rector process --dry-run` : modernisation en attente.
+- `./vendor/bin/sail php vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90` : qualité aux seuils de la CI.
 
-## 💻 Développement
+## Qualité
 
-### Commandes courantes
-| Commande | Description |
-| --- | --- |
-| `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit, Selenium) |
-| `./vendor/bin/sail composer dev` | Lance Vite avec rechargement à chaud, la file (`queue:listen`) et les journaux (`pail`) |
-| `./vendor/bin/sail artisan test -p` | Suite backend en parallèle |
-| `./vendor/bin/sail exec -e CACHE_STORE=redis -e SESSION_DRIVER=redis -e QUEUE_CONNECTION=redis -e REDIS_REEL_JETABLE=1 laravel.test php artisan test --group=redis` | Tests contre un vrai Redis (tests/Feature/Redis), que la suite écarte : ils vident le Redis de Sail, sessions et cache compris ; `REDIS_REEL_JETABLE=1` le déclare jetable, faute de quoi la garde refuse un serveur hors de la boucle locale |
-| `./vendor/bin/sail npx vitest run` | Suite frontend |
-| `./vendor/bin/sail artisan dusk` | Parcours navigateur, sur la base `gym_tracker_dusk` : demande `.env.dusk.local`, voir ci-dessous |
-| `./vendor/bin/sail bin pint` | Formate le code |
-| `./vendor/bin/sail php vendor/bin/phpstan analyse --memory-limit=2G` | Analyse statique, `level: max` |
-| `./vendor/bin/sail php vendor/bin/rector process --dry-run` | Modernisation en attente |
+La CI bloque une PR sur PHPStan (`level: max`), les tests backend (MySQL 8.4 et 9.7.4), frontend et navigateur (Dusk), PHP Insights, Rector et Pint, chacun à un seuil qui ne fait que monter ; la mutation, nocturne, bloque la release. Les seuils, les mesures et les gardes de convention sont dans [docs/developpement.md](docs/developpement.md) ; le guide du contributeur est `CONTRIBUTING.md`.
 
-### Crochet de commit
+## Mise en production
 
-`git commit` formate les fichiers indexés : Prettier pour le front, Pint pour le PHP. Pint lit chaque fichier avec le PHP qui le lance, et un PHP plus ancien que celui du projet échoue en erreur de syntaxe sur son code (#1928). `scripts/formater-le-php.sh` lance donc Pint dans le conteneur de Sail quand il tourne pour ce dossier, sinon avec le PHP de l'hôte s'il atteint la contrainte `php` de `composer.json`. Sans l'un ni l'autre, le commit est refusé avec la marche à suivre : lancer Sail (`./vendor/bin/sail up -d`), ou désigner un PHP assez récent par `PINT_PHP` (`PINT_PHP=/chemin/vers/php git commit`). Compose nomme le projet d'après le nom du dossier : le conteneur d'une autre copie du dépôt qui porte le même nom est écarté, puisque Pint y formaterait l'autre copie. Le service cherché est celui de `APP_SERVICE` (défaut `laravel.test`), lu dans l'environnement seulement : Sail le lit aussi dans le `.env`, le script non.
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée à chaque tag `v*`, par `docker-compose.prod.yml` : `app` (serveur web), `worker` (Horizon), `scheduler` (tâches planifiées, sans lui ni sauvegarde ni alerte de santé), `db` (MySQL 8.4), `redis` (file, sessions, verrous) et `redis-cache`.
 
-### Parcours navigateur
+1. **Poser les variables** dans la pile (ou un `.env` à côté de la composition). Sans valeur, une variable arrive vide, et la configuration est figée au démarrage : une variable changée n'agit qu'une fois les conteneurs recréés. Indispensables : `APP_KEY` (`echo "base64:$(openssl rand -base64 32)"`), `APP_URL` (adresse publique en `https://`), `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` (évitez `'` et `\` dans les mots de passe de MySQL), `REDIS_PASSWORD`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_FROM_ADDRESS` (et `MAIL_USERNAME`, `MAIL_PASSWORD` si le relais l'exige), `BACKUP_ARCHIVE_PASSWORD` et `BACKUP_HOST_PATH` (dossier de l'hôte inscriptible par l'uid 33, monté pour les sauvegardes ; sans eux la pile ne démarre pas). Pour le panneau : `ADMIN_ALLOWED_IPS` et `ADMIN_INITIAL_PASSWORD` (étape 4) ; pour les notifications : `VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`) ; pour les alertes de santé : `HEALTH_TO_ADDRESS`. La référence complète : [variables d'environnement](docs/variables-d-environnement.md).
+2. **Lancer la pile** : `docker compose -f docker-compose.prod.yml up -d`. Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête.
+3. **Placer le proxy inverse HTTPS** sur le même hôte, vers `localhost:8888` (le port n'écoute que sur la boucle locale), avec `X-Forwarded-Proto`. L'application ne marche pas en http : le cookie de session est réservé à HTTPS. Si le proxy est ailleurs, remettre `8888:80` et régler `TRUSTED_PROXIES` sur son adresse.
+4. **Créer le premier administrateur** : `docker compose -f docker-compose.prod.yml exec app php artisan db:seed --class=AdminSeeder --force` (avec `ADMIN_INITIAL_PASSWORD` posé à l'étape 1 ; si on l'ajoute après coup, recréer `app` d'abord, la configuration étant figée au démarrage), puis retirer la variable et recréer `app`. Le compte est `admin@gymtracker.app`. Le panneau est à `/backoffice`, ouvert aux adresses de `ADMIN_ALLOWED_IPS` ; il exige une double authentification, enrôlée à la première connexion.
+5. **Vérifier** : `docker compose -f docker-compose.prod.yml ps` (tout `healthy`), le site par son adresse HTTPS, la page « Santé » du panneau.
 
-`artisan dusk` lance les parcours avec le `.env`. Tel quel, sous Sail, ils viseraient la base de développement, et ceux qui vident leur base au premier test la videraient ; le navigateur, qui tourne dans le conteneur `selenium`, chercherait l'application sur `localhost`, c'est-à-dire chez lui. Une garde refuse les deux avant toute écriture (#1909) : la base doit finir par `_dusk`, et `APP_URL` ne peut viser ni `localhost` ni `127.0.0.1` quand le navigateur tourne ailleurs. Une fois, dériver du `.env` la configuration des parcours :
+**Mettre à jour.** À chaque release, recevoir la composition de son tag, puis `docker compose -f docker-compose.prod.yml up -d` : l'image est retéléchargée et les conteneurs recréés. Lire d'abord [la mise à niveau](docs/mise-a-niveau.md), qui dit les effets du déploiement. `db` et `redis` ne suivent pas `v1` : leur version est celle de l'étiquette `image:` de la composition.
 
-```bash
-sed -e 's#^APP_URL=.*#APP_URL=http://laravel.test#' \
-    -e 's#^DB_HOST=.*#DB_HOST=mysql#' \
-    -e 's#^DB_DATABASE=.*#DB_DATABASE=gym_tracker_dusk#' \
-    -e 's#^DUSK_DRIVER_URL=.*#DUSK_DRIVER_URL=http://selenium:4444/wd/hub#' \
-    .env > .env.dusk.local
-```
+**Revenir en arrière.** Remettre la composition de la release d'avant **et** épingler l'image de `app`, `worker` et `scheduler` sur la version exacte d'avant (`ghcr.io/kuasar-mknd/gym-tracker:X.Y.Z` à la place de `:v1`, qui suit la dernière version), puis `docker compose -f docker-compose.prod.yml up -d --remove-orphans`. Une release qui monte `redis` ou MySQL ne se défait pas ainsi : le volume n'est plus relu par la version d'avant, et le retour passe par la copie du volume prise avant la mise à jour ([déploiement](docs/deploiement.md)). Les migrations déjà jouées restent en place : l'ancienne image relance `migrate --force`, qui ne fait rien, et tourne sur le schéma plus récent ; une migration destructrice rend le retour impossible sans restaurer la sauvegarde. Certains effets d'une mise à niveau n'ont pas de retour (sessions fermées, double authentification, clé de l'application remplacée) : [la mise à niveau](docs/mise-a-niveau.md) dit lesquels.
 
-Puis, à chaque passe :
+## Documentation
 
-```bash
-./vendor/bin/sail npm run build   # Selenium ne joint pas le serveur de Vite
-./vendor/bin/sail artisan dusk
-```
+L'index est [docs/README.md](docs/README.md).
 
-`artisan dusk` met `.env.dusk.local` à la place du `.env` le temps de la passe, puis le remet ; il cherche `.env.dusk.` suivi de l'`APP_ENV` du `.env`, `local` sous Sail. Les parcours et le serveur de Sail, qui relit le `.env` à chaque requête, visent ainsi ensemble `gym_tracker_dusk` ; pendant la passe, `http://localhost` sert donc cette base. La CI tourne autrement : serveur et ChromeDriver sur le même exécuteur, `APP_URL=http://127.0.0.1:8000`, dans le `.env` qu'écrit le job `browser-shard`. Dans les deux cas, la suite ne démarre aucun pilote : elle se branche sur `DUSK_DRIVER_URL`, le Selenium de Sail ou le ChromeDriver que la CI lance dans une étape à part ; ailleurs, ChromeDriver est à lancer soi-même. Avant les parcours, la CI ouvre puis ferme une session sur ce pilote et en écrit les durées dans le journal du job : le premier démarrage de Chrome, lent sur un exécuteur neuf, se paie ainsi hors des parcours (#2046).
-
-Servis en http sur `laravel.test`, hors de la boucle locale, les parcours voient un historique en clair et aucun service worker : `HistoriqueApresDeconnexionTest` et `HistoriqueDeDeuxOngletsTest`, qui vérifient le chiffrement de l'historique, `OuvertureHorsLigneTest`, qui ouvre l'application réseau coupé, `CopiesHorsLigneTest`, qui lit les copies chiffrées des pages de salle, `NavigationHorsLigneTest`, qui les ouvre réseau coupé depuis la séance et à froid, les parcours de l'ouverture sans réseau (`SeanceRouverteHorsLigneTest`, `CopiesDUnAutreCompteTest`, `FinDeSessionCoteServeurTest`, `DeconnexionHorsLigneTest`, `ReseauLentTest`), et ceux qui démarrent, terminent ou lancent un modèle réseau coupé (`SeanceDemarreeSansReseauTest`, `ModeleLanceSansReseauTest`) s'y déclarent sautés, et ne tournent qu'en CI, sur 127.0.0.1, ou en local sur la même boucle. Sous les parcours aussi, l'application demande d'elle-même les pages de salle : ces requêtes en arrière-plan ne touchent pas à la session, et ne croisent donc pas la connexion du parcours suivant (#2048). Entre deux parcours d'une même classe, le navigateur gardé quitte l'application, sa file d'écritures et ses brouillons de séries vidés : une écriture dont la réponse n'est pas revenue ne repart pas sous le compte du parcours suivant, qui porte le même identifiant quand la classe vide sa base (#2100).
-
-### Mutation testing
-
-Le seuil n'est appliqué que par `vendor/bin/pest` : `artisan test --mutate --min` accepte l'option et l'ignore — c'est le `--min` de la **couverture**, silencieusement absorbé.
-
-```bash
-./vendor/bin/sail php vendor/bin/pest --mutate --parallel --covered-only \
-  --class='App\Policies' --min=99
-```
-
-`--parallel` suppose que les bases par processus existent ; `artisan test -p` les crée au passage, un `artisan test -p` préalable suffit donc.
-
-**En local, `--parallel` sert à itérer, pas à conclure.** Pest accorde à chaque mutant la durée de la passe de référence plus 20 % (au moins 5 s), et compte un dépassement comme un mutant tué. Cette référence est mesurée hors contention : une machine de dev qui lance dix processus la dépasse d'elle-même dès que l'ensemble couvrant est gros — le cas de tout service branché sur un observateur, couvert par des centaines de tests.
-
-Mesuré sur `App\Services\StreakService`, même code, mêmes mutations :
-
-| mode | verdicts | score |
-| --- | --- | --- |
-| `--parallel` (10 processus) | 19 timeout, 21 tués, **0 survivant** | 100,00 % |
-| séquentiel | 0 timeout, 37 tués, **3 survivants** | 92,50 % |
-
-L'erreur ne va que dans un sens : le parallèle **cache** des survivants, il n'en invente pas. Il reste donc bon pour trouver du travail — mais « cette classe est propre » demande une mesure séquentielle :
-
-```bash
-./vendor/bin/sail php vendor/bin/pest --mutate --covered-only --class='App\Services\StreakService'
-```
-
-Le nocturne n'est pas concerné : le runner ne lance qu'un processus par cœur (« Parallel: 4 processes » dans chaque rapport), sans autre charge, et sa passe de référence se mesure dans les mêmes conditions que ses mutants. Mesure sur trois nuits consécutives — 1 timeout sur les 841 mutations de `App\Services`, 4 sur les 887 de `App\Actions`, 0 sur `App\Policies`.
-
-Sa **durée**, elle, suit le runner : un runner lent exécute chaque test plus lentement, et chaque mutant, qui rejoue les tests couvrant sa ligne, le paie. Le 07/10, la passe de référence de la part `App\Services` a pris 126 s, contre 96 et 82 pour les deux autres parts du même run, et la part, qui tenait en 34 minutes la veille, a été annulée à son délai de 60 (#2004). Elle a été coupée en deux, `PersonalRecordService` et le reste. Du 16 au 24/10, la passe a de nouveau été annulée chaque nuit : le diagnostic (#2032) avait presque doublé la part, et la suite était passée de 3 489 à 4 998 tests. À code égal, `App\Policies` a pris 26 minutes sur un runner et 39 sur un autre. `App\Services` compte désormais cinq parts, pour sept en tout ; la limite de chacune est le double de la plus longue de ses mesures, et chaque rapport nomme ses dix mutants les plus lents (`--profile`). Les mesures sont en tête du job dans `.github/workflows/mutation.yml`.
-
----
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues !
-1. Assure-toi que les tests passent : `./vendor/bin/sail artisan test`
-2. Vérifie la qualité aux seuils de la CI : `./vendor/bin/sail php vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90`
-3. Formate ton code : `./vendor/bin/sail bin pint`
-4. Voir le [Guide de Contribution](CONTRIBUTING.md) pour plus de détails.
+- [Variables d'environnement](docs/variables-d-environnement.md) : la référence complète.
+- [Déploiement](docs/deploiement.md), [mise à niveau](docs/mise-a-niveau.md), [exploitation](docs/exploitation.md), [diagnostic](docs/diagnostic.md), [relevé des temps](docs/releve-des-temps.md).
+- [Sécurité](docs/securite.md) et [hors ligne](docs/hors-ligne.md) : comment l'application fonctionne.
+- [Développement](docs/developpement.md) (seuils de qualité, parcours navigateur, mutation) et [publication des versions](docs/publication-des-versions.md).
+- [Décisions d'architecture](docs/adr/), [charte graphique](docs/charte.html), [guide du contributeur](CONTRIBUTING.md), [politique de sécurité](SECURITY.md).

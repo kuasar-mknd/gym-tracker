@@ -894,7 +894,7 @@ describe('le relevé à l’écran', () => {
     })
 
     /*
-     * Le minuteur de repos se pose au bas de l'écran, et le README demande le
+     * Le minuteur de repos se pose au bas de l'écran, et docs/releve-des-temps.md demande le
      * relevé de la séance en cours : posé à sa place et sur sa couche, le
      * panneau en cachait le bas. Déplié, il dépassait le haut d'un téléphone
      * en paysage, titre compris : plus rien ne le repliait, et « Fermer »

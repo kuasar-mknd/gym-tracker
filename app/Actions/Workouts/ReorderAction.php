@@ -33,7 +33,11 @@ class ReorderAction
      */
     public function execute(HasMany $enfants, array $ordre, string $champ): void
     {
-        $identifiants = array_map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : PHP_INT_MIN, array_values($ordre));
+        $identifiants = array_map(static function (mixed $id): int {
+            $entier = is_int($id) || is_string($id) ? filter_var($id, FILTER_VALIDATE_INT) : false;
+
+            return $entier === false ? PHP_INT_MIN : $entier;
+        }, array_values($ordre));
         $attendus = $enfants->pluck('id')->all();
 
         $soumis = $identifiants;

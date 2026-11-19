@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Filament\Connexion\ConnexionDuPanneau;
 use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\Admin;
 use App\Models\User;
 use App\Support\DureeDesReponsesDAuthentification;
 use App\Support\LiensDesCourriels;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
-use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Mail\Transport\ArrayTransport;

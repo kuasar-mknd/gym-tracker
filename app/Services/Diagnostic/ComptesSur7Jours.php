@@ -47,10 +47,17 @@ final class ComptesSur7Jours
     {
         return match ($source) {
             PorteeDeDiagnostic::Exceptions => ExceptionEnregistree::query()->toBase()->where('created_at', '>=', $depuis),
-            PorteeDeDiagnostic::ErreursNavigateur => ErreurNavigateur::query()->toBase()->where('created_at', '>=', $depuis),
+            PorteeDeDiagnostic::ErreursNavigateur => $this->erreursDeComptesVerifies($depuis),
             PorteeDeDiagnostic::Files => $this->echecsDeFiles($depuis),
             PorteeDeDiagnostic::Sante, PorteeDeDiagnostic::TexteBrut => throw new LogicException('Cette portée n\'a pas de compte en cache.'),
         };
+    }
+
+    private function erreursDeComptesVerifies(CarbonInterface $depuis): Builder
+    {
+        return ErreurNavigateur::query()->toBase()
+            ->whereIn('user_id', DB::table('users')->select('id')->whereNotNull('email_verified_at'))
+            ->where('created_at', '>=', $depuis);
     }
 
     private function echecsDeFiles(CarbonInterface $depuis): Builder
