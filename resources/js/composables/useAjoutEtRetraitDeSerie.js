@@ -32,9 +32,7 @@ const memeValeur = (a, b) =>
  *   rowKey: (rangee: object) => string|number,
  *   fieldWrites: { forget: (cle: string) => void },
  *   deleteSet: (setId: unknown) => Promise<unknown>,
- *   patchSet?: (set: object, payload: object) => Promise<unknown>,
- *   nextWrite?: (cle: string) => number,
- *   isLatestWrite?: (cle: string, seq: number) => boolean,
+ *   retablirLaCoche?: (set: object) => Promise<unknown>,
  *   oublierLesRafales: (setId: unknown) => void,
  *   oublierLaSerie: (setId: unknown) => void,
  *   markUnsynced: (setId: unknown) => void,
@@ -52,9 +50,7 @@ export const useAjoutEtRetraitDeSerie = ({
     rowKey,
     fieldWrites,
     deleteSet,
-    patchSet = () => Promise.resolve(),
-    nextWrite = () => 0,
-    isLatestWrite = () => true,
+    retablirLaCoche = () => Promise.resolve(),
     oublierLesRafales,
     oublierLaSerie,
     markUnsynced,
@@ -634,23 +630,7 @@ export const useAjoutEtRetraitDeSerie = ({
                     !SyncService.modifierEnFile(fileDeLaSerie, { is_completed: serie.is_completed }) &&
                     serie.is_completed
                 ) {
-                    // Comme une coche : une écriture plus récente sur la rangée l'emporte sur ce rétablissement.
-                    const cle = `completion:${serie._rowKey ?? serie.id}`
-                    const seq = nextWrite(cle)
-
-                    patchSet(serie, { is_completed: true }).catch((err) => {
-                        if (err.isOffline || !isLatestWrite(cle, seq)) {
-                            return
-                        }
-
-                        // Refusée en ligne : l'écran dit ce que le serveur a, un tap de plus la validerait.
-                        serie.is_completed = false
-
-                        // Une ligne retirée entre-temps rend 404 : il n'y a plus rien à rétablir.
-                        if (err.response?.status !== 404) {
-                            reportSyncFailure('La coche n’a pas pu être rétablie.')
-                        }
-                    })
+                    retablirLaCoche(serie)
                 }
             },
         })

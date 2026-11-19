@@ -380,7 +380,7 @@ describe('une série créée hors ligne', () => {
 
                 await annulerAvecUnRefus(page, serie, 500)
                 await vi.waitFor(() =>
-                    expect(page.pageDuRapport.props.flash?.error).toBe('La coche n’a pas pu être rétablie.'),
+                    expect(page.pageDuRapport.props.flash?.error).toBe('La série n’a pas pu être validée. Réessaie.'),
                 )
 
                 expect(page.ligne().sets.at(-1).is_completed).toBe(false)
@@ -396,34 +396,84 @@ describe('une série créée hors ligne', () => {
                 expect(page.pageDuRapport.props.flash?.error ?? null).toBeNull()
             })
 
-            it('ne décoche pas l’écran quand la personne a coché depuis : sa coche l’emporte', async () => {
-                const page = await monterLaSeance(seance())
-                const serie = await ajouterHorsLigne(page)
-
+            const retablissementRetenu = async (page, serie, reponse) => {
                 await page.toggleSetCompletion(serie)
                 await flushPromises()
                 page.retirerAvecDelai(serie.id)
                 await flushPromises()
                 await leReseauRevient(page)
 
-                let echouer
-                const retenue = new Promise((resolve) => (echouer = resolve))
-                reseau.serveur.imposer.push(async () => {
+                let lacher
+                const retenue = new Promise((resolve) => (lacher = resolve))
+                reseau.serveur.imposer.push(async (config) => {
                     await retenue
-                    throw { response: { status: 500, data: {}, headers: {} } }
+
+                    return reponse(config)
                 })
                 page.annulerLaSuppression()
                 await flushPromises()
 
-                await page.toggleSetCompletion(serie)
-                await page.toggleSetCompletion(serie)
+                return lacher
+            }
+
+            it('ne décoche pas l’écran quand la personne a coché depuis : sa coche l’emporte', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+                const lacher = await retablissementRetenu(page, serie, async () => {
+                    throw { response: { status: 500, data: {}, headers: {} } }
+                })
+
+                const decochee = page.toggleSetCompletion(serie)
+                const recochee = page.toggleSetCompletion(serie)
                 await flushPromises()
-                echouer()
+                lacher()
+                await Promise.all([decochee, recochee])
                 await flushPromises()
 
                 expect(page.ligne().sets.at(-1).is_completed).toBe(true)
                 expect(page.pageDuRapport.props.flash?.error ?? null).toBeNull()
                 expect(reseau.serveur.series.get(100).is_completed).toBe(true)
+            })
+
+            it('fusionne la réponse du rétablissement dans la rangée : un record gagné par la coche s’affiche', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+                const lacher = await retablissementRetenu(page, serie, async (config) => {
+                    const reponse = await reseau.serveur.repondre(config)
+                    reponse.data.data.personal_record = { type: '1rm' }
+
+                    return reponse
+                })
+
+                lacher()
+                await flushPromises()
+
+                await vi.waitFor(() => expect(page.ligne().sets.at(-1).personal_record).toEqual({ type: '1rm' }))
+            })
+
+            it('envoie la coche de la personne après le rétablissement, jamais avant : serveur et écran concordent', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+                const lacher = await retablissementRetenu(page, serie, (config) => reseau.serveur.repondre(config))
+
+                const decochee = page.toggleSetCompletion(serie)
+                await flushPromises()
+
+                expect(reseau.serveur.resume().some((requete) => requete.includes('"is_completed":false}'))).toBe(false)
+
+                lacher()
+                await decochee
+                await flushPromises()
+
+                expect(page.ligne().sets.at(-1).is_completed).toBe(false)
+                expect(reseau.serveur.series.get(100).is_completed).toBe(false)
+                const coches = reseau.serveur
+                    .resume()
+                    .filter((requete) => requete.startsWith('patch'))
+                    .map((requete) => requete.split(' ').pop())
+
+                expect(coches.at(-1)).toBe('{"is_completed":false}')
+                expect(coches.slice(0, -1).every((c) => c === '{"is_completed":true}')).toBe(true)
             })
         })
 

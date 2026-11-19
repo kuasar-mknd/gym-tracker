@@ -77,7 +77,7 @@ export const useSeriesDeLaSeance = ({
             oublierLEcritureNonConfirmee,
         })
 
-    const { completionsEnVol, toggleSetCompletion } = useValidationDeSerie({
+    const { completionsEnVol, toggleSetCompletion, retablirLaCoche } = useValidationDeSerie({
         patchSet,
         nextWrite,
         isLatestWrite,
@@ -98,9 +98,7 @@ export const useSeriesDeLaSeance = ({
             rowKey,
             fieldWrites,
             deleteSet,
-            patchSet,
-            nextWrite,
-            isLatestWrite,
+            retablirLaCoche,
             oublierLesRafales,
             oublierLaSerie,
             markUnsynced,
