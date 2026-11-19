@@ -158,7 +158,6 @@ final class ExceptionEnregistree extends Exception
         'user',
         'idtoken',
         'code',
-        'recoverycode',
         'state',
         'referer',
         'keys',
@@ -289,13 +288,14 @@ final class ExceptionEnregistree extends Exception
 
     /**
      * Une clef est masquée quand sa forme comparable est dans la liste, ou
-     * quand elle finit par un mot de passe, un jeton ou un secret
-     * (`newPassword`, `oldPassword`, `resetToken`).
+     * quand elle commence par `recoverycode` (`recoveryCode`, `recoveryCodes`)
+     * ou finit par un mot de passe, un jeton ou un secret (`newPassword`,
+     * `resetToken`).
      */
     private static function estUneClefMasquee(?string $forme): bool
     {
         return $forme !== null
-            && (in_array($forme, self::CLEFS_MASQUEES, true) || Str::endsWith($forme, ['password', 'token', 'secret']));
+            && (in_array($forme, self::CLEFS_MASQUEES, true) || preg_match('/^recoverycode|(?:password|token|secret)$/', $forme) === 1);
     }
 
     /**

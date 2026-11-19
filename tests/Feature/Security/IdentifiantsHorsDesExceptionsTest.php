@@ -462,3 +462,31 @@ it('masque le code de récupération, le nouveau mot de passe et l’état OAuth
 
     expect($corps)->toContain('Camille');
 });
+
+it('masque les codes de récupération que porte l’instantané d’un composant, dans une action montée', function (): void {
+    $instantane = json_encode([
+        'data' => ['nom' => 'Camille'],
+        'memo' => ['name' => 'filament.pages.profil'],
+        'mountedActions' => [['name' => 'showNewRecoveryCodes', 'arguments' => ['recoveryCodes' => ['aaaa-1111', 'bbbb-2222']]]],
+    ], JSON_THROW_ON_ERROR);
+
+    $exception = ExceptionEnregistree::query()->create([
+        'type' => 'RuntimeException',
+        'code' => '0',
+        'message' => 'Boum',
+        'file' => 'app.php',
+        'line' => 1,
+        'trace' => [],
+        'method' => 'POST',
+        'path' => 'livewire/update',
+        'body' => ['components' => [['snapshot' => $instantane]]],
+    ]);
+
+    $corps = json_encode($exception->refresh()->body, JSON_THROW_ON_ERROR);
+
+    foreach (['aaaa-1111', 'bbbb-2222'] as $code) {
+        expect($corps)->not->toContain($code);
+    }
+
+    expect($corps)->toContain('Camille');
+});

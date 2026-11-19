@@ -9,8 +9,9 @@ use Tests\Support\FilamentAdminPanel;
 
 /*
  * Le texte que la page envoie (message, adresse, navigateur) s'affiche tel
- * quel, jamais en HTML : une colonne qui l'interpréterait ou une infobulle
- * qui le rendrait en `Htmlable` en ferait un script dans le panneau.
+ * quel, jamais en HTML : une colonne qui l'interpréterait en ferait un script
+ * dans le panneau. Le test garde les colonnes ; les infobulles, qui rendent
+ * des textes (closures typées `string`), ne sont pas vérifiées ici.
  */
 it('n’interprète en HTML aucune colonne ni infobulle du texte gardé', function (): void {
     $this->actingAs(FilamentAdminPanel::admin(['ViewAny:ErreurNavigateur', 'View:ErreurNavigateur']), 'admin');
