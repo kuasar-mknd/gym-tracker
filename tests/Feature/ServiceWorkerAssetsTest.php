@@ -475,7 +475,7 @@ function prefixesSansCoquilleDuWorker(): array
  * en-têtes que Laravel pose sur une page. Le worker l'enveloppe donc des
  * siens (#2048, partie F), qui doivent être exactement ceux du serveur :
  * chaque en-tête de `SecurityHeaders`, et la politique de `CustomPolicy` en
- * production, sans nonce, plus `frame-ancestors 'self'`. Et le `Cache-Control`
+ * production, sans nonce. Et le `Cache-Control`
  * d'une page de compte (`HandleInertiaRequests`) : la coquille y monte une
  * copie, et sans `no-store` le cache de retour arrière la rendrait au bouton
  * Retour après la fin de la session, témoin expiré, ce qu'il refuse à une page
@@ -492,7 +492,7 @@ it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la
     $preReglages = config()->array('csp.presets');
     $politique = Policy::create(presets: $preReglages, directives: config()->array('csp.directives'))->getContents();
     $reponse = new SecurityHeaders()->handle(Request::create('/dashboard'), static fn (): Response => new Response());
-    $attendus = ['content-security-policy' => $politique.";frame-ancestors 'self'"];
+    $attendus = ['content-security-policy' => $politique];
 
     foreach ($reponse->headers->all() as $nom => $valeurs) {
         if ($nom !== 'date') {

@@ -437,3 +437,42 @@ it('compte les essais de code sous la clé de l’administrateur, pour une minut
 
     Carbon\Carbon::setTestNow();
 });
+
+it('retire les caractères de contrôle du nom du jeton, pour qu’il ne forge pas une ligne du journal d’audit', function (string $nom, string $attendu): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+
+    $jeton = resolve(CreeUnJetonDeDiagnosticAction::class)->execute(
+        $admin,
+        $nom,
+        [PorteeDeDiagnostic::Sante],
+        7,
+        new Google2FA()->getCurrentOtp($secretTotp),
+    )['jeton'];
+
+    expect($jeton->nom)->toBe($attendu)
+        ->and($jeton->refresh()->nom)->toBe($attendu);
+})->with([
+    'un saut de ligne' => ["agent\n[2026-11-19 10:00:00] diagnostic.appel", 'agent[2026-11-19 10:00:00] diagnostic.appel'],
+    'un retour chariot et une tabulation' => ["a\r\tb", 'ab'],
+    'U+2028, U+2029 et U+0085' => ["a\u{2028}b\u{2029}c\u{85}d", 'abcd'],
+    'un octet nul et une séquence ANSI' => ["a\0b\e[31mc", 'ab[31mc'],
+    'un nom ordinaire' => ['Agent de maintenance', 'Agent de maintenance'],
+]);
+
+it('refuse un nom qui est vide une fois nettoyé, sans consommer le code', function (string $nom): void {
+    [$admin, $secretTotp] = jetonsDeDiagnosticSuperAdministrateur();
+
+    try {
+        resolve(CreeUnJetonDeDiagnosticAction::class)->execute($admin, $nom, [PorteeDeDiagnostic::Sante], 7, new Google2FA()->getCurrentOtp($secretTotp));
+        $motif = null;
+    } catch (CreationDeJetonRefusee $refus) {
+        $motif = $refus->motif;
+    }
+
+    expect($motif)->toBe(CreationDeJetonRefusee::NOM_INVALIDE)
+        ->and(JetonDeDiagnostic::query()->count())->toBe(0);
+})->with([
+    'seulement U+2028 et U+2029' => ["\u{2028}\u{2029}"],
+    'seulement des contrôles' => ["\n\t\r"],
+    'un texte qui n’est pas de l’UTF-8' => ["\xFF\xFE"],
+]);

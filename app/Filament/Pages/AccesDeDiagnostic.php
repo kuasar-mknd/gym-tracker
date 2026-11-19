@@ -76,6 +76,7 @@ final class AccesDeDiagnostic extends Page implements HasTable
         CreationDeJetonRefusee::JETONS_ACTIFS_AU_MAXIMUM => 'Deux jetons sont déjà actifs : révoquez-en un.',
         CreationDeJetonRefusee::DUREE_INVALIDE => 'Cette durée n’est pas permise pour ces portées.',
         CreationDeJetonRefusee::PORTEES_INVALIDES => 'Ces portées ne sont pas valides.',
+        CreationDeJetonRefusee::NOM_INVALIDE => 'Ce nom n’est pas valide.',
     ];
 
     /** @var array<string, string> */

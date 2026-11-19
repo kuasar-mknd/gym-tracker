@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Support\Sante\AccesDeDiagnosticCheck;
 use App\Support\Sante\AnnonceDeVersion;
+use App\Support\Sante\CleDeLApplicationCheck;
 use App\Support\Sante\DossierDesSauvegardesCheck;
 use App\Support\Sante\ProxysDeConfianceCheck;
 use App\Support\Sante\ReglagesDeLaBaseCheck;
@@ -72,6 +73,7 @@ final class SanteServiceProvider extends ServiceProvider
             TachesPlanifieesCheck::new(),
             AccesDeDiagnosticCheck::new(),
             ProxysDeConfianceCheck::new(),
+            CleDeLApplicationCheck::new(),
             HorizonCheck::new()->label('Travailleurs Horizon'),
             VersionsDesConteneursCheck::new(),
             VersionsDesServicesCheck::new(),

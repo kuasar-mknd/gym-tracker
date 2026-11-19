@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Support\ConnexionSociale;
 
+use Illuminate\Support\Arr;
+use Laravel\Socialite\Two\User;
 use SocialiteProviders\Apple\Provider;
+use Symfony\Component\HttpFoundation\Cookie;
 
 /**
  * Le pilote « Continuer avec Apple », sans session et avec son nonce dans un
@@ -58,4 +61,44 @@ final class FournisseurApple extends Provider
      */
     #[\Override]
     protected $carryNonceInCookie = true;
+
+    /**
+     * Le champ `user` du formulaire d'Apple est réduit à un nom borné.
+     */
+    #[\Override]
+    public function user(): User
+    {
+        $this->request->merge(['user' => self::nomDuFormulaire($this->request->input('user'))]);
+
+        return parent::user();
+    }
+
+    /**
+     * Le cookie qui efface le nonce, avec les attributs de celui qu'il remplace.
+     */
+    public static function cookieDuNonceOublie(): Cookie
+    {
+        return Cookie::create(self::COOKIE_DU_NONCE)
+            ->withValue('')
+            ->withExpires(1)
+            ->withSecure(true)
+            ->withHttpOnly(true)
+            ->withSameSite('none');
+    }
+
+    private static function nomDuFormulaire(mixed $brut): string
+    {
+        $nom = Arr::wrap(data_get(is_string($brut) ? json_decode($brut, true) : $brut, 'name'));
+        $parties = array_filter([
+            'firstName' => $nom['firstName'] ?? null,
+            'lastName' => $nom['lastName'] ?? null,
+        ], is_string(...));
+
+        return $parties === [] ? '' : (string) json_encode(['name' => array_map(self::borne(...), $parties)]);
+    }
+
+    private static function borne(string $valeur): string
+    {
+        return mb_substr((string) preg_replace('/\p{Cc}/u', '', mb_scrub($valeur)), 0, 127);
+    }
 }

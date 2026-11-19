@@ -120,6 +120,7 @@ use function Pest\Laravel\json;
 
 beforeEach(function (): void {
     $this->withoutMiddleware(ThrottleRequests::class);
+    config(['session.invites_par_minute' => PHP_INT_MAX]);
     Notification::fake();
     Mail::fake();
     Queue::fake();
