@@ -83,8 +83,8 @@ final class ReglagesDeRedisCheck extends Check
 
     /** @var array<string, string> */
     private const array CONSEQUENCES_DU_REFUS = [
-        'donnees' => 'sessions et mises en file échouent alors',
-        'cache' => 'sessions et mises en file échouent alors',
+        'donnees' => 'les mises en file, les verrous et les limiteurs échouent alors',
+        'cache' => 'le cache ne se remplit plus',
         'sessions' => 'les connexions et toute requête qui ouvre une session échouent alors',
     ];
 
@@ -320,9 +320,10 @@ final class ReglagesDeRedisCheck extends Check
         }
 
         $message = sprintf(
-            'Persistance de %s : %s. Un redémarrage perdrait ce qui a été écrit depuis le dernier succès. Lire le journal du service redis (place sur le disque, droits du volume).',
+            'Persistance de %s : %s. Un redémarrage perdrait ce qui a été écrit depuis le dernier succès. Lire le journal du service %s (place sur le disque, droits du volume).',
             Str::lcfirst(self::NOMS[$role]),
             implode(', ', $enEchec),
+            self::SERVICES[$role],
         );
 
         return [[$message], []];

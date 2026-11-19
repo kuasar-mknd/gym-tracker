@@ -183,22 +183,22 @@ it('range les sessions sur leur connexion sans déplacer le cache de l’applica
     config()->set('session.connection', 'sessions');
     config()->set('session.store');
 
-    $cacheAvant = reflexionDuMagasinDeRedis(Cache::store('redis')->getStore());
+    $cacheAvant = deuxRedisConnexionDuMagasin(Cache::store('redis')->getStore());
     $magasin = app('session')->driver()->getHandler();
 
     expect($magasin)->toBeInstanceOf(CacheBasedSessionHandler::class);
     assert($magasin instanceof CacheBasedSessionHandler);
 
-    expect(reflexionDuMagasinDeRedis($magasin->getCache()->getStore()))->toBe('sessions')
+    expect(deuxRedisConnexionDuMagasin($magasin->getCache()->getStore()))->toBe('sessions')
         ->and($cacheAvant)->toBe('cache')
-        ->and(reflexionDuMagasinDeRedis(Cache::store('redis')->getStore()))->toBe('cache');
+        ->and(deuxRedisConnexionDuMagasin(Cache::store('redis')->getStore()))->toBe('cache');
 });
 
 /**
  * La connexion nommée d'un magasin Redis, lue sans l'ouvrir (la suite n'a pas
  * de Redis).
  */
-function reflexionDuMagasinDeRedis(object $magasin): mixed
+function deuxRedisConnexionDuMagasin(object $magasin): mixed
 {
     return new ReflectionProperty($magasin, 'connection')->getValue($magasin);
 }
