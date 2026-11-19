@@ -60,28 +60,65 @@ cp .env.example .env
 
 ## Qualité
 
-La CI bloque une PR sur PHPStan (`level: max`), les tests backend (MySQL 8.4 et 9.7.4), frontend et navigateur (Dusk), PHP Insights, Rector et Pint, chacun à un seuil qui ne fait que monter ; la mutation, nocturne, bloque la release. Les seuils, les mesures et les gardes de convention sont dans [docs/developpement.md](docs/developpement.md) ; le guide du contributeur est `CONTRIBUTING.md`.
+La CI bloque une PR sur PHPStan (`level: max`), les tests backend (MySQL 8.4 et 9.7.4), frontend et navigateur (Dusk), PHP Insights, Rector et Pint, chacun à un seuil qui ne fait que monter. La mutation, nocturne, bloque la release.
+
+Les seuils, les mesures et les gardes de convention sont dans [docs/developpement.md](docs/developpement.md). Le guide du contributeur est [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Mise en production
 
-La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée à chaque tag `v*`, par `docker-compose.prod.yml` : `app` (serveur web), `worker` (Horizon), `scheduler` (tâches planifiées, sans lui ni sauvegarde ni alerte de santé), `db` (MySQL 8.4), `redis` (file, verrous), `redis-cache` (cache) et `redis-sessions` (sessions).
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée à chaque tag `v*`, par `docker-compose.prod.yml`. Il lance sept services :
 
-1. **Poser les variables** dans la pile (ou un `.env` à côté de la composition). Sans valeur, une variable arrive vide, et la configuration est figée au démarrage : une variable changée n'agit qu'une fois les conteneurs recréés. Indispensables : `APP_KEY` (`echo "base64:$(openssl rand -base64 32)"`), `APP_URL` (adresse publique en `https://`), `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` (évitez `'` et `\` dans les mots de passe de MySQL), `REDIS_PASSWORD`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_FROM_ADDRESS` (et `MAIL_USERNAME`, `MAIL_PASSWORD` si le relais l'exige), `BACKUP_ARCHIVE_PASSWORD` et `BACKUP_HOST_PATH` (dossier de l'hôte inscriptible par l'uid 33, monté pour les sauvegardes ; sans eux la pile ne démarre pas). Pour le panneau : `ADMIN_ALLOWED_IPS` et `ADMIN_INITIAL_PASSWORD` (étape 4) ; pour les notifications : `VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`) ; pour les alertes de santé : `HEALTH_TO_ADDRESS`. La référence complète : [variables d'environnement](docs/variables-d-environnement.md).
-2. **Lancer la pile** : `docker compose -f docker-compose.prod.yml up -d`. Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête.
-3. **Placer le proxy inverse HTTPS** sur le même hôte, vers `localhost:8888` (le port n'écoute que sur la boucle locale), avec `X-Forwarded-Proto`. L'application ne marche pas en http : le cookie de session est réservé à HTTPS. Si le proxy est ailleurs, remettre `8888:80` et régler `TRUSTED_PROXIES` sur son adresse.
-4. **Créer le premier administrateur** : `docker compose -f docker-compose.prod.yml exec app php artisan db:seed --class=AdminSeeder --force` (avec `ADMIN_INITIAL_PASSWORD` posé à l'étape 1 ; si on l'ajoute après coup, recréer `app` d'abord, la configuration étant figée au démarrage), puis retirer la variable et recréer `app`. Le compte est `admin@gymtracker.app`. Le panneau est à `/backoffice`, ouvert aux adresses de `ADMIN_ALLOWED_IPS` ; il exige une double authentification, enrôlée à la première connexion.
+- `app` : le serveur web ;
+- `worker` : Horizon, les files ;
+- `scheduler` : les tâches planifiées (sans lui, ni sauvegarde ni alerte de santé) ;
+- `db` : MySQL 8.4 ;
+- `redis` : la file et les verrous ;
+- `redis-cache` : le cache ;
+- `redis-sessions` : les sessions.
+
+Le détail de chaque étape est dans [docs/deploiement.md](docs/deploiement.md).
+
+### Premier déploiement
+
+1. **Poser les variables** dans la pile, ou dans un `.env` à côté de la composition.
+   - Indispensables : `APP_KEY` (`echo "base64:$(openssl rand -base64 32)"`), `APP_URL` (l'adresse publique en `https://`), `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `REDIS_PASSWORD`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_FROM_ADDRESS`, `BACKUP_ARCHIVE_PASSWORD`, `BACKUP_HOST_PATH`.
+   - `MAIL_USERNAME` et `MAIL_PASSWORD` si le relais l'exige.
+   - Pas de `'` ni de `\` dans les mots de passe de MySQL.
+   - `BACKUP_HOST_PATH` est un dossier de l'hôte, inscriptible par l'uid 33, monté pour les sauvegardes. Sans lui, sans `BACKUP_ARCHIVE_PASSWORD` ni `REDIS_PASSWORD`, la pile ne démarre pas.
+   - Pour le panneau : `ADMIN_ALLOWED_IPS` et `ADMIN_INITIAL_PASSWORD` (étape 4).
+   - Pour les notifications : `VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`).
+   - Pour les alertes de santé : `HEALTH_TO_ADDRESS`.
+   - Une variable sans valeur arrive vide. La configuration est figée au démarrage : une variable changée n'agit qu'une fois les conteneurs recréés.
+   - Référence complète : [variables d'environnement](docs/variables-d-environnement.md).
+2. **Lancer la pile** : `docker compose -f docker-compose.prod.yml up -d`. Au démarrage, `app` joue les migrations ; une migration qui échoue l'arrête.
+3. **Placer le proxy inverse HTTPS** sur le même hôte, vers `localhost:8888` (le port n'écoute que sur la boucle locale), avec `X-Forwarded-Proto`.
+   - L'application ne marche pas en http : le cookie de session est réservé à HTTPS.
+   - Si le proxy est ailleurs : remettre `8888:80` et régler `TRUSTED_PROXIES` sur son adresse.
+4. **Créer le premier administrateur** : `docker compose -f docker-compose.prod.yml exec app php artisan db:seed --class=AdminSeeder --force`, avec `ADMIN_INITIAL_PASSWORD` posé à l'étape 1. Puis retirer la variable et recréer `app`.
+   - Le compte est `admin@gymtracker.app`.
+   - Le panneau est à `/backoffice`, ouvert aux adresses de `ADMIN_ALLOWED_IPS`. Il exige une double authentification, enrôlée à la première connexion.
 5. **Vérifier** : `docker compose -f docker-compose.prod.yml ps` (tout `healthy`), le site par son adresse HTTPS, la page « Santé » du panneau.
 
-**Mettre à jour.** À chaque release, recevoir la composition de son tag, puis `docker compose -f docker-compose.prod.yml up -d` : l'image est retéléchargée et les conteneurs recréés. Lire d'abord [la mise à niveau](docs/mise-a-niveau.md), qui dit les effets du déploiement. `db` et `redis` ne suivent pas `v1` : leur version est celle de l'étiquette `image:` de la composition.
+### Mettre à jour
 
-**Revenir en arrière.** Remettre la composition de la release d'avant **et** épingler l'image de `app`, `worker` et `scheduler` sur la version exacte d'avant (`ghcr.io/kuasar-mknd/gym-tracker:X.Y.Z` à la place de `:v1`, qui suit la dernière version), puis `docker compose -f docker-compose.prod.yml up -d --remove-orphans`. Une release qui monte `redis` ou MySQL ne se défait pas ainsi : le volume n'est plus relu par la version d'avant, et le retour passe par la copie du volume prise avant la mise à jour ([déploiement](docs/deploiement.md)). Les migrations déjà jouées restent en place : l'ancienne image relance `migrate --force`, qui ne fait rien, et tourne sur le schéma plus récent ; une migration destructrice rend le retour impossible sans restaurer la sauvegarde. Certains effets d'une mise à niveau n'ont pas de retour (sessions fermées, double authentification, clé de l'application remplacée) : [la mise à niveau](docs/mise-a-niveau.md) dit lesquels.
+1. À chaque release, recevoir la composition de son tag.
+2. Lire [la mise à niveau](docs/mise-a-niveau.md), qui dit les effets du déploiement.
+3. Lancer `docker compose -f docker-compose.prod.yml up -d` : l'image est retéléchargée et les conteneurs recréés.
+
+`db` et les trois Redis ne suivent pas `v1` : leur version est celle de l'étiquette `image:` de la composition.
+
+### Revenir en arrière
+
+1. Remettre la composition de la release d'avant.
+2. Épingler l'image de `app`, `worker` et `scheduler` sur la version exacte d'avant (`ghcr.io/kuasar-mknd/gym-tracker:X.Y.Z` à la place de `:v1`, qui suit la dernière version).
+3. Lancer `docker compose -f docker-compose.prod.yml up -d --remove-orphans`.
+
+Limites du retour : [docs/deploiement.md](docs/deploiement.md#revenir-en-arrière) (volumes de `redis` ou de MySQL, migrations déjà jouées) et [la mise à niveau](docs/mise-a-niveau.md#retour-arrière) (effets sans retour).
 
 ## Documentation
 
 L'index est [docs/README.md](docs/README.md).
 
-- [Variables d'environnement](docs/variables-d-environnement.md) : la référence complète.
-- [Déploiement](docs/deploiement.md), [mise à niveau](docs/mise-a-niveau.md), [exploitation](docs/exploitation.md), [diagnostic](docs/diagnostic.md), [relevé des temps](docs/releve-des-temps.md).
-- [Sécurité](docs/securite.md) et [hors ligne](docs/hors-ligne.md) : comment l'application fonctionne.
-- [Développement](docs/developpement.md) (seuils de qualité, parcours navigateur, mutation) et [publication des versions](docs/publication-des-versions.md).
-- [Décisions d'architecture](docs/adr/), [charte graphique](docs/charte.html), [guide du contributeur](CONTRIBUTING.md), [politique de sécurité](SECURITY.md).
+- **Déployer et exploiter** : [variables d'environnement](docs/variables-d-environnement.md), [déploiement](docs/deploiement.md), [mise à niveau](docs/mise-a-niveau.md), [exploitation](docs/exploitation.md), [diagnostic](docs/diagnostic.md), [relevé des temps](docs/releve-des-temps.md), [publication des versions](docs/publication-des-versions.md).
+- **Comprendre** : [la pile de production](docs/pile-de-production.md), [sécurité](docs/securite.md), [hors ligne](docs/hors-ligne.md), [décisions d'architecture](docs/adr/), [charte graphique](docs/charte.html).
+- **Développer** : [développement](docs/developpement.md) (seuils de qualité, parcours navigateur), [tests de mutation](docs/tests-de-mutation.md), [guide du contributeur](CONTRIBUTING.md), [politique de sécurité](SECURITY.md).

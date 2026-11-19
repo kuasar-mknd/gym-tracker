@@ -362,8 +362,10 @@ services:
     # souffrent. Les sessions survivent à un redémarrage par un instantané
     # (`--save 300 1`, écrit aussi à l'arrêt propre), sans AOF : sa
     # synchronisation chaque seconde coûte cher sur le disque de production, et
-    # un plantage ne perd que cinq minutes de sessions. Même mot de passe que
-    # `redis`.
+    # un plantage ne perd que cinq minutes de sessions. Un instantané qui échoue
+    # ne ferme pas les écritures (`--stop-writes-on-bgsave-error no`) : « Réglages
+    # de Redis » passe au rouge, et les connexions continuent. Même mot de passe
+    # que `redis`.
     redis-sessions:
         image: redis:8.10.3-alpine
         restart: always
@@ -386,6 +388,7 @@ services:
                   --maxmemory 64mb \
                   --maxmemory-policy volatile-lru \
                   --appendonly no \
+                  --stop-writes-on-bgsave-error no \
                   --save 300 1 <<CONFIGURATION
               requirepass "$$mot_de_passe"
               CONFIGURATION
@@ -454,8 +457,6 @@ services:
                 condition: service_healthy
             redis-cache:
                 condition: service_healthy
-            redis-sessions:
-                condition: service_healthy
 
     # Rien n'executait les taches planifiees.
     #
@@ -519,8 +520,6 @@ services:
             redis:
                 condition: service_healthy
             redis-cache:
-                condition: service_healthy
-            redis-sessions:
                 condition: service_healthy
 
 networks:

@@ -7,7 +7,6 @@ use App\Support\JournalDuDiagnostic;
 use App\Support\MagasinDurable;
 use Illuminate\Session\CacheBasedSessionHandler;
 use Illuminate\Support\Facades\Cache;
-use ReflectionProperty;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Checks\QueueCheck;
 use Spatie\Health\Checks\Checks\ScheduleCheck;
@@ -88,6 +87,7 @@ it('garde les sessions par un instantané et un volume à elles, sans AOF', func
     $commande = (string) preg_replace('/\s+/', ' ', deuxRedisTexte($sessions, 'command'));
 
     expect(deuxRedisOptions($sessions))->toHaveKey('--appendonly', 'no')
+        ->and(deuxRedisOptions($sessions))->toHaveKey('--stop-writes-on-bgsave-error', 'no')
         ->and($commande)->toContain('--save 300 1')
         ->and($sessions['volumes'] ?? [])->toBe(['redis_sessions_data:/data'])
         ->and(array_keys((array) data_get(Yaml::parseFile(base_path('docker-compose.prod.yml')), 'volumes')))->toContain('redis_sessions_data')
@@ -158,10 +158,18 @@ it('branche le cache, les sessions et les magasins durables sur app, worker et s
         ->and(deuxRedisTexte($composition, 'environment.REDIS_SESSIONS_HOST'))->toBe('redis-sessions')
         ->and(deuxRedisTexte($composition, 'environment.REDIS_SESSIONS_PORT'))->toBe('6379');
 
-    foreach (['redis', 'redis-cache', 'redis-sessions'] as $dependance) {
+    foreach (['redis', 'redis-cache'] as $dependance) {
         expect(deuxRedisTexte($composition, "depends_on.{$dependance}.condition"))->toBe('service_healthy');
     }
 })->with(['app', 'worker', 'scheduler']);
+
+it('n’attend l’instance des sessions que dans app, le seul service qui ouvre une session', function (string $service, string $attendu): void {
+    expect(deuxRedisTexte(deuxRedisService($service), 'depends_on.redis-sessions.condition'))->toBe($attendu);
+})->with([
+    'app' => ['app', 'service_healthy'],
+    'worker' => ['worker', ''],
+    'scheduler' => ['scheduler', ''],
+]);
 
 it('range les limiteurs et les battements sur la connexion des données quand le magasin durable est posé', function (): void {
     config()->set('cache.limiter', 'redis-durable');
@@ -178,7 +186,7 @@ it('retombe sur une seule instance quand REDIS_CACHE_HOST, REDIS_SESSIONS_HOST e
         ->and(config('database.redis.sessions.password'))->toBe(config('database.redis.default.password'));
 });
 
-it('range les sessions sur leur connexion sans déplacer le cache de l’application', function (): void {
+it('nomme la connexion des sessions sur leur magasin sans déplacer celle du cache (le comportement de Laravel que la composition suppose ; la connexion elle-même ne s’ouvre pas, la suite n’a pas de Redis)', function (): void {
     config()->set('session.driver', 'redis');
     config()->set('session.connection', 'sessions');
     config()->set('session.store');

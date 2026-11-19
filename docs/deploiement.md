@@ -1,84 +1,134 @@
-# Déploiement : détail
+# Déployer et mettre à jour la pile de production
 
-La procédure courte est dans le README ; ce fichier dit le détail et les vérifications.
+Cette page dit comment mettre l'application en production, la mettre à jour et revenir en arrière. Le [README](../README.md) en donne la version courte ; ici, le détail et les vérifications.
 
-## Mise à jour de la pile
+| Je veux… | Section |
+| --- | --- |
+| Installer la production pour la première fois | [Premier déploiement](#premier-déploiement) |
+| Passer à la release suivante | [Mettre à jour la pile](#mettre-à-jour-la-pile) |
+| Défaire une mise à jour | [Revenir en arrière](#revenir-en-arrière) |
+| Brancher ou vérifier le proxy inverse | [Proxy inverse et port de l'application](#proxy-inverse-et-port-de-lapplication) |
+| Comprendre pourquoi la pile est faite ainsi | [La pile de production](pile-de-production.md) |
+| Savoir ce que la prochaine version change | [Mise à niveau](mise-a-niveau.md) |
 
-La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml up -d` (ou la mise à jour de la pile) : `pull_policy: always` retélécharge l'image et recrée les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé, et un simple redémarrage ne télécharge rien. Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
+## Avant de commencer
 
-La base et Redis ne suivent pas `v1` : `db` et `redis` lancent l'étiquette de la composition (`redis:8.10.3-alpine`, une version exacte), et retélécharger l'image de l'application ne les change pas. **À chaque release, la pile reçoit la composition de son tag** (`docker-compose.prod.yml`), puis se met à jour ; « Versions des services », dans la page « Santé », dit ensuite si `db` et `redis` servent la version qu'elle attend. Une release qui monte `redis` se déploie par la marche « Redis » de `.ai/rules/dependencies.md`, à une heure creuse : application arrêtée, Redis arrêté, copie du volume de données de redis, mise à jour, vérification, et retour par la copie si besoin ; la version d'avant ne relit plus le volume une fois l'AOF réécrit par la nouvelle. Une bascule de MySQL a sa propre marche, dans le même fichier.
+Il faut :
 
-## Trois instances de Redis
+- un hôte qui fait tourner Docker Compose ;
+- un proxy inverse HTTPS sur ce même hôte ;
+- un dossier de l'hôte pour les sauvegardes, inscriptible par l'utilisateur de l'uid 33 (`www-data`), qui sera `BACKUP_HOST_PATH` ;
+- un relais SMTP ;
+- des clés VAPID, si vous voulez les notifications (`npx web-push generate-vapid-keys`).
 
-Chaque usage a son instance, avec sa politique et son plafond :
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y.
 
-| Service | Porte | Plafond | Politique | Persistance |
-| --- | --- | --- | --- | --- |
-| `redis` | file, Horizon, verrous, limiteurs, battements de santé | 128 Mo | `noeviction` | AOF et instantané, volume `redis_data` |
-| `redis-cache` | le cache | 128 Mo | `allkeys-lru` | aucune, elle repart vide |
-| `redis-sessions` | sessions et pierres tombales de session | 64 Mo | `volatile-lru` | instantané toutes les cinq minutes (écrit aussi à l'arrêt propre), volume `redis_sessions_data`, sans AOF |
+## Premier déploiement
 
-Pourquoi ce partage : une requête sans cookie en ouvre une session, donc un afflux de visiteurs depuis beaucoup d'adresses remplit l'instance qui les porte. Si c'était `redis`, en `noeviction`, plus rien ne s'y écrirait : ni connexion, ni limiteur, ni verrou, ni mise en file. Sur `redis-sessions`, une instance pleine évince la session la moins récemment servie (chaque session porte une échéance), et le reste de la pile ne le voit pas. Ce que cela coûte : l'éviction ne distingue pas un invité d'un compte connecté ; sous un afflux, une session inactive depuis longtemps, connectée ou non, peut se fermer avant son échéance (le titulaire se reconnecte, ou son cookie « Se souvenir de moi » le fait). Sans AOF, un plantage de Redis (pas un arrêt propre) perd au plus cinq minutes de sessions écrites ; l'AOF ferait synchroniser le disque de production chaque seconde pour un enjeu que la reconnexion couvre. Le plafond de 64 Mo tient environ quarante-huit mille sessions de 1 Ko (mesuré) ; la limite du conteneur (128 Mo) laisse la marge d'un instantané. « Réglages de Redis », dans « Santé », passe à l'orange quand `redis-sessions` évince, et au rouge quand elle refuse une écriture.
+1. **Poser les variables** dans la pile, ou dans un fichier `.env` à côté de `docker-compose.prod.yml`.
+   - Poser au moins celles que la colonne « Obligatoire en production » de [la référence](variables-d-environnement.md#production--à-poser-dans-la-pile) marque `oui`.
+   - Pour `APP_KEY` : `echo "base64:$(openssl rand -base64 32)"`.
+   - Pour `ADMIN_INITIAL_PASSWORD`, voir l'étape 4.
+   - Pas d'apostrophe ni d'antislash dans les mots de passe de MySQL.
+   - Sans `BACKUP_ARCHIVE_PASSWORD`, `BACKUP_HOST_PATH` ou `REDIS_PASSWORD`, la pile ne démarre pas.
+2. **Lancer la pile** :
 
-Les trois partagent `REDIS_PASSWORD` et le réseau `backend` ; aucune ne publie de port.
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```
 
-### Le cache à part
+   Au démarrage, `app` joue les migrations. Une migration qui échoue l'arrête.
+3. **Placer le proxy inverse HTTPS** (voir [Proxy inverse](#proxy-inverse-et-port-de-lapplication)).
+4. **Créer le premier administrateur** (voir [Créer le premier administrateur](#créer-le-premier-administrateur)).
+5. **Vérifier** :
+   - `docker compose -f docker-compose.prod.yml ps` : tous les services `healthy` ;
+   - le site, par son adresse HTTPS ;
+   - la page « Santé » du panneau.
 
-Deux conditions avant de s'en servir : l'image de la release, celle qui connaît `REDIS_CACHE_HOST` et `CACHE_DURABLE_STORE`, est publiée et son `APP_VERSION` vérifié (« Versions des conteneurs ») avant de poser la nouvelle composition ; et un retour en arrière remet la composition d'avant, jamais l'image seule : l'ancienne image avec la nouvelle composition range le cache sur la base 1 de `redis`, en `noeviction`, qui refuse alors les écritures dès 128 Mo.
+### Créer le premier administrateur
 
-La bascule se fait en trois commandes, dans cet ordre :
+1. Vérifier que `ADMIN_INITIAL_PASSWORD` est posée dans la pile. Si on l'ajoute après coup, recréer `app` d'abord : la configuration est figée au démarrage.
+2. Lancer le seeder :
 
-```sh
-docker compose -f docker-compose.prod.yml exec app php artisan cache:clear
-docker compose -f docker-compose.prod.yml up -d -t 60
-docker compose -f docker-compose.prod.yml exec redis redis-cli -n 1 FLUSHDB ASYNC
-```
+   ```bash
+   docker compose -f docker-compose.prod.yml exec app php artisan db:seed --class=AdminSeeder --force
+   ```
 
-La première vide l'ancien cache avant que `redis` ne passe en `noeviction` : sans elle, il recharge jusqu'à 128 Mo d'ancien cache depuis son AOF et refuse des mises en file. La deuxième met la pile à jour ; dès lors `app` écrit son cache sur `redis-cache`. La troisième vide la base 1 de `redis`, où les anciens conteneurs ont pu écrire pendant la bascule (jamais `FLUSHALL`, jamais sans `-n 1`) ; elle seule la vide, un `cache:clear` lancé après la mise à jour ne vide que `redis-cache`. Les compteurs des limiteurs repartent de zéro, et « Planificateur » comme « File d'attente » peuvent passer au rouge une fois, le temps du battement suivant. Pour revenir en arrière, remettre la composition de la release d'avant puis `docker compose -f docker-compose.prod.yml up -d --remove-orphans` (sans `--remove-orphans`, `redis-cache` reste lancé) : la file reste dans `redis_data`, le cache repart vide. Revenir ensuite à la nouvelle composition, c'est refaire ces trois commandes : le cache a rempli la base 1 entre-temps.
+3. Retirer `ADMIN_INITIAL_PASSWORD` de la pile, puis recréer `app`.
 
-### Les sessions sur leur instance
+Le compte est `admin@gymtracker.app`. Le panneau est à `/backoffice`, ouvert aux adresses de `ADMIN_ALLOWED_IPS`. Il exige une double authentification, enrôlée à la première connexion (voir [Sécurité](securite.md#double-authentification-du-panneau)).
 
-L'image de la release, celle qui connaît la connexion `sessions` (`REDIS_SESSIONS_HOST`, `SESSION_CONNECTION`), est publiée et son `APP_VERSION` vérifié avant de poser la composition : l'ancienne image avec la nouvelle composition échoue sur toute requête qui ouvre une session (connexion `sessions` inconnue). Un retour en arrière remet la composition d'avant **et** l'image d'avant ensemble.
+## Mettre à jour la pile
 
-```sh
-docker compose -f docker-compose.prod.yml up -d
-```
+À chaque release :
 
-`redis-sessions` démarre et passe `healthy`, puis `app`, `worker` et `scheduler` sont recréés (leur environnement a changé). **Toutes les sessions s'ouvrent de nouveau sur la nouvelle instance : chacun se reconnecte une fois**, hors les appareils dont le cookie « Se souvenir de moi » le fait seul. Les copies hors ligne d'un appareil, dont la clé vit dans la session, s'effacent à la première vérification de la page « hors ligne » ; les modifications qui attendaient leur envoi restent (`docs/hors-ligne.md`). Les anciennes sessions restent dans `redis` jusqu'à leur échéance (`SESSION_LIFETIME` minutes), sans effet. À vérifier : `docker compose -f docker-compose.prod.yml ps` montre `redis-sessions` en `healthy` ; après une connexion, `docker compose -f docker-compose.prod.yml exec redis-sessions redis-cli DBSIZE` n'est plus à zéro ; « Réglages de Redis » et « Versions des services » restent verts. Pour revenir en arrière : la composition d'avant et l'image d'avant, `up -d --remove-orphans` ; les sessions reviennent sur `redis`, chacun se reconnecte une fois de plus, et le volume `redis_sessions_data` reste (`docker volume rm <projet>_redis_sessions_data` s'il ne sert plus).
+1. Recevoir dans la pile la composition du tag de la release (`docker-compose.prod.yml`).
+2. Lire [la mise à niveau](mise-a-niveau.md), qui dit ce que la version fait au déploiement, et suivre ses manœuvres.
+3. À une heure creuse, mettre la pile à jour :
 
-## Secrets hors des lignes de commande et sessions chiffrées
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```
 
-Deux changements de `docker-compose.prod.yml`, décidés ensemble :
+   Vous pouvez aussi utiliser la mise à jour de la pile de votre outil. L'image est retéléchargée, et les conteneurs dont l'image a changé sont recréés.
+4. Vérifier :
+   - `docker compose -f docker-compose.prod.yml ps` : `db`, `redis`, `redis-cache` et `redis-sessions` en `healthy` ;
+   - la page « Santé » reste verte. « Versions des conteneurs » et « Versions des services » disent si les conteneurs et les services servent la version attendue.
 
-- *Plus de secret en argument.* La sonde de `db` passait `-p${DB_PASSWORD}` à `mysqladmin`, et chaque Redis recevait `--requirepass ${REDIS_PASSWORD}` : la valeur se lisait dans `docker inspect` (la commande et la sonde du conteneur), `docker ps --no-trunc` et `ps` sur l'hôte. La sonde lit désormais `MYSQL_PWD` (`DB_ROOT_PASSWORD`), et chaque Redis démarre par `sh -c` qui lui donne `requirepass` par une configuration sur l'entrée standard, sous les guillemets que Redis demande, puis `exec docker-entrypoint.sh redis-server -` : Redis reste le premier processus, sous l'utilisateur `redis`, et s'arrête proprement. `AucunSecretNEstUnArgumentDeLaPileTest` (tests/Feature/Conventions) refuse tout secret dans la `command`, l'`entrypoint` ou la sonde d'un service. **Ce que cela ne cache pas** : l'environnement d'un conteneur (`REDIS_PASSWORD`, `DB_PASSWORD`, `APP_KEY`…) reste lisible par `docker inspect` et par `root`, et le fichier de la pile aussi ; un mot de passe lu dans un fichier (`*_FILE`, `secrets:`) demanderait que l'entrée et la configuration de l'application le lisent, ce qui n'est pas fait. Un mot de passe de Redis peut porter espaces, `"`, `\`, `$` et `#` (essayé avec `p@ss w"or\d $x #y`), pas de retour à la ligne.
-- *Sessions chiffrées.* `SESSION_ENCRYPT` vaut `true` par défaut et dans la composition : la session, qui porte la clé AES des copies hors ligne, s'écrit chiffrée (`APP_KEY`) dans Redis. Mesuré le 16/11/2026 (AES-256-CBC, PHP 8.5, aarch64) : 9 µs pour chiffrer et 8 µs pour déchiffrer une session de 450 octets, 45 et 42 µs pour une de 4 Ko ; elle occupe 2,2 fois plus de place (996 octets au lieu de 449), soit environ un mégaoctet pour mille sessions, dans les 64 Mo de `redis-sessions`. Sur le serveur de production, comptez quelques fois plus par requête : sans mesure, c'est une estimation, négligeable devant les 0,35 à 1,7 s que coûte chaque écriture SQL. Une session écrite en clair ne se déchiffre pas, et Laravel la lit comme vide : son titulaire devient un invité **une seule fois** (une page du compte le renvoie vers la connexion, sa session s'écrit chiffrée sous le même identifiant, aucune erreur), sauf l'appareil qui se souvient du compte, que son cookie de rappel reconnecte sans rien faire. Sa clé des copies hors ligne est neuve : les copies d'avant s'effacent à la première vérification de la page « hors ligne », et les modifications qui attendaient leur envoi restent pour le retour du compte (`docs/hors-ligne.md`, « Ce que l'appareil garde hors ligne »). Les sessions en clair encore dans Redis (et dans l'AOF de `redis`, jusqu'à sa prochaine réécriture) y restent jusqu'à `SESSION_LIFETIME` minutes sans visite, ou jusqu'à ce que leur titulaire revienne ; une rotation d'`APP_KEY` sans `APP_PREVIOUS_KEYS` ferme de même toutes les sessions. `SessionsChiffreesTest` (tests/Feature/Security) joue la bascule dans les deux sens.
+Ce qu'il faut savoir :
 
-La manœuvre, à une heure creuse, une seule fois, avec la composition de la release :
+- **La base et Redis ne suivent pas `v1`.** `db` et `redis` lancent l'étiquette de la composition (`mysql:8.4`, `redis:8.10.3-alpine`). C'est pourquoi la pile doit recevoir la composition de la release à chaque fois.
+- **Une release qui monte `redis`** (`redis-cache` et `redis-sessions` portent la même étiquette et suivent la même marche, `redis-sessions` avec son volume `redis_sessions_data`) se déploie par la marche « Redis » de `.ai/rules/dependencies.md`, à une heure creuse :
+  1. arrêter l'application, puis Redis ;
+  2. copier le volume de données de `redis` ;
+  3. mettre à jour, puis vérifier ;
+  4. au besoin, revenir par la copie.
 
-```sh
-docker compose -f docker-compose.prod.yml stop worker scheduler
-docker compose -f docker-compose.prod.yml exec app php artisan down
-docker compose -f docker-compose.prod.yml up -d -t 300
-```
+  La version d'avant ne relit plus le volume une fois l'AOF réécrit par la nouvelle.
+- **Une bascule de MySQL** a sa propre marche, dans le même fichier.
 
-`up -d` recrée `db` (sa sonde a changé : MySQL s'arrête proprement, `stop_grace_period` de cinq minutes, et repart sur le même volume), `redis` et `redis-cache` (leur commande a changé : `redis` écrit son AOF en s'arrêtant et la relit, la file y est ; `redis-cache` repart vide, comme toujours), puis `app`, `worker` et `scheduler`. Les variables de la pile, `REDIS_PASSWORD` comprise, ne changent pas. Si `up -d` n'a pas recréé `app`, `docker compose -f docker-compose.prod.yml exec app php artisan up` le rouvre. À vérifier ensuite : `docker compose -f docker-compose.prod.yml ps` montre `db` et chaque Redis en `healthy` ; `docker inspect <projet>-redis-1 --format '{{json .Config.Cmd}} {{json .Config.Healthcheck}}'` (et `<projet>-db-1`) ne montre aucun mot de passe ; `docker compose -f docker-compose.prod.yml exec redis redis-cli ping` répond `PONG` ; « Réglages de Redis » et « Versions des services », dans « Santé », restent verts ; la connexion marche, et seules les personnes sans « Se souvenir de moi » se reconnectent une fois. Si `redis` ne démarre pas, `docker logs <projet>-redis-1` le dit (le plus probable : un retour à la ligne dans `REDIS_PASSWORD`). Pour revenir en arrière sur les sessions seules : `SESSION_ENCRYPT=false` dans la pile, puis `up -d` : les sessions chiffrées se lisent alors comme vides, et chacun se reconnecte une fois de plus. Pour tout défaire : la composition d'avant et `up -d`, même suite.
+## Revenir en arrière
 
-## La pile de production
+1. Remettre la composition de la release d'avant.
+2. Épingler l'image de `app`, `worker` et `scheduler` sur la version exacte d'avant : `ghcr.io/kuasar-mknd/gym-tracker:X.Y.Z` à la place de `:v1`, qui suit la dernière version.
+3. Relancer la pile :
 
-`docker-compose.prod.yml` déclare sept services : `app`, `db`, `redis`, `redis-cache`, `redis-sessions`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge. `scheduler` porte `init: true` : ses tâches d'arrière-plan (les sauvegardes) sont orphelines dès leur lancement, et `schedule:work`, qui ne récolte pas les enfants qu'il n'a pas lancés, les laisserait en processus zombies jusqu'à la recréation du conteneur. `worker` prend un travail neuf dès sa mise en file : la lecture d'une file vide attend sur Redis deux secondes au plus (`block_for`), et aucun processus de Horizon ne dort entre deux lectures (`sleep` à 0) ; jusqu'ici, un travail attendait jusqu'à trois secondes dans une file vide. `scheduler` lance `horizon:snapshot` toutes les cinq minutes : la page « Metrics » de Horizon montre le débit et la durée des travaux des deux dernières heures.
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --remove-orphans
+   ```
 
-La sonde de santé de `app` (le `HEALTHCHECK` de l'image et celui de la composition, toutes les trente secondes) demande `/up` avec `curl -f` : `{"status":"up"}` et 200, ou `{"status":"down"}` et 500 quand un écouteur de `DiagnosingHealth` lève, l'exception partant dans les journaux. La même réponse JSON pour tout client, sans session ni cookie, que ni le navigateur ni le service worker de la PWA ne gardent (`Cache-Control: no-store`), et `/up` répond aussi pendant une maintenance. Le sondage ne lit pas la base : il réécrit seulement l'annonce de version de `app` dans le cache, comme avant. Un outil de surveillance qui cherchait un mot dans l'ancienne page HTML de Laravel cherche désormais `"status":"up"`.
+   Sans `--remove-orphans`, `redis-cache` et `redis-sessions` restent lancés.
 
-Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée. `stop_grace_period: 5m` laisse au serveur cinq minutes pour s'arrêter proprement, au lieu des dix secondes après lesquelles Docker le coupe net ; il rend la main dès qu'il a fini.
+Ce que le retour ne défait pas :
+
+- **Une release qui monte `redis` ou MySQL** ne se défait pas ainsi : le volume n'est plus relu par la version d'avant. Le retour passe par la copie du volume prise avant la mise à jour.
+- **Les migrations déjà jouées** restent en place. L'ancienne image relance `migrate --force`, qui ne fait rien, et tourne sur le schéma plus récent. Une migration destructrice rend le retour impossible sans restaurer la sauvegarde.
+- **Certains effets d'une mise à niveau** n'ont pas de retour : sessions fermées, double authentification, clé de l'application remplacée. [La mise à niveau](mise-a-niveau.md#retour-arrière) dit lesquels.
 
 ## Proxy inverse et port de l'application
 
-L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le port 8888 publié par `app`, qui n'écoute que sur la boucle locale de l'hôte (`127.0.0.1:8888:80`) : le proxy inverse doit tourner sur le même hôte et viser `localhost:8888`, et aucun autre appareil du réseau ne joint ce port, donc aucun ne peut forger `X-Forwarded-For` (liste blanche du panneau, limiteurs par adresse). Un proxy inverse sur un autre hôte ne joint plus le port : remettre `8888:80` et régler `TRUSTED_PROXIES` sur son adresse. Si `TRUSTED_PROXIES` est resserré, il doit contenir l'adresse de la passerelle du réseau de conteneurs, pas seulement l'adresse du réseau local : le conteneur voit la passerelle du pont, ni `127.0.0.1` ni l'adresse de l'hôte. L'ouverture directe ne marche d'ailleurs pas : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session, la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`). `X-Forwarded-Proto` décide aussi du chiffrement de l'historique : les pages d'un compte sont chiffrées dans l'historique du navigateur, et la déconnexion en jette la clé, pour que le bouton Retour ne réaffiche rien du compte parti ; le navigateur ne sait chiffrer qu'en HTTPS ou sur la boucle locale, et l'application ne le lui demande que là. Sans l'en-tête, les pages restent servies, mais l'historique en clair. Les pages d'un compte sortent en outre en `Cache-Control: no-store`.
+L'application s'ouvre par le proxy inverse HTTPS, jamais directement sur le port 8888. Les raisons sont dans [La pile de production](pile-de-production.md#le-proxy-inverse-et-le-port-de-lapplication).
 
-### Manœuvre de déploiement du port local
+### Ce que le proxy doit faire
 
-Redéployer la pile (`docker compose -f docker-compose.prod.yml up -d`) recrée `app` avec le port sur la boucle locale. Puis, dans l'ordre : (1) ouvrir le site par son adresse HTTPS habituelle, donc par le proxy inverse : la page de connexion répond ; (2) depuis un autre appareil du réseau local, ouvrir `http://IP-DE-L-HÔTE:8888` : la connexion doit être refusée ou expirer, sans réponse de l'application. Retour arrière si (1) échoue : remettre `8888:80` dans la composition et redéployer.
+| Exigence | Détail |
+| --- | --- |
+| Tourner sur le même hôte | `app` n'écoute que sur la boucle locale (`127.0.0.1:8888:80`). |
+| Viser `localhost:8888` | |
+| Servir en HTTPS | Le cookie de session est réservé à HTTPS : une visite en http ne garde aucune session, la connexion échoue. |
+| Transmettre `X-Forwarded-Proto` | Sans l'en-tête, l'historique du navigateur reste en clair. |
 
-### Résolution DNS bornée
+### Si le proxy est sur un autre hôte
 
-`app`, `worker` et `scheduler` portent `dns_opt: [timeout:2, attempts:2]` : `dns_get_record()` n'a pas de délai propre et prenait celui du `resolv.conf` du conteneur (10 s mesurés avec un serveur DNS muet, 4 s avec ces options). Redéployer la pile (`docker compose -f docker-compose.prod.yml up -d`) recrée ces trois conteneurs ; rien d'autre à faire, et aucune variable d'environnement n'est ajoutée.
+1. Remettre `8888:80` à la place de `127.0.0.1:8888:80` dans la composition.
+2. Régler `TRUSTED_PROXIES` sur l'adresse du proxy.
+3. Si `TRUSTED_PROXIES` est resserré, y mettre l'adresse de la passerelle du réseau de conteneurs, pas seulement l'adresse du réseau local : le conteneur voit la passerelle du pont, ni `127.0.0.1` ni l'adresse de l'hôte.
+
+### Vérifier le port local
+
+À faire une fois, quand le port passe sur la boucle locale (voir [la mise à niveau](mise-a-niveau.md#port-de-lapplication-sur-la-boucle-locale)), avec un proxy inverse sur le même hôte. Dans l'ordre :
+
+1. Ouvrir le site par son adresse HTTPS habituelle, donc par le proxy inverse. Résultat attendu : la page de connexion répond.
+2. Depuis un autre appareil du réseau local, ouvrir `http://IP-DE-L-HÔTE:8888`. Résultat attendu : la connexion est refusée ou expire, sans réponse de l'application.
+
+Si l'étape 1 échoue : le proxy inverse ne joint pas le port. Remettre `8888:80` dans la composition et redéployer ouvre le port au réseau local, donc seulement si le proxy est sur un autre hôte (voir ci-dessus) ; sinon, corriger le proxy pour qu'il vise `localhost:8888`.
