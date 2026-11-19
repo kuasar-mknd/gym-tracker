@@ -40,10 +40,20 @@ class SecurityHeaders
         );
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
 
-        if ($response->getStatusCode() >= 400 && ! $response->headers->has('Content-Security-Policy')) {
+        if ($this->appelleLaPolitiqueDesErreurs($response)) {
             $response->headers->set('Content-Security-Policy', self::POLITIQUE_DES_ERREURS);
         }
 
         return $response;
+    }
+
+    private function appelleLaPolitiqueDesErreurs(Response $response): bool
+    {
+        $pageDeDebogage = config()->boolean('app.debug') && $response->isServerError();
+
+        return config()->boolean('csp.enabled')
+            && $response->getStatusCode() >= 400
+            && ! $pageDeDebogage
+            && ! $response->headers->has('Content-Security-Policy');
     }
 }

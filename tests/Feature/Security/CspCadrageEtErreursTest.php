@@ -76,3 +76,13 @@ it('ne dispense aucune route _dusk du contrôle de falsification de requête', f
 
     post('/_dusk/sonde', [], ['Sec-Fetch-Site' => 'cross-site'])->assertStatus(419);
 });
+
+it('laisse sans politique la page de débogage de Laravel et respecte csp.enabled', function (): void {
+    Route::get('/_csp-erreur-de-debogage', static fn (): never => throw new RuntimeException('boum'));
+
+    config(['app.debug' => true]);
+    expect(get('/_csp-erreur-de-debogage')->assertStatus(500)->headers->has('Content-Security-Policy'))->toBeFalse();
+
+    config(['app.debug' => false, 'csp.enabled' => false]);
+    expect(get('/chemin-inconnu-sans-csp')->assertNotFound()->headers->has('Content-Security-Policy'))->toBeFalse();
+});
