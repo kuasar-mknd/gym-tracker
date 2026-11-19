@@ -16,7 +16,7 @@ defineProps({
     >
         <div class="relative z-10 mb-6">
             <h3 class="text-accent-info-deep sur-titre mb-1">Endurance</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic">Durée Récente</p>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic">Durée récente</p>
         </div>
 
         <!-- Recent Workouts Line Chart -->

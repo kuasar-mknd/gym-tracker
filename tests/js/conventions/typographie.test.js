@@ -72,6 +72,10 @@ it('écrit les libellés et les exemples de champ à la française', () => {
             'un modèle de séance se dit « Modèle », pas « Programme » (le programme d’un minuteur, en minuscule, reste du code)',
             (fichier) => !fichier.endsWith('.vue'),
         ],
+        [
+            /(?:>\s*|["'])(?!Liquid Glass|Space Grotesk|Month Year|Gym Tracker|[A-ZÉ][a-zéèêàç]+ Wilks)[A-ZÉ][a-zéèêàçùôï]+ (?:(?:de|du|des|d'|la|le|les|l'|par|vs|et) ?)?[A-ZÉ][a-zéèêàçùôï]+(?:\s*<|["'])/,
+            'un titre français s’écrit en casse de phrase (« Mes séances »), pas en casse de titre anglaise',
+        ],
         [/placeholder="Ex:/, '« Ex. : » et non « Ex: »'],
         [/placeholder="\d+\.\d+"/, 'un exemple de nombre prend la virgule'],
         [/>\s*x \{\{/, 'une quantité s’écrit « × »'],

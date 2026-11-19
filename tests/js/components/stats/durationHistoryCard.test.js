@@ -63,7 +63,7 @@ describe('DurationHistoryCard', () => {
     it('still names what the card holds while it is empty', async () => {
         const empty = await mountCard({ durationHistory: [] })
 
-        expect(empty.text()).toContain('Durée des Séances')
+        expect(empty.text()).toContain('Durée des séances')
         expect(empty.text()).toContain('30 dernières séances')
     })
 

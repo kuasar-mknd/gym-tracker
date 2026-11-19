@@ -36,7 +36,7 @@ const menuGroups = [
         ],
     },
     {
-        title: 'Ma Progression',
+        title: 'Ma progression',
         items: [
             {
                 name: 'Badges',

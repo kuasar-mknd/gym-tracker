@@ -290,12 +290,12 @@ describe('Dashboard', () => {
         const none = mountDashboard({ activeGoals: [] })
         const one = mountDashboard({ activeGoals: goals })
 
-        // An empty chart under a "Progression des Objectifs" heading is worse
+        // An empty chart under a "Progression des objectifs" heading is worse
         // than no chart: it reads as no progress rather than no goal. So the
         // heading is checked *and* the series behind it — the heading alone is
         // satisfied by exactly the empty chart this test exists to forbid.
-        expect(none.text()).not.toContain('Progression des Objectifs')
-        expect(one.text()).toContain('Progression des Objectifs')
+        expect(none.text()).not.toContain('Progression des objectifs')
+        expect(one.text()).toContain('Progression des objectifs')
         expect(one.findComponent({ name: 'ActiveGoalsChart' }).props('data')).toEqual(goals)
     })
 

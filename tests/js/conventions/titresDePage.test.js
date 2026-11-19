@@ -290,13 +290,13 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
 
         // Les défauts de #2120 : un en-tête de bureau titré en h2, une page sans titre de bureau.
         expect(
-            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h2>Mes Séances</h2></template><p />')),
+            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h2>Mes séances</h2></template><p />')),
         ).toEqual({
             telephone: 1,
             bureau: 0,
         })
         expect(
-            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h1>Mes Séances</h1></template><p />')),
+            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h1>Mes séances</h1></template><p />')),
         ).toEqual({
             telephone: 1,
             bureau: 1,
@@ -304,7 +304,7 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
         // Un titre de bureau posé dans la page sans le dire au layout : deux titres sur bureau.
         expect(
             titresDeLaPage(
-                pageDe('page-title="Stats"', '<div class="bureau:block hidden"><h1>Mon Évolution</h1></div>'),
+                pageDe('page-title="Stats"', '<div class="bureau:block hidden"><h1>Mon évolution</h1></div>'),
             ),
         ).toEqual({
             telephone: 1,
@@ -314,7 +314,7 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
             titresDeLaPage(
                 pageDe(
                     'page-title="Stats" titre-dans-la-page',
-                    '<div class="bureau:block hidden"><h1>Mon Évolution</h1></div>',
+                    '<div class="bureau:block hidden"><h1>Mon évolution</h1></div>',
                 ),
             ),
         ).toEqual({ telephone: 1, bureau: 1 })

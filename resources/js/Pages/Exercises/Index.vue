@@ -187,7 +187,7 @@ const typeLabel = (type) => {
 <template>
     <Head title="Bibliothèque" />
 
-    <AuthenticatedLayout liquid-variant="subtle" page-title="La Bibliothèque" titre-dans-la-page>
+    <AuthenticatedLayout liquid-variant="subtle" page-title="La bibliothèque" titre-dans-la-page>
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <div class="pb-main-safe space-y-6">
             <!-- Header -->
@@ -211,7 +211,7 @@ const typeLabel = (type) => {
                     dusk="create-exercise-btn-desktop"
                 >
                     <GlassIcon name="add" class="mr-2" />
-                    Nouvel Exercice
+                    Nouvel exercice
                 </GlassButton>
             </div>
 
@@ -347,7 +347,7 @@ const typeLabel = (type) => {
             Le « + » de la barre collante. Il vivait dans le corps de la page,
             en `sm:hidden`, à côté de son jumeau de bureau — donc sous
             l'en-tête plutôt que dedans, et pas au même endroit que celui de
-            « Mes Séances » ou de « Mes Modèles ».
+            « Mes séances » ou de « Mes modèles ».
         -->
         <template #header-actions>
             <GlassButton

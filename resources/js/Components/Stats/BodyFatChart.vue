@@ -14,7 +14,7 @@ const labels = computed(() => props.data.map((item) => item.date))
 
 const datasets = computed(() => [
     {
-        label: 'Masse Grasse (%)',
+        label: 'Masse grasse (%)',
         data: props.data.map((item) => item.body_fat),
         fill: true,
         tension: 0.4,

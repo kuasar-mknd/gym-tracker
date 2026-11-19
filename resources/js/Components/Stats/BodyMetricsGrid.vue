@@ -29,7 +29,7 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
         <GlassCard padding="p-5">
             <div class="flex items-start justify-between">
                 <div>
-                    <h4 class="sur-titre text-accent-secondary-deep mb-1">Masse Grasse</h4>
+                    <h4 class="sur-titre text-accent-secondary-deep mb-1">Masse grasse</h4>
                     <p class="font-display text-text-main text-3xl font-black">
                         {{ bodyFat ? nombre(bodyFat) : '—' }}
                         <span class="text-text-muted text-sm">%</span>
@@ -70,7 +70,7 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
                 </template>
                 <div class="flex items-start justify-between">
                     <div>
-                        <h4 class="sur-titre text-accent-tertiary-deep mb-1">Volume Mois</h4>
+                        <h4 class="sur-titre text-accent-tertiary-deep mb-1">Volume mois</h4>
                         <p class="font-display text-text-main text-3xl font-black">
                             {{ nombre(monthlyComparison?.current_volume ?? 0, 0) }}
                             <span class="text-text-muted text-sm">kg</span>

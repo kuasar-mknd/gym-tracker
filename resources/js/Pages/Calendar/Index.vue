@@ -364,7 +364,7 @@ const formatDateFull = (dateStr) => {
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-text-main font-bold">Entrée Journal</span>
+                                    <span class="text-text-main font-bold">Entrée journal</span>
                                     <span
                                         v-if="selectedDayDetails.journal.mood_score"
                                         class="text-text-main bg-surface-sunken text-2xs rounded px-1.5 py-0.5 font-bold"

@@ -189,7 +189,7 @@ describe('the empty cupboard', () => {
         // Both at once reads as "nothing to show" printed directly above a form
         // that is asking for the very first product.
         expect(wrapper.text()).not.toContain('Aucun complément')
-        expect(wrapper.text()).toContain('Nouveau Complément')
+        expect(wrapper.text()).toContain('Nouveau complément')
     })
 
     it('opens the form from its own “Commencer” button', async () => {
@@ -199,7 +199,7 @@ describe('the empty cupboard', () => {
 
         // This is the button a first-time user reaches for; the header one is
         // small and sits away from where the eye already is.
-        expect(wrapper.text()).toContain('Nouveau Complément')
+        expect(wrapper.text()).toContain('Nouveau complément')
     })
 })
 
@@ -209,7 +209,7 @@ describe('the monthly usage chart', () => {
 
         // Thirty flat bars say nothing: the card is pure noise until there is
         // something to read in it.
-        expect(wrapper.text()).not.toContain('Consommation Mensuelle')
+        expect(wrapper.text()).not.toContain('Consommation mensuelle')
     })
 
     it('appears from the first dose of the period', async () => {
@@ -220,7 +220,7 @@ describe('the monthly usage chart', () => {
             ],
         })
 
-        expect(wrapper.text()).toContain('Consommation Mensuelle')
+        expect(wrapper.text()).toContain('Consommation mensuelle')
         expect(wrapper.findComponent({ name: 'SupplementUsageChart' }).props('data')).toHaveLength(2)
     })
 
@@ -230,7 +230,7 @@ describe('the monthly usage chart', () => {
         // Reading `.some` off an absent prop takes the whole page down with it,
         // supplements included — the part the user actually came for.
         expect(wrapper.text()).toContain('Whey Protein')
-        expect(wrapper.text()).not.toContain('Consommation Mensuelle')
+        expect(wrapper.text()).not.toContain('Consommation mensuelle')
     })
 })
 
@@ -253,7 +253,7 @@ describe('adding a supplement', () => {
         // Left as it was, the next "Ajouter" opens on the previous product's
         // name and the user files a duplicate without noticing.
         expect(form.name).toBe('')
-        expect(wrapper.text()).not.toContain('Nouveau Complément')
+        expect(wrapper.text()).not.toContain('Nouveau complément')
     })
 
     it('lets the form be dismissed without saving anything', async () => {
@@ -264,7 +264,7 @@ describe('adding a supplement', () => {
 
         // Opened by mistake and unable to close, the form sits over the list
         // until the page is reloaded.
-        expect(wrapper.text()).not.toContain('Nouveau Complément')
+        expect(wrapper.text()).not.toContain('Nouveau complément')
         expect(form.post).not.toHaveBeenCalled()
     })
 })

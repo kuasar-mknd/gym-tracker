@@ -1,5 +1,5 @@
 <template>
-    <Head title="Calculateur d'Échauffement" />
+    <Head title="Calculateur d'échauffement" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">

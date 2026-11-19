@@ -1,5 +1,5 @@
 <template>
-    <Head title="Calculateur de Macros" />
+    <Head title="Calculateur de macros" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
@@ -95,7 +95,7 @@
                     >
                         <div>
                             <p class="text-text-muted text-sm font-bold tracking-wider uppercase">
-                                Cibles Journalières
+                                Cibles journalières
                             </p>
                             <div
                                 class="from-accent-primary to-accent-secondary font-display mt-1 bg-linear-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent italic"

@@ -6,7 +6,7 @@
  * volume de la séance (`Workout::recalculerLeVolume()`) et les records
  * (`PersonalRecordService`) ne comptent déjà que les séries validées ; les
  * graphiques de la fiche exercice comptaient tout, et une série prévue à
- * 140 kg puis jamais faite y faisait monter la « Charge Max » au-dessus du
+ * 140 kg puis jamais faite y faisait monter la « Charge max » au-dessus du
  * record affiché (#1956).
  *
  * Le serveur envoie `is_completed` et `is_warmup` sur chaque série : une série

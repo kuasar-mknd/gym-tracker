@@ -260,7 +260,7 @@ describe('Goals/Index', () => {
         const mobile = wrapper.find('[dusk="create-goal-btn"]')
 
         expect(wrapper.find('[dusk="goal-create-form"]').exists()).toBe(false)
-        expect(toggle(wrapper).text()).toBe('Nouvel Objectif')
+        expect(toggle(wrapper).text()).toBe('Nouvel objectif')
         expect(mobile.attributes('aria-label')).toBe('Nouvel objectif')
 
         await toggle(wrapper).trigger('click')
@@ -300,7 +300,7 @@ describe('Goals/Index', () => {
 
     /**
      * Once the goal is saved the panel has to close *and* forget what was typed,
-     * or the next "Nouvel Objectif" reopens on the previous goal's values and
+     * or the next "Nouvel objectif" reopens on the previous goal's values and
      * quietly creates a duplicate.
      */
     it('referme et vide le formulaire une fois la création acceptée', async () => {

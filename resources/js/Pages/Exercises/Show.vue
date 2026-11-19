@@ -265,7 +265,7 @@ const scatterData = computed(() => {
 
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="titre-carte">Charge Max</h3>
+                            <h3 class="titre-carte">Charge max</h3>
                             <p class="text-text-muted text-xs font-semibold">Maximum soulevé par séance (kg)</p>
                         </div>
                         <div class="h-64">
@@ -285,7 +285,7 @@ const scatterData = computed(() => {
 
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="titre-carte">Charge Moyenne</h3>
+                            <h3 class="titre-carte">Charge moyenne</h3>
                             <p class="text-text-muted text-xs font-semibold">Poids moyen par série (kg)</p>
                         </div>
                         <div class="h-64">
@@ -305,7 +305,7 @@ const scatterData = computed(() => {
 
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="titre-carte">Poids vs Reps</h3>
+                            <h3 class="titre-carte">Poids vs répétitions</h3>
                             <p class="text-text-muted text-xs font-semibold">Répartition des séries de travail</p>
                         </div>
                         <div class="h-64">
@@ -315,7 +315,7 @@ const scatterData = computed(() => {
 
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="titre-carte">Progression par Série</h3>
+                            <h3 class="titre-carte">Progression par série</h3>
                             <p class="text-text-muted text-xs font-semibold">
                                 Poids des 3 premières séries de travail dans le temps
                             </p>
@@ -338,7 +338,7 @@ const scatterData = computed(() => {
                 <div class="stagger-3 animate-slide-up">
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="titre-carte">Performance Historique</h3>
+                            <h3 class="titre-carte">Performance historique</h3>
                             <p class="text-text-muted text-xs font-semibold">Volume et 1RM au fil du temps</p>
                         </div>
                         <div v-if="history.length > 0" class="h-64">
@@ -358,7 +358,7 @@ const scatterData = computed(() => {
                 <div class="stagger-4 animate-slide-up">
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="titre-carte">Évolution du Volume</h3>
+                            <h3 class="titre-carte">Évolution du volume</h3>
                             <p class="text-text-muted text-xs font-semibold">Volume total par séance</p>
                         </div>
                         <div v-if="volumeData.length > 0" class="h-64">

@@ -853,7 +853,7 @@ describe('la barre de bureau', () => {
     /**
      * Les boutons qu'une page double entre les deux en-têtes, et l'espace
      * qu'elle réserve à la barre du bas, basculent avec la barre de bureau.
-     * Repassés à `sm:`, « Ajouter » des compléments et « Nouvel Exercice » de
+     * Repassés à `sm:`, « Ajouter » des compléments et « Nouvel exercice » de
      * la bibliothèque se montraient deux fois sur un téléphone couché, une
      * fois dans l'en-tête mobile et une fois dans la page, sans qu'aucun test
      * ne le voie. Toute bascule par la largeur s'écrit donc `bureau:`, hors la

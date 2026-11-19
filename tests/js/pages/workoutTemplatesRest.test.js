@@ -201,7 +201,7 @@ describe('the template listing', () => {
     /**
      * « Nouveau modèle » se posait dans un `Link` autour d'un `GlassButton` :
      * un bouton dans un lien, deux arrêts de tabulation par geste, et
-     * « Nouveau Modèle » sur bureau à côté de « Nouveau modèle » sur
+     * « Nouveau modèle » sur bureau à côté de « Nouveau modèle » sur
      * téléphone (#2117). L'en-tête mobile et celui du bureau en ont chacun un.
      */
     it('ouvre la création par un seul lien « Nouveau modèle » dans chaque en-tête', () => {

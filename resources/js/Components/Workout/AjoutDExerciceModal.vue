@@ -178,7 +178,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
             <div v-else class="space-y-6">
                 <div class="flex items-center gap-4">
                     <GlassIconButton icon="arrow_back" label="Retour" @click="showCreateForm = false" />
-                    <h3 class="titre-carte">Nouvel Exercice</h3>
+                    <h3 class="titre-carte">Nouvel exercice</h3>
                 </div>
 
                 <form @submit.prevent="createAndAddExercise" class="space-y-4">

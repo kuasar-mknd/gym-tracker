@@ -145,7 +145,7 @@ const selectCommonPart = (part) => {
 
             <!-- Chart -->
             <GlassCard v-if="latestMeasurements.some((m) => m.diff !== 0)" class="animate-slide-up">
-                <h3 class="text-accent-state-deep sur-titre mb-4">Évolution Récente</h3>
+                <h3 class="text-accent-state-deep sur-titre mb-4">Évolution récente</h3>
                 <BodyPartDiffChart :data="latestMeasurements" />
             </GlassCard>
 

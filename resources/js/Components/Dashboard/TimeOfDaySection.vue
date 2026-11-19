@@ -16,7 +16,7 @@ defineProps({
     >
         <div class="relative z-10 mb-6">
             <h3 class="text-accent-secondary-deep sur-titre mb-1">Habitudes</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic">Horaire Favori</p>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic">Horaire favori</p>
         </div>
 
         <!-- Time of Day Chart -->

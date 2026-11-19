@@ -20,9 +20,9 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Nouveau Modèle" />
+    <Head title="Nouveau modèle" />
 
-    <AuthenticatedLayout page-title="Nouveau Modèle" show-back back-route="templates.index">
+    <AuthenticatedLayout page-title="Nouveau modèle" show-back back-route="templates.index">
         <TemplateForm :exercises="exercises" :bornes-du-modele="bornesDuModele" :bornes-d-une-serie="bornesDUneSerie" />
     </AuthenticatedLayout>
 </template>

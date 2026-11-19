@@ -275,7 +275,7 @@ const latestBodyFat = computed(() => {
                 <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <!-- Weight Chart -->
                     <GlassCard>
-                        <h3 class="text-accent-info-deep sur-titre mb-4">Évolution Poids</h3>
+                        <h3 class="text-accent-info-deep sur-titre mb-4">Évolution poids</h3>
                         <div class="h-64">
                             <WeightHistoryChart
                                 hauteur="h-full"
@@ -294,7 +294,7 @@ const latestBodyFat = computed(() => {
 
                     <!-- Body Fat Chart -->
                     <GlassCard>
-                        <h3 class="text-accent-secondary-deep sur-titre mb-4">Évolution Masse Grasse</h3>
+                        <h3 class="text-accent-secondary-deep sur-titre mb-4">Évolution masse grasse</h3>
                         <div class="h-64">
                             <BodyFatLineChart
                                 hauteur="h-full"

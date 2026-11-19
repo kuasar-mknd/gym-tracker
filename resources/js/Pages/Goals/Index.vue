@@ -97,9 +97,9 @@ const goalDistribution = computed(() => {
 </script>
 
 <template>
-    <Head title="Mes Objectifs" />
+    <Head title="Mes objectifs" />
 
-    <AuthenticatedLayout page-title="Mes Objectifs">
+    <AuthenticatedLayout page-title="Mes objectifs">
         <!-- The #header slot is desktop-only (hidden bureau:block in the layout), so the
              create action has to be mirrored here or it is unreachable on phones. -->
         <template #header-actions>
@@ -117,7 +117,7 @@ const goalDistribution = computed(() => {
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="titre-section">Mes Objectifs 🎯</h1>
+                    <h1 class="titre-section">Mes objectifs 🎯</h1>
                     <p class="text-text-muted text-sm">Fixe tes cibles et dépasse tes limites.</p>
                 </div>
                 <GlassButton
@@ -125,7 +125,7 @@ const goalDistribution = computed(() => {
                     dusk="create-goal-btn-desktop"
                     @click="showCreateForm = !showCreateForm"
                 >
-                    {{ showCreateForm ? 'Annuler' : 'Nouvel Objectif' }}
+                    {{ showCreateForm ? 'Annuler' : 'Nouvel objectif' }}
                 </GlassButton>
             </div>
         </template>
@@ -154,7 +154,7 @@ const goalDistribution = computed(() => {
                 >
                     <div v-if="showCreateForm">
                         <GlassCard class="p-6">
-                            <h3 class="titre-carte mb-6">Nouvel Objectif</h3>
+                            <h3 class="titre-carte mb-6">Nouvel objectif</h3>
                             <div dusk="goal-create-form">
                                 <GoalForm
                                     :form="form"
