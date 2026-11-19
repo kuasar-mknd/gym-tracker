@@ -33,6 +33,8 @@ const memeValeur = (a, b) =>
  *   fieldWrites: { forget: (cle: string) => void },
  *   deleteSet: (setId: unknown) => Promise<unknown>,
  *   patchSet?: (set: object, payload: object) => Promise<unknown>,
+ *   nextWrite?: (cle: string) => number,
+ *   isLatestWrite?: (cle: string, seq: number) => boolean,
  *   oublierLesRafales: (setId: unknown) => void,
  *   oublierLaSerie: (setId: unknown) => void,
  *   markUnsynced: (setId: unknown) => void,
@@ -51,6 +53,8 @@ export const useAjoutEtRetraitDeSerie = ({
     fieldWrites,
     deleteSet,
     patchSet = () => Promise.resolve(),
+    nextWrite = () => 0,
+    isLatestWrite = () => true,
     oublierLesRafales,
     oublierLaSerie,
     markUnsynced,
@@ -630,8 +634,12 @@ export const useAjoutEtRetraitDeSerie = ({
                     !SyncService.modifierEnFile(fileDeLaSerie, { is_completed: serie.is_completed }) &&
                     serie.is_completed
                 ) {
+                    // Comme une coche : une écriture plus récente sur la rangée l'emporte sur ce rétablissement.
+                    const cle = `completion:${serie._rowKey ?? serie.id}`
+                    const seq = nextWrite(cle)
+
                     patchSet(serie, { is_completed: true }).catch((err) => {
-                        if (err.isOffline) {
+                        if (err.isOffline || !isLatestWrite(cle, seq)) {
                             return
                         }
 

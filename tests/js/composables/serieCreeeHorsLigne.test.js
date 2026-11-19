@@ -361,6 +361,72 @@ describe('une série créée hors ligne', () => {
             expect(reseau.serveur.series.get(100).is_completed).toBe(false)
         })
 
+        describe('quand le rétablissement de la coche est refusé en ligne', () => {
+            const annulerAvecUnRefus = async (page, serie, statut) => {
+                await page.toggleSetCompletion(serie)
+                await flushPromises()
+                page.retirerAvecDelai(serie.id)
+                await flushPromises()
+                await leReseauRevient(page)
+                reseau.serveur.imposer.push(async () => {
+                    throw { response: { status: statut, data: {}, headers: {} } }
+                })
+                page.annulerLaSuppression()
+            }
+
+            it('dit pourquoi sur une erreur du serveur', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+
+                await annulerAvecUnRefus(page, serie, 500)
+                await vi.waitFor(() =>
+                    expect(page.pageDuRapport.props.flash?.error).toBe('La coche n’a pas pu être rétablie.'),
+                )
+
+                expect(page.ligne().sets.at(-1).is_completed).toBe(false)
+            })
+
+            it('ne dit rien sur un 404 : la ligne a été retirée', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+
+                await annulerAvecUnRefus(page, serie, 404)
+                await vi.waitFor(() => expect(page.ligne().sets.at(-1).is_completed).toBe(false))
+
+                expect(page.pageDuRapport.props.flash?.error ?? null).toBeNull()
+            })
+
+            it('ne décoche pas l’écran quand la personne a coché depuis : sa coche l’emporte', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+
+                await page.toggleSetCompletion(serie)
+                await flushPromises()
+                page.retirerAvecDelai(serie.id)
+                await flushPromises()
+                await leReseauRevient(page)
+
+                let echouer
+                const retenue = new Promise((resolve) => (echouer = resolve))
+                reseau.serveur.imposer.push(async () => {
+                    await retenue
+                    throw { response: { status: 500, data: {}, headers: {} } }
+                })
+                page.annulerLaSuppression()
+                await flushPromises()
+
+                await page.toggleSetCompletion(serie)
+                await page.toggleSetCompletion(serie)
+                await flushPromises()
+                echouer()
+                await flushPromises()
+
+                expect(page.ligne().sets.at(-1).is_completed).toBe(true)
+                expect(page.pageDuRapport.props.flash?.error ?? null).toBeNull()
+                expect(reseau.serveur.series.get(100).is_completed).toBe(true)
+            })
+        })
+
         it('met la suppression d’une série du serveur en file durable quand la page part, et un rechargement ne la ramène pas', async () => {
             const page = await monterLaSeance(seance())
 

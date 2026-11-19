@@ -99,6 +99,8 @@ export const useSeriesDeLaSeance = ({
             fieldWrites,
             deleteSet,
             patchSet,
+            nextWrite,
+            isLatestWrite,
             oublierLesRafales,
             oublierLaSerie,
             markUnsynced,
