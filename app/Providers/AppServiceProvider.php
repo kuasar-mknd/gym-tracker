@@ -232,7 +232,7 @@ final class AppServiceProvider extends ServiceProvider
             ->give(function (Application $app): \Minishlink\WebPush\WebPush {
                 $fournisseur = $app->getProvider(\NotificationChannels\WebPush\WebPushServiceProvider::class);
 
-                /** @var array<string, mixed> $authentification */
+                /** @var array<string, array<string, string>> $authentification */
                 $authentification = Closure::bind(
                     fn (): array => $this->webPushAuth(),
                     $fournisseur,
@@ -248,10 +248,7 @@ final class AppServiceProvider extends ServiceProvider
                 $reglage = config('webpush.automatic_padding');
                 $remplissage = is_numeric($reglage) ? (int) $reglage : (bool) $reglage;
 
-                $budget = config('webpush.budget_secondes');
-
-                return new \App\Support\WebPushBorne($authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
-                    ->setBudgetEnSecondes(is_numeric($budget) ? (float) $budget : 25.0)
+                return new \App\Support\WebPushBorne(config()->float('webpush.budget_secondes'), $authentification, [], $client, new \GuzzleHttp\Psr7\HttpFactory(), new \GuzzleHttp\Psr7\HttpFactory())
                     ->setReuseVAPIDHeaders(true)
                     ->setAutomaticPadding($remplissage);
             });

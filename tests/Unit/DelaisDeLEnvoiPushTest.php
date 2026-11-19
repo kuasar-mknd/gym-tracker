@@ -134,7 +134,7 @@ it('arrête l’envoi aux appareils restants quand le budget de temps est dépas
 });
 
 it('envoie tous les appareils quand le budget tient', function (): void {
-    config(['webpush.budget_secondes' => 25]);
+    config(['webpush.budget_secondes' => 25.0]);
 
     $envoyes = 0;
     $rapide = new Client([

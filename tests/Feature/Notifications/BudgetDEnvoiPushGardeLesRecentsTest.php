@@ -20,7 +20,8 @@ use NotificationChannels\WebPush\WebPushMessage;
 it('joint les appareils du plus récent au plus ancien, et coupe les plus anciens', function (): void {
     $cles = VAPID::createVapidKeys();
     $clePublique = $cles['publicKey'];
-    assert(is_string($clePublique));
+    $clePrivee = $cles['privateKey'];
+    assert(is_string($clePublique) && is_string($clePrivee));
 
     $joints = [];
     $lent = new Client([
@@ -32,8 +33,7 @@ it('joint les appareils du plus récent au plus ancien, et coupe les plus ancien
         },
     ]);
 
-    $webPush = new WebPushBorne(['VAPID' => ['subject' => 'mailto:exploitant@example.org', 'publicKey' => $cles['publicKey'], 'privateKey' => $cles['privateKey']]], [], $lent, new HttpFactory(), new HttpFactory())
-        ->setBudgetEnSecondes(0.5);
+    $webPush = new WebPushBorne(0.5, ['VAPID' => ['subject' => 'mailto:exploitant@example.org', 'publicKey' => $clePublique, 'privateKey' => $clePrivee]], [], $lent, new HttpFactory(), new HttpFactory());
 
     $compte = User::factory()->create();
 

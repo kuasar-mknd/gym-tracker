@@ -43,6 +43,6 @@ return [
      * d'un compte : passé ce budget, les appareils restants ne la reçoivent
      * pas (`App\Support\WebPushBorne`). Sous les 60 s d'Horizon.
      */
-    'budget_secondes' => 25,
+    'budget_secondes' => 25.0,
 
 ];

@@ -7,6 +7,9 @@ namespace App\Support;
 use Generator;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\WebPush;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 
 /**
  * Un WebPush dont l'envoi s'arrête quand son budget de temps est dépassé.
@@ -20,13 +23,19 @@ use Minishlink\WebPush\WebPush;
  */
 class WebPushBorne extends WebPush
 {
-    private float $budgetEnSecondes = 25.0;
-
-    public function setBudgetEnSecondes(float $secondes): static
-    {
-        $this->budgetEnSecondes = $secondes;
-
-        return $this;
+    /**
+     * @param  array<string, array<string, string>>  $auth
+     * @param  array<string, int|string>  $defaultOptions
+     */
+    public function __construct(
+        private readonly float $budgetEnSecondes,
+        array $auth = [],
+        array $defaultOptions = [],
+        ?ClientInterface $client = null,
+        ?RequestFactoryInterface $requestFactory = null,
+        ?StreamFactoryInterface $streamFactory = null,
+    ) {
+        parent::__construct($auth, $defaultOptions, $client, $requestFactory, $streamFactory);
     }
 
     public function flush(?int $batchSize = null): Generator
@@ -37,7 +46,7 @@ class WebPushBorne extends WebPush
         foreach (parent::flush($batchSize) as $rapport) {
             yield $rapport;
 
-            $restants = $restants - 1;
+            $restants -= 1;
 
             if ($restants > 0 && (hrtime(true) - $debut) / 1_000_000_000 >= $this->budgetEnSecondes) {
                 $this->vapidHeaders = [];

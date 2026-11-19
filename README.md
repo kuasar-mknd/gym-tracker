@@ -154,6 +154,8 @@ L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le 
 
 **Manœuvre de déploiement du port local (#2309).** Redéployer la pile (`docker compose -f docker-compose.prod.yml up -d`) recrée `app` avec le port sur la boucle locale. Puis, dans l'ordre : (1) ouvrir le site par son adresse HTTPS habituelle, donc par le proxy inverse : la page de connexion répond ; (2) depuis un autre appareil du réseau local, ouvrir `http://IP-DE-L-HÔTE:8888` : la connexion doit être refusée ou expirer, sans réponse de l'application. Retour arrière si (1) échoue : remettre `8888:80` dans la composition et redéployer.
 
+**Résolution DNS bornée (audit, wave1.34).** `app`, `worker` et `scheduler` portent `dns_opt: [timeout:2, attempts:2]` : `dns_get_record()` n'a pas de délai propre et prenait celui du `resolv.conf` du conteneur (10 s mesurés avec un serveur DNS muet, 4 s avec ces options). Redéployer la pile (`docker compose -f docker-compose.prod.yml up -d`) recrée ces trois conteneurs ; rien d'autre à faire, et aucune variable d'environnement n'est ajoutée.
+
 ### Double authentification du panneau
 
 Le panneau (`/backoffice`) exige la double authentification de chaque administrateur (#2353) : une application de codes à usage unique (TOTP), et des codes de récupération. Le mot de passe et la liste d'adresses (`ADMIN_ALLOWED_IPS`) ne suffisent plus, alors qu'un super administrateur fixe le mot de passe de tout compte et télécharge les sauvegardes.
