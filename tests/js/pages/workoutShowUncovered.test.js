@@ -922,6 +922,33 @@ describe('Workouts/Show — the session’s own settings', () => {
      * « Terminer » passe par l'API et la file hors ligne (#2049) : la séance
      * nommée dans la charge, l'heure du geste, puis l'accueil.
      */
+    it('sends the pending set delete before the end of the session', async () => {
+        const ordre = []
+        const reponse = deferred()
+        destroy.mockImplementation((url) => {
+            ordre.push(`delete ${url}`)
+
+            return reponse.promise
+        })
+        patch.mockImplementation(async (url) => {
+            ordre.push(`patch ${url}`)
+
+            return { data: { data: { id: 1, ended_at: 'fin' }, meta: {} } }
+        })
+        const wrapper = await mountPage()
+
+        await click(wrapper, 'remove-set-0-0')
+        await buttonLabelled(wrapper, 'Terminer').trigger('click')
+        await flushPromises()
+        await emitOn(wrapper, FinishModalStub, 'confirm')
+        await flushPromises()
+
+        expect(ordre).toEqual(['delete /api/v1/sets/42'])
+
+        reponse.resolve({ data: {} })
+        await vi.waitFor(() => expect(ordre).toEqual(['delete /api/v1/sets/42', 'patch /api.v1.workouts.finish']))
+    })
+
     it('asks before finishing, and only then closes the session', async () => {
         const { router } = await import('@inertiajs/vue3')
         router.visit.mockClear()

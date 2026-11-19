@@ -267,6 +267,63 @@ describe('une série créée hors ligne', () => {
         expect([...reseau.serveur.series.keys()]).toEqual([3])
     })
 
+    describe('avec le temps d’annuler la suppression (#2355)', () => {
+        it('garde sa création en file, coche comprise, tant qu’on peut annuler, et la crée au vidage si on annule', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            page.saisieTerminee(serie, 'weight', '200')
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+
+            const avant = fileDurable()
+
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+
+            expect(page.ligne().sets.map((s) => s.id)).toEqual([3])
+            expect(fileDurable()).toEqual(avant)
+
+            page.annulerLaSuppression()
+            await flushPromises()
+
+            expect(page.ligne().sets.map(({ weight, is_completed }) => [weight, is_completed])).toEqual([
+                [80, true],
+                [200, true],
+            ])
+            expect(fileDurable()).toEqual(avant)
+
+            await leReseauRevient(page)
+
+            expect(reseau.serveur.resume()).toEqual([
+                'post /api/v1/sets {"workout_line_id":1,"is_completed":true,"weight":200,"reps":5}',
+            ])
+            expect([...reseau.serveur.series.keys()].sort((a, b) => a - b)).toEqual([3, 100])
+        })
+
+        it('supprime du serveur ce que la file a créé quand le réseau revient avant l’échéance', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+
+            await leReseauRevient(page)
+
+            expect(reseau.serveur.series.has(100)).toBe(true)
+            expect(page.ligne().sets.map((s) => s.id)).toEqual([3])
+
+            page.validerLaSuppression()
+            await flushPromises()
+
+            expect(reseau.serveur.resume().map((requete) => requete.split(' {')[0])).toEqual([
+                'post /api/v1/sets',
+                'delete /api/v1/sets/100',
+            ])
+            expect([...reseau.serveur.series.keys()]).toEqual([3])
+        })
+    })
+
     it('est supprimée du serveur quand on la retire pendant que sa création vole', async () => {
         const page = await monterLaSeance(seance())
         const serie = await ajouterHorsLigne(page)

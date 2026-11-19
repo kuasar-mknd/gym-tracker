@@ -538,7 +538,7 @@ export const useAjoutEtRetraitDeSerie = ({
         oublierLaSerie(setId)
 
         // La rangée a quitté l'écran : sa marque « non enregistrée » part avec elle (#2299).
-        deleteSet(setId)
+        return deleteSet(setId)
             .then(() => {
                 seriesRetirees.add(setId)
                 clearUnsynced(setId, idsReels.get(setId))
@@ -579,7 +579,7 @@ export const useAjoutEtRetraitDeSerie = ({
             porte: (set) => String(serie.id) === String(set.id),
             valider: () => {
                 enAttente = null
-                supprimerPourDeBon(retrait)
+                return supprimerPourDeBon(retrait)
             },
             annuler: () => {
                 enAttente = null
@@ -591,10 +591,14 @@ export const useAjoutEtRetraitDeSerie = ({
     }
 
     if (getCurrentInstance()) {
+        const surLaPageCachee = () => document.visibilityState === 'hidden' && valider()
+
         window.addEventListener('pagehide', valider)
+        document.addEventListener('visibilitychange', surLaPageCachee)
 
         onUnmounted(() => {
             window.removeEventListener('pagehide', valider)
+            document.removeEventListener('visibilitychange', surLaPageCachee)
             valider()
         })
     }

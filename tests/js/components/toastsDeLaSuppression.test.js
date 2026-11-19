@@ -25,7 +25,13 @@ describe('ToastsDuLayout — la suppression qu’on peut annuler (#2355)', () =>
     it('shows nothing while no deletion waits', () => {
         const wrapper = monter()
 
-        expect(wrapper.find('[dusk="toast-suppression"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="annuler-la-suppression"]').exists()).toBe(false)
+    })
+
+    it('keeps its live region in the page before there is anything to say, so the message is announced', () => {
+        const wrapper = monter()
+
+        expect(wrapper.get('[dusk="toast-suppression"]').attributes('role')).toBe('status')
     })
 
     it('announces the deletion politely, as a status and not as an alert', async () => {
@@ -58,7 +64,7 @@ describe('ToastsDuLayout — la suppression qu’on peut annuler (#2355)', () =>
 
         expect(s.annuler).toHaveBeenCalledTimes(1)
         expect(s.valider).not.toHaveBeenCalled()
-        expect(wrapper.find('[dusk="toast-suppression"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="annuler-la-suppression"]').exists()).toBe(false)
     })
 
     it('goes away with the deletion once the time has run out', async () => {
@@ -71,7 +77,7 @@ describe('ToastsDuLayout — la suppression qu’on peut annuler (#2355)', () =>
         await wrapper.vm.$nextTick()
 
         expect(s.valider).toHaveBeenCalledTimes(1)
-        expect(wrapper.find('[dusk="toast-suppression"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="annuler-la-suppression"]').exists()).toBe(false)
     })
 
     it('holds the countdown while the pointer or the focus is on it', async () => {
@@ -81,11 +87,11 @@ describe('ToastsDuLayout — la suppression qu’on peut annuler (#2355)', () =>
         proposerUneAnnulation(s)
         await wrapper.vm.$nextTick()
 
-        await wrapper.get('[dusk="toast-suppression"]').trigger('focusin')
+        await wrapper.get('[dusk="annuler-la-suppression"]').trigger('focusin')
         vi.advanceTimersByTime(DELAI_POUR_ANNULER_MS * 2)
         expect(s.valider).not.toHaveBeenCalled()
 
-        await wrapper.get('[dusk="toast-suppression"]').trigger('focusout')
+        await wrapper.get('[dusk="annuler-la-suppression"]').trigger('focusout')
         vi.advanceTimersByTime(DELAI_POUR_ANNULER_MS)
         expect(s.valider).toHaveBeenCalledTimes(1)
     })

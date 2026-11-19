@@ -109,9 +109,9 @@ export const useSeriesDeLaSeance = ({
 
     /** Ce qui ne peut plus attendre part d'abord : la suppression en attente, puis les saisies. */
     const viderLesEcritures = () => {
-        validerLaSuppressionEnAttente()
+        const suppression = validerLaSuppressionEnAttente()
 
-        return flushAllPendingUpdates()
+        return Promise.allSettled([suppression, flushAllPendingUpdates()])
     }
 
     return {

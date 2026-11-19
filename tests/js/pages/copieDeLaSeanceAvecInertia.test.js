@@ -1,4 +1,5 @@
 import { it, expect, vi, beforeAll, afterEach } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 
 import { creerUneFabriqueEnMemoire } from '../utils/baseIndexeeEnMemoire'
 import { creerUnFauxServeur } from '../composables/seanceHorsLigne'
@@ -74,6 +75,7 @@ let magasin
 let ecriture
 let delai
 let validerLaSuppression
+let annulerLaSuppression
 let fabriqueDeLaBase
 
 /** La séance 5 telle que la copie la garde. */
@@ -112,7 +114,8 @@ beforeAll(async () => {
             const { creerLeMagasinDesCopies, ouvrirLaBaseDuNavigateur } = await import('@/Utils/copiesHorsLigne')
             const { installerLEcritureDesCopies } = await import('@/Utils/ecritureDesCopies')
             ;({ DELAI_DE_L_INSTANTANE_MS: delai } = await import('@/composables/useCopieDeLaSeance'))
-            ;({ valider: validerLaSuppression } = await import('@/Utils/suppressionAnnulable'))
+            ;({ valider: validerLaSuppression, annuler: annulerLaSuppression } =
+                await import('@/Utils/suppressionAnnulable'))
 
             magasin = creerLeMagasinDesCopies({ ouvrirLaBase: () => ouvrirLaBaseDuNavigateur(fabriqueDeLaBase) })
             ecriture = installerLEcritureDesCopies({ routeur: router, magasin })
@@ -223,6 +226,19 @@ it('verse dans la copie la séance enregistrée, jamais tant qu’une écriture 
         timeout: delai * 3,
     })
     expect(present('[dusk="set-unsynced-0-1"]')).toBe(false)
+
+    // 4b. Une suppression qui attend « Annuler » n'est pas partie : la copie garde la série au repos, et la série revient si on annule (#2355).
+    await auDelaDeLAntiRebond()
+    await cliquer('[dusk="remove-set-0-1"]')
+    expect(rangees()).toBe(1)
+    await auDelaDeLAntiRebond()
+    await ecriture.ecrituresFinies()
+
+    expect((await seanceGardee()).workout_lines[0].sets).toHaveLength(2)
+
+    annulerLaSuppression()
+    await flushPromises()
+    expect(rangees()).toBe(2)
 
     // 5. Une suppression part, sa réponse tarde : la série a quitté l'écran, mais pas la copie, tant que le serveur n'a rien dit.
     await auDelaDeLAntiRebond()

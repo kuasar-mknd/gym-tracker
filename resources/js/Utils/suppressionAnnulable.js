@@ -27,12 +27,27 @@ const clore = () => {
     suppressionAnnulable.value = null
 }
 
-/** L'échéance, ou tout ce qui ne peut plus l'attendre : la suppression part maintenant. */
+/** Les suppressions parties dont la réponse n'est pas revenue : la copie hors ligne attend qu'elles aient abouti. */
+export const suppressionsEnVol = ref(0)
+
+/**
+ * L'échéance, ou tout ce qui ne peut plus l'attendre : la suppression part maintenant.
+ *
+ * @returns {Promise<unknown>|undefined} l'envoi, que « Terminer » attend
+ */
 export function valider() {
     const suppression = courante
 
     clore()
-    suppression?.valider()
+
+    const envoi = suppression?.valider()
+
+    if (envoi !== undefined) {
+        suppressionsEnVol.value++
+        envoi.finally(() => suppressionsEnVol.value--)
+    }
+
+    return envoi
 }
 
 /**
