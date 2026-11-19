@@ -116,6 +116,10 @@ describe('terminer une séance', () => {
         ])
         expect(page.ecrituresEnAttente.value).toBe(0)
         expect(inertia.patch).not.toHaveBeenCalled()
+        // La fin acceptée ouvre le bilan sur la page ; « Fermer » mène à l'accueil (#2434).
+        expect(inertia.visit).not.toHaveBeenCalled()
+        expect(page.bilanDeFin.value).toMatchObject({ enAttente: false })
+        page.fermerLeBilan()
         expect(inertia.visit).toHaveBeenCalledWith('/dashboard', expect.any(Object))
     })
 
@@ -269,6 +273,9 @@ describe('terminer pendant un vidage qui traîne', () => {
 
         expect(aLaCloture).toHaveLength(1)
         expect(aLaCloture[0].enFile).toBe(0)
+        // Un seul bilan, donc une seule visite à l'accueil, à « Fermer » (#2434).
+        expect(inertia.visit).not.toHaveBeenCalled()
+        page.fermerLeBilan()
         expect(inertia.visit).toHaveBeenCalledTimes(1)
         expect(page.clotureEnCours.value).toBe(false)
     })

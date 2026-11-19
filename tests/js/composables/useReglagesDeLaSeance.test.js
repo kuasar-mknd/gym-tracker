@@ -110,7 +110,7 @@ describe('les réglages de la séance', () => {
         expect(reglages.savingTemplate.value).toBe(false)
     })
 
-    it('vide les écritures en attente, puis termine la séance par l’API, à l’heure du geste, et mène à l’accueil', async () => {
+    it('vide les écritures en attente, puis termine la séance par l’API, à l’heure du geste, ouvre le bilan, et « Fermer » mène à l’accueil', async () => {
         const reglages = monter()
         reglages.finishWorkout()
         expect(reglages.showFinishModal.value).toBe(true)
@@ -131,6 +131,11 @@ describe('les réglages de la séance', () => {
         expect(reglages.clotureEnCours.value).toBe(false)
         expect(reglages.localWorkout.value.ended_at).toBe(HEURE_DU_GESTE.toISOString())
         expect(haptics.triggerHaptic).toHaveBeenCalledWith('success')
+        // La fin acceptée ouvre le bilan sur la page (#2434) : l'accueil attend « Fermer ».
+        expect(inertia.visit).not.toHaveBeenCalled()
+        expect(reglages.bilanDeFin.value).toMatchObject({ enAttente: false, records: [], peutReprendre: false })
+
+        reglages.fermerLeBilan()
         expect(inertia.visit).toHaveBeenCalledWith('/dashboard/', expect.any(Object))
 
         // Sans invitation dans la réponse, l'accueil ne la montre pas.
@@ -148,12 +153,100 @@ describe('les réglages de la séance', () => {
         const reglages = monter()
 
         await reglages.confirmFinishWorkout()
+        reglages.fermerLeBilan()
 
         expect(inertia.flash).not.toHaveBeenCalled()
 
         inertia.visit.mock.calls[0][1].onSuccess()
 
         expect(inertia.flash).toHaveBeenCalledWith('proposerLesNotifications', true)
+    })
+
+    describe('le bilan de fin (#2434)', () => {
+        const REPRISE_JUSQUA = '2026-10-19T18:57:00.000Z'
+
+        const bilanDuServeur = () =>
+            finAcceptee({
+                records: [{ exercice: 'Squat', valeur: 100 }],
+                peut_reprendre: true,
+                reprise_jusqu_a: REPRISE_JUSQUA,
+                proposer_les_notifications: true,
+            })
+
+        it('porte les records et la limite de « Reprendre » que la réponse donne', async () => {
+            file.patch.mockResolvedValue(bilanDuServeur())
+            const reglages = monter()
+
+            await reglages.confirmFinishWorkout()
+
+            expect(reglages.bilanDeFin.value).toEqual({
+                enAttente: false,
+                records: [{ exercice: 'Squat', valeur: 100 }],
+                peutReprendre: true,
+                repriseJusqua: REPRISE_JUSQUA,
+                proposer: true,
+            })
+        })
+
+        it('« Reprendre » rouvre la séance par le serveur, une seule fois, et le bilan se ferme à la réponse', async () => {
+            file.patch.mockResolvedValue(bilanDuServeur())
+            const reglages = monter()
+            await reglages.confirmFinishWorkout()
+
+            reglages.reprendreLaSeance()
+            reglages.reprendreLaSeance()
+
+            expect(inertia.post).toHaveBeenCalledTimes(1)
+            expect(inertia.post).toHaveBeenCalledWith(
+                '/workouts.reopen/5',
+                {},
+                expect.objectContaining({ preserveState: false }),
+            )
+            expect(reglages.repriseEnCours.value).toBe(true)
+
+            inertia.post.mock.calls[0][2].onSuccess()
+            inertia.post.mock.calls[0][2].onFinish()
+
+            expect(reglages.bilanDeFin.value).toBeNull()
+            expect(reglages.repriseEnCours.value).toBe(false)
+            expect(inertia.visit).not.toHaveBeenCalled()
+        })
+
+        it('passé le délai du serveur, « Reprendre » disparaît sans l’appeler', async () => {
+            file.patch.mockResolvedValue(bilanDuServeur())
+            const reglages = monter()
+            await reglages.confirmFinishWorkout()
+
+            vi.setSystemTime(new Date('2026-10-19T18:57:01.000Z'))
+            reglages.reprendreLaSeance()
+
+            expect(inertia.post).not.toHaveBeenCalled()
+            expect(reglages.bilanDeFin.value.peutReprendre).toBe(false)
+        })
+
+        it('une fin en file dit « enregistrée sur cet appareil » : ni records ni reprise, et « Fermer » reste sur la séance', async () => {
+            file.patch.mockRejectedValue({ isOffline: true, queueId: 'qF' })
+            const reglages = monter()
+
+            await reglages.confirmFinishWorkout()
+
+            expect(reglages.bilanDeFin.value).toMatchObject({ enAttente: true, records: [], peutReprendre: false })
+
+            reglages.reprendreLaSeance()
+            expect(inertia.post).not.toHaveBeenCalled()
+
+            reglages.fermerLeBilan()
+            expect(reglages.bilanDeFin.value).toBeNull()
+            expect(inertia.visit).not.toHaveBeenCalled()
+        })
+
+        it('n’ouvre aucun bilan tant que la fin n’est pas partie', () => {
+            const reglages = monter()
+
+            reglages.finishWorkout()
+
+            expect(reglages.bilanDeFin.value).toBeNull()
+        })
     })
 
     it('prend l’heure de fin au « Confirmer », avant d’attendre les écritures', async () => {

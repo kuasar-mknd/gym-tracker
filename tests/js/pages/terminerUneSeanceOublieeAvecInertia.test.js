@@ -93,6 +93,10 @@ it('propose l’heure de la dernière série saisie, et clôt la séance avec el
     await cliquer('[dusk="confirm-finish-button"]')
     await vi.waitUntil(() => reseau.serveur.requetes.length > 0)
     vi.useRealTimers()
+    // La fin acceptée ouvre le bilan sur la page, sans visite ; « Fermer » mène à l'accueil (#2434).
+    await vi.waitUntil(() => present('dialog[open] [dusk="bilan-de-fin"]'))
+    expect(visites).toEqual([])
+    await cliquer('[dusk="bilan-de-fin-fermer"]')
     await vi.waitUntil(() => present('#accueil'))
     await flushPromises()
 

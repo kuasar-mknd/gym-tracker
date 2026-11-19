@@ -6,8 +6,6 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import { formatToLocalISO } from '@/Utils/date'
 import { estUneSeanceOubliee, finProposeeDUneSeance, jourEtHeure } from '@/Utils/seanceOubliee'
-import { seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
-import { entier } from '@/Utils/nombre'
 
 /**
  * La question « Terminer la séance ? » (#1961, #2049).
@@ -22,13 +20,6 @@ import { entier } from '@/Utils/nombre'
  * démarrage), ou une heure choisie, jamais avant le début ni dans le futur. La confirmation
  * porte alors l'heure retenue (un instant ISO) ; sans proposition, elle ne
  * porte rien, et la fin est celle du geste.
- *
- * C'est aussi le bilan de la séance (#2434) : sa durée, son volume et ses séries
- * validées, tirés de la copie locale, donc les mêmes avec ou sans réseau. Rien
- * n'est enregistré avant « Enregistrer » ; « Reprendre » (`close`) laisse la
- * séance ouverte, et rien ne la rouvre une fois enregistrée, d'où la note. Les
- * records, que seul le serveur connaît et seulement après l'enregistrement, n'y
- * figurent pas : l'accueil, où mène la fin, les dit.
  */
 const props = defineProps({
     show: { type: Boolean, required: true },
@@ -136,34 +127,6 @@ const confirmer = () => {
     emit('confirm', (heure < premiere ? premiere : heure).toISOString())
 }
 
-/** L'instant où la séance finirait : l'heure retenue d'une séance oubliée, sinon maintenant. */
-const finDuBilan = computed(() => {
-    if (!oubliee.value) {
-        return maintenant.value
-    }
-
-    const retenue = new Date(choix.value === 'derniere' ? finProposee.value : heureChoisie.value)
-
-    return isNaN(retenue.getTime()) ? new Date(finProposee.value) : retenue
-})
-
-/** Ce que la séance a donné : durée, volume et séries validées, lus de la copie locale. */
-const bilan = computed(() => {
-    const series = (props.seance?.workout_lines ?? []).flatMap((ligne) => ligne.sets ?? [])
-    const debutDeLaSeance = new Date(props.seance?.started_at ?? NaN)
-    const minutes = Math.max(0, Math.round((finDuBilan.value - debutDeLaSeance) / 60000))
-
-    return {
-        duree: isNaN(minutes)
-            ? '—'
-            : minutes >= 60
-              ? `${entier(Math.floor(minutes / 60))} h ${String(minutes % 60).padStart(2, '0')}`
-              : `${entier(minutes)} min`,
-        volume: `${entier(volumeDesSeriesValidees(series))} kg`,
-        series: entier(seriesValidees(series).length),
-    }
-})
-
 const avisDAttente = computed(() =>
     props.enAttente > 1
         ? `${props.enAttente} modifications sont encore en route vers le serveur. La séance reste ouverte : réessaie dans un instant.`
@@ -174,7 +137,7 @@ const avisDAttente = computed(() =>
 <template>
     <Modal :show="show" @close="emit('close')" max-width="sm" aria-labelledby="finish-workout-modal-title">
         <div class="p-6 text-center">
-            <h3 id="finish-workout-modal-title" class="titre-carte mb-4" dusk="finish-workout-modal-title">
+            <h3 id="finish-workout-modal-title" class="titre-carte mb-6" dusk="finish-workout-modal-title">
                 Terminer la séance ?
             </h3>
             <p
@@ -193,26 +156,6 @@ const avisDAttente = computed(() =>
             >
                 {{ avisDAttente }}
             </p>
-            <dl class="bg-surface-sunken/60 mb-4 rounded-2xl p-1 text-left" dusk="finish-workout-bilan">
-                <div class="flex items-baseline justify-between gap-3 px-3 py-2">
-                    <dt class="text-text-muted text-sm">Durée</dt>
-                    <dd class="text-text-main font-medium tabular-nums" dusk="finish-workout-duree">
-                        {{ bilan.duree }}
-                    </dd>
-                </div>
-                <div class="flex items-baseline justify-between gap-3 px-3 py-2">
-                    <dt class="text-text-muted text-sm">Volume</dt>
-                    <dd class="text-text-main font-medium tabular-nums" dusk="finish-workout-volume">
-                        {{ bilan.volume }}
-                    </dd>
-                </div>
-                <div class="flex items-baseline justify-between gap-3 px-3 py-2">
-                    <dt class="text-text-muted text-sm">Séries</dt>
-                    <dd class="text-text-main font-medium tabular-nums" dusk="finish-workout-series">
-                        {{ bilan.series }}
-                    </dd>
-                </div>
-            </dl>
             <div v-if="oubliee" class="mb-6 space-y-4 text-left" dusk="finish-workout-forgotten">
                 <p class="text-text-muted text-sm font-medium">
                     Cette séance est ouverte depuis le {{ jourEtHeure(debut) }}.
@@ -237,9 +180,8 @@ const avisDAttente = computed(() =>
                     dusk="finish-workout-end-input"
                 />
             </div>
-            <p class="text-text-muted mb-6 text-sm">Une séance enregistrée ne se rouvre plus.</p>
-            <div class="flex flex-col-reverse gap-3">
-                <GlassButton variant="secondary" @click="emit('close')" class="w-full"> Reprendre </GlassButton>
+            <div class="flex gap-3">
+                <GlassButton variant="secondary" @click="emit('close')" class="flex-1"> Annuler </GlassButton>
                 <GlassButton
                     variant="primary"
                     id="confirm-finish-button"
@@ -247,9 +189,9 @@ const avisDAttente = computed(() =>
                     :loading="enCours"
                     :disabled="erreurDeLHeure !== ''"
                     @click="confirmer"
-                    class="w-full"
+                    class="flex-1"
                 >
-                    Enregistrer
+                    Confirmer
                 </GlassButton>
             </div>
         </div>

@@ -1344,6 +1344,29 @@
     }
 }
 
+/*
+ * Un bouton du bilan de fin de séance (#2434), à toute largeur : une capsule
+ * en casse de phrase, sans ombre. L'action principale garde le vert d'état de
+ * `GlassButton` : la maquette la veut orange, ce qu'aucune variante ne porte.
+ */
+@utility bouton-de-bilan {
+    &.glass-button {
+        min-height: 3rem;
+        border-radius: var(--radius-capsule);
+        font-family: var(--font-sans);
+        font-size: 0.875rem;
+        font-style: normal;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+        box-shadow: none;
+
+        &:hover {
+            box-shadow: none;
+        }
+    }
+}
+
 /* L'onglet : un carré de 56 px à rayon plein, donc un disque exact, qui devient une bulle de verre épais quand il est actif. */
 @utility glass-nav-item {
     display: flex;

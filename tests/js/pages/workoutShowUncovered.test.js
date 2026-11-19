@@ -939,6 +939,12 @@ describe('Workouts/Show — the session’s own settings', () => {
         expect(routerPatch).not.toHaveBeenCalled()
         expect(wrapper.vm.showFinishModal).toBe(false)
         expect(haptics.triggerHaptic).toHaveBeenCalledWith('success')
+        // Le bilan s'ouvre sur la page (#2434) ; « Fermer » mène à l'accueil.
+        expect(router.visit).not.toHaveBeenCalled()
+        expect(wrapper.vm.liaisonDuBilan.bilan).toMatchObject({ enAttente: false })
+
+        wrapper.vm.liaisonDuBilan.onFermer()
+
         expect(router.visit).toHaveBeenCalledWith('/dashboard', expect.any(Object))
     })
 

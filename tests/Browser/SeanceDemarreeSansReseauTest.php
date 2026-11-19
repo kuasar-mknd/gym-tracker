@@ -114,7 +114,14 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
                     "JSON.parse(localStorage.getItem('offline_sync_queue') || '[]').some((entree) => String(entree.url).endsWith('/api/v1/workouts/finish'))",
                     15,
                     'la fin de la séance n’est pas entrée en file',
-                )->waitUntilMissing('dialog[open]', 15);
+                );
+
+                // Sans réseau, le bilan dit où est la fin (#2434) : ni records ni « Reprendre » ; « Fermer » laisse sur la séance.
+                $browser->waitFor('dialog[open] [dusk="bilan-de-fin-sur-l-appareil"]', 15)
+                    ->assertSeeIn('[dusk="bilan-de-fin-sur-l-appareil"]', 'Enregistrée sur cet appareil')
+                    ->assertMissing('[dusk="bilan-de-fin-reprendre"]')
+                    ->clickWhenSettled('[dusk="bilan-de-fin-fermer"]')
+                    ->waitUntilMissing('dialog[open]', 15);
 
                 $file = $this->laFile($browser);
                 $this->assertSame(

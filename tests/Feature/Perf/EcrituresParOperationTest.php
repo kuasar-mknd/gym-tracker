@@ -309,10 +309,11 @@ it('termine une séance faite par la file hors ligne en une lecture de ses séan
         ->assertOk());
     $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
 
+    // Dix requêtes, dont la lecture des records de la séance (`Workout::recordsDePoids()`, bornée à cinq par l'index de `workout_id`) que le bilan de fin porte dans `meta` (#2434) : neuf avant elle.
     expect(serieDeJoursLectures($sql))->toHaveCount(1)
         ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
         ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(9, implode("\n", $sql));
+        ->and(count($sql))->toBe(10, implode("\n", $sql));
 });
 
 it('supprime une séance faite en une lecture des séances faites qui restent et une écriture de la série', function (): void {

@@ -1,9 +1,5 @@
 <script setup>
-/**
- * La seance en cours : ce que la page garde apres son eclatement — la copie
- * locale de la seance, sa fusion avec les props, et le cablage des composables
- * qui font le reste.
- */
+// La seance en cours : la copie locale, sa fusion avec les props, et le cablage des composables qui font le reste.
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -29,6 +25,7 @@ import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
+import BilanDeFinDeSeance from '@/Components/Workout/BilanDeFinDeSeance.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import SeriesHorsDeLaCopie from '@/Components/Workout/SeriesHorsDeLaCopie.vue'
@@ -41,8 +38,7 @@ import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
 const props = defineProps({
     workout: { type: Object, required: true },
     exercises: { type: Array, required: true },
-    // Les plafonds d'une série (`Set::bornes()`), sous lesquels une série
-    // ajoutée ramène ce qu'elle recopie.
+    // Les plafonds d'une série (`Set::bornes()`), sous lesquels une série ajoutée ramène ce qu'elle recopie.
     bornesDUneSerie: { type: Object, default: null },
 })
 
@@ -214,6 +210,7 @@ const {
     finishWorkout,
     annulerLaCloture,
     confirmFinishWorkout,
+    liaisonDuBilan,
     showSettingsModal,
     settingsForm,
     updateSettings,
@@ -378,6 +375,8 @@ onUnmounted(() => {
             @close="annulerLaCloture"
             @confirm="confirmFinishWorkout"
         />
+
+        <BilanDeFinDeSeance v-bind="liaisonDuBilan" />
 
         <ConfirmDialog
             :ouvert="retraitDemande"
