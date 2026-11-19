@@ -148,6 +148,20 @@ describe('le plafond journalier du défi (5.4)', function (): void {
         expect(RateLimiter::attempts($cleDuJour))->toBe(1);
     });
 
+    it('remet le compte à zéro quand le défi est passé', function (): void {
+        $administrateur = administrateurDuSecondFacteur();
+        $cleDuJour = 'filament:auth:multi_factor_challenge:rate_limit_jour:'.Filament::getUserScopedAuthIdentifier($administrateur);
+
+        Livewire::test(ConnexionDuPanneau::class)
+            ->fillForm(['email' => $administrateur->email, 'password' => 'password'])
+            ->call('authenticate')
+            ->set('data.multiFactor.app.code', AppAuthentication::make()->getCurrentCode($administrateur))
+            ->call('authenticate');
+
+        expect(auth('admin')->check())->toBeTrue()
+            ->and(RateLimiter::attempts($cleDuJour))->toBe(0);
+    });
+
     it('verrouille le défi une fois le plafond atteint, même pour le bon code', function (): void {
         $administrateur = administrateurDuSecondFacteur();
         $cleDuJour = 'filament:auth:multi_factor_challenge:rate_limit_jour:'.Filament::getUserScopedAuthIdentifier($administrateur);

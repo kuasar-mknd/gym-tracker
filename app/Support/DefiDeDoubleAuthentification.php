@@ -46,6 +46,11 @@ final class DefiDeDoubleAuthentification extends MultiFactorChallenge
         return max(parent::getRateLimiterAvailableInSeconds($user), $duJour);
     }
 
+    public function oublierLesEssaisDuJour(Authenticatable $user): void
+    {
+        RateLimiter::clear($this->cleDuJour($user));
+    }
+
     private function cleDuJour(Authenticatable $user): string
     {
         return 'filament:auth:multi_factor_challenge:rate_limit_jour:'.Filament::getUserScopedAuthIdentifier($user);

@@ -25,6 +25,7 @@ final class ConnexionDuPanneau extends Login
 
         if ($reponse !== null && $administrateur instanceof Admin) {
             AssuranceDuSecondFacteur::marquer($administrateur);
+            DefiDeDoubleAuthentification::make()->oublierLesEssaisDuJour($administrateur);
         }
 
         return $reponse;

@@ -29,6 +29,14 @@ it('refuse les appels d’envoi de Livewire à un composant sans envoi de fichie
         ->assertStatus(403);
 })->with(['_startUpload', '_finishUpload', '_removeUpload', '_uploadErrored']);
 
+it('refuse en 403 un appel d’envoi dont le nom n’est pas une chaîne', function (mixed $nom): void {
+    Filament::setCurrentPanel('admin');
+
+    Livewire::test(Dashboard::class)
+        ->call('_startUpload', $nom, [], false)
+        ->assertStatus(403);
+})->with([123, [['a']]]);
+
 it('refuse les appels d’envoi de Livewire à une page du panneau qui n’en déclare aucun', function (string $methode): void {
     $admin = FilamentAdminPanel::admin();
     $this->actingAs($admin, 'admin');

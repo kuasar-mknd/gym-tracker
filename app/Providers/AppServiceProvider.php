@@ -683,8 +683,9 @@ final class AppServiceProvider extends ServiceProvider
             }
 
             abort_unless(
-                method_exists($composant, 'isFileUploadForSchemaComponent')
-                    && $composant->isFileUploadForSchemaComponent($parametres[0] ?? '') === true,
+                is_string($parametres[0] ?? null)
+                    && method_exists($composant, 'isFileUploadForSchemaComponent')
+                    && $composant->isFileUploadForSchemaComponent($parametres[0]) === true,
                 403,
             );
         });
