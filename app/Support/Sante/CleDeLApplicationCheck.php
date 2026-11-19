@@ -56,9 +56,9 @@ final class CleDeLApplicationCheck extends Check
      */
     private function clesEnService(): array
     {
-        $anciennes = array_filter((array) config('app.previous_keys'), is_string(...));
+        $anciennes = (array) config('app.previous_keys');
 
-        return array_values([...$anciennes, (string) config('app.key')]);
+        return array_values(array_filter([...$anciennes, config('app.key')], is_string(...)));
     }
 
     private function estPubliee(string $cle): bool
