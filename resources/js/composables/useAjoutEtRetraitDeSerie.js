@@ -5,6 +5,8 @@ import { entreeDeLaRangee } from '@/Utils/seanceEtFile'
 import { retirerDeLaListe } from '@/Utils/miseAJourOptimiste'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 import { raisonDuRefus } from '@/composables/useSaisieDeSerie'
+import { isTemporaryId } from '@/Utils/pendingIds'
+import { annuler, proposerUneAnnulation, valider } from '@/Utils/suppressionAnnulable'
 
 /**
  * Deux valeurs d'un champ mesuré qui disent la même chose : `80`, `80.0` et
@@ -30,6 +32,7 @@ const memeValeur = (a, b) =>
  *   rowKey: (rangee: object) => string|number,
  *   fieldWrites: { forget: (cle: string) => void },
  *   deleteSet: (setId: unknown) => Promise<unknown>,
+ *   retablirLaCoche?: (set: object) => Promise<unknown>,
  *   oublierLesRafales: (setId: unknown) => void,
  *   oublierLaSerie: (setId: unknown) => void,
  *   markUnsynced: (setId: unknown) => void,
@@ -47,6 +50,7 @@ export const useAjoutEtRetraitDeSerie = ({
     rowKey,
     fieldWrites,
     deleteSet,
+    retablirLaCoche = () => Promise.resolve(),
     oublierLesRafales,
     oublierLaSerie,
     markUnsynced,
@@ -521,7 +525,12 @@ export const useAjoutEtRetraitDeSerie = ({
         pendingIds.track(tempSet.id, creation)
     }
 
-    const removeSet = (setId) => {
+    /** La série retirée de l'écran dont la suppression n'est pas encore partie, ou `null`. */
+    let enAttente = null
+
+    const supprimerPourDeBon = ({ serie, remettre }, { surDepart = false } = {}) => {
+        const setId = serie.id
+
         // Clear any pending updates for this set to prevent 404s
         oublierLesRafales(setId)
 
@@ -531,27 +540,28 @@ export const useAjoutEtRetraitDeSerie = ({
 
         oublierLaSerie(setId)
 
-        const line = localWorkout.value.workout_lines.find((candidate) => candidate.sets.some((s) => s.id === setId))
+        /*
+         * La page part ou se cache : une requête directe est coupée au
+         * déchargement, et rien ne la remettrait en file. La suppression entre
+         * dans la file durable avant tout envoi ; le vidage l'enverra.
+         */
+        const realSetId = isTemporaryId(setId) ? null : setId
 
-        if (line === undefined) {
-            return
+        if (
+            surDepart &&
+            realSetId !== null &&
+            pendingIds.fileDe(setId) === null &&
+            SyncService.mettreEnFile({ method: 'delete', url: route('api.v1.sets.destroy', { set: realSetId }) }) !==
+                null
+        ) {
+            seriesRetirees.add(setId)
+            clearUnsynced(setId, idsReels.get(setId))
+
+            return Promise.resolve()
         }
 
-        /*
-         * Refusé, le retrait remet la série à sa place exacte, jamais deux fois,
-         * dans la ligne que l'écran montre alors : une réponse du serveur a pu
-         * reconstruire les lignes (`fusionnerLaSeance`) depuis le retrait, et
-         * la remettre dans l'ancienne ne la montrait plus (#2077).
-         */
-        const cleDeLaLigne = rowKey(line)
-        const remettre = retirerDeLaListe(
-            () =>
-                (localWorkout.value.workout_lines.find((candidate) => rowKey(candidate) === cleDeLaLigne) ?? line).sets,
-            setId,
-        )
-
         // La rangée a quitté l'écran : sa marque « non enregistrée » part avec elle (#2299).
-        deleteSet(setId)
+        return deleteSet(setId)
             .then(() => {
                 seriesRetirees.add(setId)
                 clearUnsynced(setId, idsReels.get(setId))
@@ -569,15 +579,98 @@ export const useAjoutEtRetraitDeSerie = ({
             })
     }
 
+    /** La rangée quitte l'écran ; la suppression attend « Annuler » ou l'échéance (#2355). */
+    const removeSet = (setId) => {
+        const line = localWorkout.value.workout_lines.find((candidate) => candidate.sets.some((s) => s.id === setId))
+
+        if (line === undefined) {
+            return
+        }
+
+        const serie = line.sets.find((s) => s.id === setId)
+        const cleDeLaLigne = rowKey(line)
+        const remettre = retirerDeLaListe(
+            () =>
+                (localWorkout.value.workout_lines.find((candidate) => rowKey(candidate) === cleDeLaLigne) ?? line).sets,
+            setId,
+        )
+
+        const retrait = { serie, cleDeLaLigne, remettre }
+
+        /*
+         * Créée en file et cochée, la série ne doit pas y rester cochée : si le
+         * réseau revient pendant l'attente, le serveur la créerait validée
+         * (records, objectifs) pour une série qu'on a supprimée (#1960).
+         */
+        const fileDeLaSerie = pendingIds.fileDe(serie.id)
+
+        if (fileDeLaSerie !== null) {
+            SyncService.modifierEnFile(fileDeLaSerie, { is_completed: false })
+        }
+
+        proposerUneAnnulation({
+            message: 'Série supprimée',
+            porte: (set) => String(serie.id) === String(set.id),
+            valider: (options) => {
+                enAttente = null
+
+                return supprimerPourDeBon(retrait, options)
+            },
+            annuler: () => {
+                enAttente = null
+                remettre()
+
+                /*
+                 * Partie ou en vol depuis, la création n'est plus dans la file :
+                 * la coche retirée au clic est rétablie par l'identifiant réel,
+                 * une fois la création retombée.
+                 */
+                if (
+                    fileDeLaSerie !== null &&
+                    !SyncService.modifierEnFile(fileDeLaSerie, { is_completed: serie.is_completed }) &&
+                    serie.is_completed
+                ) {
+                    retablirLaCoche(serie)
+                }
+            },
+        })
+
+        enAttente = retrait
+    }
+
+    if (getCurrentInstance()) {
+        const surLaPageQuiPart = () => valider({ surDepart: true })
+        const surLaPageCachee = () => document.visibilityState === 'hidden' && surLaPageQuiPart()
+
+        window.addEventListener('pagehide', surLaPageQuiPart)
+        document.addEventListener('visibilitychange', surLaPageCachee)
+
+        onUnmounted(() => {
+            window.removeEventListener('pagehide', surLaPageQuiPart)
+            document.removeEventListener('visibilitychange', surLaPageCachee)
+            valider()
+        })
+    }
+
     /**
      * Ce qu'une ligne retiree laisse derriere elle : les rafales en attente de ses
      * series, et sa chaine de creation, indexee sur une chaine que rien ne ramasse.
      */
     const oublierLesEcrituresDeLaLigne = (line) => {
+        // La série qui attendait revient dans sa ligne : elle part avec elle, ou reste avec elle si le serveur refuse.
+        if (enAttente?.cleDeLaLigne === rowKey(line)) {
+            annuler()
+        }
+
         line.sets?.forEach((set) => oublierLesRafales(set.id))
 
         setCreateChains.delete(rowKey(line))
     }
 
-    return { addSet, removeSet, oublierLesEcrituresDeLaLigne }
+    return {
+        addSet,
+        removeSet,
+        oublierLesEcrituresDeLaLigne,
+        validerLaSuppressionEnAttente: valider,
+    }
 }

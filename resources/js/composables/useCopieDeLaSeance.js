@@ -3,6 +3,7 @@ import SyncService from '@/Utils/SyncService'
 import { ecritureDesCopiesInstallee } from '@/Utils/ecritureDesCopies'
 import { isTemporaryId } from '@/Utils/pendingIds'
 import { seanceConnueDuServeur } from '@/Utils/seanceEtFile'
+import { suppressionAnnulable, suppressionsEnVol } from '@/Utils/suppressionAnnulable'
 
 /**
  * L'attente après le dernier changement de la séance avant d'en prendre
@@ -173,6 +174,8 @@ export const useCopieDeLaSeance = ({
         SyncService.ecrituresEnCours() === 0 &&
         unsyncedSetIds.value.size === 0 &&
         ordreEnVol.value === 0 &&
+        suppressionAnnulable.value === null &&
+        suppressionsEnVol.value === 0 &&
         valeursDeRepli().length === 0 &&
         !aDesRangeesProvisoires(localWorkout.value)
 
@@ -313,7 +316,16 @@ export const useCopieDeLaSeance = ({
     )
 
     watch(localWorkout, planifier, { deep: true })
-    watch(() => [unsyncedSetIds.value.size, ordreEnVol.value, valeursDeRepli().length], planifier)
+    watch(
+        () => [
+            unsyncedSetIds.value.size,
+            ordreEnVol.value,
+            valeursDeRepli().length,
+            suppressionAnnulable.value,
+            suppressionsEnVol.value,
+        ],
+        planifier,
+    )
 
     onMounted(() => {
         fenetre.document?.addEventListener('visibilitychange', surLaPageQuiSeCache)
