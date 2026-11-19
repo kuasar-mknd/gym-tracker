@@ -225,6 +225,24 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 })
 
 /**
+ * Le chemin que le clic suit, ou `null` quand l'adresse sort de l'origine du
+ * worker : la destination vient d'une charge que le serveur a écrite, et
+ * `openWindow()` suivrait aussi bien une autre origine que `javascript:`.
+ *
+ * @param {string} brute
+ * @returns {string|null}
+ */
+const destinationDeLOrigine = (brute) => {
+    try {
+        const adresse = new URL(brute, self.location.origin)
+
+        return adresse.origin === self.location.origin ? `${adresse.pathname}${adresse.search}${adresse.hash}` : null
+    } catch {
+        return null
+    }
+}
+
+/**
  * Reprendre la fenêtre ouverte, plutôt que d'en empiler une seconde.
  *
  * `openWindow` seul ouvre un second exemplaire de l'application par-dessus celui
@@ -240,7 +258,11 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close()
 
-    const destination = event.action || event.notification.data?.url || '/'
+    const destination = destinationDeLOrigine(event.action || event.notification.data?.url || '/')
+
+    if (destination === null) {
+        return
+    }
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((fenetres) => {

@@ -430,6 +430,35 @@ describe('clic sur une notification', () => {
         expect(openWindow).toHaveBeenCalledWith('/achievements')
     })
 
+    it.each([
+        ['une autre origine', 'https://evil.example/workouts/12'],
+        ['une adresse sans schéma d’origine', '//evil.example/workouts/12'],
+        ['javascript:', 'javascript:alert(1)'],
+    ])('refuse %s, portée par la notification ou par le bouton', async (_nom, destination) => {
+        for (const evenement of [{ data: { url: destination } }, { action: destination, data: { url: '/' } }]) {
+            const fenetre = fenetreCliente()
+            fenetresOuvertes.push(fenetre)
+
+            const { close, waited } = clicked(evenement)
+            await Promise.all(waited)
+
+            // Le bouton d’une notification porte une adresse que le serveur a
+            // écrite : le worker ne la suit que sur son origine.
+            expect(close).toHaveBeenCalled()
+            expect(openWindow).not.toHaveBeenCalled()
+            expect(fenetre.navigate).not.toHaveBeenCalled()
+
+            fenetresOuvertes.length = 0
+        }
+    })
+
+    it('suit une adresse absolue de son origine, rendue en chemin', async () => {
+        const { waited } = clicked({ data: { url: `${self.location.origin}/stats?a=1#b` } })
+        await Promise.all(waited)
+
+        expect(openWindow).toHaveBeenCalledWith('/stats?a=1#b')
+    })
+
     it('retombe sur l’accueil quand la notification ne transporte rien', async () => {
         const { waited } = clicked({})
         await Promise.all(waited)
