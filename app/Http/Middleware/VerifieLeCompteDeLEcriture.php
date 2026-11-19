@@ -59,7 +59,7 @@ final class VerifieLeCompteDeLEcriture
         }
 
         return response()->json([
-            'message' => 'Cette modification a été faite par un autre compte que celui connecté : elle attend que ce compte se reconnecte.',
+            'message' => 'Cette modification a été faite par un autre compte que celui connecté : elle n\'a pas été exécutée. Rejouée par la file, elle attend que ce compte se reconnecte.',
             'raison' => self::RAISON,
         ], Response::HTTP_CONFLICT);
     }
