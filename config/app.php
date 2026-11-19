@@ -155,7 +155,10 @@ return [
      *
      * @var list<string>
      */
-    'cles_publiees' => [],
+    'cles_publiees' => [
+        '4d1ba6c5d20c0033c393c279edf5b026e900f21abf4b002f5d1ec961bacb8012',
+        'ff5a95d4356e45341f90a177c00bf37ec0a2ba4e3f67a4e09ebdbe281fbf9de6',
+    ],
 
     'previous_keys' => [
         ...array_filter(
