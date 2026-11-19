@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support\ConnexionSociale;
 
+use Illuminate\Support\Arr;
+use Laravel\Socialite\Two\User;
 use SocialiteProviders\Apple\Provider;
 use Symfony\Component\HttpFoundation\Cookie;
 
@@ -64,7 +66,7 @@ final class FournisseurApple extends Provider
      * Le champ `user` du formulaire d'Apple est réduit à un nom borné.
      */
     #[\Override]
-    public function user()
+    public function user(): User
     {
         $this->request->merge(['user' => self::nomDuFormulaire($this->request->input('user'))]);
 
@@ -86,24 +88,17 @@ final class FournisseurApple extends Provider
 
     private static function nomDuFormulaire(mixed $brut): string
     {
-        $utilisateur = is_array($brut) ? $brut : (is_string($brut) ? json_decode($brut, true) : null);
-        $nom = is_array($utilisateur) ? ($utilisateur['name'] ?? null) : null;
+        $nom = Arr::wrap(data_get(is_string($brut) ? json_decode($brut, true) : $brut, 'name'));
+        $parties = array_filter([
+            'firstName' => $nom['firstName'] ?? null,
+            'lastName' => $nom['lastName'] ?? null,
+        ], is_string(...));
 
-        if (! is_array($nom)) {
-            return '';
-        }
+        return $parties === [] ? '' : (string) json_encode(['name' => array_map(self::borne(...), $parties)]);
+    }
 
-        $parties = [];
-
-        foreach (['firstName', 'lastName'] as $partie) {
-            $valeur = $nom[$partie] ?? null;
-
-            if (is_string($valeur)) {
-                $nettoyee = preg_replace('/\p{Cc}/u', '', mb_scrub($valeur));
-                $parties[$partie] = mb_substr(is_string($nettoyee) ? $nettoyee : '', 0, 127);
-            }
-        }
-
-        return $parties === [] ? '' : (string) json_encode(['name' => $parties]);
+    private static function borne(string $valeur): string
+    {
+        return mb_substr((string) preg_replace('/\p{Cc}/u', '', mb_scrub($valeur)), 0, 127);
     }
 }
