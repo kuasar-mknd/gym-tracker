@@ -68,6 +68,10 @@ function infrastructureLignesQuiLaNomment(string $contenu): array
     $lignes = [];
 
     foreach (explode("\n", $contenu) as $index => $ligne) {
+        if (preg_match('/^\s*"integrity":\s*"sha\d+-[A-Za-z0-9+\/]+=*",?$/', $ligne) === 1) {
+            continue;
+        }
+
         if (preg_match('/\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}\b/', $ligne) === 1) {
             $lignes[] = $index + 1;
 
@@ -96,6 +100,14 @@ it('reconnaît un nom interdit sans l\'écrire', function (): void {
     expect(infrastructureLignesQuiLaNomment("première ligne\nle ".strrev('san').' de production'))->toBe([2])
         ->and(infrastructureLignesQuiLaNomment('passe par '.implode('.', [100, 100, 100, 100])))->toBe([1])
         ->and(infrastructureLignesQuiLaNomment('un proxy inverse, une pile, un disque lent, 203.0.113.32'))->toBe([]);
+});
+
+it('ne juge pas le hachage d\'intégrité d\'un verrou, du base64 au hasard', function (): void {
+    $mot = ucfirst(strrev('msd'));
+    $hachage = '"integrity": "sha512-MzCVoWtcg4Pm2B3je5mMvYMvj3MmBKw+fU7vbsJc9/iT8ip6/eYIHo/'.$mot.'/mr+wsHB6SEyJDuxB09Yy6r/8+4A==",';
+
+    expect(infrastructureLignesQuiLaNomment($hachage))->toBe([])
+        ->and(infrastructureLignesQuiLaNomment('le '.strrev('msd').' de production'))->toBe([1]);
 });
 
 it('ne nomme l\'infrastructure de production nulle part dans le dépôt', function (): void {
