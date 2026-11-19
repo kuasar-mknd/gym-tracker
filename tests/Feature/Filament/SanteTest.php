@@ -186,11 +186,11 @@ it('donne à chaque contrôle un libellé français, jamais celui que le paquet 
 });
 
 /**
- * La référence des variables nomme les contrôles comme la page et le courriel : un libellé
- * changé dans le provider se change aussi là-bas.
+ * La page d'exploitation (`docs/exploitation.md`) décrit les contrôles comme la page et le courriel
+ * les nomment : un libellé changé dans le provider se change aussi là-bas.
  */
-it('nomme dans la référence des variables chaque contrôle par son libellé', function (): void {
-    $reference = (string) file_get_contents(base_path('docs/variables-d-environnement.md'));
+it('nomme dans la page d\'exploitation chaque contrôle par son libellé', function (): void {
+    $reference = (string) file_get_contents(base_path('docs/exploitation.md'));
 
     foreach (Health::registeredChecks() as $controle) {
         expect($reference)->toContain('« '.$controle->getLabel().' »');
