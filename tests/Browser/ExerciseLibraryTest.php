@@ -77,7 +77,7 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->select('form select:last-of-type', 'Dos') // Category select
                 ->click('@submit-exercise-btn')
                 ->waitUntilMissing('@exercise-modal-title', 15)
-                ->waitForText(strtoupper($newExerciseName), 15);
+                ->waitForText($newExerciseName, 15);
 
             // Le nom affiché ne prouve pas l'écriture : Inertia rend la réponse du
             // serveur, mais rien ici ne distinguait un rendu optimiste d'une vraie
@@ -98,7 +98,7 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->type('@edit-exercise-name', $updatedName)
                 ->click('@save-exercise-btn')
                 ->waitUntilMissing('@edit-exercise-name', 10)
-                ->assertSee(strtoupper($updatedName));
+                ->assertSee($updatedName);
 
             $this->waitForDatabase(
                 fn (): bool => $exercise->fresh()?->name === $updatedName,
@@ -113,8 +113,8 @@ class ExerciseLibraryTest extends DuskTestCase
             // native : Dusk clique un bouton au lieu de repondre au navigateur.
             $browser->waitFor('@confirm-dialog-confirm', 10)
                 ->click('@confirm-dialog-confirm')
-                ->waitUntilMissingText(strtoupper($updatedName), 10)
-                ->assertDontSee(strtoupper($updatedName));
+                ->waitUntilMissingText($updatedName, 10)
+                ->assertDontSee($updatedName);
 
             // Disparaître de l'écran n'est pas être supprimé : sans cette
             // vérification, un retrait purement côté client passait au vert.

@@ -27,7 +27,7 @@ class PageBrowserTest extends DuskTestCase
             $pages = [
                 '/dashboard' => 'Bon retour',
                 '/workouts' => 'Mes séances',
-                '/calendar' => 'CALENDRIER',
+                '/calendar' => 'Calendrier',
                 '/exercises' => 'BIBLIOTHÈQUE',
                 '/stats' => 'ÉVOLUTION',
                 '/corps' => 'CORPS',
