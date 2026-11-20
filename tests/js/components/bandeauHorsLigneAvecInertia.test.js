@@ -267,7 +267,7 @@ describe('le bandeau d’une copie', () => {
         expect(relais.rejets).toEqual([])
     })
 
-    it('servie pour lenteur, la copie dit que le réseau ne répond pas', async () => {
+    it('servie pour lenteur, le bandeau dit « Réseau lent »', async () => {
         expect(await magasin.ecrireUneCopie(pageDe())).toBe('ecrite')
         reseau.mode = 'muet'
 
