@@ -33,7 +33,11 @@ describe('l’état d’une séance que le serveur ne connaît pas encore', () =
         const wrapper = monter({ etat: null, seance: { id: 5, ended_at: FIN, _finEnAttente: 'qF' } })
 
         expect(wrapper.get(`#${ID_DE_L_ETAT_DE_LA_SEANCE}`).text()).toBe(messageDeLaFinEnAttente(FIN))
-        expect(wrapper.get('[role="status"]').classes()).toContain('info-fill')
+        expect(wrapper.get('[role="status"]').classes()).toEqual(
+            expect.arrayContaining(['bg-surface-card', 'border-accent-warning/60']),
+        )
+        expect(wrapper.get('[role="status"]').classes()).not.toContain('danger-fill')
+        expect(wrapper.get('.material-symbols-outlined').classes()).toContain('text-accent-warning-deep')
         expect(accueil(wrapper).attributes('href')).toBe('/dashboard')
     })
 
@@ -55,6 +59,7 @@ describe('l’état d’une séance que le serveur ne connaît pas encore', () =
 
         expect(wrapper.text()).toContain(SEANCE_REFUSEE)
         expect(wrapper.text()).not.toContain('Séance terminée')
+        expect(wrapper.get('[role="status"]').classes()).toContain('danger-fill')
     })
 
     it('ne dit rien d’une séance du serveur, ouverte ou close par lui', () => {

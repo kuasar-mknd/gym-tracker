@@ -267,7 +267,7 @@ const formatDate = (dateString) => {
                             <div class="mb-2 flex items-start justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="info-fill flex size-10 items-center justify-center rounded-lg shadow-md"
+                                        class="accent-fill flex size-10 items-center justify-center rounded-lg shadow-md"
                                     >
                                         <GlassIcon name="medication" />
                                     </div>

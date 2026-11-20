@@ -71,7 +71,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
         <template #action-left>
             <button
                 @click="emit('start-edit', exercise)"
-                class="info-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
+                class="accent-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
                 data-testid="edit-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
@@ -122,7 +122,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                                 ? 'bg-accent-primary/10 text-accent-primary-deep'
                                 : exercise.type === 'cardio'
                                   ? 'bg-accent-state/30 text-text-main'
-                                  : 'bg-accent-info/10 text-accent-info-deep',
+                                  : 'bg-accent-tertiary/10 text-accent-tertiary-deep',
                         ]"
                     >
                         <GlassIcon :name="typeIcons[exercise.type] || 'fitness_center'" size="lg" />

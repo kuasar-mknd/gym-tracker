@@ -326,7 +326,7 @@ describe('« Réessayer »', () => {
         expect(relais.rejets).toEqual([])
     })
 
-    it('sans réponse, annonce au bout du délai que le réseau ne répond pas, et « Annuler » l’arrête', async () => {
+    it('sans réponse, annonce au bout du délai que le réseau est lent, et « Annuler » l’arrête', async () => {
         await servirLaCopieDe(pageDe())
         const depuis = requetes.length
         reseau.mode = 'muet'

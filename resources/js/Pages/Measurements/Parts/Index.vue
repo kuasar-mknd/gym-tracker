@@ -192,7 +192,6 @@ const selectCommonPart = (part) => {
                     v-if="latestMeasurements.length === 0 && !showAddForm"
                     class="col-span-full"
                     icon="📏"
-                    color="cyan"
                     title="Aucune mesure enregistrée"
                     description="Enregistre un premier tour de bras, de cuisse ou de taille pour suivre son évolution."
                     action-label="Commencer"

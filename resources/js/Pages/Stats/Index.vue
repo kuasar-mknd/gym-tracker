@@ -119,7 +119,7 @@ const handlePeriodChange = (period) => {
 
                 <Link
                     :href="route('exercises.index')"
-                    class="text-accent-info-deep inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase"
+                    class="text-accent-primary-deep inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase"
                 >
                     Bibliothèque d'exercices
                     <GlassIcon name="arrow_forward" size="xs" />

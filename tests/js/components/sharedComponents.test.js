@@ -1093,7 +1093,7 @@ describe('ExerciseCard', () => {
 
         expect(tileFor('strength')).toContain('text-accent-primary-deep')
         expect(tileFor('cardio')).toContain('bg-accent-state/30')
-        expect(tileFor('timed')).toContain('text-accent-info-deep')
+        expect(tileFor('timed')).toContain('text-accent-tertiary-deep')
 
         // The three branches must not collapse onto one another.
         expect(tileFor('strength')).not.toBe(tileFor('cardio'))

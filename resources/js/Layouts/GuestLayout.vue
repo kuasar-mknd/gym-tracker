@@ -83,7 +83,7 @@ onMounted(() => {
                 <p
                     v-if="ecrituresEffacees > 0"
                     role="status"
-                    class="info-fill border-accent-info mb-4 rounded-xl border p-3 text-sm font-medium"
+                    class="bg-surface-card border-accent-warning/60 text-text-main mb-4 rounded-xl border p-3 text-sm font-medium"
                     dusk="ecritures-effacees-a-la-deconnexion"
                 >
                     {{ messageDesEcrituresEffaceesALaDeconnexion(ecrituresEffacees) }}
@@ -91,7 +91,7 @@ onMounted(() => {
                 <p
                     v-if="ecrituresAbandonnees !== null"
                     role="status"
-                    class="info-fill border-accent-info mb-4 rounded-xl border p-3 text-sm font-medium"
+                    class="bg-surface-card border-accent-warning/60 text-text-main mb-4 rounded-xl border p-3 text-sm font-medium"
                     dusk="ecritures-abandonnees-a-la-deconnexion"
                 >
                     {{ messageDesEcrituresAbandonnees(ecrituresAbandonnees) }}

@@ -1163,12 +1163,6 @@
     color: var(--color-text-on-accent);
 }
 
-/* Cyan, 11,61:1 en encre. */
-@utility info-fill {
-    background: var(--color-accent-info);
-    color: var(--color-text-on-accent);
-}
-
 @utility glass-button-primary {
     background: var(--color-accent-state);
     border: none;

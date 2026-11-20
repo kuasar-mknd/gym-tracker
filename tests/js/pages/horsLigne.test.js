@@ -106,7 +106,7 @@ describe('la page HorsLigne', () => {
         const bouton = wrapper.find('[dusk="attendre-la-reponse"]')
 
         expect(bouton.text()).toBe('Attendre la réponse')
-        expect(wrapper.text()).toContain('Le réseau ne répond pas')
+        expect(wrapper.text()).toContain("Réseau lent, et l'appareil n'en garde pas de copie.")
 
         await bouton.trigger('click')
 

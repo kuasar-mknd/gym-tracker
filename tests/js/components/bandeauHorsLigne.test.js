@@ -73,7 +73,7 @@ describe('BandeauHorsLigne', () => {
         expect(region.text()).toBe('cloud_offHors ligneCopie du 12 oct. à 18:04 Réessayer')
         expect(region.attributes('aria-live')).toBe('polite')
         expect(region.classes()).toContain('bg-surface-card')
-        expect(region.classes()).not.toContain('info-fill')
+        expect(region.classes()).toContain('border-accent-warning/60')
         expect(region.text()).toContain('cloud_off')
     })
 
