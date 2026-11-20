@@ -46,6 +46,30 @@ const props = defineProps({
  */
 const estUneForce = computed(() => props.exercise.type === 'strength')
 
+/*
+ * Une force dont aucune série de travail ne porte de charge (le poids du corps)
+ * n'a ni volume en kilos, ni charge max, ni nuage poids contre répétitions, ni
+ * 1RM : seules ses répétitions disent quelque chose. Dès qu'une série porte une
+ * charge, les cinq cartes reviennent.
+ */
+const aDesCharges = computed(() =>
+    (props.history ?? []).some((session) => seriesDeTravail(session.sets).some((s) => parseFloat(s.weight) > 0)),
+)
+
+const afficheLesCharges = computed(() => estUneForce.value && aDesCharges.value)
+
+/*
+ * La progression du 1RM arrive avec la page, avant l'historique : tant qu'il
+ * n'est pas là, une courbe vide ne la montre pas, de peur de la voir
+ * disparaître pour le poids du corps. Un exercice sans aucune séance garde son
+ * état vide.
+ */
+const afficheLaProgression = computed(
+    () =>
+        estUneForce.value &&
+        (props.progress.length > 0 || (props.history != null && (props.history.length === 0 || aDesCharges.value))),
+)
+
 /**
  * Les séances de la plus ancienne à la plus récente, avec les séries que
  * chaque graphique a le droit de lire.
@@ -139,7 +163,7 @@ const scatterData = computed(() => {
             </p>
 
             <!-- Progress Chart -->
-            <GlassCard v-if="estUneForce" class="animate-slide-up">
+            <GlassCard v-if="afficheLaProgression" class="animate-slide-up">
                 <div class="mb-4">
                     <h3 class="titre-carte">Progression 1RM</h3>
                     <p class="text-text-muted text-xs font-semibold">Estimation sur 1 an</p>
@@ -167,7 +191,7 @@ const scatterData = computed(() => {
                     v-if="history && history.length > 0"
                     class="stagger-1 animate-slide-up grid grid-cols-1 gap-6 md:grid-cols-2"
                 >
-                    <GlassCard v-if="estUneForce">
+                    <GlassCard v-if="afficheLesCharges">
                         <div class="mb-4">
                             <h3 class="titre-carte">Volume</h3>
                             <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
@@ -187,7 +211,7 @@ const scatterData = computed(() => {
                         </div>
                     </GlassCard>
 
-                    <GlassCard v-if="estUneForce">
+                    <GlassCard v-if="afficheLesCharges">
                         <div class="mb-4">
                             <h3 class="titre-carte">Charge Max</h3>
                             <p class="text-text-muted text-xs font-semibold">Maximum soulevé par séance (kg)</p>
@@ -197,7 +221,7 @@ const scatterData = computed(() => {
                         </div>
                     </GlassCard>
 
-                    <GlassCard v-if="estUneForce">
+                    <GlassCard v-if="afficheLesCharges">
                         <div class="mb-4">
                             <h3 class="titre-carte">Poids vs Reps</h3>
                             <p class="text-text-muted text-xs font-semibold">Répartition des séries de travail</p>

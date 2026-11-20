@@ -101,14 +101,62 @@ const monter = async (type, series, progress = []) => {
 
 const titres = (wrapper) => wrapper.findAll('h3').map((titre) => titre.text())
 
-describe.each([
-    ['force', 'strength'],
-    ['poids du corps', 'strength'],
-])('une fiche de %s', (nom, type) => {
-    it('garde les cartes de charge et ne montre pas « Séries »', async () => {
-        const wrapper = await monter(type, SEANCES[nom], [{ date: '03/02', full_date: '2026-02-03', one_rep_max: 120 }])
+const CINQ_CARTES = ['Progression 1RM', 'Volume', 'Endurance', 'Charge Max', 'Poids vs Reps']
 
-        expect(titres(wrapper)).toEqual(['Progression 1RM', 'Volume', 'Endurance', 'Charge Max', 'Poids vs Reps'])
+describe('une fiche de force', () => {
+    it('montre les cinq cartes, sans « Séries », dès que des séries portent une charge', async () => {
+        const wrapper = await monter('strength', SEANCES.force, [
+            { date: '03/02', full_date: '2026-02-03', one_rep_max: 120 },
+        ])
+
+        expect(titres(wrapper)).toEqual(CINQ_CARTES)
+    })
+
+    it('ne montre que « Endurance » pour le poids du corps, dont aucune série ne porte de charge', async () => {
+        const wrapper = await monter('strength', SEANCES['poids du corps'])
+
+        expect(titres(wrapper)).toEqual(['Endurance'])
+        expect(wrapper.findComponent({ name: 'Line' }).props('data').datasets[0].data).toEqual([12])
+        expect(wrapper.text()).not.toContain('Pas assez de données pour afficher le graphique')
+    })
+
+    it('rend les cinq cartes dès qu’une séance sur deux porte une charge', async () => {
+        const wrapper = mount(ExerciseShow, {
+            props: {
+                exercise: { id: 1, name: 'Exercice', type: 'strength', category: 'Pectoraux' },
+                progress: [],
+                history: [seance('10/02/2026', [serie(20, 8)]), seance('03/02/2026', [serie(0, 12)])],
+            },
+            global: { mocks: { route: globalThis.route }, stubs: { AuthenticatedLayout: passesSlot } },
+        })
+        await vi.dynamicImportSettled()
+        await flushPromises()
+
+        expect(titres(wrapper)).toEqual(CINQ_CARTES)
+    })
+
+    it('ne compte ni un échauffement ni une série jamais cochée comme une charge', async () => {
+        const wrapper = await monter('strength', [
+            { ...serie(40, 10), is_warmup: true },
+            { ...serie(60, 8), is_completed: false },
+            serie(0, 12),
+        ])
+
+        expect(titres(wrapper)).toEqual(['Endurance'])
+    })
+
+    it('garde l’état vide de la progression pour un exercice sans séance', async () => {
+        const wrapper = mount(ExerciseShow, {
+            props: {
+                exercise: { id: 1, name: 'Exercice', type: 'strength', category: 'Pectoraux' },
+                progress: [],
+                history: [],
+            },
+            global: { mocks: { route: globalThis.route }, stubs: { AuthenticatedLayout: passesSlot } },
+        })
+        await flushPromises()
+
+        expect(titres(wrapper)).toEqual(['Progression 1RM'])
     })
 })
 
