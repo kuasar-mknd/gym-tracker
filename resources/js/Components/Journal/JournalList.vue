@@ -52,43 +52,43 @@ const emit = defineEmits(['edit', 'delete'])
                                     <div class="flex flex-wrap gap-2">
                                         <span
                                             v-if="journal.mood_score"
-                                            class="bg-surface-glass-strong text-text-muted text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium"
+                                            class="bg-surface-glass-strong text-text-muted ring-border text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium ring-1 ring-inset"
                                         >
                                             Humeur {{ journal.mood_score }}/5
                                         </span>
                                         <span
                                             v-if="journal.sleep_quality"
-                                            class="bg-surface-glass-strong text-text-muted text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium"
+                                            class="bg-accent-tertiary/10 text-accent-tertiary-deep ring-accent-tertiary/30 text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium ring-1 ring-inset"
                                         >
                                             Sommeil {{ journal.sleep_quality }}/5
                                         </span>
                                         <span
                                             v-if="journal.stress_level"
-                                            class="bg-surface-glass-strong text-text-muted text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium"
+                                            class="bg-accent-primary/10 text-accent-primary-deep ring-accent-primary/30 text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium ring-1 ring-inset"
                                         >
                                             Stress {{ journal.stress_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.energy_level"
-                                            class="bg-surface-glass-strong text-text-muted text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium"
+                                            class="bg-accent-warning/10 text-accent-warning-deep ring-accent-warning/30 text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium ring-1 ring-inset"
                                         >
                                             Énergie {{ journal.energy_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.motivation_level"
-                                            class="bg-surface-glass-strong text-text-muted text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium"
+                                            class="bg-accent-secondary/10 text-accent-secondary-deep ring-accent-secondary/30 text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium ring-1 ring-inset"
                                         >
                                             Motivation {{ journal.motivation_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.nutrition_score"
-                                            class="bg-surface-glass-strong text-text-muted text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium"
+                                            class="bg-accent-state/10 text-accent-state-deep ring-accent-state/30 text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium ring-1 ring-inset"
                                         >
                                             Diète {{ journal.nutrition_score }}/5
                                         </span>
                                         <span
                                             v-if="journal.training_intensity"
-                                            class="bg-surface-glass-strong text-text-muted text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium"
+                                            class="bg-accent-danger/10 text-accent-danger-deep ring-accent-danger/30 text-2xs inline-flex items-center rounded-md px-2 py-1 font-medium ring-1 ring-inset"
                                         >
                                             Intensité {{ journal.training_intensity }}/10
                                         </span>

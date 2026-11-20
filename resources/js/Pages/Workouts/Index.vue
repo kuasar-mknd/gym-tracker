@@ -182,7 +182,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <div v-if="workoutList.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <GlassStat :valeur="entier(workouts.total ?? workoutList.length)" libelle="Séances" />
-                    <GlassStat :valeur="entier(totalExercises || 0)" libelle="Exercices" />
+                    <GlassStat :valeur="entier(totalExercises || 0)" libelle="Exercices" ton="text-accent-state-deep" />
                 </div>
 
                 <Deferred data="deferredData">

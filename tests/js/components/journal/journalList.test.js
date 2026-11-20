@@ -78,6 +78,13 @@ describe('JournalList — what each entry shows', () => {
         expect(card(wrapper).text()).toContain('Humeur 5/5')
     })
 
+    /** The score is shown as it is stored: the page no longer hands down a list of labels. */
+    it('shows any stored mood score without a label list', () => {
+        const wrapper = mountList({ 'juillet 2026': [entry({ mood_score: 4 })] })
+
+        expect(card(wrapper).text()).toContain('Humeur 4/5')
+    })
+
     it('leaves out the mood entirely when the entry recorded none', () => {
         const wrapper = mountList({ 'juillet 2026': [entry({ mood_score: null })] })
 
