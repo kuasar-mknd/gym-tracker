@@ -46,15 +46,15 @@ const ICONES = { hausse: 'trending_up', baisse: 'trending_down', stable: 'trendi
 
 <template>
     <GlassCard padding="p-4" class="flex flex-col justify-between gap-2">
-        <p class="sur-titre text-text-muted">{{ libelle }}</p>
+        <p class="etiquette">{{ libelle }}</p>
         <p
-            class="font-display flex items-baseline gap-1 font-black tabular-nums"
+            class="font-display flex items-baseline gap-1 font-semibold tabular-nums"
             :class="[ton, taille === 'lg' ? 'text-4xl' : 'text-2xl']"
         >
             {{ valeur }}
-            <span v-if="unite" class="text-text-muted text-sm font-bold">{{ unite }}</span>
+            <span v-if="unite" class="text-text-muted text-sm font-medium">{{ unite }}</span>
         </p>
-        <p v-if="tendance" class="text-text-muted flex items-center gap-1 text-xs font-bold">
+        <p v-if="tendance" class="text-text-muted flex items-center gap-1 text-xs font-medium">
             <span class="material-symbols-outlined text-base" aria-hidden="true">{{ ICONES[tendance.sens] }}</span>
             {{ tendance.texte }}
         </p>

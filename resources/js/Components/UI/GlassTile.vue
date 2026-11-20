@@ -37,9 +37,9 @@ const props = defineProps({
 })
 
 const ACTIFS = {
-    primary: 'border-accent-primary bg-accent-primary text-text-on-dark-accent shadow-glow-orange',
-    secondary: 'border-accent-secondary bg-accent-secondary text-text-on-dark-accent shadow-glow-pink',
-    info: 'border-accent-info bg-accent-info text-text-main shadow-glow-cyan',
+    primary: 'border-accent-primary bg-accent-primary text-text-on-dark-accent',
+    secondary: 'border-accent-secondary bg-accent-secondary text-text-on-dark-accent',
+    info: 'border-accent-info bg-accent-info text-text-main',
 }
 
 const ANNEAUX = {
@@ -49,7 +49,7 @@ const ANNEAUX = {
 }
 
 const classes = computed(() => [
-    'flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-2xl border px-3 py-2 backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none active:scale-95',
+    'flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-2xl border px-3 py-2 transition focus-visible:ring-2 focus-visible:outline-none active:scale-95',
     ANNEAUX[props.ton],
     props.active
         ? ACTIFS[props.ton]
@@ -60,7 +60,7 @@ const classes = computed(() => [
 <template>
     <button type="button" :aria-pressed="active === null ? undefined : active" :class="classes">
         <span v-if="icon" class="material-symbols-outlined text-2xl" aria-hidden="true">{{ icon }}</span>
-        <span class="font-display text-sm font-black whitespace-nowrap uppercase">{{ label }}</span>
-        <span v-if="detail" class="text-2xs font-bold opacity-80">{{ detail }}</span>
+        <span class="text-sm font-medium whitespace-nowrap">{{ label }}</span>
+        <span v-if="detail" class="text-2xs font-medium opacity-80">{{ detail }}</span>
     </button>
 </template>

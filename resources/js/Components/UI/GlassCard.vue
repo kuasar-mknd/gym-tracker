@@ -22,7 +22,7 @@
  * @property {String} as - The HTML element or Vue component to render as the root node (default: 'div').
  * @property {String} padding - Tailwind utility classes for the card's inner padding (default: 'p-5 sm:p-6').
  * @property {String} rounded - Tailwind utility classes for the card's border radius (default: 'rounded-carte').
- * @property {Boolean} hover - Enables hover effects: translates the card up slightly and adds a stronger drop shadow (default: false).
+ * @property {Boolean} hover - Enables hover effects: adds a stronger shadow (default: false).
  */
 defineProps({
     variant: {
@@ -56,7 +56,7 @@ defineProps({
             padding,
             rounded,
             {
-                'cursor-pointer hover:-translate-y-1 hover:shadow-lg': hover,
+                'cursor-pointer hover:shadow-lg': hover,
                 'verre-regulier': variant === 'default',
                 'verre-fin': variant === 'fin',
                 'verre-epais': variant === 'epais',

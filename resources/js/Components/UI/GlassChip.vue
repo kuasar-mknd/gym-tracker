@@ -32,13 +32,13 @@ const props = defineProps({
 })
 
 const classes = computed(() => [
-    'focus-visible:ring-accent-primary relative inline-flex shrink-0 items-center gap-2 rounded-full font-bold whitespace-nowrap uppercase transition focus-visible:ring-2 focus-visible:outline-none',
+    'focus-visible:ring-accent-primary relative inline-flex shrink-0 items-center gap-2 rounded-full font-medium whitespace-nowrap transition focus-visible:ring-2 focus-visible:outline-none',
     props.size === 'sm'
-        ? "min-h-8 px-3 text-xs tracking-wide before:absolute before:-inset-1.5 before:content-['']"
-        : 'min-h-touch px-5 text-sm tracking-wide',
+        ? "min-h-8 px-3 text-xs before:absolute before:-inset-1.5 before:content-['']"
+        : 'min-h-touch px-5 text-sm',
     props.active
         ? (props.classeActive ?? 'bg-text-main text-text-on-dark-accent shadow-cast')
-        : 'border-glass-border bg-surface-card/60 text-text-muted hover:text-text-main border backdrop-blur-sm',
+        : 'border-glass-border bg-surface-card/60 text-text-muted hover:text-text-main border',
 ])
 </script>
 

@@ -87,9 +87,9 @@ class OuvertureHorsLigneTest extends DuskTestCase
             $this->reglerLeReseau($outils, true);
 
             /*
-             * Les textes se lisent dans le DOM : `titre-carte` et `glass-button`
-             * les passent en majuscules, et WebDriver rend le texte transformé,
-             * contre lequel une absence se vérifierait aussi à tort.
+             * Les textes se lisent dans le DOM : `titre-carte` les passe en
+             * majuscules, et WebDriver rend le texte transformé, contre lequel
+             * une absence se vérifierait aussi à tort.
              */
             $texteDe = $this->texteDe(...);
             $absentDeLaPage = fn (string $texte): string => '!'.$this->laPageDit($texte);

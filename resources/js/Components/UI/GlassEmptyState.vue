@@ -56,16 +56,8 @@ defineProps({
 
 defineEmits(['action'])
 
-const glowColors = {
-    orange: 'bg-accent-primary',
-    violet: 'bg-accent-tertiary',
-    pink: 'bg-accent-secondary',
-    green: 'bg-accent-state',
-}
-
 /*
- * Les classes sont écrites en toutes lettres, comme celles du halo juste
- * au-dessus.
+ * Les classes sont écrites en toutes lettres.
  *
  * La couleur de l'icône était assemblée par littéral de gabarit —
  * `text-${...}` — et le scanner de Tailwind ne lit que des chaînes littérales
@@ -100,34 +92,23 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
     <component
         :is="taille === 'carte' ? GlassCard : 'div'"
         :class="
-            taille === 'carte'
-                ? 'relative overflow-hidden p-8 text-center'
-                : 'flex h-full flex-col items-center justify-center py-6 text-center'
+            taille === 'carte' ? 'p-8 text-center' : 'flex h-full flex-col items-center justify-center py-6 text-center'
         "
         :variant="taille === 'carte' ? 'default' : undefined"
     >
-        <!-- Liquid Glow Background behind Icon -->
-        <div
-            v-if="taille === 'carte'"
-            class="absolute top-1/2 left-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-3xl"
-            :class="glowColors[color]"
-        ></div>
-
-        <div class="relative z-10 flex flex-col items-center">
+        <div class="flex flex-col items-center">
             <!-- Icon Wrapper -->
             <div
                 :class="
                     taille === 'carte'
-                        ? 'border-surface-card/50 bg-surface-card/30 mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg backdrop-blur-md'
+                        ? 'border-surface-card/50 bg-surface-card/30 mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border'
                         : 'mb-2 flex items-center justify-center'
                 "
             >
                 <!-- Emoji -->
-                <span
-                    v-if="icon && !isLigatureName(icon)"
-                    :class="taille === 'carte' ? 'text-5xl drop-shadow-sm' : 'text-3xl'"
-                    >{{ icon }}</span
-                >
+                <span v-if="icon && !isLigatureName(icon)" :class="taille === 'carte' ? 'text-5xl' : 'text-3xl'">{{
+                    icon
+                }}</span>
                 <span
                     v-else-if="icon"
                     class="material-symbols-outlined"
@@ -140,7 +121,7 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
             </div>
 
             <!-- Content -->
-            <h3 v-if="taille === 'carte'" class="titre-carte mb-2">
+            <h3 v-if="taille === 'carte'" class="titre-plat mb-2">
                 {{ title }}
             </h3>
             <p v-else class="text-text-muted text-sm font-medium">{{ title }}</p>

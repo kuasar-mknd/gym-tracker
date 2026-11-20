@@ -144,7 +144,7 @@ describe('les variantes de bouton', () => {
      * one, and it is not a button in this sense.
      */
     it("n'autorise personne à repeindre un bouton à la main", () => {
-        const marqueDeposee = /\b(?:bg-gradient-main|glass-button-(?:primary|neon|gradient-border|secondary|danger))\b/
+        const marqueDeposee = /\b(?:bg-gradient-main|glass-button-(?:primary|secondary|danger))\b/
 
         const copies = collectSourceFiles()
             .filter((fichier) => !fichier.endsWith('GlassButton.vue'))

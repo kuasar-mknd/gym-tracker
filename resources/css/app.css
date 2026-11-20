@@ -433,9 +433,6 @@
     --animate-fade-in: fade-in 0.3s ease-out;
     --animate-slide-up: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --animate-scale-in: scale-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --animate-pulse-slow: pulse 3s ease-in-out infinite;
-    --animate-pulse-glow: pulse-glow 8s infinite alternate;
-    --animate-liquid-pulse: liquid-pulse 2s infinite;
 
     /*
      * Note sur `rgb(from … r g b / alpha)`, employe 63 fois ci-dessous.
@@ -458,24 +455,11 @@
      * Les ombres DERIVENT de leur accent, elles ne le recopient pas.
      *
      * `rgb(from <couleur> r g b / alpha)` reprend les canaux du jeton et n'en
-     * change que l'opacite. Ecrites en `rgba()` litteral, ces douze lignes
-     * etaient douze copies a la main — et deux avaient deja diverge sans que
-     * rien ne puisse le signaler : `--shadow-neon-blue` portait `0, 240, 255`
-     * pour un cyan qui vaut `#00e5ff`, `--shadow-neon-pink` portait
-     * `255, 0, 153` pour un rose qui vaut `#ff0080`. Deux couleurs sous un seul
-     * nom, exactement la panne que cette charte existe pour supprimer.
+     * change que l'opacite : une seule couleur sous un seul nom.
      */
     --shadow-glow-orange:
         0 0 20px rgb(from var(--color-accent-primary) r g b / 0.25),
         0 10px 40px rgb(from var(--color-accent-primary) r g b / 0.15);
-    --shadow-glow-pink:
-        0 0 20px rgb(from var(--color-accent-secondary) r g b / 0.25),
-        0 10px 40px rgb(from var(--color-accent-secondary) r g b / 0.15);
-    --shadow-glow-cyan: 0 0 20px rgb(from var(--color-accent-info) r g b / 0.4);
-    --shadow-glow-magenta: 0 0 20px rgb(from var(--color-category-core) r g b / 0.4);
-    --shadow-neon: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
-    --shadow-neon-blue: 0 10px 30px rgb(from var(--color-accent-info) r g b / 0.4);
-    --shadow-neon-pink: 0 10px 30px rgb(from var(--color-accent-secondary) r g b / 0.4);
     --shadow-glass-inset: inset 0 0 20px rgb(from var(--color-surface-card) r g b / 0.8);
     --shadow-glass-out: 0 8px 32px rgb(from var(--color-accent-tertiary) r g b / 0.1);
     --shadow-glass-card: 0 8px 32px 0 rgb(from var(--color-shadow-ambient) r g b / 0.07);
@@ -551,27 +535,6 @@
         to {
             opacity: 1;
             transform: scale(1);
-        }
-    }
-    @keyframes pulse-glow {
-        0% {
-            opacity: 0.5;
-            transform: scale(1);
-        }
-        100% {
-            opacity: 0.8;
-            transform: scale(1.1);
-        }
-    }
-    @keyframes liquid-pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0.7);
-        }
-        70% {
-            box-shadow: 0 0 0 15px rgb(from var(--color-accent-state) r g b / 0);
-        }
-        100% {
-            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0);
         }
     }
 }
@@ -801,7 +764,6 @@
     left: -200px;
     filter: blur(60px);
     z-index: 0;
-    animation: pulse-glow 8s infinite alternate;
     pointer-events: none;
 }
 
@@ -818,7 +780,6 @@
     right: -200px;
     filter: blur(60px);
     z-index: 0;
-    animation: pulse-glow 10s infinite alternate-reverse;
     pointer-events: none;
 }
 
@@ -945,7 +906,6 @@
 }
 
 @utility glass-button {
-    /* ===== GLASS BUTTONS ===== */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -957,20 +917,20 @@
     -webkit-backdrop-filter: blur(var(--backdrop-blur-glass));
     border: 1px solid rgb(from var(--color-surface-card) r g b / 0.9);
     border-radius: 1rem;
-    font-family: 'Archivo', sans-serif;
-    font-weight: 800;
-    font-style: italic;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
+    font-family: var(--font-sans);
+    font-weight: 500;
     color: var(--color-text-main);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+        background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.05);
 
     &:hover {
-        transform: translateY(-2px);
         box-shadow: 0 6px 20px rgb(from var(--color-shadow-cast) r g b / 0.1);
     }
 
@@ -990,14 +950,12 @@
  * l'application (44 occurrences).
  *
  * Le vert d'etat avec de l'encre rend 15,19:1 — le meilleur contraste de toute
- * la palette. La variante `neon` existait deja dans ce fichier, exactement ainsi,
- * et n'etait employee nulle part.
+ * la palette.
  *
  * Le degrade n'est pas retire de l'application : il reste partout ou aucun texte
  * ne se pose dessus — le bouton `+` de la barre (une icone y tient les 3:1
  * demandes pour du non-texte), les en-tetes du tableau de bord, les cartes
- * d'objectif, les cases a cocher, et le logo, ou `text-gradient` colore le texte
- * lui-meme au lieu de se poser derriere.
+ * d'objectif et les cases a cocher.
  */
 /*
  * Une surface d'accent et le texte qui va dessus, indissociables.
@@ -1167,54 +1125,6 @@
     background: var(--color-accent-state);
     border: none;
     color: var(--color-text-on-accent);
-    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.35);
-
-    &:hover {
-        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.5);
-    }
-}
-
-@utility glass-button-neon {
-    background: var(--color-accent-state);
-    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.2);
-    color: var(--color-text-on-accent);
-    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
-
-    &:hover {
-        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.6);
-    }
-}
-
-@utility glass-button-gradient-border {
-    /* Gradient Border Button */
-    position: relative;
-    background: var(--color-surface-card);
-    border: none;
-    padding: 2px;
-    border-radius: 1rem;
-
-    &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 1rem;
-        padding: 2px;
-        background: var(--background-image-gradient-main);
-
-        /*
-         * Les deux `#fff` ci-dessous ne sont PAS des couleurs : c'est un
-         * masque, et un masque ne lit que l'opacite. `#fff` y veut dire
-         * « opaque », pas « blanc ». Les remplacer par un jeton de surface
-         * marcherait tant que ce jeton reste clair, et effacerait la bordure le
-         * jour ou il cesserait de l'etre — une panne d'autant plus penible que
-         * la cause serait a l'autre bout du fichier.
-         */
-        -webkit-mask:
-            linear-gradient(#fff 0 0) content-box,
-            linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-    }
 }
 
 @utility glass-input {
@@ -1230,7 +1140,9 @@
     color: var(--color-text-main);
     font-size: 1rem;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
     outline: none;
     box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.03);
 
@@ -1250,7 +1162,6 @@
         box-shadow:
             0 0 0 4px rgb(from var(--color-accent-primary) r g b / 0.1),
             0 8px 20px rgb(from var(--color-shadow-cast) r g b / 0.08);
-        transform: scale(1.02);
     }
 }
 
@@ -1294,12 +1205,7 @@
             min-height: 3rem;
             padding-inline: 0.5rem;
             border-radius: var(--radius-capsule);
-            font-family: var(--font-sans);
             font-size: 0.875rem;
-            font-style: normal;
-            font-weight: 500;
-            letter-spacing: 0;
-            text-transform: none;
             box-shadow: none;
 
             &:hover {
@@ -1318,12 +1224,7 @@
     &.glass-button {
         min-height: 3rem;
         border-radius: var(--radius-capsule);
-        font-family: var(--font-sans);
         font-size: 0.875rem;
-        font-style: normal;
-        font-weight: 500;
-        letter-spacing: 0;
-        text-transform: none;
         box-shadow: none;
 
         &:hover {
@@ -1406,14 +1307,8 @@
 }
 
 @utility glass-modal {
-    background: rgb(from var(--color-surface-card) r g b / 0.95);
-    backdrop-filter: blur(var(--backdrop-blur-glass-strong));
-    -webkit-backdrop-filter: blur(var(--backdrop-blur-glass-strong));
-    border: 1px solid var(--verre-lisere);
-    border-radius: 2rem;
     /* Sa hauteur se borne dans Modal.vue, par `hauteur-sure-*` : la zone sûre, pas 85vh (#2043). */
     overflow-y: auto;
-    box-shadow: 0 25px 50px rgb(from var(--color-shadow-cast) r g b / 0.15);
 }
 
 @utility glass-skeleton {
@@ -1497,11 +1392,10 @@
 }
 
 @utility font-display-label {
-    font-family: 'Archivo', sans-serif;
-    font-weight: 900;
-    font-size: 0.625rem;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.75rem;
+    line-height: 1rem;
 }
 
 @utility pt-main-safe {
@@ -1721,26 +1615,6 @@
 }
 
 @layer components {
-    @keyframes pulse-glow {
-        0% {
-            opacity: 0.5;
-            transform: scale(1);
-        }
-        100% {
-            opacity: 0.8;
-            transform: scale(1.1);
-        }
-    }
-
-    @keyframes stripe-move {
-        from {
-            background-position: 0 0;
-        }
-        to {
-            background-position: 20px 0;
-        }
-    }
-
     @keyframes skeleton-pulse {
         0% {
             background-position: 200% 0;

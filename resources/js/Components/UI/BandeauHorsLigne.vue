@@ -70,7 +70,7 @@ const dateDeLaPage = computed(() => {
             <GlassButton
                 variant="secondary"
                 size="sm"
-                class="col-start-3 row-start-1 min-h-8! px-3! py-1! font-sans text-sm font-medium tracking-normal normal-case not-italic before:-inset-y-[7px]!"
+                class="col-start-3 row-start-1 min-h-8! px-3! py-1! text-sm font-medium before:-inset-y-[7px]!"
                 dusk="reessayer-hors-ligne"
                 :loading="rechargementDeLaCopie"
                 @click="reessayerLaCopie()"

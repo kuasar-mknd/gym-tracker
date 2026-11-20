@@ -18,25 +18,23 @@ defineProps({
         <!-- Cyan / Magenta for analytics -->
         <template v-else-if="variant === 'cyan-magenta'">
             <div
-                class="animate-pulse-glow absolute top-[-10%] left-[-10%] h-[600px] w-[600px] blur-[100px] filter"
+                class="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] blur-[100px] filter"
                 style="
                     background: radial-gradient(
                         circle,
                         rgb(from var(--color-accent-info) r g b / 0.2) 0%,
                         transparent 70%
                     );
-                    animation-duration: 4s;
                 "
             ></div>
             <div
-                class="animate-pulse-glow absolute right-[-10%] bottom-[10%] h-[600px] w-[600px] blur-[100px] filter"
+                class="absolute right-[-10%] bottom-[10%] h-[600px] w-[600px] blur-[100px] filter"
                 style="
                     background: radial-gradient(
                         circle,
                         rgb(from var(--color-category-core) r g b / 0.15) 0%,
                         transparent 70%
                     );
-                    animation-duration: 6s;
                 "
             ></div>
         </template>

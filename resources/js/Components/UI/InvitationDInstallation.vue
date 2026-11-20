@@ -40,15 +40,14 @@ watch(visible, (estVisible) => emit('visibilite', estVisible))
         </div>
 
         <div class="min-w-0 flex-1 space-y-2">
-            <h3 class="titre-carte">Garde-la sous la main</h3>
+            <h3 class="titre-plat">Installer l'application</h3>
 
             <p v-if="forme === 'native'" class="text-text-muted text-sm font-medium">
-                Installée, l'application s'ouvre en un geste et fonctionne sans réseau.
+                S'ouvre en un geste, fonctionne sans réseau.
             </p>
             <p v-else class="text-text-muted text-sm font-medium">
-                Appuie sur <span class="text-text-main font-bold">Partager</span>, puis sur
-                <span class="text-text-main font-bold">« Sur l'écran d'accueil »</span>. Elle s'ouvrira en un geste et
-                fonctionnera sans réseau.
+                Appuie sur <span class="text-text-main font-semibold">Partager</span>, puis sur
+                <span class="text-text-main font-semibold">« Sur l'écran d'accueil »</span>.
             </p>
 
             <GlassButton

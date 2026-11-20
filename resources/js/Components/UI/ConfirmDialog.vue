@@ -129,7 +129,7 @@ watch(
 <template>
     <Modal :show="ouvert" max-width="md" :aria-labelledby="idTitre" @close="emit('annuler')">
         <div class="p-6">
-            <h2 :id="idTitre" class="titre-carte">{{ titre }}</h2>
+            <h2 :id="idTitre" class="titre-plat">{{ titre }}</h2>
 
             <p v-if="decrit" class="text-text-muted mt-2 text-sm">{{ description }}</p>
 

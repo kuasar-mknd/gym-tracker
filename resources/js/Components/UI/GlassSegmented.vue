@@ -59,7 +59,7 @@ const auClavier = (evenement, index) => {
 }
 
 const classesOption = computed(() => [
-    'focus-visible:ring-accent-primary relative flex items-center justify-center gap-1 rounded-lg font-bold whitespace-nowrap transition focus-visible:ring-2 focus-visible:outline-none',
+    'focus-visible:ring-accent-primary relative flex items-center justify-center gap-1 rounded-lg font-medium whitespace-nowrap transition focus-visible:ring-2 focus-visible:outline-none',
     props.size === 'sm'
         ? // La cible reste à 44 px par le pseudo-élément, la pilule à 36.
           "min-h-9 px-3 text-xs before:absolute before:-inset-1 before:content-['']"
