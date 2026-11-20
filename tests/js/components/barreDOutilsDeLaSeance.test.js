@@ -60,7 +60,7 @@ describe('la barre d’outils de la séance', () => {
         const classes = barre().classes()
 
         expect(classes).toEqual(
-            expect.arrayContaining(['fixed', 'mb-0', 'bottom-sure-23', 'left-sure-4', 'right-sure-4']),
+            expect.arrayContaining(['fixed', 'mb-0', 'bottom-sure-22', 'left-sure-4', 'right-sure-4']),
         )
         expect(classes).toContain('bureau:contents')
         expect(classes).toContain('verre-epais')

@@ -1518,7 +1518,7 @@
     padding-bottom: calc(9rem + var(--safe-area-bottom));
 }
 
-/* Le bas de la page avec l'accessoire de séance (60 px) au-dessus de la barre : `pb-main-safe` plus de quoi le franchir. */
+/* Le bas de la page avec l'accessoire de séance (64 px) au-dessus de la barre : `pb-main-safe` plus de quoi le franchir. */
 @utility pb-main-safe-accessoire {
     padding-bottom: calc(13.25rem + var(--safe-area-bottom));
 }

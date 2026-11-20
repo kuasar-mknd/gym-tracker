@@ -417,7 +417,7 @@ onUnmounted(() => {
                 soit l'Accueil, les séances ou une autre.
             -->
             <div v-if="accessoireDeSeance" class="bureau:mb-6 mx-auto" :class="LARGEURS[largeur]">
-                <div class="bottom-sure-23 left-sure-4 right-sure-4 z-flottant bureau:static fixed">
+                <div class="bottom-sure-22 left-sure-4 right-sure-4 z-flottant bureau:static fixed">
                     <ActiveWorkoutBanner
                         :workout="activeWorkout"
                         :repos="reposLaisse"
