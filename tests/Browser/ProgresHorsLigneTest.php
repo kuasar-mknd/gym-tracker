@@ -27,8 +27,8 @@ use Tests\Support\ParcoursHorsLigne;
  * témoin positif : sans lui, leur absence hors ligne ne prouverait rien), et
  * la copie rangée, déchiffrée, n'en porte aucun chiffre ; puis, la coupure
  * faite, la flèche de la bibliothèque et l'onglet Progrès ouvrent la racine
- * légère, où les cartes disent « Indisponible hors ligne » au lieu d'un
- * squelette sans fin, et rien d'autre n'est dit. Le réseau rendu, la page se
+ * légère, où une seule phrase dit que les mesures reviennent avec le réseau
+ * (ni carte, ni choix de période, ni courbe d'exercice), et rien d'autre n'est dit. Le réseau rendu, la page se
  * recharge et les mesures reviennent.
  *
  * Comme les autres parcours hors ligne, il exige un contexte sûr, et rend
@@ -37,8 +37,6 @@ use Tests\Support\ParcoursHorsLigne;
 class ProgresHorsLigneTest extends DuskTestCase
 {
     use ParcoursHorsLigne;
-
-    private const string PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau.";
 
     private const string POIDS = '83.70';
 
@@ -109,9 +107,9 @@ class ProgresHorsLigneTest extends DuskTestCase
                 // Rien n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
                 $this->assertSame([], $this->messagesSansReseau($browser));
 
-                // Un lien vers une page de mesures, qu'aucune copie ne garde, le dit et laisse Progrès.
-                $browser->clickWhenSettled('#main-content a[href$="/body-measurements"]')
-                    ->waitUntil($this->laPageDit(self::PAGE_INDISPONIBLE), 15, 'la page des mesures n’a rien dit sans réseau')
+                // Aucun contrôle qui mènerait à « Hors ligne » : ni période (`/stats?period=…` n'est jamais gardée), ni courbe d'exercice.
+                $browser->assertScript("[...document.querySelectorAll('#main-content button')].some((b) => /JOURS|MOIS|AN/.test(b.textContent))", false)
+                    ->assertScript("document.querySelectorAll('#main-content [role=\"combobox\"], #main-content select').length", 0)
                     ->assertPathIs('/stats');
             });
 
@@ -148,14 +146,16 @@ class ProgresHorsLigneTest extends DuskTestCase
 
     /**
      * Attend la racine de Progrès servie de sa copie : son adresse, son
-     * bandeau daté, des cartes qui disent « Indisponible hors ligne » au lieu
-     * de pulser, aucune mesure à l'écran, et pas la page « Hors ligne ».
+     * bandeau daté, une seule phrase pour les mesures, aucun squelette, aucune
+     * mesure à l'écran, et pas la page « Hors ligne ».
      */
     private function attendreLaRacineSansMesures(Browser $browser): void
     {
         $this->attendreLaCopie($browser, '/stats');
 
         $browser->waitFor('#main-content [data-indisponible-hors-ligne]', 15)
+            ->assertScript("document.querySelectorAll('#main-content [data-indisponible-hors-ligne]').length", 1)
+            ->assertScript("document.querySelector('#main-content [data-indisponible-hors-ligne]').textContent.includes('Les mesures reviennent avec le réseau.')", true)
             ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 15, 'une carte de Progrès pulse sans fin hors ligne')
             ->assertMissing('[dusk="page-hors-ligne"]')
             ->assertScript('(() => /\\b83[.,]7\\b|\\b19[.,]3\\b/.test(document.querySelector("#main-content")?.textContent ?? ""))()', false);

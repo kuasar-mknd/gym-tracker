@@ -136,10 +136,10 @@ describe('WeightEvolutionCard chart', () => {
      * leave the skeleton up for good.
      */
     it('waits on the deferred prop the page actually sends', async () => {
-        const dashboard = await mountCard({ latestWeight: '82.5', weightHistory: [] })
+        const carte = await mountCard({ latestWeight: '82.5', weightHistory: [] })
         const scoped = await mountCard({ latestWeight: '82.5', weightHistory: [], deferredData: { weightHistory: [] } })
 
-        expect(dashboard.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
+        expect(carte.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
         expect(scoped.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
     })
 

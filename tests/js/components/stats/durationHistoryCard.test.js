@@ -73,10 +73,10 @@ describe('DurationHistoryCard', () => {
      * leave the skeleton up for good.
      */
     it('waits on the deferred prop the page actually sends', async () => {
-        const dashboard = await mountCard({ durationHistory: [] })
+        const carte = await mountCard({ durationHistory: [] })
         const scoped = await mountCard({ durationHistory: [], deferredData: { durationHistory: [] } })
 
-        expect(dashboard.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
+        expect(carte.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
         expect(scoped.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
     })
 })

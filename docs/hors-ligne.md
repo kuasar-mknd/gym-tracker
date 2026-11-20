@@ -71,11 +71,12 @@ Pour s'ouvrir plus tard sans réseau, l'application garde sur l'appareil une cop
 
 | Copiées | Jamais copiées |
 | --- | --- |
-| l'accueil ; la séance en cours et les trois dernières séances closes visitées ; la liste des séances ; la liste des modèles, avec de quoi lancer chacun sans réseau ; la bibliothèque d'exercices ; le profil ; les outils ; le minuteur d'intervalles ; les disques ; le 1RM ; l'échauffement | le journal, les mesures, la santé, les habitudes, les compléments, les notifications, les objectifs ; tout formulaire ; toute page d'invité |
+| l'accueil ; la séance en cours et les trois dernières séances closes visitées ; la liste des séances ; la liste des modèles, avec de quoi lancer chacun sans réseau ; la bibliothèque d'exercices ; la racine de Progrès, sans une seule mesure ; le profil ; les outils ; le minuteur d'intervalles ; les disques ; le 1RM ; l'échauffement | le journal, les mesures, la santé, les habitudes, les compléments, les notifications, les objectifs ; tout formulaire ; toute page d'invité |
 
 Deux précisions :
 
 - La copie de l'accueil ne garde ni le dernier poids ni les objectifs en cours qu'il affiche.
+- La copie de Progrès ne garde ni le poids, ni sa variation, ni la masse grasse, ni les historiques : hors ligne, la page dit que les mesures reviennent avec le réseau.
 - Aucune copie ne garde le message qu'une page affiche après un enregistrement.
 
 ### Où et comment elles sont gardées

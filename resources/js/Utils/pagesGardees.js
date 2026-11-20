@@ -16,7 +16,8 @@
  * visitées ; la liste des séances, page 1 sans filtre ; la liste des modèles,
  * pour en lancer un sans réseau (#2049, extension écrite de la décision 2) ;
  * la bibliothèque ; la racine de Progrès, sans une seule mesure (#2434, lot
- * 4a) ; les menus « Plus » (le profil et les outils) ; le
+ * 4a ; décision du propriétaire du 2026-11-19, qui étend la liste du
+ * 2026-10-12) ; les menus « Plus » (le profil et les outils) ; le
  * minuteur d'intervalles, les disques, le 1RM et l'échauffement. Jamais une
  * page de santé, de journal, de notifications, d'objectifs, de compléments,
  * le profil à modifier, un formulaire de création ou d'édition, ni une page
