@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 
-vi.mock('@/Components/Stats/ActiveGoalsChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'ActiveGoalsChart', props: ['data'], template: '<div />' },
-}))
 import { mount as monterVraiment, flushPromises } from '@vue/test-utils'
 
 /*
@@ -157,7 +153,6 @@ describe('Dashboard', () => {
     const quickActions = recording('QuickActions', ['processing'])
     const recentActivity = recording('RecentActivity', ['recentWorkouts', 'processing'])
     const goalsSummary = recording('GoalsSummary', ['activeGoals', 'indisponible'])
-    const activeGoalsChart = recording('ActiveGoalsChart', ['data'])
 
     const mountDashboard = (props = {}) =>
         mount(Dashboard, {
@@ -171,7 +166,6 @@ describe('Dashboard', () => {
                     QuickActions: quickActions,
                     RecentActivity: recentActivity,
                     GoalsSummary: goalsSummary,
-                    ActiveGoalsChart: activeGoalsChart,
                 },
             },
         })
@@ -285,18 +279,17 @@ describe('Dashboard', () => {
         expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('indisponible')).toBe(false)
     })
 
-    it('ne dessine la progression des objectifs que s’il y en a', () => {
-        const goals = [{ id: 1, title: 'Squat 100', progress_pct: 40 }]
-        const none = mountDashboard({ activeGoals: [] })
-        const one = mountDashboard({ activeGoals: goals })
+    /*
+     * L'accueil n'a plus de graphique des objectifs (la progression se lit dans
+     * le récapitulatif) ni de seconde courbe de durée : « Activité récente »
+     * trace déjà la durée des mêmes séances (`RecentWorkoutsTimelineChart`).
+     */
+    it('ne dessine plus de graphique des objectifs ni de durée récente', () => {
+        const wrapper = mountDashboard({ activeGoals: [{ id: 1, title: 'Squat 100', progress_pct: 40 }] })
 
-        // An empty chart under a "Progression des objectifs" heading is worse
-        // than no chart: it reads as no progress rather than no goal. So the
-        // heading is checked *and* the series behind it — the heading alone is
-        // satisfied by exactly the empty chart this test exists to forbid.
-        expect(none.text()).not.toContain('Progression des objectifs')
-        expect(one.text()).toContain('Progression des objectifs')
-        expect(one.findComponent({ name: 'ActiveGoalsChart' }).props('data')).toEqual(goals)
+        expect(wrapper.text()).not.toContain('Progression des objectifs')
+        expect(wrapper.text()).not.toContain('Durée récente')
+        expect(wrapper.findComponent({ name: 'RecentWorkoutDurationSection' }).exists()).toBe(false)
     })
 
     it('passe les objectifs au récapitulatif qui les résume', () => {
@@ -346,7 +339,6 @@ describe('Dashboard', () => {
                         QuickActions: quickActions,
                         RecentActivity: recentActivity,
                         GoalsSummary: goalsSummary,
-                        ActiveGoalsChart: activeGoalsChart,
                         InvitationDInstallation: installation,
                         InvitationAuxNotifications: recording('InvitationAuxNotifications', [
                             'uneAutreInvitationPasseAvant',

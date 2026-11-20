@@ -5,10 +5,8 @@ import { chartDataOf } from './chartRecorder.js'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
 
-const ActiveGoalsChart = (await import('@/Components/Stats/ActiveGoalsChart.vue')).default
 const AverageWeightChart = (await import('@/Components/Stats/AverageWeightChart.vue')).default
 const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue')).default
-const DashboardDurationChart = (await import('@/Components/Stats/DashboardDurationChart.vue')).default
 const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryChart.vue')).default
 const Estimated1RMHistoryChart = (await import('@/Components/Stats/Estimated1RMHistoryChart.vue')).default
 const FastingHistoryChart = (await import('@/Components/Stats/FastingHistoryChart.vue')).default
@@ -107,16 +105,6 @@ const paintOf = (component, key, { type = 'Bar', datasetIndex = 0 } = {}) =>
  */
 const cases = [
     {
-        chart: 'ActiveGoalsChart',
-        component: ActiveGoalsChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jetonTransparent('accent-primary', 0.55)],
-        ],
-    },
-    {
         chart: 'AverageWeightChart',
         component: AverageWeightChart,
         type: 'Line',
@@ -147,28 +135,6 @@ const cases = [
         stops: [
             [0, jetonTransparent('accent-secondary', 0.25)],
             [1, jetonTransparent('accent-tertiary', 0.05)],
-        ],
-    },
-    {
-        chart: 'DashboardDurationChart',
-        component: DashboardDurationChart,
-        type: 'Line',
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jetonTransparent('accent-info', 0.3)],
-            [1, jetonTransparent('accent-info', 0)],
-        ],
-    },
-    {
-        chart: 'DashboardDurationChart',
-        component: DashboardDurationChart,
-        type: 'Line',
-        key: 'borderColor',
-        requested: RIGHTWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jeton('accent-state')],
         ],
     },
     {

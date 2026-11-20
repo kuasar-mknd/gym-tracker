@@ -59,9 +59,7 @@ export const ADRESSE_DE_LA_CONSTRUCTION = '/build/'
  * Une entrée par ligne, sous la forme `'resources/js/…Chart.vue',`.
  */
 export const GRAPHIQUES_INDISPONIBLES_HORS_LIGNE = Object.freeze([
-    'resources/js/Components/Stats/ActiveGoalsChart.vue',
     'resources/js/Components/Stats/BodyFatChart.vue',
-    'resources/js/Components/Stats/DashboardDurationChart.vue',
     'resources/js/Components/Stats/DurationDistributionChart.vue',
     'resources/js/Components/Stats/DurationHistoryChart.vue',
     'resources/js/Components/Stats/ExerciseCategoryChart.vue',

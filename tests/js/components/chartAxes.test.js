@@ -19,7 +19,6 @@ vi.mock('vue-chartjs', () => {
 
 const MonthlyVolumeChart = (await import('@/Components/Stats/MonthlyVolumeChart.vue')).default
 const WaterHistoryChart = (await import('@/Components/Stats/WaterHistoryChart.vue')).default
-const DashboardDurationChart = (await import('@/Components/Stats/DashboardDurationChart.vue')).default
 const RecentWorkoutsTimelineChart = (await import('@/Components/Stats/RecentWorkoutsTimelineChart.vue')).default
 const WorkoutHistoryTimelineChart = (await import('@/Components/Stats/WorkoutHistoryTimelineChart.vue')).default
 
@@ -83,7 +82,6 @@ describe('WaterHistoryChart Y axis', () => {
  * these charts draws a line over bars and its durations are not dataset zero.
  */
 describe.each([
-    ['DashboardDurationChart', DashboardDurationChart, 'Line'],
     ['RecentWorkoutsTimelineChart', RecentWorkoutsTimelineChart, 'Line'],
     ['WorkoutHistoryTimelineChart', WorkoutHistoryTimelineChart, 'Bar'],
 ])('%s', (_name, component, chartType) => {

@@ -272,6 +272,26 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
         expect(poseurs, 'un h2 : le titre de niveau 1 appartient à la page').toEqual([])
     })
 
+    /*
+     * L'Accueil et le Profil ne montrent pas leur titre : une salutation, une
+     * carte d'identité en tient lieu, et le layout garde un `<h1>` masqué.
+     * Retirer `titre-masque` rend le titre visible sans qu'aucun autre test ne tombe.
+     */
+    it.each(['resources/js/Pages/Dashboard.vue', 'resources/js/Pages/Profile/Index.vue'])(
+        'masque le titre visible de %s sans retirer son h1',
+        (chemin) => {
+            const { elements } = elementsDuGabarit(gabarit(readFileSync(`${jsRoot}/../../${chemin}`, 'utf8')))
+            const layout = elements.find(({ nom }) => nom === 'AuthenticatedLayout')
+
+            expect(layout.attributs).toMatch(/(?:^|\s)titre-masque(?:\s|$)/)
+            expect(layout.attributs).toMatch(/(?:^|\s)page-title="[^"]*\S[^"]*"/)
+            expect(titresDeLaPage(readFileSync(`${jsRoot}/../../${chemin}`, 'utf8'))).toEqual({
+                telephone: 1,
+                bureau: 1,
+            })
+        },
+    )
+
     it('tient pour composant tout fichier qui n’est ni un layout ni une page', () => {
         const page = '<template><AuthenticatedLayout page-title="Profil"><h1 /></AuthenticatedLayout></template>'
 

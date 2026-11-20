@@ -72,6 +72,15 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * Le titre de l'en-tête mobile ne se voit pas : une salutation ou une carte
+     * d'identité en tient lieu (l'Accueil, le Profil). Le `<h1>` reste, pour les
+     * lecteurs d'écran, et l'en-tête garde la cloche des notifications.
+     */
+    titreMasque: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
@@ -325,9 +334,11 @@ onUnmounted(() => {
                     v-if="pageTitle"
                     class="truncate"
                     :class="
-                        titrePlat
-                            ? 'titre-ecran'
-                            : ['titre-carte', pageTitle.length > 12 ? 'text-xl' : 'text-2xl max-[21rem]:text-xl']
+                        titreMasque
+                            ? 'sr-only'
+                            : titrePlat
+                              ? 'titre-ecran'
+                              : ['titre-carte', pageTitle.length > 12 ? 'text-xl' : 'text-2xl max-[21rem]:text-xl']
                     "
                 >
                     {{ pageTitle }}

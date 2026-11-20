@@ -4,25 +4,20 @@ import { Head, Deferred } from '@inertiajs/vue3'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
-import GlassCard from '@/Components/UI/GlassCard.vue'
 import QuickActions from '@/Components/Dashboard/QuickActions.vue'
 import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
 import DurationSection from '@/Components/Dashboard/DurationSection.vue'
 import TimeOfDaySection from '@/Components/Dashboard/TimeOfDaySection.vue'
 import RecentVolumeSection from '@/Components/Dashboard/RecentVolumeSection.vue'
 import RecentExercisesSection from '@/Components/Dashboard/RecentExercisesSection.vue'
-import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDurationSection.vue'
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
 import { ref } from 'vue'
-import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
-
-const ActiveGoalsChart = graphiqueAsynchrone(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
 /**
  * Dashboard - Command Center
@@ -67,7 +62,7 @@ const installationProposee = ref(false)
 <template>
     <Head title="Accueil" />
 
-    <AuthenticatedLayout page-title="Accueil" titre-plat>
+    <AuthenticatedLayout page-title="Accueil" titre-masque>
         <div class="space-y-6">
             <DashboardHeader
                 :user="$page.props.auth.user"
@@ -110,10 +105,9 @@ const installationProposee = ref(false)
                 <TimeOfDaySection :time-of-day-distribution="analyticalStats?.workoutDistributions?.time_of_day" />
             </Deferred>
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <RecentVolumeSection :recent-workouts="recentWorkouts" />
                 <RecentExercisesSection :recent-workouts="recentWorkouts" />
-                <RecentWorkoutDurationSection :recent-workouts="recentWorkouts" />
             </div>
 
             <RecentActivity
@@ -123,21 +117,6 @@ const installationProposee = ref(false)
             />
 
             <GoalsSummary :active-goals="activeGoals" :indisponible="indisponibleSurLaCopie('activeGoals')" />
-
-            <GlassCard
-                v-if="activeGoals && activeGoals.length > 0"
-                as="section"
-                variant="fin"
-                class="stagger-6 animate-slide-up relative overflow-hidden"
-            >
-                <div class="relative z-10 mb-5">
-                    <p class="etiquette">Visualisation</p>
-                    <h3 class="titre-plat">Progression des objectifs</h3>
-                </div>
-                <div class="relative -mx-2 mt-2 h-48 w-auto">
-                    <ActiveGoalsChart :data="activeGoals" />
-                </div>
-            </GlassCard>
 
             <RecentPRs :recent-p-rs="recentPRs" />
         </div>

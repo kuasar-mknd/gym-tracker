@@ -571,6 +571,27 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
         expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mon Évolution'], bureau: ['Mon Évolution'] })
     })
 
+    /*
+     * L'Accueil et le Profil ne montrent pas leur titre : une salutation, une
+     * carte d'identité en tient lieu. Le `<h1>` reste pour les lecteurs
+     * d'écran, à chaque largeur, et l'en-tête garde la cloche.
+     */
+    it('masque le titre de l’en-tête mobile sans le retirer : un h1 par largeur, la cloche gardée', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Accueil', titreMasque: true } })
+        const [mobile] = wrapper.findAll('h1')
+
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Accueil'], bureau: ['Accueil'] })
+        expect(mobile.classes()).toContain('sr-only')
+        expect(mobile.classes()).not.toContain('titre-carte')
+        expect(wrapper.get('header').findAll('a[href="/resolved/notifications.index"]')).toHaveLength(1)
+    })
+
+    it('ne masque pas le titre sans titre-masque', () => {
+        const [mobile] = mountLayout({ props: { pageTitle: 'Mes Séances' } }).findAll('h1')
+
+        expect(mobile.classes()).not.toContain('sr-only')
+    })
+
     it('ne pose aucun titre sans page-title, la page portant le sien', () => {
         expect(titresExposes(mountLayout({ props: { showBack: true } }).element)).toEqual({ telephone: [], bureau: [] })
     })
