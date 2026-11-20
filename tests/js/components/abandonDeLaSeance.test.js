@@ -180,6 +180,24 @@ describe('« Abandonner » sur une séance vide', () => {
         expect(exercice().attributes('disabled')).toBeUndefined()
     })
 
+    it('garde « Terminer » fermé si le réseau tombe pendant l’attente de l’abandon', async () => {
+        let vider
+        vi.spyOn(SyncService, 'attendreLesEcritures').mockReturnValue(new Promise((resolve) => (vider = resolve)))
+        const wrapper = monter()
+
+        await abandonner(wrapper).trigger('click')
+        await confirmer(wrapper).trigger('click')
+        await flushPromises()
+        noterQueLeServeurNeRepondPas()
+        await flushPromises()
+
+        expect(wrapper.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeDefined()
+
+        vider()
+        await flushPromises()
+    })
+
     /* Une copie servie après le retour du réseau : la visite serait arrêtée, « Terminer » reste la sortie. */
     it('laisse « Terminer » sur une copie hors ligne, sans bouton désactivé', () => {
         visite.page.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }

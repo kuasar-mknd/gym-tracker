@@ -623,7 +623,7 @@ describe('AuthenticatedLayout — the session in progress', () => {
             const classes = wrapper.getComponent({ name: 'ActiveWorkoutBanner' }).element.parentElement.className
 
             expect(classes).toContain('fixed')
-            expect(classes).toContain('bottom-sure-22')
+            expect(classes).toContain('au-dessus-du-menu')
             expect(classes).toContain('bureau:static')
             expect(wrapper.get('main').classes()).toContain('pb-main-safe-accessoire')
         },

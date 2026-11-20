@@ -49,6 +49,12 @@ afterEach(() => vi.useRealTimers())
  * The banner is the only place the elapsed time of a running session is shown,
  * and it is computed here rather than sent by the server. Nothing covered it.
  */
+describe('ActiveWorkoutBanner : la capsule', () => {
+    it('fait 64 px, la hauteur de la barre d’outils de la séance', () => {
+        expect(mountBanner({ started_at: startedSecondsAgo(5) }).classes()).toContain('min-h-16')
+    })
+})
+
 describe('ActiveWorkoutBanner elapsed time', () => {
     it('counts minutes and seconds under the hour, both padded', async () => {
         // 7 seconds, not 10: an unpadded value would read "45 min 7 s".

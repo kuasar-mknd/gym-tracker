@@ -1272,6 +1272,7 @@
     border: 1px solid var(--verre-lisere);
     border-radius: var(--radius-capsule);
     padding: 0.375rem;
+    min-height: var(--hauteur-du-menu);
     display: flex;
     gap: 0.25rem;
     align-items: center;
@@ -1562,6 +1563,10 @@
 @utility bottom-sure-* {
     bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
 }
+/* Posé sur le menu du bas, à 6 px : la barre d'outils de la séance et l'accessoire. */
+@utility au-dessus-du-menu {
+    bottom: calc(var(--safe-area-bottom) + 1rem + var(--hauteur-du-menu) + 0.375rem);
+}
 @utility left-sure-* {
     left: calc(var(--spacing) * --value(integer) + var(--safe-area-left));
 }
@@ -1640,6 +1645,15 @@
         --safe-area-top: env(safe-area-inset-top, 0px);
         --safe-area-left: env(safe-area-inset-left, 0px);
         --safe-area-right: env(safe-area-inset-right, 0px);
+
+        /* La hauteur du menu du bas (#2434) : ce qui flotte au-dessus s'y pose, 6 px plus haut, à toute largeur. */
+        --hauteur-du-menu: 4.375rem;
+    }
+
+    @media (width <= 20rem) {
+        :root {
+            --hauteur-du-menu: 4.125rem;
+        }
     }
 
     /*
