@@ -37,7 +37,7 @@ describe('l’état d’une séance que le serveur ne connaît pas encore', () =
             expect.arrayContaining(['bg-surface-card', 'border-accent-warning/60']),
         )
         expect(wrapper.get('[role="status"]').classes()).not.toContain('danger-fill')
-        expect(wrapper.get('.material-symbols-outlined').classes()).toContain('text-accent-warning-deep')
+        expect(wrapper.get('glass-icon-stub').classes()).toContain('text-accent-warning-deep')
         expect(accueil(wrapper).attributes('href')).toBe('/dashboard')
     })
 
