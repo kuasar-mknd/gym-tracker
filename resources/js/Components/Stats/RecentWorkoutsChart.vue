@@ -25,21 +25,11 @@ const datasets = computed(() => [
     {
         label: 'Volume',
         data: donneesChronologiques.value.map((d) => d.workout_volume || 0),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
-            gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
-
-            return gradient
-        },
+        backgroundColor: jeton('accent-primary'),
         borderRadius: 8,
         barPercentage: 0.6,
         borderWidth: 0,
-        hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
+        hoverBackgroundColor: jeton('accent-tertiary'),
     },
 ])
 

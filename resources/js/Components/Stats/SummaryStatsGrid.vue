@@ -63,9 +63,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
     <div class="stagger-5 animate-slide-up grid grid-cols-4 gap-3">
         <!-- Number of Sessions Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center transition-colors active:scale-95"
         >
-            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Séances</div>
+            <div class="text-text-muted text-2xs font-medium">Séances</div>
             <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
@@ -73,7 +73,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
-                <div class="font-display text-text-main mt-1 text-2xl font-black">
+                <div class="font-display text-text-main mt-1 text-2xl font-semibold">
                     {{ entier(volumeTrend?.length ?? 0) }}
                 </div>
             </Deferred>
@@ -81,9 +81,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Number of Muscles Targeted Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center transition-colors active:scale-95"
         >
-            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Muscles</div>
+            <div class="text-text-muted text-2xs font-medium">Muscles</div>
             <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
@@ -91,7 +91,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
-                <div class="font-display text-text-main mt-1 text-2xl font-black">
+                <div class="font-display text-text-main mt-1 text-2xl font-semibold">
                     {{ muscleDistribution?.length || 0 }}
                 </div>
             </Deferred>
@@ -99,19 +99,19 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Number of Exercises Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center transition-colors active:scale-95"
         >
-            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Exercices</div>
-            <div class="font-display text-text-main mt-1 text-2xl font-black">
+            <div class="text-text-muted text-2xs font-medium">Exercices</div>
+            <div class="font-display text-text-main mt-1 text-2xl font-semibold">
                 {{ entier(exercises?.length ?? 0) }}
             </div>
         </div>
 
         <!-- Monthly Comparison Volume Change Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center transition-colors active:scale-95"
         >
-            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">vs Mois -1</div>
+            <div class="text-text-muted text-2xs font-medium">vs mois -1</div>
             <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
@@ -127,7 +127,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                 -->
                 <div
                     v-if="monthlyChange === null"
-                    class="font-display text-text-muted mt-1 text-2xl font-black"
+                    class="font-display text-text-muted mt-1 text-2xl font-semibold"
                     title="Pas de mois précédent à comparer"
                 >
                     <span aria-hidden="true">—</span>
@@ -136,7 +136,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                 <div
                     v-else
                     :class="[
-                        'font-display mt-1 text-2xl font-black',
+                        'font-display mt-1 text-2xl font-semibold',
                         monthlyChange >= 0 ? 'text-trend-up' : 'text-trend-down',
                     ]"
                 >

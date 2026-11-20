@@ -20,8 +20,8 @@ defineProps({
     <GlassCard padding="p-5">
         <div class="flex items-start justify-between">
             <div>
-                <h4 class="sur-titre text-accent-secondary-deep mb-1">Masse Grasse</h4>
-                <p class="font-display text-text-main text-3xl font-black">
+                <h4 class="etiquette mb-1">Masse grasse</h4>
+                <p class="font-display text-text-main text-3xl font-semibold">
                     {{ bodyFat ? nombre(bodyFat) : '—' }}
                     <span class="text-text-muted text-sm">%</span>
                 </p>

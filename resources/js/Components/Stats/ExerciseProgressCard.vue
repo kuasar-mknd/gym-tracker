@@ -81,7 +81,7 @@ watch(selectedExercise, (newVal) => {
     <!-- Exercise Progress (1RM) -->
     <GlassCard>
         <div class="mb-4">
-            <h3 class="titre-carte">Progression 1RM</h3>
+            <h3 class="titre-plat">Progression 1RM</h3>
             <div class="mt-3">
                 <GlassSelect
                     v-model="selectedExercise"

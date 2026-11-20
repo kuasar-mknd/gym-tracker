@@ -17,15 +17,7 @@ const datasets = computed(() => [
     {
         label: 'Habitudes complétées',
         data: props.data.map((item) => item.count),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jeton('accent-tertiary')) // Violet
-            gradient.addColorStop(1, jeton('accent-secondary')) // Pink
-            return gradient
-        },
+        backgroundColor: jeton('accent-tertiary'),
         borderRadius: 4,
         barThickness: 'flex',
         maxBarThickness: 20,

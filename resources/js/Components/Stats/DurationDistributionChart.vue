@@ -14,10 +14,10 @@ const props = defineProps({
 
 // Colors for the buckets
 const bucketColors = {
-    '< 30 min': jeton('accent-info'), // cyan-pure
-    '30-60 min': jeton('accent-secondary'), // hot-pink
-    '60-90 min': jeton('accent-tertiary'), // vivid-violet
-    '90+ min': jeton('accent-primary'), // electric-orange
+    '< 30 min': jeton('accent-info'),
+    '30-60 min': jeton('accent-secondary'),
+    '60-90 min': jeton('accent-tertiary'),
+    '90+ min': jeton('accent-primary'),
 }
 
 // Expecting data to be [{ label: '< 30 min', count: 5 }, ...]

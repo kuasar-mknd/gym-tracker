@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { jetonTransparent } from '@/Utils/couleurs'
 import { chartDataOf, chartOptionsOf } from './chartRecorder.js'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
@@ -94,9 +95,9 @@ describe('WorkoutHistoryTimelineChart axes', () => {
 })
 
 describe('WorkoutHistoryTimelineChart gradient', () => {
-    it('asks for no colour at all before the plot area exists', () => {
+    it('paints the volume bars one colour, with no plot area to wait for', () => {
         const volume = chartDataOf(mountChart(), 'Bar').datasets[1]
 
-        expect(volume.backgroundColor({ chart: { ctx: null, chartArea: null } })).toBeNull()
+        expect(volume.backgroundColor).toBe(jetonTransparent('accent-primary', 0.6))
     })
 })

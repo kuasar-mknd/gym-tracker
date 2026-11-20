@@ -169,15 +169,13 @@ describe('BaseChart', () => {
         expect(trace(wrapper).exists()).toBe(false)
     })
 
-    it('garde à l’ombre la densité que la carte demande', () => {
-        // Six cartes portaient une ombre plus dense ou plus pâle que 0,2 ; une
-        // valeur figée dans le composant les aurait toutes alignées en silence.
-        expect(monter({ lueur: 'accent-danger', lueurOpacite: 0.25 }).find('.relative').attributes('style')).toContain(
-            '--lueur-opacite: 0.25',
-        )
-        expect(monter({ lueur: 'accent-danger' }).find('.relative').attributes('style')).toContain(
-            '--lueur-opacite: 0.2',
-        )
+    it('ne pose plus d’ombre, quelle que soit la densité qu’une carte demanderait', () => {
+        // La lueur a quitté la charte : ses anciennes props ne laissent ni style
+        // ni classe sur le cadre.
+        const cadre = monter({ lueur: 'accent-danger', lueurOpacite: 0.25 }).find('.relative')
+
+        expect(cadre.attributes('style')).toBeUndefined()
+        expect(cadre.classes()).not.toContain('avec-lueur')
     })
 
     it('remplit la carte qui fixe sa hauteur, au lieu d’y laisser un vide', () => {
@@ -189,18 +187,14 @@ describe('BaseChart', () => {
         expect(cadre.classes()).not.toContain('h-full')
     })
 
-    it('pose la hauteur, la lueur et la surcouche', () => {
-        const wrapper = monter({ hauteur: 'h-64', lueur: 'accent-info' }, { surcouche: '<span>centre</span>' })
+    it('pose la hauteur et la surcouche, sans lueur', () => {
+        const wrapper = monter({ hauteur: 'h-64' }, { surcouche: '<span>centre</span>' })
         const cadre = wrapper.find('.relative')
 
         expect(cadre.classes()).toContain('h-64')
-        expect(cadre.classes()).toContain('avec-lueur')
-        expect(cadre.attributes('style')).toContain('--lueur: var(--color-accent-info)')
+        expect(cadre.classes()).not.toContain('avec-lueur')
+        expect(cadre.attributes('style')).toBeUndefined()
         expect(wrapper.text()).toContain('centre')
-
-        const sansLueur = monter().find('.relative')
-        expect(sansLueur.classes()).not.toContain('avec-lueur')
-        expect(sansLueur.attributes('style')).toBeUndefined()
     })
 
     it('dessine la légende d’un anneau sous le canevas, et habille ses parts lui-même', () => {

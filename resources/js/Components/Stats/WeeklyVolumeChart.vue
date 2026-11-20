@@ -28,22 +28,11 @@ const datasets = computed(() => [
 
             return gradient
         },
-        borderColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-
-            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-            gradient.addColorStop(0, jeton('accent-primary'))
-            gradient.addColorStop(0.5, jeton('accent-secondary'))
-            gradient.addColorStop(1, jeton('accent-tertiary'))
-
-            return gradient
-        },
+        borderColor: jeton('accent-primary'),
         borderWidth: 4,
         tension: 0.4,
         pointBackgroundColor: jeton('surface-card'),
-        pointBorderColor: jeton('accent-secondary'),
+        pointBorderColor: jeton('accent-primary'),
         pointBorderWidth: 2,
         pointRadius: 4,
         pointHoverRadius: 6,

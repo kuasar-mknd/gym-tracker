@@ -101,17 +101,8 @@ describe('WeeklyVolumeChart', () => {
             expect(created[0].stops[1][1]).toBe(jetonTransparent('accent-primary', 0))
         })
 
-        it('trace la ligne de gauche à droite, orange vers violet', () => {
-            const { ctx, created } = recordingContext()
-
-            dataset().borderColor(scriptableContext(ctx, laidOutArea))
-
-            expect(created[0].coordinates).toEqual([10, 0, 310, 0])
-            expect(created[0].stops).toEqual([
-                [0, jeton('accent-primary')],
-                [0.5, jeton('accent-secondary')],
-                [1, jeton('accent-tertiary')],
-            ])
+        it('trace la ligne d’une seule couleur, sans dégradé', () => {
+            expect(dataset().borderColor).toBe(jeton('accent-primary'))
         })
 
         /**
@@ -124,7 +115,6 @@ describe('WeeklyVolumeChart', () => {
             const beforeLayout = scriptableContext(ctx)
 
             expect(dataset().backgroundColor(beforeLayout)).toBeNull()
-            expect(dataset().borderColor(beforeLayout)).toBeNull()
         })
     })
 })

@@ -19,22 +19,14 @@ const datasets = computed(() => [
         data: props.data.map((item) => Math.round(Number(item.score) * 100) / 100),
         fill: true,
         tension: 0.4,
-        borderColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-            gradient.addColorStop(0, jeton('accent-primary')) // Electric Orange
-            gradient.addColorStop(1, jeton('accent-secondary')) // Hot Pink
-            return gradient
-        },
+        borderColor: jeton('accent-primary'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart
             if (!chartArea) return null
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
             gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
-            gradient.addColorStop(1, jetonTransparent('accent-secondary', 0))
+            gradient.addColorStop(1, jetonTransparent('accent-primary', 0))
             return gradient
         },
         borderWidth: 3,
@@ -63,8 +55,6 @@ const infobulle = {
         :labels="labels"
         :datasets="datasets"
         hauteur="h-64"
-        lueur="accent-primary"
-        :lueur-opacite="0.15"
         :infobulle="infobulle"
         :axe-x="{ ticks: { maxTicksLimit: 6 } }"
     />

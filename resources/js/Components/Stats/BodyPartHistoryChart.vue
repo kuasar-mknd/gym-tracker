@@ -27,15 +27,7 @@ const datasets = computed(() => [
         data: props.data.map((item) => item.value),
         fill: true,
         tension: 0.4,
-        borderColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-            gradient.addColorStop(0, jeton('accent-tertiary')) // Purple
-            gradient.addColorStop(1, jeton('accent-secondary')) // Pink
-            return gradient
-        },
+        borderColor: jeton('accent-tertiary'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart

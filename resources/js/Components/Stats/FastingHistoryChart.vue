@@ -34,16 +34,7 @@ const datasets = computed(() => [
             const diffMs = end - start
             return Math.max(0, Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10)
         }),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            // Liquid Glass gradient: Orange to Red/Pink
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jeton('accent-primary')) // Orange
-            gradient.addColorStop(1, jeton('accent-danger')) // Red
-            return gradient
-        },
+        backgroundColor: jeton('accent-primary'),
         borderRadius: 8,
         borderSkipped: false,
         barThickness: 16,
@@ -62,8 +53,6 @@ const infobulle = {
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48"
-        lueur="accent-danger"
-        :lueur-opacite="0.25"
         :infobulle="infobulle"
         :axe-y="{ ticks: { stepSize: 4 } }"
     />

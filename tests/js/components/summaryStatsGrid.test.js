@@ -64,7 +64,7 @@ describe('SummaryStatsGrid counts', () => {
 })
 
 describe('SummaryStatsGrid monthly comparison', () => {
-    const comparison = (wrapper) => card(wrapper, 'vs Mois -1').find('.text-2xl')
+    const comparison = (wrapper) => card(wrapper, 'vs mois -1').find('.text-2xl')
 
     it('signs a better month and paints it green', () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: 12 } }))

@@ -20,35 +20,28 @@ const datasets = computed(() => [
         data: props.data.map((item) => item.weight),
         fill: true,
         tension: 0.4,
-        borderColor: (context) => {
-            const { ctx, chartArea } = context.chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-            gradient.addColorStop(0, jeton('accent-info'))
-            gradient.addColorStop(1, jetonTransparent('accent-info', 0.55))
-            return gradient
-        },
+        borderColor: jeton('accent-primary'),
         backgroundColor: (context) => {
             const { ctx, chartArea } = context.chart
             if (!chartArea) return null
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            gradient.addColorStop(0, jetonTransparent('accent-info', 0.2))
-            gradient.addColorStop(1, jetonTransparent('accent-info', 0))
+            gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
+            gradient.addColorStop(1, jetonTransparent('accent-primary', 0))
             return gradient
         },
         borderWidth: 3,
         pointRadius: 2,
-        pointBackgroundColor: jeton('accent-info'),
+        pointBackgroundColor: jeton('accent-primary'),
         pointBorderColor: jeton('surface-card'),
         pointBorderWidth: 2,
         pointHoverRadius: 6,
         pointHoverBackgroundColor: jeton('surface-card'),
-        pointHoverBorderColor: jeton('accent-info'),
+        pointHoverBorderColor: jeton('accent-primary'),
         pointHoverBorderWidth: 3,
     },
 ])
 
-const infobulle = { accent: 'accent-info', callbacks: { label: (context) => `${context.parsed.y} kg` } }
+const infobulle = { accent: 'accent-primary', callbacks: { label: (context) => `${context.parsed.y} kg` } }
 </script>
 
 <template>
@@ -58,7 +51,6 @@ const infobulle = { accent: 'accent-info', callbacks: { label: (context) => `${c
         :labels="labels"
         :datasets="datasets"
         :hauteur="hauteur"
-        lueur="accent-info"
         :infobulle="infobulle"
         :axe-x="!compact"
         :axe-y="{ grid: { display: false } }"

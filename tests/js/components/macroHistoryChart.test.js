@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { jeton } from '@/Utils/couleurs'
 import { chartDataOf, tooltipLabelOf } from './chartRecorder.js'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
@@ -106,10 +107,7 @@ describe('MacroHistoryChart gradients', () => {
     const paints = () => {
         const dataset = chartDataOf(mountChart(), 'Line').datasets[0]
 
-        return [
-            ['borderColor', dataset.borderColor],
-            ['backgroundColor', dataset.backgroundColor],
-        ]
+        return [['backgroundColor', dataset.backgroundColor]]
     }
 
     it('asks for no colour at all before the plot area exists', () => {
@@ -136,17 +134,15 @@ describe('MacroHistoryChart gradients', () => {
         }
     })
 
-    it('runs the line gradient across the chart and the fill down it', () => {
-        const [[, border], [, background]] = paints()
-        const borderChart = paintingChart()
+    it('draws the line in one colour and fades the fill down under it', () => {
+        const dataset = chartDataOf(mountChart(), 'Line').datasets[0]
         const backgroundChart = paintingChart()
 
-        border({ chart: borderChart.chart })
-        background({ chart: backgroundChart.chart })
+        dataset.backgroundColor({ chart: backgroundChart.chart })
 
-        // The line is tinted left to right along the time axis; the fill fades
-        // top to bottom under it. Swapping the two paints a stripe instead.
-        expect(borderChart.gradients[0].from).toEqual([AREA.left, 0, AREA.right, 0])
+        // The line is the accent itself, no gradient; the fill fades top to
+        // bottom under it. Swapping the pairs paints a stripe instead.
+        expect(dataset.borderColor).toBe(jeton('accent-primary'))
         expect(backgroundChart.gradients[0].from).toEqual([0, AREA.top, 0, AREA.bottom])
     })
 })

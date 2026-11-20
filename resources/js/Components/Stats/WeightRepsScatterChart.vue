@@ -16,7 +16,7 @@ const datasets = computed(() => [
     {
         label: 'Séries',
         data: props.data,
-        backgroundColor: jetonTransparent('accent-primary', 0.6), // Electric Orange with opacity
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderColor: jeton('accent-primary'),
         borderWidth: 1,
         pointRadius: 5,
@@ -41,7 +41,6 @@ const axeX = { title: titre('Poids (kg)'), grid: { display: true, ...grille() } 
         type="scatter"
         :datasets="datasets"
         hauteur="h-full"
-        lueur="accent-primary"
         :infobulle="infobulle"
         :axe-x="axeX"
         :axe-y="{ title: titre('Répétitions'), beginAtZero: true }"

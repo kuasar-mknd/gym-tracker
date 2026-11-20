@@ -26,21 +26,11 @@ const datasets = computed(() => [
     {
         label: 'Exercices',
         data: donneesChronologiques.value.map((d) => d.workout_lines_count || 0),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jeton('accent-info')) // cyan-pure
-            gradient.addColorStop(1, jeton('accent-state')) // neon-green
-
-            return gradient
-        },
+        backgroundColor: jeton('accent-state'),
         borderRadius: 8,
         barPercentage: 0.6,
         borderWidth: 0,
-        hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
+        hoverBackgroundColor: jeton('accent-tertiary'),
     },
 ])
 

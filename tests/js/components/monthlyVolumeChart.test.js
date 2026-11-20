@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { jeton } from '@/Utils/couleurs'
 import { chartDataOf, chartOptionsOf, tooltipLabelOf } from './chartRecorder.js'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
@@ -85,9 +86,9 @@ describe('MonthlyVolumeChart tooltip', () => {
 })
 
 describe('MonthlyVolumeChart gradient', () => {
-    it('asks for no colour at all before the plot area exists', () => {
+    it('paints its bars one colour, with no plot area to wait for', () => {
         const dataset = chartDataOf(mountChart(), 'Bar').datasets[0]
 
-        expect(dataset.backgroundColor({ chart: { ctx: null, chartArea: null } })).toBeNull()
+        expect(dataset.backgroundColor).toBe(jeton('accent-primary'))
     })
 })

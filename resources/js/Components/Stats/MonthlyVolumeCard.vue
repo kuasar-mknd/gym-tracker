@@ -30,8 +30,8 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
             </template>
             <div class="flex items-start justify-between">
                 <div>
-                    <h4 class="sur-titre text-accent-tertiary-deep mb-1">Volume Mois</h4>
-                    <p class="font-display text-text-main text-3xl font-black">
+                    <h4 class="etiquette mb-1">Volume mois</h4>
+                    <p class="font-display text-text-main text-3xl font-semibold">
                         {{ nombre(monthlyComparison?.current_volume ?? 0, 0) }}
                         <span class="text-text-muted text-sm">kg</span>
                     </p>

@@ -32,7 +32,7 @@ const WorkoutHistoryTimelineChart = (await import('@/Components/Stats/WorkoutHis
 
 /**
  * Chart.js resolves a *scriptable* colour by calling it on every frame with the
- * live chart. Thirty of the Stats charts use that hook to build a canvas
+ * live chart. The area fills under the Stats lines use that hook to build a canvas
  * gradient, and none of the existing suites ever calls the functions they hand
  * over — the charts are asserted through their series and their tooltips, which
  * both stop short of the paint.
@@ -55,12 +55,6 @@ const AREA = { top: 11, right: 444, bottom: 222, left: 33 }
 
 /** A fill: opaque at the top of the plot, fading down towards the axis. */
 const DOWNWARD = [0, AREA.top, 0, AREA.bottom]
-
-/** A bar fill: the colour climbs out of the baseline towards the top. */
-const UPWARD = [0, AREA.bottom, 0, AREA.top]
-
-/** A stroke: the tint travels along the line, left to right. */
-const RIGHTWARD = [AREA.left, 0, AREA.right, 0]
 
 /**
  * Calls a scriptable colour the way Chart.js would and records what it asked the
@@ -104,53 +98,11 @@ const cases = [
         chart: 'BodyFatLineChart',
         component: BodyFatLineChart,
         type: 'Line',
-        key: 'borderColor',
-        requested: RIGHTWARD,
-        stops: [
-            [0, jeton('accent-tertiary')],
-            [1, jeton('accent-secondary')],
-        ],
-    },
-    {
-        chart: 'BodyFatLineChart',
-        component: BodyFatLineChart,
-        type: 'Line',
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
             [0, jetonTransparent('accent-secondary', 0.25)],
-            [1, jetonTransparent('accent-tertiary', 0.05)],
-        ],
-    },
-    {
-        chart: 'DurationHistoryChart',
-        component: DurationHistoryChart,
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jetonTransparent('accent-info', 0.55)],
-        ],
-    },
-    {
-        chart: 'FastingHistoryChart',
-        component: FastingHistoryChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-danger')],
-        ],
-    },
-    {
-        chart: 'HabitConsistencyChart',
-        component: HabitConsistencyChart,
-        type: 'Line',
-        key: 'borderColor',
-        requested: RIGHTWARD,
-        stops: [
-            [0, jeton('accent-state')],
-            [1, jeton('accent-info')],
+            [1, jetonTransparent('accent-secondary', 0)],
         ],
     },
     {
@@ -162,16 +114,6 @@ const cases = [
         stops: [
             [0, jetonTransparent('accent-state', 0.2)],
             [1, jetonTransparent('accent-state', 0)],
-        ],
-    },
-    {
-        chart: 'HabitHistoryChart',
-        component: HabitHistoryChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-tertiary')],
-            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -186,158 +128,25 @@ const cases = [
         ],
     },
     {
-        chart: 'MonthlyVolumeChart',
-        component: MonthlyVolumeChart,
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-secondary')],
-        ],
-    },
-    {
-        chart: 'OneRepMaxPercentagesChart',
-        component: OneRepMaxPercentagesChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-secondary')],
-        ],
-    },
-    {
-        chart: 'RecentPRsChart',
-        component: RecentPRsChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-warning')],
-        ],
-    },
-    {
-        chart: 'RecentWorkoutsChart',
-        component: RecentWorkoutsChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-secondary')],
-        ],
-    },
-    {
-        chart: 'RecentWorkoutsExercisesChart',
-        component: RecentWorkoutsExercisesChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jeton('accent-state')],
-        ],
-    },
-    {
-        chart: 'RecentWorkoutsTimelineChart',
-        component: RecentWorkoutsTimelineChart,
-        type: 'Line',
-        key: 'borderColor',
-        requested: RIGHTWARD,
-        stops: [
-            [0, jeton('accent-tertiary')],
-            [1, jeton('accent-primary')],
-        ],
-    },
-    {
         chart: 'RecentWorkoutsTimelineChart',
         component: RecentWorkoutsTimelineChart,
         type: 'Line',
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, jetonTransparent('accent-tertiary', 0.2)],
+            [0, jetonTransparent('accent-primary', 0.2)],
             [1, jetonTransparent('accent-primary', 0)],
         ],
     },
     {
-        chart: 'SetsPerSessionChart',
-        component: SetsPerSessionChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-secondary')],
-        ],
-    },
-    {
-        chart: 'SupplementUsageChart',
-        component: SupplementUsageChart,
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jetonTransparent('accent-info', 0.55)],
-        ],
-    },
-    {
-        chart: 'VolumePerWorkoutChart',
-        component: VolumePerWorkoutChart,
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jeton('accent-tertiary')],
-        ],
-    },
-    {
-        chart: 'VolumeTrendChart',
-        component: VolumeTrendChart,
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-secondary')],
-        ],
-    },
-    {
-        chart: 'WaterHistoryChart',
-        component: WaterHistoryChart,
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jetonTransparent('accent-info', 0.55)],
-        ],
-    },
-    {
-        chart: 'WeightHistoryChart',
-        component: WeightHistoryChart,
-        type: 'Line',
-        key: 'borderColor',
-        requested: RIGHTWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jetonTransparent('accent-info', 0.55)],
-        ],
-    },
-    {
         chart: 'WeightHistoryChart',
         component: WeightHistoryChart,
         type: 'Line',
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, jetonTransparent('accent-info', 0.2)],
-            [1, jetonTransparent('accent-info', 0)],
-        ],
-    },
-    {
-        chart: 'WilksHistoryChart',
-        component: WilksHistoryChart,
-        type: 'Line',
-        key: 'borderColor',
-        requested: RIGHTWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-secondary')],
+            [0, jetonTransparent('accent-primary', 0.2)],
+            [1, jetonTransparent('accent-primary', 0)],
         ],
     },
     {
@@ -348,18 +157,7 @@ const cases = [
         requested: DOWNWARD,
         stops: [
             [0, jetonTransparent('accent-primary', 0.2)],
-            [1, jetonTransparent('accent-secondary', 0)],
-        ],
-    },
-    {
-        chart: 'WilksScoreChart',
-        component: WilksScoreChart,
-        type: 'Line',
-        key: 'borderColor',
-        requested: RIGHTWARD,
-        stops: [
-            [0, jeton('accent-primary')],
-            [1, jeton('accent-secondary')],
+            [1, jetonTransparent('accent-primary', 0)],
         ],
     },
     {
@@ -370,7 +168,7 @@ const cases = [
         requested: DOWNWARD,
         stops: [
             [0, jetonTransparent('accent-primary', 0.2)],
-            [1, jetonTransparent('accent-secondary', 0)],
+            [1, jetonTransparent('accent-primary', 0)],
         ],
     },
     {
@@ -384,27 +182,146 @@ const cases = [
             [1, jetonTransparent('accent-tertiary', 0)],
         ],
     },
+]
+
+/**
+ * Les séries peintes d'une seule couleur : le dégradé d'une teinte à l'autre a
+ * quitté la charte, il ne reste que le trait ou l'aplat de l'accent du graphique.
+ * Les attentes sont écrites ici, pas relues sur le composant.
+ */
+const flats = [
+    {
+        chart: 'BodyFatLineChart',
+        component: BodyFatLineChart,
+        type: 'Line',
+        key: 'borderColor',
+        expected: () => jeton('accent-secondary'),
+    },
+    {
+        chart: 'DurationHistoryChart',
+        component: DurationHistoryChart,
+        key: 'backgroundColor',
+        expected: () => jetonTransparent('accent-primary', 0.6),
+    },
+    {
+        chart: 'FastingHistoryChart',
+        component: FastingHistoryChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'HabitConsistencyChart',
+        component: HabitConsistencyChart,
+        type: 'Line',
+        key: 'borderColor',
+        expected: () => jeton('accent-state'),
+    },
+    {
+        chart: 'HabitHistoryChart',
+        component: HabitHistoryChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-tertiary'),
+    },
+    {
+        chart: 'MonthlyVolumeChart',
+        component: MonthlyVolumeChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'OneRepMaxPercentagesChart',
+        component: OneRepMaxPercentagesChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'RecentPRsChart',
+        component: RecentPRsChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'RecentWorkoutsChart',
+        component: RecentWorkoutsChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'RecentWorkoutsExercisesChart',
+        component: RecentWorkoutsExercisesChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-state'),
+    },
+    {
+        chart: 'RecentWorkoutsTimelineChart',
+        component: RecentWorkoutsTimelineChart,
+        type: 'Line',
+        key: 'borderColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'SetsPerSessionChart',
+        component: SetsPerSessionChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-secondary'),
+    },
+    {
+        chart: 'SupplementUsageChart',
+        component: SupplementUsageChart,
+        key: 'backgroundColor',
+        expected: () => jetonTransparent('accent-primary', 0.6),
+    },
+    {
+        chart: 'VolumePerWorkoutChart',
+        component: VolumePerWorkoutChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'VolumeTrendChart',
+        component: VolumeTrendChart,
+        key: 'backgroundColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'WaterHistoryChart',
+        component: WaterHistoryChart,
+        key: 'backgroundColor',
+        expected: () => jetonTransparent('accent-primary', 0.6),
+    },
+    {
+        chart: 'WeightHistoryChart',
+        component: WeightHistoryChart,
+        type: 'Line',
+        key: 'borderColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'WilksHistoryChart',
+        component: WilksHistoryChart,
+        type: 'Line',
+        key: 'borderColor',
+        expected: () => jeton('accent-primary'),
+    },
+    {
+        chart: 'WilksScoreChart',
+        component: WilksScoreChart,
+        type: 'Line',
+        key: 'borderColor',
+        expected: () => jeton('accent-primary'),
+    },
     {
         chart: 'WorkoutFrequencyChart',
         component: WorkoutFrequencyChart,
         key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jetonTransparent('accent-info', 0.6)],
-            [1, jetonTransparent('accent-tertiary', 0.8)],
-        ],
+        expected: () => jetonTransparent('accent-primary', 0.6),
     },
     {
         chart: 'WorkoutHistoryTimelineChart',
         component: WorkoutHistoryTimelineChart,
-        // The gradient is on the volume bars, drawn behind the duration line.
         datasetIndex: 1,
         key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jetonTransparent('accent-primary', 0.4)],
-            [1, jetonTransparent('accent-secondary', 0.8)],
-        ],
+        expected: () => jetonTransparent('accent-primary', 0.6),
     },
 ]
 
@@ -440,6 +357,15 @@ describe('les dégradés que les graphes demandent au canvas', () => {
         // Returning the stops instead of the object, or forgetting the return
         // altogether, leaves Chart.js with `undefined` and the series vanishes.
         expect(returned).toBe(gradient)
+    })
+})
+
+describe('les séries peintes d’une seule couleur', () => {
+    it.each(flats)('$chart · $key est une couleur unie, sans dégradé', (subject) => {
+        const painted = paintFor(subject)
+
+        expect(painted).toBe(subject.expected())
+        expect(typeof painted).toBe('string')
     })
 })
 

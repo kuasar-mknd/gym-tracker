@@ -121,16 +121,8 @@ describe('BodyPartHistoryChart', () => {
             }
         }
 
-        it('trace la courbe de gauche à droite, violet vers rose', () => {
-            const { ctx, recorded } = recordingContext()
-
-            dataset().borderColor({ chart: { ctx, chartArea: { left: 10, right: 310, top: 0, bottom: 256 } } })
-
-            expect(recorded).toEqual([
-                [10, 0, 310, 0],
-                [0, jeton('accent-tertiary')],
-                [1, jeton('accent-secondary')],
-            ])
+        it('trace la courbe d’une seule couleur, sans dégradé', () => {
+            expect(dataset().borderColor).toBe(jeton('accent-tertiary'))
         })
 
         it('remplit de haut en bas, en s’effaçant vers l’axe', () => {
@@ -153,7 +145,6 @@ describe('BodyPartHistoryChart', () => {
         it('ne peint rien tant que la zone de tracé n’est pas mesurée', () => {
             const beforeLayout = { chart: { ctx: {}, chartArea: undefined } }
 
-            expect(dataset().borderColor(beforeLayout)).toBeNull()
             expect(dataset().backgroundColor(beforeLayout)).toBeNull()
         })
     })
