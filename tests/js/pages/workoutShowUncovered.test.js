@@ -1014,6 +1014,27 @@ describe('Workouts/Show — reaching the exercise picker', () => {
         expect(wrapper.vm.showAddExercise).toBe(true)
     })
 
+    /*
+     * Sans le bouton central, une séance sans exercice n'a de chemin vers sa fin
+     * que par la barre d'outils : la page la monte même vide, avec `vide`, que
+     * `ActionsDeLaSeance` traduit en Exercice et Terminer seulement
+     * (`barreDOutilsDeLaSeance.test.js`).
+     */
+    it('mounts the toolbar on an empty session, told it is empty, and not on a read-only one', async () => {
+        const vide = await mountPage(session())
+
+        expect(vide.findComponent(ActionsDeLaSeance).exists()).toBe(true)
+        expect(vide.findComponent(ActionsDeLaSeance).props('vide')).toBe(true)
+
+        const remplie = await mountPage()
+
+        expect(remplie.findComponent(ActionsDeLaSeance).props('vide')).toBe(false)
+
+        const terminee = await mountPage(session({ ended_at: '2026-07-29T09:00:00.000000Z' }))
+
+        expect(terminee.findComponent(ActionsDeLaSeance).exists()).toBe(false)
+    })
+
     it('opens from under a session that already has exercises', async () => {
         const wrapper = await mountPage()
 
@@ -1022,15 +1043,25 @@ describe('Workouts/Show — reaching the exercise picker', () => {
         expect(wrapper.vm.showAddExercise).toBe(true)
     })
 
-    it('opens when the layout’s floating button asks it to', async () => {
+    it('opens when the toolbar asks it to', async () => {
         const wrapper = await mountPage()
 
         expect(wrapper.vm.showAddExercise).toBe(false)
 
-        window.dispatchEvent(new CustomEvent('open-add-exercise'))
+        wrapper.findComponent(ActionsDeLaSeance).vm.$emit('ajouter-un-exercice')
         await flushPromises()
 
         expect(wrapper.vm.showAddExercise).toBe(true)
+    })
+
+    /** Le bouton central de la barre du bas, seul émetteur de l'évènement, n'existe plus : la page ne l'écoute plus. */
+    it('no longer listens for the central button’s window event', async () => {
+        const wrapper = await mountPage()
+
+        window.dispatchEvent(new CustomEvent('open-add-exercise'))
+        await flushPromises()
+
+        expect(wrapper.vm.showAddExercise).toBe(false)
     })
 
     it('ignores an exercise that is not in the picker', async () => {

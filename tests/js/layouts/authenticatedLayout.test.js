@@ -588,6 +588,34 @@ describe('AuthenticatedLayout — the session in progress', () => {
     })
 
     /*
+     * L'accessoire est unique : il porte le `dusk`, le repos et l'annonce de sa
+     * fin. Sur l'Accueil et sur Séances, une grande carte s'y ajoutait ; elle
+     * est partie, et la page ne monte jamais deux exemplaires.
+     */
+    it.each(['dashboard', 'workouts.index', 'stats.index', 'profile.index'])(
+        'monte un seul accessoire de séance sur %s, fixé au-dessus de la barre sous 1 024 px',
+        (onPage) => {
+            const wrapper = mountLayout({ onPage, auth: { user: user({ active_workout: active }) } })
+
+            expect(wrapper.findAllComponents({ name: 'ActiveWorkoutBanner' })).toHaveLength(1)
+
+            const classes = wrapper.getComponent({ name: 'ActiveWorkoutBanner' }).element.parentElement.className
+
+            expect(classes).toContain('fixed')
+            expect(classes).toContain('bottom-sure-24')
+            expect(classes).toContain('bureau:static')
+            expect(wrapper.get('main').classes()).toContain('pb-main-safe-accessoire')
+        },
+    )
+
+    it('garde le bas de la page ordinaire sans séance en cours', () => {
+        const wrapper = mountLayout({ auth: { user: user() } })
+
+        expect(wrapper.get('main').classes()).toContain('pb-main-safe')
+        expect(wrapper.get('main').classes()).not.toContain('pb-main-safe-accessoire')
+    })
+
+    /*
      * Le repos laissé par la page de séance (#2434) ne se montre que sur le
      * bandeau de la séance qui l'a déposé : une autre séance en cours, ou
      * aucune, l'efface au lieu de l'annoncer.

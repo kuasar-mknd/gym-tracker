@@ -29,6 +29,11 @@ const props = defineProps({
     enregistrementDuModele: { type: Boolean, default: false },
     /** La séance a été démarrée sans réseau, et sa création attend la file. */
     seanceEnAttente: { type: Boolean, default: false },
+    /**
+     * La séance n'a pas encore d'exercice : ni repos ni modèle à proposer, mais
+     * « Terminer » reste : sans lui, une séance vide n'aurait aucun chemin vers sa fin.
+     */
+    vide: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['ajouter-un-exercice', 'demarrer-un-repos', 'enregistrer-comme-modele', 'terminer'])
@@ -65,7 +70,7 @@ const raisonDuModele = computed(() => {
         >
             <GlassButton
                 @click="emit('ajouter-un-exercice')"
-                class="bouton-de-barre bureau:w-full flex-1"
+                class="bouton-de-barre bureau:w-full flex-auto"
                 dusk="add-exercise-existing"
             >
                 <GlassIcon name="add" size="sm" class="bureau:hidden @max-[19rem]:hidden" />
@@ -73,9 +78,10 @@ const raisonDuModele = computed(() => {
                 <span class="bureau:inline hidden">Ajouter un exercice</span>
             </GlassButton>
             <GlassButton
+                v-if="!vide"
                 variant="secondary"
                 @click="emit('demarrer-un-repos')"
-                class="bouton-de-barre bureau:w-full flex-1"
+                class="bouton-de-barre bureau:w-full flex-auto"
                 dusk="open-rest-timer"
             >
                 <GlassIcon name="timer" size="sm" class="bureau:hidden @max-[19rem]:hidden" />
@@ -83,9 +89,9 @@ const raisonDuModele = computed(() => {
                 <span class="bureau:inline hidden">Démarrer un repos</span>
             </GlassButton>
             <GlassButton
-                variant="primary"
+                variant="accent"
                 @click="emit('terminer')"
-                class="bouton-de-barre bureau:w-full flex-1"
+                class="bouton-de-barre bureau:w-full flex-auto"
                 id="finish-workout-mobile"
                 dusk="finish-workout-mobile"
                 >Terminer</GlassButton
@@ -98,7 +104,7 @@ const raisonDuModele = computed(() => {
             l'atteint plus (#2434). Sur bureau, pas de clavier à fermer : il reprend
             la largeur de la colonne, mais garde la variante effacée.
         -->
-        <div class="bureau:block flex justify-end pt-6">
+        <div v-if="!vide" class="bureau:block flex justify-end pt-6">
             <GlassButton
                 variant="ghost"
                 @click="emit('enregistrer-comme-modele')"
@@ -110,7 +116,7 @@ const raisonDuModele = computed(() => {
                 >Modèle</GlassButton
             >
         </div>
-        <p v-if="!joignable" id="modele-sans-reseau" class="text-text-muted text-center text-sm font-medium">
+        <p v-if="!joignable && !vide" id="modele-sans-reseau" class="text-text-muted text-center text-sm font-medium">
             Il faut le réseau pour enregistrer la séance comme modèle.
         </p>
     </div>

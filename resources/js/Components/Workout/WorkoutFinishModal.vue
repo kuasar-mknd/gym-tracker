@@ -180,16 +180,18 @@ const avisDAttente = computed(() =>
                     dusk="finish-workout-end-input"
                 />
             </div>
-            <div class="flex gap-3">
-                <GlassButton variant="secondary" @click="emit('close')" class="flex-1"> Annuler </GlassButton>
+            <div class="flex flex-col-reverse gap-3 min-[24rem]:flex-row">
+                <GlassButton variant="secondary" @click="emit('close')" class="bouton-de-bilan min-w-0 flex-1">
+                    Annuler
+                </GlassButton>
                 <GlassButton
-                    variant="primary"
+                    variant="accent"
                     id="confirm-finish-button"
                     dusk="confirm-finish-button"
                     :loading="enCours"
                     :disabled="erreurDeLHeure !== ''"
                     @click="confirmer"
-                    class="flex-1"
+                    class="bouton-de-bilan min-w-0 flex-1"
                 >
                     Confirmer
                 </GlassButton>

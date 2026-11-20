@@ -17,7 +17,6 @@ apps
 arrow_back
 arrow_downward
 arrow_forward
-arrow_forward_ios
 arrow_upward
 assignment_add
 autorenew
@@ -35,7 +34,6 @@ chevron_left
 chevron_right
 close
 cloud_off
-dashboard
 delete
 drag_indicator
 directions_run
@@ -60,7 +58,6 @@ local_drink
 local_fire_department
 logout
 medication
-menu
 menu_book
 military_tech
 monitor_heart

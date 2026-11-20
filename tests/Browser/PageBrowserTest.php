@@ -30,7 +30,7 @@ class PageBrowserTest extends DuskTestCase
                 '/calendar' => 'CALENDRIER',
                 '/exercises' => 'BIBLIOTHÈQUE',
                 '/stats' => 'ÉVOLUTION',
-                '/profile' => 'PLUS',
+                '/profile' => 'PROFIL',
             ];
 
             foreach ($pages as $url => $text) {

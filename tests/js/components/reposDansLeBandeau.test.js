@@ -27,11 +27,10 @@ const depot = (surcharge = {}) => ({
     ...surcharge,
 })
 
-const monter = (repos, compact = true) =>
+const monter = (repos) =>
     mount(ActiveWorkoutBanner, {
         props: {
             workout: { id: 12, name: 'Push A', started_at: new Date(MAINTENANT.getTime() - 600_000).toISOString() },
-            compact,
             repos,
         },
         global: {
@@ -63,8 +62,8 @@ describe('le repos dans le bandeau de la séance', () => {
         expect(duree(wrapper)).toContain('10 min')
     })
 
-    it.each([true, false])('dit le repos à la place de la durée, sur l’horloge (compact : %s)', async (compact) => {
-        const wrapper = monter(depot(), compact)
+    it('dit le repos à la place de la durée, sur l’horloge', async () => {
+        const wrapper = monter(depot())
 
         expect(duree(wrapper)).toContain('Repos 1:12')
 
@@ -114,7 +113,6 @@ describe('le repos dans le bandeau de la séance', () => {
                                 name: 'Push A',
                                 started_at: new Date(MAINTENANT.getTime() - 600_000).toISOString(),
                             },
-                            compact: true,
                             repos: repos.value,
                         })
                 },

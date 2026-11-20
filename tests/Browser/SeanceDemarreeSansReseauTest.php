@@ -306,16 +306,16 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
     }
 
     /**
-     * Le bouton « Séance » de la barre du bas, sans réseau : la séance en
+     * Le bouton « Démarrer une séance » de l'Accueil, sans réseau (la barre du bas n'a plus de bouton central) : la séance en
      * attente s'ouvre, et rien ne dit qu'il faut le réseau.
      *
      * @return string la clé que l'appareil a tirée
      */
     private function demarrerSansReseau(Browser $browser): string
     {
-        $browser->waitFor('button.glass-nav-fab', 15)
-            ->assertAttribute('button.glass-nav-fab', 'aria-label', 'Séance')
-            ->script("document.querySelector('button.glass-nav-fab').click();");
+        $browser->waitFor('[dusk="start-workout-button"]', 15)
+            ->assertMissing('button.glass-nav-fab')
+            ->script("document.querySelector('[dusk=\"start-workout-button\"]').click();");
 
         $browser->waitUntil(
             "location.pathname.startsWith('/workouts/en-attente/') && document.querySelector('[dusk=\"add-first-exercise\"]') !== null",

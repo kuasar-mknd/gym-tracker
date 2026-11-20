@@ -55,13 +55,13 @@ class SessionExpireeSurLaSeanceTest extends DuskTestCase
                 ->visit('/dashboard')
                 ->waitFor('#main-content', 30)
                 ->disableAnimations()
-                ->waitFor('button.glass-nav-fab', 15)
-                ->assertAttribute('button.glass-nav-fab', 'aria-label', 'Séance');
+                ->waitFor('[dusk="start-workout-button"]', 15)
+                ->assertMissing('button.glass-nav-fab');
 
             $this->expirerLaSession($compte);
-            $browser->script("document.querySelector('button.glass-nav-fab').click();");
+            $browser->script("document.querySelector('[dusk=\"start-workout-button\"]').click();");
 
-            $this->attendreLaConnexion($browser, '« Séance »');
+            $this->attendreLaConnexion($browser, '« Démarrer une séance »');
         });
 
         $this->assertSame(0, Workout::query()->where('user_id', $compte->id)->count(), 'une séance a été créée');

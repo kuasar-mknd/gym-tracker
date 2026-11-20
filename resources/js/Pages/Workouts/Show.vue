@@ -232,14 +232,12 @@ const { addExercise, removeLine, retraitDemande, titreDuRetrait, annulerLeRetrai
 // Les tests vident le debounce d'une serie par ici.
 defineExpose({ flushPendingUpdates })
 
-const handleFabAddExercise = () => (showAddExercise.value = !seanceEnLectureSeule.value)
+const ouvrirLeChoixDUnExercice = () => (showAddExercise.value = !seanceEnLectureSeule.value)
 
 onMounted(() => {
     // Le premier relevé : la séance telle qu'elle est arrivée, du serveur ou de
     // l'historique. Les suivants se font dans l'observateur des props.
     releverLesValeursDuServeur(seanceDeDepart)
-
-    window.addEventListener('open-add-exercise', handleFabAddExercise)
 
     rejouerLesBrouillons({
         trouverLaSerie: (setId) => {
@@ -258,8 +256,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-    window.removeEventListener('open-add-exercise', handleFabAddExercise)
-
     // Une valeur tapee juste avant de partir est une saisie : elle part maintenant.
     flushAllPendingUpdates()
 })
@@ -341,10 +337,11 @@ onUnmounted(() => {
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
 
             <ActionsDeLaSeance
-                v-if="localWorkout.workout_lines.length > 0 && !lectureSeule"
+                v-if="!lectureSeule"
+                :vide="localWorkout.workout_lines.length === 0"
                 :enregistrement-du-modele="savingTemplate"
                 :seance-en-attente="seanceProvisoire"
-                @ajouter-un-exercice="handleFabAddExercise"
+                @ajouter-un-exercice="ouvrirLeChoixDUnExercice"
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"
                 @terminer="finishWorkout"

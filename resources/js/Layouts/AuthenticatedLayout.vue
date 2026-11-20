@@ -97,8 +97,8 @@ const isWorkoutShow = computed(() => page.component === 'Workouts/Show')
 const reposLaisse = computed(() => reposAMontrer(page.props.auth?.user?.id, activeWorkout.value))
 // Celui d'une autre séance (supprimée, ou quittée sans clôture), ou sans séance en cours : il ne reviendrait pas.
 watch(activeWorkout, (seance) => oublierLeReposDUneAutreSeance(page.props.auth?.user?.id, seance), { immediate: true })
-// La grande bannière n'a sa place que là où la séance est le sujet ; ailleurs, une ligne.
-const banniereCompacte = computed(() => !route().current('dashboard') && !route().current('workouts.index'))
+// L'accessoire de la séance en cours : sur toutes les pages sauf la séance elle-même, qui a sa barre d'outils.
+const accessoireDeSeance = computed(() => activeWorkout.value !== null && !isWorkoutShow.value)
 
 /*
  * L'abonnement push du navigateur rejoint le serveur à l'ouverture de
@@ -324,7 +324,11 @@ onUnmounted(() => {
                 <h1
                     v-if="pageTitle"
                     class="truncate"
-                    :class="titrePlat ? 'titre-ecran' : ['titre-carte', pageTitle.length > 12 ? 'text-xl' : 'text-2xl']"
+                    :class="
+                        titrePlat
+                            ? 'titre-ecran'
+                            : ['titre-carte', pageTitle.length > 12 ? 'text-xl' : 'text-2xl max-[21rem]:text-xl']
+                    "
                 >
                     {{ pageTitle }}
                 </h1>
@@ -368,7 +372,10 @@ onUnmounted(() => {
             id="main-content"
             tabindex="-1"
             class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6 focus:outline-none"
-            :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
+            :class="[
+                { 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack },
+                accessoireDeSeance ? 'pb-main-safe-accessoire bureau:pb-main-safe' : 'pb-main-safe',
+            ]"
         >
             <!--
                 Le titre de niveau 1 du bureau (#2120). Celui de l'en-tête mobile
@@ -392,13 +399,20 @@ onUnmounted(() => {
                 <BandeauHorsLigne />
             </div>
 
-            <div v-if="activeWorkout && !isWorkoutShow" class="mx-auto mb-6" :class="LARGEURS[largeur]">
-                <ActiveWorkoutBanner
-                    :workout="activeWorkout"
-                    :compact="banniereCompacte"
-                    :repos="reposLaisse"
-                    @ouvrir="ouvrirLaSeanceEnCours"
-                />
+            <!--
+                L'accessoire de séance (#2434) : fixé au-dessus de la barre du
+                bas sous 1 024 px, dans le flux de la page sur bureau, où il
+                n'y a pas de barre. Un seul exemplaire, que la page en cours
+                soit l'Accueil, les séances ou une autre.
+            -->
+            <div v-if="accessoireDeSeance" class="bureau:mb-6 mx-auto" :class="LARGEURS[largeur]">
+                <div class="bottom-sure-24 left-sure-4 right-sure-4 z-flottant bureau:static fixed">
+                    <ActiveWorkoutBanner
+                        :workout="activeWorkout"
+                        :repos="reposLaisse"
+                        @ouvrir="ouvrirLaSeanceEnCours"
+                    />
+                </div>
             </div>
 
             <!--

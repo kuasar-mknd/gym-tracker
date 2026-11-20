@@ -17,7 +17,7 @@
  * C'est le mécanisme d'une classe CSS inexistante, transposé aux props : la
  * valeur est acceptée, rien ne s'applique, et personne n'est prévenu.
  */
-export const VARIANTS = ['default', 'primary', 'secondary', 'neon', 'gradient-border', 'danger', 'ghost']
+export const VARIANTS = ['default', 'primary', 'secondary', 'neon', 'gradient-border', 'danger', 'ghost', 'accent']
 
 export const TAILLES = ['sm', 'md', 'lg', 'xl']
 </script>
@@ -35,6 +35,9 @@ defineProps({
          *   default    — la carte de verre. Une action ordinaire.
          *   secondary  — contour seul, fond transparent. Le second choix.
          *   ghost      — rien jusqu'au survol. Ce qui ne doit pas attirer.
+         *   accent     — plein, orange de la charte sous du blanc : fin et
+         *                clôture d'une séance (#2434). Casse de phrase, avec
+         *                `bouton-de-barre` ou `bouton-de-bilan`.
          *
          * `secondary` n'etait PAS implementee : elle n'apparaissait pas dans
          * l'objet de classes, donc ses dix boutons — six « Annuler » — rendaient
@@ -112,6 +115,7 @@ const sizeClasses = {
             {
                 'w-full sm:w-auto': block,
                 'glass-button-primary': variant === 'primary',
+                'accent-fill border-transparent shadow-none': variant === 'accent',
                 'glass-button-neon shadow-neon': variant === 'neon',
                 'glass-button-gradient-border': variant === 'gradient-border',
                 'border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20':

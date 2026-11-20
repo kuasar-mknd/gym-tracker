@@ -13,7 +13,7 @@ import {
 
 /*
  * Démarrer une séance sans réseau (#2049), depuis la vraie page d'accueil et
- * la vraie barre du bas, avec le vrai client d'Inertia et la vraie file hors
+ * son bouton « Démarrer une séance », avec le vrai client d'Inertia et la vraie file hors
  * ligne.
  *
  * Le bouton « Séance » faisait une visite d'Inertia (`workouts.store`) qui ne
@@ -164,7 +164,7 @@ let DEMARRAGE_SANS_RESEAU
 /** La page qu'Inertia montre, telle que `usePage()` la lit : visites du client comprises. */
 let page = null
 
-const bouton = () => document.querySelector('nav[aria-label="Navigation principale"] button')
+const bouton = () => document.querySelector('[dusk="start-workout-button"]')
 const seanceAffichee = () => document.getElementById('seance')?.textContent ?? null
 const toasts = () =>
     [...document.querySelectorAll('[role="alert"][aria-live]')].map((toast) => toast.textContent.trim())

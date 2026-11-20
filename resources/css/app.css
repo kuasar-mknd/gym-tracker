@@ -275,41 +275,6 @@
     --color-accent-warning-deep: #8a6803;
 
     /*
-     * --- La seance en cours ---------------------------------------------
-     *
-     * Le bandeau du tableau de bord, et lui seul. Un degrade vert-emeraude vers
-     * cyan, qui n'appartient a aucune autre famille : ce n'est ni un accent —
-     * il ne demande rien — ni une categorie. C'est une identite, celle d'une
-     * seance ouverte.
-     *
-     * Il portait `emerald-500`, `teal-500` et `cyan-500` de Tailwind. La
-     * conversion vers la charte les a envoyes sur `accent-state` et
-     * `accent-info`, les jetons VIFS, bien plus clairs : le texte blanc y est
-     * passe de 2,5:1 a 1,2:1, et pas un mot du bandeau ne se lisait. C'est le
-     * piege de ce genre de table — remplacer une nuance par un role change la
-     * luminosite, pas seulement le nom.
-     *
-     * Ce sont les trois tons d'ORIGINE, a l'identique.
-     *
-     * Ils ont d'abord ete assombris ici pour que le blanc y tienne 4,5:1 —
-     * mesure, le blanc n'y rend que 2,5:1. Sam a demande les couleurs d'avant,
-     * et les a redemandees : c'est donc une decision assumee, pas un oubli.
-     *
-     * Ce qui la rend defendable : ce bandeau ne porte aucune information qu'on
-     * ne retrouve ailleurs. Il annonce une seance ouverte, l'annonce aussi par
-     * sa pastille « En cours », et mene a la page qui porte le detail. Le seuil
-     * AA protege la lecture d'un contenu ; il s'agit ici d'une banniere de
-     * navigation, et personne n'y lit longtemps.
-     *
-     * Si un jour on veut les deux, la reponse n'est pas d'assombrir ces trois
-     * tons : c'est de poser un voile sombre sous le texte, qui laisse le degrade
-     * intact la ou il se voit et donne au mot le fond qu'il lui faut.
-     */
-    --color-session-from: #10b981;
-    --color-session-via: #14b8a6;
-    --color-session-to: #06b6d4;
-
-    /*
      * --- Tendance ------------------------------------------------------
      *
      * Une direction, pas un jugement. `comparison > 0 ? trend-up : trend-down`
@@ -1308,13 +1273,18 @@
     border-radius: var(--radius-capsule);
     padding: 0.375rem;
     display: flex;
-    justify-content: space-around;
+    gap: 0.25rem;
     align-items: center;
     box-shadow: var(--verre-reflet), var(--verre-ombre-flottante);
     z-index: 50;
     transition:
         transform 0.3s ease,
         bottom 0.3s ease;
+
+    @media (width <= 20rem) {
+        padding: 0.25rem;
+        gap: 0;
+    }
 }
 
 /*
@@ -1346,8 +1316,8 @@
 
 /*
  * Un bouton du bilan de fin de séance (#2434), à toute largeur : une capsule
- * en casse de phrase, sans ombre. L'action principale garde le vert d'état de
- * `GlassButton` : la maquette la veut orange, ce qu'aucune variante ne porte.
+ * en casse de phrase, sans ombre. L'action principale est `variant="accent"`,
+ * l'orange de la maquette.
  */
 @utility bouton-de-bilan {
     &.glass-button {
@@ -1367,23 +1337,49 @@
     }
 }
 
-/* L'onglet : un carré de 56 px à rayon plein, donc un disque exact, qui devient une bulle de verre épais quand il est actif. */
+/*
+ * L'onglet : une capsule de 56 px de haut, de largeur égale à ses voisines
+ * (#2434). L'onglet actif est la capsule entière, pas un disque de 56 px : le
+ * libellé n'a plus à tenir dans un cercle. Sur un téléphone de 320 px, la barre
+ * (288 px) passe à 10 px de libellé, 4 px de remplissage et une icône de 20 px,
+ * pour que le bas du texte reste à plus de 9 px de la courbe.
+ */
 @utility glass-nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.125rem;
-    flex: none;
-    width: 3.5rem;
+    gap: 0;
+    flex: 1;
+    min-width: 0;
     height: 3.5rem;
-    padding: 0;
+    padding: 0 0 0.25rem;
     border-radius: var(--radius-capsule);
     color: var(--color-text-muted);
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    font-weight: 500;
+    white-space: nowrap;
     transition:
         color 0.2s ease,
         background-color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
+
+    /* L'icône occupe sa propre hauteur : la ligne de la police de symboles la portait à 1,33 fois, et le libellé descendait contre la courbe. */
+    & > .material-symbols-outlined {
+        font-size: 1.25rem;
+        line-height: 1;
+        height: 1.25rem;
+    }
+
+    @media (width <= 20rem) {
+        font-size: 0.625rem;
+
+        & > .material-symbols-outlined {
+            font-size: 1.125rem;
+            height: 1.125rem;
+        }
+    }
 
     &:hover {
         color: var(--color-text-main);
@@ -1402,18 +1398,6 @@
     &.glass-nav-item {
         color: var(--color-accent-primary-deep);
     }
-}
-
-/* Le bouton central : `accent-fill` et `verre-plein` lui donnent un orange uni, sans dégradé ni halo. */
-@utility glass-nav-fab {
-    position: relative;
-    top: -1.25rem;
-    width: 4.5rem;
-    height: 4.5rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 @utility glass-overlay {
@@ -1532,6 +1516,11 @@
 
 @utility pb-main-safe {
     padding-bottom: calc(9rem + var(--safe-area-bottom));
+}
+
+/* Le bas de la page avec l'accessoire de séance (60 px) au-dessus de la barre : `pb-main-safe` plus de quoi le franchir. */
+@utility pb-main-safe-accessoire {
+    padding-bottom: calc(13.25rem + var(--safe-area-bottom));
 }
 
 @utility pb-main-safe-repos {

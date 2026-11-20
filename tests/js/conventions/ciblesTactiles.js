@@ -201,7 +201,7 @@ export const seRetrecit = (classes, classesDuParent) => {
  *
  * Deux formes, toutes deux légitimes : celui qui remplit son parent (`h-full`,
  * la trappe de suppression d'une ligne qu'on fait glisser) et celui qui porte un
- * utilitaire nommé de la charte (`glass-nav-fab`, qui vaut 72 px). Les compter à
+ * utilitaire nommé de la charte (`glass-nav-item`, qui vaut 56 px). Les compter à
  * 24 px serait faux ; les compter comme conformes serait un mensonge. Ils sont
  * écartés de la mesure, et cette note est là pour que personne ne croie la
  * mesure exhaustive.
