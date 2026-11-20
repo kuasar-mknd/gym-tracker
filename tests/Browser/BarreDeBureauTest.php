@@ -59,7 +59,8 @@ class BarreDeBureauTest extends DuskTestCase
                     '/body-measurements' => ['Progrès', '/corps'],
                     '/goals' => ['Progrès', '/stats'],
                     '/profile' => ['Profil', null],
-                    '/tools' => ['Profil', '/profile'],
+                    // Outils pose son retour lui-même dans son en-tête : le layout n'ajoute pas le sien.
+                    '/tools' => ['Profil', null],
                     '/habits' => ['Profil', '/profile'],
                 ];
 
