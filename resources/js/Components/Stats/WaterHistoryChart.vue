@@ -20,17 +20,9 @@ const datasets = computed(() => [
     {
         label: 'Volume (ml)',
         data: props.data.map((item) => item.total),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            gradient.addColorStop(0, jeton('accent-info')) // Blue-500
-            gradient.addColorStop(1, jetonTransparent('accent-info', 0.55)) // Blue-300
-            return gradient
-        },
+        backgroundColor: jetonTransparent('accent-primary', 0.7),
         borderRadius: 6,
-        hoverBackgroundColor: jeton('accent-info'), // Blue-600
+        hoverBackgroundColor: jeton('accent-primary'),
     },
 ])
 
@@ -47,7 +39,7 @@ const axeY = computed(() => ({
 }))
 
 const infobulle = {
-    accent: 'accent-info',
+    accent: 'accent-primary',
     callbacks: {
         label: (context) => `${context.raw} ml`,
         title: (context) => context[0].label,
@@ -62,7 +54,6 @@ const infobulle = {
         :datasets="datasets"
         hauteur="h-[300px] pt-4"
         :infobulle="infobulle"
-        :axe-x="{ ticks: { textTransform: 'uppercase' } }"
         :axe-y="axeY"
     />
 </template>

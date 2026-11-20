@@ -30,8 +30,8 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
             </template>
             <div class="flex items-start justify-between">
                 <div>
-                    <h4 class="sur-titre text-accent-tertiary-deep mb-1">Volume Mois</h4>
-                    <p class="font-display text-text-main text-3xl font-black">
+                    <h4 class="etiquette mb-1">Volume mois</h4>
+                    <p class="font-display text-text-main text-3xl font-semibold">
                         {{ nombre(monthlyComparison?.current_volume ?? 0, 0) }}
                         <span class="text-text-muted text-sm">kg</span>
                     </p>
@@ -39,7 +39,7 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
                 <div
                     v-if="variationDuMois !== null"
                     :class="[
-                        'flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold whitespace-nowrap',
+                        'flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-semibold whitespace-nowrap',
                         variationDuMois > 0
                             ? 'bg-trend-up/10 text-trend-up'
                             : variationDuMois < 0

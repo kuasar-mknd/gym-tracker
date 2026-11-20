@@ -18,23 +18,13 @@ const labels = computed(() => donneesTriees.value.map((d) => `${d.percent}%`))
 
 const datasets = computed(() => [
     {
-        label: 'Poids Estimé (kg)',
+        label: 'Poids estimé (kg)',
         data: donneesTriees.value.map((d) => d.value),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
-            gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
-
-            return gradient
-        },
+        backgroundColor: jeton('accent-primary'),
         borderRadius: 8,
         barPercentage: 0.6,
         borderWidth: 0,
-        hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
+        hoverBackgroundColor: jeton('accent-tertiary'),
     },
 ])
 

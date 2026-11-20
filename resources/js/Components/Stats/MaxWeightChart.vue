@@ -14,19 +14,19 @@ const labels = computed(() => props.data.map((item) => item.date))
 
 const datasets = computed(() => [
     {
-        label: 'Charge Max (kg)',
+        label: 'Charge max (kg)',
         data: props.data.map((item) => item.weight),
         fill: true,
         tension: 0.4,
         // Une séance sans série validée n'a pas de point (null) : la courbe passe outre.
         spanGaps: true,
-        borderColor: jeton('accent-state'), // Emerald
+        borderColor: jeton('accent-state'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart
             if (!chartArea) return null
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            gradient.addColorStop(0, jetonTransparent('accent-state', 0.2)) // Emerald with opacity
+            gradient.addColorStop(0, jetonTransparent('accent-state', 0.2))
             gradient.addColorStop(1, jetonTransparent('accent-state', 0)) // Transparent
             return gradient
         },

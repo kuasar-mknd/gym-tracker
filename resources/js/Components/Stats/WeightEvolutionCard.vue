@@ -22,8 +22,8 @@ defineProps({
     <GlassCard class="stagger-1 animate-slide-up relative overflow-hidden">
         <div class="mb-4 flex items-start justify-between">
             <div>
-                <h3 class="text-accent-primary-deep sur-titre mb-1">Poids Corporel</h3>
-                <p class="font-display text-text-main text-5xl font-black tracking-tighter">
+                <h3 class="etiquette mb-1">Poids corporel</h3>
+                <p class="font-display text-text-main text-5xl font-semibold tracking-tighter">
                     {{ latestWeight ? nombre(latestWeight) : '—' }}
                     <span class="text-text-muted text-lg">kg</span>
                 </p>
@@ -31,7 +31,7 @@ defineProps({
             <div
                 v-if="weightChange"
                 :class="[
-                    'flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold',
+                    'flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold',
                     weightChange > 0 ? 'bg-trend-down/10 text-trend-down' : 'bg-trend-up/10 text-trend-up',
                 ]"
             >
@@ -63,7 +63,7 @@ defineProps({
 
         <Link
             :href="route('body-measurements.index')"
-            class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition hover:gap-3"
+            class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-semibold hover:underline"
         >
             {{ latestWeight ? "Voir tout l'historique" : 'Ajouter une pesée' }}
             <GlassIcon name="arrow_forward" size="xs" />

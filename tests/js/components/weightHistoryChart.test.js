@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { jeton } from '@/Utils/couleurs'
 import { chartDataOf, chartOptionsOf, tooltipLabelOf } from './chartRecorder.js'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
@@ -73,7 +74,7 @@ describe('WeightHistoryChart gradients', () => {
         const dataset = chartDataOf(mountChart(), 'Line').datasets[0]
         const blankChart = { chart: { ctx: null, chartArea: null } }
 
-        expect(dataset.borderColor(blankChart)).toBeNull()
+        expect(dataset.borderColor).toBe(jeton('accent-primary'))
         expect(dataset.backgroundColor(blankChart)).toBeNull()
     })
 })

@@ -17,15 +17,7 @@ const datasets = computed(() => [
     {
         label: 'Séries',
         data: props.data.map((d) => d.sets),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jeton('accent-primary')) // Electric orange shade
-            gradient.addColorStop(1, jeton('accent-secondary')) // Hot pink shade
-            return gradient
-        },
+        backgroundColor: jeton('accent-secondary'),
         borderRadius: 4,
         barPercentage: 0.5,
         borderWidth: 0,

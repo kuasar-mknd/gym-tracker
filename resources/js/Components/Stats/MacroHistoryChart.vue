@@ -26,15 +26,7 @@ const datasets = computed(() => [
         data: sortedData.value.map((item) => item.target_calories),
         fill: true,
         tension: 0.4,
-        borderColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-            gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
-            gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
-            return gradient
-        },
+        borderColor: jeton('accent-primary'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart
@@ -72,7 +64,7 @@ const infobulle = {
     opaque: true,
     displayColors: true,
     boxPadding: 4,
-    titleFont: { family: 'Space Grotesk', weight: 'bold' },
+    titleFont: { family: 'Space Grotesk', weight: 500 },
     bodyFont: { family: 'Space Grotesk' },
     callbacks: { label: (context) => `${context.dataset.label}: ${context.parsed.y}` },
 }
@@ -85,8 +77,6 @@ const infobulle = {
         :labels="labels"
         :datasets="datasets"
         hauteur="h-64"
-        lueur="accent-primary"
-        :lueur-opacite="0.1"
         :legende="{ position: 'top', align: 'end', labels: { boxWidth: 8 } }"
         :infobulle="infobulle"
         :axe-x="{ ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } }"

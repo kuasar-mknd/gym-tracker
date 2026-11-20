@@ -122,13 +122,13 @@ describe('l’historique différé (#2351)', () => {
         historique.arrive = true
     })
 
-    it('montre un squelette qui pulse, sans graphique ni état vide, tant que l’historique n’est pas arrivé', async () => {
+    it('montre un squelette, sans graphique ni état vide, tant que l’historique n’est pas arrivé', async () => {
         historique.arrive = false
         const wrapper = await mountPage(null)
 
         expect(wrapper.find('[data-deferred="history"]').exists()).toBe(true)
         expect(wrapper.find('[data-historique-en-attente]').exists()).toBe(true)
-        expect(wrapper.findAll('[data-historique-en-attente] .animate-pulse')).toHaveLength(4)
+        expect(wrapper.findAll('[data-historique-en-attente] [data-carte-en-attente]')).toHaveLength(4)
         expect(wrapper.text()).not.toContain('Pas assez de données pour afficher les statistiques')
         expect(wrapper.vm.volumeData).toEqual([])
     })

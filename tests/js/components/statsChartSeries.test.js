@@ -30,39 +30,6 @@ const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkout
 const chartIn = (wrapper, name) => wrapper.findComponent({ name })
 const seriesOf = (wrapper, name) => chartIn(wrapper, name).props('data')
 
-/**
- * A stand-in for the Chart.js scriptable context. The colour callbacks build a
- * canvas gradient, so the fake records the stops that were added to it — that
- * is what decides whether a bar reads as a gain or a loss.
- *
- * @returns {{ctx: object, chartArea: object, stops: string[]}}
- */
-const paintingContext = () => {
-    const stops = []
-
-    return {
-        stops,
-        ctx: {
-            createLinearGradient: () => ({ addColorStop: (_offset, color) => stops.push(color) }),
-        },
-        chartArea: { top: 0, bottom: 100, left: 0, right: 100 },
-    }
-}
-
-/**
- * Runs a scriptable colour callback and returns the gradient stops it laid down.
- *
- * @param {Function} callback
- * @param {number} raw
- * @returns {string[]}
- */
-const stopsFor = (callback, raw) => {
-    const chart = paintingContext()
-    callback({ raw, chart })
-
-    return chart.stops
-}
-
 describe('BodyPartDiffChart series', () => {
     const measurements = [
         { part: 'Poids', diff: 0, unit: 'kg' },
@@ -110,8 +77,8 @@ describe('BodyPartDiffChart series', () => {
     it('paints a gain green and a loss red', () => {
         const paint = seriesOf(mountChart(), 'Bar').datasets[0].backgroundColor
 
-        expect(stopsFor(paint, 2)).toEqual([jeton('trend-up'), jetonTransparent('trend-up', 0.55)])
-        expect(stopsFor(paint, -1.5)).toEqual([jeton('trend-down'), jetonTransparent('trend-down', 0.55)])
+        expect(paint({ raw: 2 })).toBe(jeton('trend-up'))
+        expect(paint({ raw: -1.5 })).toBe(jeton('trend-down'))
     })
 })
 
@@ -151,11 +118,11 @@ describe('BodyFatLineChart series', () => {
         expect(series.datasets[0].data).toEqual([])
     })
 
-    it('asks for neither line nor fill colour before the plot area exists', () => {
+    it('draws the line in one colour and asks for no fill colour before the plot area exists', () => {
         const dataset = seriesOf(mountChart([{ date: '01/07', body_fat: 18.4 }]), 'Line').datasets[0]
         const blankChart = { chart: { ctx: null, chartArea: null } }
 
-        expect(dataset.borderColor(blankChart)).toBeNull()
+        expect(dataset.borderColor).toBe(jeton('accent-secondary'))
         expect(dataset.backgroundColor(blankChart)).toBeNull()
     })
 })
@@ -321,26 +288,44 @@ describe('VolumePerWorkoutChart series', () => {
 })
 
 /**
- * Every one of these builds its bar fill as a canvas gradient over the plot
- * area — and Chart.js runs that callback once on the very first frame, before
- * any plot area exists. The guard is the difference between the chart rendering
- * and the page throwing on mount, and it is identical enough in all five that
- * testing only one would let the other four drift.
+ * Chacune peint ses barres d'une seule couleur, la même à la première image
+ * qu'aux suivantes : plus de dégradé à construire sur une zone de tracé qui
+ * n'existe pas encore. Les attentes sont écrites ici, pas relues sur le
+ * composant.
  */
 describe.each([
-    ['BodyPartDiffChart', BodyPartDiffChart, { data: [{ part: 'Poitrine', diff: 2, unit: 'cm' }] }],
     [
         'RecentWorkoutsExercisesChart',
         RecentWorkoutsExercisesChart,
         { data: [{ started_at: '2026-07-05T10:00:00Z', workout_lines_count: 5 }] },
+        jeton('accent-state'),
     ],
-    ['DurationHistoryChart', DurationHistoryChart, { data: [{ date: '01/07', duration: 45 }] }],
-    ['SetsPerSessionChart', SetsPerSessionChart, { data: [{ date: '01/07', sets: 12 }] }],
-    ['VolumePerWorkoutChart', VolumePerWorkoutChart, { data: [{ date: '01/07', volume: 8250 }] }],
-])('%s first frame', (_name, component, props) => {
-    it('asks for no fill colour at all before the plot area exists', () => {
-        const paint = seriesOf(mount(component, { props }), 'Bar').datasets[0].backgroundColor
+    [
+        'DurationHistoryChart',
+        DurationHistoryChart,
+        { data: [{ date: '01/07', duration: 45 }] },
+        jetonTransparent('accent-primary', 0.7),
+    ],
+    ['SetsPerSessionChart', SetsPerSessionChart, { data: [{ date: '01/07', sets: 12 }] }, jeton('accent-secondary')],
+    [
+        'VolumePerWorkoutChart',
+        VolumePerWorkoutChart,
+        { data: [{ date: '01/07', volume: 8250 }] },
+        jeton('accent-primary'),
+    ],
+])('%s first frame', (_name, component, props, expected) => {
+    it('peint ses barres d’une couleur unie', () => {
+        expect(seriesOf(mount(component, { props }), 'Bar').datasets[0].backgroundColor).toBe(expected)
+    })
+})
 
-        expect(paint({ raw: 1, chart: { ctx: null, chartArea: null } })).toBeNull()
+describe('BodyPartDiffChart first frame', () => {
+    it('colours a bar from its own value, with no plot area needed', () => {
+        const paint = seriesOf(
+            mount(BodyPartDiffChart, { props: { data: [{ part: 'Poitrine', diff: 2, unit: 'cm' }] } }),
+            'Bar',
+        ).datasets[0].backgroundColor
+
+        expect(paint({ raw: 1, chart: { ctx: null, chartArea: null } })).toBe(jeton('trend-up'))
     })
 })

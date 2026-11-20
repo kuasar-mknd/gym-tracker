@@ -25,22 +25,14 @@ const datasets = computed(() => [
         data: sortedData.value.map((item) => parseFloat(item.score)),
         fill: true,
         tension: 0.4,
-        borderColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-            gradient.addColorStop(0, jeton('accent-primary')) // Orange
-            gradient.addColorStop(1, jeton('accent-secondary')) // Pink
-            return gradient
-        },
+        borderColor: jeton('accent-primary'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart
             if (!chartArea) return null
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
             gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
-            gradient.addColorStop(1, jetonTransparent('accent-secondary', 0))
+            gradient.addColorStop(1, jetonTransparent('accent-primary', 0))
             return gradient
         },
         borderWidth: 3,
@@ -50,7 +42,7 @@ const datasets = computed(() => [
         pointBorderWidth: 2,
         pointHoverRadius: 6,
         pointHoverBackgroundColor: jeton('surface-card'),
-        pointHoverBorderColor: jeton('accent-secondary'),
+        pointHoverBorderColor: jeton('accent-primary'),
         pointHoverBorderWidth: 3,
     },
 ])
@@ -68,7 +60,6 @@ const infobulle = {
         :labels="labels"
         :datasets="datasets"
         hauteur="h-64"
-        lueur="accent-primary"
         :infobulle="infobulle"
         :axe-y="{ grid: { borderDash: [4, 4] } }"
     />

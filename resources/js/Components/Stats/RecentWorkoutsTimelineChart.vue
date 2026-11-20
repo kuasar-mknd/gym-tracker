@@ -24,21 +24,13 @@ const datasets = computed(() => [
         data: reversedData.value.map(workoutDurationMinutes),
         fill: true,
         tension: 0.4,
-        borderColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-            gradient.addColorStop(0, jeton('accent-tertiary')) // vivid-violet
-            gradient.addColorStop(1, jeton('accent-primary')) // electric-orange
-            return gradient
-        },
+        borderColor: jeton('accent-primary'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart
             if (!chartArea) return null
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            gradient.addColorStop(0, jetonTransparent('accent-tertiary', 0.2))
+            gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
             gradient.addColorStop(1, jetonTransparent('accent-primary', 0))
             return gradient
         },
@@ -75,7 +67,6 @@ const infobulle = {
         :labels="labels"
         :datasets="datasets"
         hauteur="h-40"
-        lueur="accent-tertiary"
         :infobulle="infobulle"
         :axe-y="{ display: false, beginAtZero: true }"
     />

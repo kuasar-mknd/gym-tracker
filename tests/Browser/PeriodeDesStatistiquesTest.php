@@ -31,7 +31,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
      * différées ne sont pas là.
      */
     private const string SEANCES_AFFICHEES = <<<'JS'
-        const etiquette = [...document.querySelectorAll('div.uppercase')].find((noeud) => noeud.textContent.trim() === 'Séances');
+        const etiquette = [...document.querySelectorAll('div.text-2xs')].find((noeud) => noeud.textContent.trim() === 'Séances');
         const valeur = etiquette?.nextElementSibling;
         return valeur && valeur.classList.contains('font-display') ? valeur.textContent.trim() : null;
         JS;
@@ -40,7 +40,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
      * Le résumé que `BaseChart` écrit des valeurs que trace la courbe du volume.
      */
     private const string RESUME_DU_VOLUME = <<<'JS'
-        const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Évolution du Volume');
+        const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Évolution du volume');
         const resume = titre?.closest('.stagger-3')?.querySelector('p.sr-only') ?? null;
         return resume ? resume.textContent.trim() : null;
         JS;

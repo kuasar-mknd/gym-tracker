@@ -76,8 +76,6 @@ const props = defineProps({
     entiers: { type: Boolean, default: false },
     indexAxis: { type: String, default: 'x' },
     interaction: { type: Object, default: null },
-    lueur: { type: String, default: '' },
-    lueurOpacite: { type: Number, default: 0.2 },
     options: { type: Object, default: () => ({}) },
     plugins: { type: Array, default: () => [] },
     vide: { type: Boolean, default: false },
@@ -169,7 +167,7 @@ const legende = () => {
         position: 'bottom',
         labels: {
             color: jeton('text-muted'),
-            font: { size: 10, weight: 'bold' },
+            font: { size: 10, weight: 500 },
             padding: 12,
             boxHeight: 8,
             usePointStyle: true,
@@ -299,21 +297,11 @@ onBeforeUnmount(() => {
     window.removeEventListener('beforeprint', avantImpression)
     window.removeEventListener('afterprint', apresImpression)
 })
-
-const style = computed(() =>
-    props.lueur
-        ? { '--lueur': `var(--color-${props.lueur})`, '--lueur-opacite': String(props.lueurOpacite) }
-        : undefined,
-)
 </script>
 
 <template>
     <div class="flex h-full w-full flex-col">
-        <div
-            ref="boite"
-            :class="['relative w-full', hauteur === 'h-full' ? 'min-h-0 flex-1' : hauteur, { 'avec-lueur': lueur }]"
-            :style="style"
-        >
+        <div ref="boite" :class="['relative w-full', hauteur === 'h-full' ? 'min-h-0 flex-1' : hauteur]">
             <slot v-if="vide" name="vide" />
             <template v-else-if="approche">
                 <component
@@ -333,7 +321,7 @@ const style = computed(() =>
             <li
                 v-for="entree in legendeSousLAnneau"
                 :key="entree.label"
-                class="font-display text-text-muted flex items-center gap-1.5 text-xs font-bold"
+                class="font-display text-text-muted flex items-center gap-1.5 text-xs font-medium"
             >
                 <span
                     class="inline-block h-2 w-2 rounded-full"
@@ -345,9 +333,3 @@ const style = computed(() =>
         </ul>
     </div>
 </template>
-
-<style scoped>
-.avec-lueur :deep(canvas) {
-    filter: drop-shadow(0 4px 6px rgb(from var(--lueur) r g b / var(--lueur-opacite)));
-}
-</style>

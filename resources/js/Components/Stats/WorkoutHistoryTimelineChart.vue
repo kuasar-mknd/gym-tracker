@@ -28,7 +28,7 @@ const datasets = computed(() => [
         type: 'line',
         label: 'Durée (min)',
         data: seances.value.map(workoutDurationMinutes),
-        borderColor: jeton('accent-secondary'), // hot-pink
+        borderColor: jeton('accent-secondary'),
         borderWidth: 3,
         pointBackgroundColor: jeton('surface-card'),
         pointBorderColor: jeton('accent-secondary'),
@@ -41,17 +41,7 @@ const datasets = computed(() => [
         type: 'bar',
         label: 'Volume',
         data: seances.value.map((d) => d.workout_volume || 0),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jetonTransparent('accent-primary', 0.4)) // electric-orange with opacity
-            gradient.addColorStop(1, jetonTransparent('accent-secondary', 0.8)) // hot-pink with opacity
-
-            return gradient
-        },
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderRadius: 8,
         barPercentage: 0.6,
         yAxisID: 'y',
