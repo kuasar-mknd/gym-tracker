@@ -278,10 +278,6 @@ final class PersonalRecordService
                 ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)
                 ->delete();
 
-            if ($retires > 0) {
-                $this->noterUneEcriture($user->id, $idExercice);
-            }
-
             $this->reconstruire($user, $idExercice, null);
 
             return $retires;
@@ -927,8 +923,6 @@ final class PersonalRecordService
         /** @var TResultat */
         return Cache::lock("records:{$idUtilisateur}:{$idExercice}", self::VIE_DU_VERROU)
             ->block(self::ATTENTE_DU_VERROU, function () use ($idUtilisateur, $idExercice, $section): mixed {
-                unset($this->ecrits["{$idUtilisateur}:{$idExercice}"]);
-
                 try {
                     return $section();
                 } finally {

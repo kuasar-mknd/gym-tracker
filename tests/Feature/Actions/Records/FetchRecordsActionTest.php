@@ -358,3 +358,43 @@ it('date un record du nouveau début de sa séance quand celui-ci change', funct
 
     expect($action->execute($user)['records'][0]['poids_max']['date'] ?? null)->toBe('2026-11-03');
 });
+
+it('montre le record que reparer recrée quand il manquait', function (): void {
+    $user = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
+    $seance = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    $serie = Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => 100, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
+    $service = app(PersonalRecordService::class);
+    $service->synchroniserLesRecordsDeLaSerie($serie, $user);
+    PersonalRecord::query()->where('user_id', $user->id)->where('type', PersonalRecordType::MaxWeight->value)->delete();
+
+    $action = app(FetchRecordsAction::class);
+
+    expect($action->execute($user)['records'][0]['poids_max'])->toBeNull();
+
+    $service->reparer($user, $exercice->id);
+
+    expect($action->execute($user)['records'][0]['poids_max']['valeur'] ?? null)->toBe(100.0);
+});
+
+it('montre la valeur du record que la reconstruction réécrit après la suppression de sa série', function (): void {
+    $user = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
+    $seance = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    $lourde = Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => 100, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
+    $legere = Set::factory()->createQuietly(['workout_line_id' => $ligne->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true, 'is_warmup' => false]);
+    $service = app(PersonalRecordService::class);
+    $service->synchroniserLesRecordsDeLaSerie($lourde, $user);
+    $service->synchroniserLesRecordsDeLaSerie($legere, $user);
+
+    $action = app(FetchRecordsAction::class);
+
+    expect($action->execute($user)['records'][0]['poids_max']['valeur'] ?? null)->toBe(100.0);
+
+    Set::query()->whereKey($lourde->id)->delete();
+    $service->recompute($user, $exercice->id);
+
+    expect($action->execute($user)['records'][0]['poids_max']['valeur'] ?? null)->toBe(80.0);
+});
