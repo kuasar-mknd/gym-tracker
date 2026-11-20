@@ -1314,14 +1314,8 @@
 }
 
 @utility glass-modal {
-    background: rgb(from var(--color-surface-card) r g b / 0.95);
-    backdrop-filter: blur(var(--backdrop-blur-glass-strong));
-    -webkit-backdrop-filter: blur(var(--backdrop-blur-glass-strong));
-    border: 1px solid var(--verre-lisere);
-    border-radius: 2rem;
     /* Sa hauteur se borne dans Modal.vue, par `hauteur-sure-*` : la zone sûre, pas 85vh (#2043). */
     overflow-y: auto;
-    box-shadow: 0 25px 50px rgb(from var(--color-shadow-cast) r g b / 0.15);
 }
 
 @utility glass-skeleton {

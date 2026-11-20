@@ -242,7 +242,7 @@ const containerClass = computed(() =>
                     -->
                     <div
                         v-show="show"
-                        class="glass-modal verre-epais text-text-main hauteur-sure-12 rounded-carte flex transform flex-col overflow-y-auto transition sm:mx-auto sm:w-full"
+                        class="glass-modal verre-epais text-text-main hauteur-sure-12 rounded-carte relative flex transform flex-col overflow-y-auto transition sm:mx-auto sm:w-full"
                         :class="maxWidthClass"
                     >
                         <slot v-if="showSlot" />

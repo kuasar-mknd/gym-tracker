@@ -64,9 +64,9 @@ class DeconnexionAvecDesEcrituresEnAttenteTest extends DuskTestCase
 
             /*
              * Chaque libellé se vérifie deux fois (#2079). Dans le DOM, à
-             * l'identique, casse comprise : `glass-button` le passe en
-             * majuscules, et WebDriver rend le texte transformé (« RESTER
-             * CONNECTÉ »), où « Rester connecté » ne se trouve pas. À l'écran,
+             * l'identique, casse comprise : un texte que le CSS passe en
+             * majuscules (`titre-carte`) se lit transformé par WebDriver, où
+             * le texte d'origine ne se trouve pas. À l'écran,
              * sans tenir compte de la casse : `textContent` lit aussi un texte
              * caché, et `waitFor` comme `assertVisible` ne disent que le bouton
              * affiché, pas son libellé.
