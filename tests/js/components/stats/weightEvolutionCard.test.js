@@ -31,7 +31,10 @@ beforeAll(() => {
 
 /** The chart is an async component, so the slot content lands a tick later. */
 const mountCard = async (props) => {
-    const wrapper = mount(WeightEvolutionCard, { props, global: { mocks: { route: globalThis.route } } })
+    const wrapper = mount(WeightEvolutionCard, {
+        props: { periode: 'cette période', ...props },
+        global: { mocks: { route: globalThis.route } },
+    })
 
     await flushPromises()
 
@@ -57,7 +60,7 @@ describe('WeightEvolutionCard headline', () => {
 
 describe('WeightEvolutionCard sans pesée sur la période', () => {
     it('ne dit pas « pas encore de données » quand un poids est affiché', async () => {
-        const card = await mountCard({ latestWeight: '45', weightHistory: [], periode: 'cette période' })
+        const card = await mountCard({ latestWeight: '45', weightHistory: [] })
 
         expect(card.text()).toContain('Aucune pesée sur cette période')
         expect(card.text()).not.toContain('Pas encore de données de poids')
