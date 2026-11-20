@@ -18,8 +18,9 @@ const RETOURS = {
     'Goals/Index': 'stats.index',
     'Habits/Index': 'profile.index',
     'Journal/Index': 'profile.index',
-    'Measurements/Index': 'stats.index',
-    'Measurements/Parts/Index': 'stats.index',
+    'Corps/Index': 'stats.index',
+    'Measurements/Index': 'corps.index',
+    'Measurements/Parts/Index': 'corps.index',
     // Sans historique (ouverture à froid, clic sur une notification push), `history.back()` ne ferait rien.
     'Notifications/Index': 'dashboard',
     'Supplements/Index': 'profile.index',

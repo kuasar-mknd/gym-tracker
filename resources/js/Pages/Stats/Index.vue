@@ -3,13 +3,13 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 
-import WeightEvolutionCard from '@/Components/Stats/WeightEvolutionCard.vue'
-import BodyMetricsGrid from '@/Components/Stats/BodyMetricsGrid.vue'
+import MonthlyVolumeCard from '@/Components/Stats/MonthlyVolumeCard.vue'
 import VolumeTrendCard from '@/Components/Stats/VolumeTrendCard.vue'
 import DurationHistoryCard from '@/Components/Stats/DurationHistoryCard.vue'
 import MuscleDistributionCard from '@/Components/Stats/MuscleDistributionCard.vue'
 import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
@@ -21,9 +21,6 @@ const props = defineProps({
     deferredData: Object,
 
     exercises: Array,
-    latestWeight: [Number, String],
-    weightChange: Number,
-    bodyFat: Number,
     selectedPeriod: String,
 })
 
@@ -127,19 +124,20 @@ const handlePeriodChange = (period) => {
             </template>
 
             <template v-else>
-                <WeightEvolutionCard
-                    :latest-weight="latestWeight"
-                    :weight-change="weightChange"
-                    :weight-history="deferredData?.body?.weightHistory"
-                    :deferred-data="deferredData"
-                />
+                <Link v-press :href="route('corps.index')" class="block">
+                    <GlassCard padding="p-4" class="transition duration-300 hover:-translate-y-0.5 active:scale-[0.99]">
+                        <div class="flex items-center gap-3">
+                            <GlassIcon name="accessibility_new" class="text-accent-secondary-deep" />
+                            <div class="min-w-0 flex-1">
+                                <h2 class="titre-carte">Corps</h2>
+                                <p class="text-text-muted text-xs">Poids, masse grasse, mensurations</p>
+                            </div>
+                            <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />
+                        </div>
+                    </GlassCard>
+                </Link>
 
-                <BodyMetricsGrid
-                    :body-fat="bodyFat"
-                    :body-fat-history="deferredData?.body?.bodyFatHistory"
-                    :monthly-comparison="deferredData?.performance?.monthlyComparison"
-                    :deferred-data="deferredData"
-                />
+                <MonthlyVolumeCard :monthly-comparison="deferredData?.performance?.monthlyComparison" />
 
                 <VolumeTrendCard
                     :volume-trend="deferredData?.performance?.volumeTrend"

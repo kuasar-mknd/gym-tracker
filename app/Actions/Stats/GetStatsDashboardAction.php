@@ -6,7 +6,6 @@ namespace App\Actions\Stats;
 
 use App\Models\User;
 use App\Services\Diagnostic\ValeurLue;
-use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\ExerciseStatsService;
 use App\Services\Stats\VolumeStatsService;
@@ -20,8 +19,7 @@ class GetStatsDashboardAction
         protected FetchStatsOverviewAction $fetchStatsOverview,
         protected VolumeStatsService $volumeStats,
         protected ExerciseStatsService $exerciseStats,
-        protected WorkoutStatsService $workoutStats,
-        protected BodyStatsService $bodyStats
+        protected WorkoutStatsService $workoutStats
     ) {
     }
 
@@ -38,9 +36,6 @@ class GetStatsDashboardAction
      * `Inertia::defer()`.
      *
      * @return array{
-     *     latestWeight: \Closure(): (float|string|null),
-     *     weightChange: \Closure(): float,
-     *     bodyFat: \Closure(): (float|string|null),
      *     exercises: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>,
      *     selectedPeriod: string,
      *     deferredData: \Closure(): array<string, mixed>
@@ -55,7 +50,6 @@ class GetStatsDashboardAction
             ...$this->fetchStatsOverview->chiffresImmediats($user, $period),
             'deferredData' => fn (): array => [
                 'performance' => $this->performanceOverview($user, $jours),
-                'body' => $this->bodyStats->getBodyProgressOverview($user, $jours),
             ],
         ];
     }

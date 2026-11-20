@@ -20,15 +20,15 @@ test('authenticated user can view stats dashboard', function (): void {
         ->assertInertia(
             fn (Assert $page): Assert => $page
                 ->component('Stats/Index')
-                ->has('latestWeight')
-                ->has('weightChange')
-                ->has('bodyFat')
+                ->missing('latestWeight')
+                ->missing('weightChange')
+                ->missing('bodyFat')
                 ->has('exercises')
                 ->has('selectedPeriod')
         );
 });
 
-test('stats dashboard loads deferred performance and body stats props', function (): void {
+test('stats dashboard loads deferred performance props and no body stats', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -40,7 +40,7 @@ test('stats dashboard loads deferred performance and body stats props', function
                 ->loadDeferredProps(
                     fn (Assert $page): Assert => $page
                         ->has('deferredData.performance')
-                        ->has('deferredData.body')
+                        ->missing('deferredData.body')
                 )
         );
 });

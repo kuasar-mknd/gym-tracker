@@ -39,7 +39,7 @@ class OngletActifDesPagesTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($compte): void {
             $browser->loginAs(User::findOrFail($compte->id))->resizeToIphone15();
 
-            foreach (['/goals', '/calendar', '/habits', '/daily-journals', '/supplements', '/achievements', '/body-measurements'] as $adresse) {
+            foreach (['/goals', '/calendar', '/habits', '/daily-journals', '/supplements', '/achievements', '/corps'] as $adresse) {
                 $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitFor('nav[aria-label="Navigation principale"]', 30);
 
                 /** @var array{retour: ?string, allumes: list<string>} $page */
@@ -47,6 +47,17 @@ class OngletActifDesPagesTest extends DuskTestCase
 
                 $this->assertNotNull($page['retour'], "$adresse n'a pas de bouton Retour.");
                 $this->assertSame([$page['retour']], $page['allumes'], "$adresse n'allume pas l'onglet où mène son retour.");
+            }
+
+            // Poids et mensurations reviennent à Corps, qui n'est pas un onglet : Progrès reste allumé.
+            foreach (['/body-measurements', '/body-metrics'] as $adresse) {
+                $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitFor('nav[aria-label="Navigation principale"]', 30);
+
+                /** @var array{retour: ?string, allumes: list<string>} $page */
+                $page = $browser->script(self::LIT)[0];
+
+                $this->assertSame('/corps', $page['retour'], "$adresse ne revient pas à Corps.");
+                $this->assertSame(['/stats'], $page['allumes'], "$adresse n'allume pas Progrès.");
             }
 
             // La cloche mène aux notifications : leur retour va à l'Accueil, qui reste éteint.

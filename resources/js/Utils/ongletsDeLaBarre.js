@@ -41,7 +41,7 @@ export const ONGLETS = [
         nom: 'Progrès',
         icone: 'bar_chart_4_bars',
         route: 'stats.index',
-        familles: ['stats', 'goals', 'achievements', 'body-measurements', 'body-parts', 'exercises'],
+        familles: ['stats', 'corps', 'goals', 'achievements', 'body-measurements', 'body-parts', 'exercises'],
     },
     {
         cle: 'profil',

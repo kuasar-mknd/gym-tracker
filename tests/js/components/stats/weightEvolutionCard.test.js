@@ -31,7 +31,10 @@ beforeAll(() => {
 
 /** The chart is an async component, so the slot content lands a tick later. */
 const mountCard = async (props) => {
-    const wrapper = mount(WeightEvolutionCard, { props, global: { mocks: { route: globalThis.route } } })
+    const wrapper = mount(WeightEvolutionCard, {
+        props: { periode: 'cette période', ...props },
+        global: { mocks: { route: globalThis.route } },
+    })
 
     await flushPromises()
 
@@ -63,10 +66,32 @@ describe('WeightEvolutionCard sans pesée sur la période', () => {
         expect(card.text()).not.toContain('Pas encore de données de poids')
     })
 
+    it('nomme la période que la page lui donne', async () => {
+        const card = await mountCard({ latestWeight: '45', weightHistory: [], periode: 'les 90 derniers jours' })
+
+        expect(card.text()).toContain('Aucune pesée sur les 90 derniers jours')
+    })
+
     it('garde « pas encore de données » quand rien n’a jamais été pesé', async () => {
         const card = await mountCard({ latestWeight: null, weightHistory: [] })
 
         expect(card.text()).toContain('Pas encore de données de poids')
+    })
+})
+
+describe('WeightEvolutionCard lien vers l’historique', () => {
+    it('renvoie vers l’historique quand un poids est affiché', async () => {
+        const card = await mountCard({ latestWeight: '45', weightHistory: [] })
+
+        expect(card.text()).toContain("Voir tout l'historique")
+        expect(card.text()).not.toContain('Ajouter une pesée')
+    })
+
+    it('propose d’ajouter une pesée quand rien n’a été pesé', async () => {
+        const card = await mountCard({ latestWeight: null, weightHistory: [] })
+
+        expect(card.text()).toContain('Ajouter une pesée')
+        expect(card.text()).not.toContain("Voir tout l'historique")
     })
 })
 
@@ -131,16 +156,13 @@ describe('WeightEvolutionCard chart', () => {
     })
 
     /**
-     * The page sends the body stats under deferredData. A copy served without
-     * the network lists that very key as rescued: waiting on another one would
-     * leave the skeleton up for good.
+     * The Corps page sends the body stats under bodyStats. Waiting on another
+     * key would leave the skeleton up for good.
      */
     it('waits on the deferred prop the page actually sends', async () => {
         const carte = await mountCard({ latestWeight: '82.5', weightHistory: [] })
-        const scoped = await mountCard({ latestWeight: '82.5', weightHistory: [], deferredData: { weightHistory: [] } })
 
-        expect(carte.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
-        expect(scoped.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
+        expect(carte.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('bodyStats')
     })
 
     it('leads to the page where the measurement is taken', async () => {

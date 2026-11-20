@@ -44,33 +44,32 @@ it('trace la durée des trente dernières séances terminées, pas une de plus',
 });
 
 /*
- * Les chiffres immédiats de la page sont des fermetures (#2148, étape 3a) :
- * l'action ne lit rien avant qu'Inertia ne les résolve, et les trois chiffres
- * de la pesée (dernier poids, écart, masse grasse) viennent d'une seule
- * lecture du cache, faite par la première fermeture résolue, quel que soit
- * l'ordre.
+ * La racine de Progrès ne porte plus la pesée : elle vit sur la page Corps
+ * (`FetchCorpsActionTest`, où sont passés les trois chiffres qu'une seule
+ * lecture du cache nourrissait). Ni les props immédiates ni le groupe différé
+ * n'en parlent, et rien ne lit le cache des mesures, fermetures résolues ou non.
  */
-it('ne lit la pesée qu’une fois pour ses trois chiffres, et rien avant qu’ils soient résolus', function (): void {
+it('ne rend aucune prop de pesée et ne lit pas le cache des mesures', function (): void {
     Carbon::setTestNow(Carbon::parse('2026-06-30 12:00:00'));
     $user = User::factory()->create();
     \App\Models\BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 80.4, 'body_fat' => 18.5, 'measured_at' => '2026-06-29 08:00:00']);
-    \App\Models\BodyMeasurement::factory()->create(['user_id' => $user->id, 'weight' => 81.0, 'body_fat' => 19.0, 'measured_at' => '2026-06-22 08:00:00']);
     Cache::flush();
 
     $lectures = 0;
-    $prefixe = "stats.latest_metrics.{$user->id}.";
-    Event::listen([CacheHit::class, CacheMissed::class], static function (CacheHit|CacheMissed $lecture) use (&$lectures, $prefixe): void {
-        if (str_starts_with($lecture->key, $prefixe)) {
+    Event::listen([CacheHit::class, CacheMissed::class], static function (CacheHit|CacheMissed $lecture) use (&$lectures): void {
+        if (str_contains($lecture->key, 'latest_metrics') || str_contains($lecture->key, 'body_progress')) {
             $lectures++;
         }
     });
 
     $props = app(GetStatsDashboardAction::class)->execute($user, Request::create('/stats', 'GET', ['period' => '7j']));
-    expect($lectures)->toBe(0);
 
-    expect($props['bodyFat']())->toBe('18.50')
-        ->and($props['weightChange']())->toBe(-0.6)
-        ->and($props['latestWeight']())->toBe('80.40')
-        ->and($props['selectedPeriod'])->toBe('7j')
-        ->and($lectures)->toBe(1);
+    expect(array_keys($props))->toBe(['exercises', 'selectedPeriod', 'deferredData'])
+        ->and($props['selectedPeriod'])->toBe('7j');
+
+    $props['exercises']();
+    $differees = $props['deferredData']();
+
+    expect(array_keys($differees))->toBe(['performance'])
+        ->and($lectures)->toBe(0);
 });

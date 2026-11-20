@@ -20,6 +20,7 @@ class WebRoutesSecurityTest extends TestCase
             route('goals.index'),
             route('templates.index'),
             route('exercises.index'),
+            route('corps.index'),
             route('body-measurements.index'),
             route('body-parts.index'),
             route('plates.index'),

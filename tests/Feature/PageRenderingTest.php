@@ -144,7 +144,7 @@ test('stats page renders without cache errors', function (): void {
 // In the new architecture, StatsController returns deferredData as a consolidated deferred prop
                 ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                     ->has('deferredData.performance.volumeTrend')
-                    ->has('deferredData.body.weightHistory')
+                    ->missing('deferredData.body')
                 )
                 ->has('exercises')
         );
@@ -349,6 +349,7 @@ test('unauthenticated users are redirected to login for all protected pages', fu
     '/goals',
     '/exercises',
     '/templates',
+    '/corps',
     '/body-measurements',
     '/daily-journals',
     '/notifications',
