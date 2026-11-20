@@ -81,14 +81,34 @@ class ReouvertureNeRejoueRienTest extends TestCase
         ];
     }
 
-    public function test_la_reponse_de_la_fin_porte_les_records_et_le_droit_de_reprendre(): void
+    public function test_la_reponse_de_la_fin_porte_le_droit_de_reprendre_et_pas_les_records(): void
     {
-        $this->terminer()
+        $reponse = $this->terminer()
             ->assertOk()
             ->assertJsonPath('meta.peut_reprendre', true)
-            ->assertJsonPath('meta.reprise_jusqu_a', $this->seance->refresh()->ended_at->copy()->addMinutes(Workout::DELAI_DE_REOUVERTURE_MINUTES)->toIso8601String())
-            ->assertJsonPath('meta.records.0.exercice', 'Développé couché')
-            ->assertJsonPath('meta.records.0.valeur', 100);
+            ->assertJsonPath('meta.reprise_jusqu_a', $this->seance->refresh()->ended_at->copy()->addMinutes(Workout::DELAI_DE_REOUVERTURE_MINUTES)->toIso8601String());
+
+        $meta = $reponse->json('meta');
+        $this->assertIsArray($meta);
+        $this->assertArrayNotHasKey('records', $meta);
+    }
+
+    public function test_le_bilan_lit_les_records_de_la_seance_par_une_route_a_part(): void
+    {
+        $this->terminer()->assertOk();
+
+        $this->actingAs($this->compte)->getJson(route('workouts.records', $this->seance))
+            ->assertOk()
+            ->assertJsonPath('records.0.exercice', 'Développé couché')
+            ->assertJsonPath('records.0.valeur', 100)
+            ->assertJsonCount(1, 'records');
+    }
+
+    public function test_les_records_d_une_seance_ne_se_lisent_que_par_son_compte(): void
+    {
+        $this->terminer()->assertOk();
+
+        $this->actingAs(User::factory()->create())->getJson(route('workouts.records', $this->seance))->assertNotFound();
     }
 
     public function test_une_fin_choisie_trop_loin_ne_laisse_pas_reprendre(): void
@@ -114,7 +134,7 @@ class ReouvertureNeRejoueRienTest extends TestCase
         $this->rouvrir();
         $this->assertNull($this->seance->refresh()->ended_at);
 
-        $this->terminer()->assertOk()->assertJsonPath('meta.records.0.valeur', 100);
+        $this->terminer()->assertOk();
 
         $this->assertSame($apresLaPremiere, $this->etat());
         $this->assertSame($notifiees, Notification::sent($this->compte, AchievementUnlocked::class)->count());
@@ -170,14 +190,15 @@ class ReouvertureNeRejoueRienTest extends TestCase
         $this->assertNotNull($this->seance->refresh()->ended_at);
     }
 
-    public function test_ziggy_connait_la_route_de_reouverture_cote_client(): void
+    public function test_ziggy_connait_les_routes_de_reouverture_et_de_records_cote_client(): void
     {
         /** @var list<string> $exposees */
         $exposees = config('ziggy.only');
         /** @var array<string, mixed> $routes */
-        $routes = (new \Tighten\Ziggy\Ziggy())->toArray()['routes'];
+        $routes = new \Tighten\Ziggy\Ziggy()->toArray()['routes'];
 
         $this->assertContains('workouts.*', $exposees);
         $this->assertArrayHasKey('workouts.reopen', $routes);
+        $this->assertArrayHasKey('workouts.records', $routes);
     }
 }

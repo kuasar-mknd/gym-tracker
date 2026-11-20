@@ -150,6 +150,21 @@ class WorkoutController extends Controller
         return redirect()->route('workouts.show', $rouverte);
     }
 
+    /**
+     * Les records de poids que la séance tient, lus par le bilan de fin une fois
+     * ouvert (#2434) : une lecture à part, hors de la réponse de la fin, que la
+     * file hors ligne rejoue aussi. Les records s'écrivent par une tâche en file :
+     * ils peuvent manquer juste après la fin, et le bilan les prend à l'ouverture.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si la séance n'est pas celle du compte.
+     */
+    public function records(Workout $workout): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('view', $workout);
+
+        return response()->json(['records' => $workout->recordsDePoids()]);
+    }
+
     public function destroy(Workout $workout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $workout);

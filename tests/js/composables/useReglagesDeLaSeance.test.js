@@ -31,6 +31,8 @@ vi.mock('@inertiajs/vue3', () => ({
     usePage: () => inertia.page,
 }))
 vi.mock('@/composables/useHaptics', () => haptics)
+const http = vi.hoisted(() => vi.fn())
+vi.mock('@/Utils/http', () => ({ http }))
 vi.mock('@/Utils/SyncService', () => ({
     default: {
         patch: (...args) => file.patch(...args),
@@ -76,6 +78,8 @@ const finAcceptee = (meta = {}) => ({
 })
 
 beforeEach(() => {
+    http.mockReset()
+    http.mockResolvedValue({ data: {} })
     vi.clearAllMocks()
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(HEURE_DU_GESTE)
@@ -181,11 +185,42 @@ describe('les réglages de la séance', () => {
 
             expect(reglages.bilanDeFin.value).toEqual({
                 enAttente: false,
-                records: [{ exercice: 'Squat', valeur: 100 }],
+                records: [],
                 peutReprendre: true,
                 repriseJusqua: REPRISE_JUSQUA,
                 proposer: true,
             })
+        })
+
+        it('lit les records par une requête à part, une fois le bilan ouvert', async () => {
+            file.patch.mockResolvedValue(bilanDuServeur())
+            http.mockResolvedValue({ data: { records: [{ exercice: 'Squat', valeur: 100 }] } })
+            const reglages = monter()
+
+            await reglages.confirmFinishWorkout()
+            await flushPromises()
+
+            expect(http).toHaveBeenCalledWith({ method: 'get', url: '/workouts.records/5' })
+            expect(reglages.bilanDeFin.value.records).toEqual([{ exercice: 'Squat', valeur: 100 }])
+        })
+
+        it('garde le bilan sans records quand leur lecture échoue, et n’en donne pas à un bilan refermé', async () => {
+            file.patch.mockResolvedValue(bilanDuServeur())
+            http.mockRejectedValueOnce(new Error('réseau'))
+            const reglages = monter()
+            await reglages.confirmFinishWorkout()
+            await flushPromises()
+
+            expect(reglages.bilanDeFin.value).toMatchObject({ enAttente: false, records: [] })
+
+            let rendre
+            http.mockReturnValueOnce(new Promise((resolve) => (rendre = resolve)))
+            await reglages.confirmFinishWorkout()
+            reglages.bilanDeFin.value = null
+            rendre({ data: { records: [{ exercice: 'Squat', valeur: 100 }] } })
+            await flushPromises()
+
+            expect(reglages.bilanDeFin.value).toBeNull()
         })
 
         it('« Reprendre » rouvre la séance par le serveur, une seule fois, et le bilan se ferme à la réponse', async () => {

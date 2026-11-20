@@ -131,7 +131,23 @@ describe('le bilan de fin de séance', () => {
 
         expect(lire(wrapper, 'bilan-de-fin-reprise-perimee')).toBe('Le délai pour reprendre est passé.')
         expect(boutons(wrapper)).toEqual(['Fermer'])
-        expect(monter().find('[dusk="bilan-de-fin-reprise-perimee"]').exists()).toBe(false)
+        expect(lire(monter(), 'bilan-de-fin-reprise-perimee')).toBe('')
+    })
+
+    it('rend le focus à « Fermer » quand « Reprendre » disparaît, et garde son conteneur d’état dans la page', async () => {
+        const wrapper = mount(BilanDeFinDeSeance, {
+            props: { bilan: DU_SERVEUR, seance: SEANCE },
+            attachTo: document.body,
+            global: { stubs: { Modal: { props: ['show'], template: '<div v-if="show"><slot /></div>' } } },
+        })
+
+        expect(wrapper.get('[dusk="bilan-de-fin-reprise-perimee"]').attributes('role')).toBe('status')
+
+        await wrapper.setProps({ bilan: { ...DU_SERVEUR, peutReprendre: false, reprisePerimee: true } })
+        await wrapper.vm.$nextTick()
+
+        expect(document.activeElement).toBe(wrapper.get('[dusk="bilan-de-fin-fermer"]').element)
+        wrapper.unmount()
     })
 
     it('occupe « Reprendre » le temps de l’aller-retour, et retient « Fermer »', () => {

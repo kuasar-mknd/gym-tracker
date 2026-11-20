@@ -119,9 +119,10 @@ it('termine par une seule requête, mène à l’accueil, et l’invitation aux 
     await vi.waitUntil(() => present('#accueil'))
     await flushPromises()
 
-    // Une seule requête, la fin, et aucune visite qui écrive : l'accueil seul.
+    // Deux requêtes : la fin, puis la lecture des records que le bilan ouvert fait (#2434) ; aucune visite qui écrive : l'accueil seul.
     expect(reseau.serveur.resume()).toEqual([
         'patch /api/v1/workouts/finish {"workout_id":5,"ended_at":"2026-10-19T06:42:00.000Z"}',
+        'get /workouts/5/records',
     ])
     /*
      * L'heure de l'appareil au départ de la fin, lue à l'envoi, à côté de

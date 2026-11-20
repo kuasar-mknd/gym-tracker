@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
@@ -48,6 +48,19 @@ const resume = computed(() => {
         series: entier(seriesValidees(series).length),
     }
 })
+
+/** « Fermer » reprend le focus quand « Reprendre » disparaît sous le doigt : il le perdrait sinon. */
+const fermer = ref(null)
+
+watch(
+    () => props.bilan?.reprisePerimee === true,
+    async (perimee) => {
+        if (perimee) {
+            await nextTick()
+            fermer.value?.$el?.focus()
+        }
+    },
+)
 
 const peutReprendre = computed(() => props.bilan?.enAttente !== true && props.bilan?.peutReprendre === true)
 const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bilan?.records ?? [])))
@@ -105,15 +118,15 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
                 </ul>
             </div>
             <p
-                v-if="bilan?.reprisePerimee"
                 role="status"
-                class="text-text-muted mt-4 text-sm"
+                :class="{ 'text-text-muted mt-4 text-sm': bilan?.reprisePerimee }"
                 dusk="bilan-de-fin-reprise-perimee"
             >
-                Le délai pour reprendre est passé.
+                {{ bilan?.reprisePerimee ? 'Le délai pour reprendre est passé.' : '' }}
             </p>
             <div class="mt-6 flex flex-col gap-3">
                 <GlassButton
+                    ref="fermer"
                     variant="primary"
                     class="bouton-de-bilan w-full"
                     dusk="bilan-de-fin-fermer"

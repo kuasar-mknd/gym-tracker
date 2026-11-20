@@ -95,7 +95,8 @@ const raisonDuModele = computed(() => {
             « Modèle » enregistre une séance et quitte la page : sur téléphone, il
             n'occupe plus la largeur, que l'on touche pour fermer le clavier. Petit,
             effacé, à droite et à distance de la liste, un toucher dans le vide ne
-            l'atteint plus (#2434). Sur bureau, la colonne d'avant.
+            l'atteint plus (#2434). Sur bureau, pas de clavier à fermer : il reprend
+            la largeur de la colonne, mais garde la variante effacée.
         -->
         <div class="bureau:block flex justify-end pt-6">
             <GlassButton

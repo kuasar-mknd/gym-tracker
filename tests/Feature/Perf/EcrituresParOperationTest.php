@@ -309,11 +309,10 @@ it('termine une séance faite par la file hors ligne en une lecture de ses séan
         ->assertOk());
     $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
 
-    // Dix requêtes : neuf avant, plus la lecture des records de la séance (`Workout::recordsDePoids()`) que le bilan de fin porte dans `meta` (#2434). Le plan (EXPLAIN) lit les records de la séance par `personal_records_workout_id_foreign`, les trie (Using filesort) puis applique le LIMIT 5 : le plafond de cinq ne borne pas la lecture. Le rejeu de la file hors ligne, qui passe par ce même `finish`, paie aussi cette lecture.
     expect(serieDeJoursLectures($sql))->toHaveCount(1)
         ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
         ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
-        ->and(count($sql))->toBe(10, implode("\n", $sql));
+        ->and(count($sql))->toBe(9, implode("\n", $sql));
 });
 
 it('supprime une séance faite en une lecture des séances faites qui restent et une écriture de la série', function (): void {

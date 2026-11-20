@@ -57,6 +57,7 @@ const ADRESSES_DE_LA_SEANCE = {
     'api.v1.workout-lines.set-order': 'api/v1/workout-lines/{workoutLine}/set-order',
     'api.v1.workouts.line-order': 'api/v1/workouts/{workout}/line-order',
     'workouts.update': 'workouts/{workout}',
+    'workouts.records': 'workouts/{workout}/records',
     'templates.save-from-workout': 'workouts/{workout}/save-as-template',
 }
 

@@ -3,6 +3,7 @@ import { router, useForm, usePage } from '@inertiajs/vue3'
 import { attendreAuPlus } from '@/Utils/attendreAuPlus'
 import { estUneCopie } from '@/Utils/copiesServies'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
+import { http } from '@/Utils/http'
 import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
 import { FIN_NON_ENREGISTREE } from '@/Utils/seanceEnAttente'
 import { estUneFinDeSeance } from '@/Utils/seanceEtFile'
@@ -166,12 +167,38 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
         showFinishModal.value = false
         bilanDeFin.value = {
             enAttente: false,
-            records: Array.isArray(meta.records) ? meta.records : [],
+            records: [],
             peutReprendre: meta.peut_reprendre === true,
             repriseJusqua: meta.reprise_jusqu_a ?? null,
             proposer: meta.proposer_les_notifications === true,
         }
         triggerHaptic('success')
+        void chargerLesRecords(bilanDeFin.value, reponse?.data?.data?.id ?? idReelDeLaSeance())
+    }
+
+    /**
+     * Les records de poids de la séance, lus une fois le bilan ouvert (#2434) :
+     * une lecture à part (`workouts.records`), hors de la réponse de la fin, que
+     * la file hors ligne rejoue aussi. Un échec ne dit rien : le bilan se passe de
+     * records. Un bilan refermé, ou remplacé entre-temps, n'en reçoit pas.
+     *
+     * @param {object} bilan Le bilan ouvert, tel qu'`apresLaFin` l'a posé.
+     * @param {number|string|null} seance
+     */
+    const chargerLesRecords = async (bilan, seance) => {
+        if (seance === null || seance === undefined) {
+            return
+        }
+
+        try {
+            const reponse = await http({ method: 'get', url: route('workouts.records', { workout: seance }) })
+
+            if (bilanDeFin.value === bilan && Array.isArray(reponse.data?.records)) {
+                bilanDeFin.value = { ...bilan, records: reponse.data.records }
+            }
+        } catch {
+            // Sans records, le bilan reste complet : durée, volume, séries.
+        }
     }
 
     /**
@@ -243,7 +270,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
                 preserveState: false,
                 onSuccess: () => (bilanDeFin.value = null),
                 onHttpException: (reponse) => retirerLaRepriseRefusee(reponse?.status),
-                onError: () => retirerLaRepriseRefusee(422),
+                onError: (erreurs) => retirerLaRepriseRefusee(Object.keys(erreurs ?? {}).length > 0 ? 422 : null),
                 onFinish: () => (repriseEnCours.value = false),
             },
         )

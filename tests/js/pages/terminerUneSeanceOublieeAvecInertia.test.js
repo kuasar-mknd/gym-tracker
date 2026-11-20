@@ -102,6 +102,7 @@ it('propose l’heure de la dernière série saisie, et clôt la séance avec el
 
     expect(reseau.serveur.resume()).toEqual([
         `patch /api/v1/workouts/finish {"workout_id":5,"ended_at":"2026-10-19T06:42:00.000Z","fin_choisie":"${DERNIERE_SERIE}"}`,
+        'get /workouts/5/records',
     ])
     expect(visites).toEqual(['/dashboard'])
     expect(fileDurable()).toEqual([])
