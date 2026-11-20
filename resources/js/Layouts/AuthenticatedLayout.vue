@@ -87,7 +87,7 @@ const props = defineProps({
      * fiche d'un exercice, le jeûne, la modification d'un objectif) : le
      * layout n'ajoute pas le sien, qui le doublerait (lot 8, #2434).
      */
-    retourDansLaPage: {
+    retourPropre: {
         type: Boolean,
         default: false,
     },
@@ -112,7 +112,7 @@ useRaccourciClavier(
 
 const page = usePage()
 
-const retourDeBureau = computed(() => props.showBack && !props.retourDansLaPage)
+const retourDeBureau = computed(() => props.showBack && !props.retourPropre)
 const hrefDuRetour = computed(() => (props.backRoute ? route(props.backRoute) : 'javascript:history.back()'))
 
 /*

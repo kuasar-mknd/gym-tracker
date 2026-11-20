@@ -1120,7 +1120,7 @@ describe('AuthenticatedLayout — the frame around the page', () => {
 
     it('n’ajoute pas son retour quand la page porte déjà le sien', () => {
         const wrapper = mountLayout({
-            props: { showBack: true, backRoute: 'tools.index', pageTitle: 'Outils', retourDansLaPage: true },
+            props: { showBack: true, backRoute: 'tools.index', pageTitle: 'Outils', retourPropre: true },
             slots: { header: '<h1>Outils</h1>' },
         })
 
