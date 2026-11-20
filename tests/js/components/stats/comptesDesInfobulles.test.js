@@ -24,6 +24,13 @@ const cartes = [
         attendus: ['1 séance', '2 séances'],
     },
     {
+        nom: 'SetsPerSessionChart',
+        trace: 'Bar',
+        data: [{ date: '01/07', sets: 1 }],
+        contexte: (n) => ({ parsed: { y: n } }),
+        attendus: ['1 série', '2 séries'],
+    },
+    {
         nom: 'RecentWorkoutsExercisesChart',
         trace: 'Bar',
         data: [{ started_at: '2026-07-05T10:00:00Z', workout_lines_count: 1 }],

@@ -12,6 +12,10 @@ vi.mock('@/Components/Stats/OneRepMaxChart.vue', () => ({
     __esModule: true,
     default: { name: 'OneRepMaxChart', props: ['data'], template: '<div />' },
 }))
+vi.mock('@/Components/Stats/SetsPerSessionChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'SetsPerSessionChart', props: ['data'], template: '<div />' },
+}))
 vi.mock('@/Components/Stats/VolumeTrendChart.vue', () => ({
     __esModule: true,
     default: { name: 'VolumeTrendChart', props: ['data'], template: '<div />' },
@@ -50,7 +54,7 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 /*
- * The five charts are not loaded at all here.
+ * The six charts are not loaded at all here.
  *
  * The page pulls them in through defineAsyncComponent, and those import chains
  * keep resolving after the test that started them has returned. Whatever they
@@ -187,6 +191,7 @@ describe('the series feeding the charts', () => {
         // came down to nothing. null is the point Chart.js does not draw.
         expect(wrapper.vm.maxRepsData[0].reps).toBeNull()
         expect(wrapper.vm.maxWeightData[0].weight).toBeNull()
+        expect(wrapper.vm.setsPerSessionData[0].sets).toBe(0)
     })
 })
 
@@ -241,6 +246,7 @@ describe('only the sets that were done', () => {
         ])
 
         expect(wrapper.vm.maxRepsData[0].reps).toBe(5)
+        expect(wrapper.vm.setsPerSessionData[0].sets).toBe(1)
         expect(wrapper.vm.scatterData).toEqual([{ x: 100, y: 5 }])
     })
 
@@ -256,7 +262,7 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.maxWeightData[0].weight).toBe(100)
     })
 
-    it('leaves a ticked warm-up out of Poids vs Reps (#2333)', async () => {
+    it('leaves a ticked warm-up out of Séries and Poids vs Reps (#2333)', async () => {
         const wrapper = await mountPage([
             session('13/06/2026', [
                 { weight: 100, reps: 5 },
@@ -265,6 +271,7 @@ describe('only the sets that were done', () => {
             ]),
         ])
 
+        expect(wrapper.vm.setsPerSessionData[0].sets).toBe(1)
         expect(wrapper.vm.scatterData).toEqual([{ x: 100, y: 5 }])
     })
 
@@ -272,6 +279,7 @@ describe('only the sets that were done', () => {
         const wrapper = await mountPage([session('13/06/2026', [{ weight: 40, reps: 10, is_warmup: true }])])
 
         expect(wrapper.vm.scatterData).toEqual([])
+        expect(wrapper.vm.setsPerSessionData[0].sets).toBe(0)
         expect(wrapper.vm.volumeData[0].volume).toBe(0)
     })
 
@@ -311,41 +319,6 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.maxRepsData.map((point) => point.reps)).toEqual([5, null, 5])
         // Rien n'a été soulevé : un volume nul est la vérité, pas un trou.
         expect(wrapper.vm.volumeData.map((point) => point.volume)).toEqual([475, 0, 500])
-    })
-})
-
-/*
- * La fiche allégée (#2434, lot 4c) garde cinq cartes pour tous les types : un
- * exercice de cardio ou de temps, dont les séries n'ont ni poids ni
- * répétitions, rend la même page, sans erreur.
- */
-describe('les cartes gardées, pour chaque type d’exercice', () => {
-    const SANS_POIDS = [{ duration_seconds: 1800, distance_km: 5 }]
-
-    it.each([
-        ['strength', [{ weight: 100, reps: 5 }]],
-        ['strength', [{ weight: 0, reps: 15 }]],
-        ['cardio', SANS_POIDS],
-        ['timed', SANS_POIDS],
-    ])('montre les cartes d’un exercice « %s » (%j)', async (type, sets) => {
-        const wrapper = mount(ExerciseShow, {
-            props: {
-                exercise: { id: 1, name: 'Exercice', type, category: 'Pectoraux' },
-                progress: [],
-                history: [session('03/02/2026', sets)],
-            },
-            global: {
-                mocks: { route: globalThis.route },
-                stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot },
-            },
-        })
-
-        await flushPromises()
-
-        const titres = wrapper.findAll('h3').map((titre) => titre.text())
-
-        expect(titres).toEqual(['Progression 1RM', 'Volume', 'Endurance', 'Charge Max', 'Poids vs Reps'])
-        expect(wrapper.vm.volumeData[0].volume).toBe(sets[0].weight ? sets[0].weight * sets[0].reps : 0)
     })
 })
 

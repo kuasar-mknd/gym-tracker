@@ -24,6 +24,7 @@ const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue'
 const RecentWorkoutsExercisesChart = (await import('@/Components/Stats/RecentWorkoutsExercisesChart.vue')).default
 const ExerciseCategoryChart = (await import('@/Components/Stats/ExerciseCategoryChart.vue')).default
 const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryChart.vue')).default
+const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
 const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkoutChart.vue')).default
 
 const chartIn = (wrapper, name) => wrapper.findComponent({ name })
@@ -275,6 +276,30 @@ describe('DurationHistoryChart series', () => {
     })
 })
 
+describe('SetsPerSessionChart series', () => {
+    const mountChart = (data) => mount(SetsPerSessionChart, { props: { data } })
+
+    it('plots the set count of each session against its date', () => {
+        const series = seriesOf(
+            mountChart([
+                { date: '01/07', sets: 12 },
+                { date: '03/07', sets: 18 },
+            ]),
+            'Bar',
+        )
+
+        expect(series.labels).toEqual(['01/07', '03/07'])
+        expect(series.datasets[0].data).toEqual([12, 18])
+    })
+
+    it('plots no bar at all when there is no session', () => {
+        const series = seriesOf(mountChart([]), 'Bar')
+
+        expect(series.labels).toEqual([])
+        expect(series.datasets[0].data).toEqual([])
+    })
+})
+
 describe('VolumePerWorkoutChart series', () => {
     it('plots the volume of each session against its date', () => {
         const series = seriesOf(
@@ -310,6 +335,7 @@ describe.each([
         { data: [{ started_at: '2026-07-05T10:00:00Z', workout_lines_count: 5 }] },
     ],
     ['DurationHistoryChart', DurationHistoryChart, { data: [{ date: '01/07', duration: 45 }] }],
+    ['SetsPerSessionChart', SetsPerSessionChart, { data: [{ date: '01/07', sets: 12 }] }],
     ['VolumePerWorkoutChart', VolumePerWorkoutChart, { data: [{ date: '01/07', volume: 8250 }] }],
 ])('%s first frame', (_name, component, props) => {
     it('asks for no fill colour at all before the plot area exists', () => {

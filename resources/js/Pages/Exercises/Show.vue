@@ -14,6 +14,7 @@ const OneRepMaxChart = graphiqueAsynchrone(() => import('@/Components/Stats/OneR
 const VolumeTrendChart = graphiqueAsynchrone(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 const MaxRepsChart = graphiqueAsynchrone(() => import('@/Components/Stats/MaxRepsChart.vue'))
 const MaxWeightChart = graphiqueAsynchrone(() => import('@/Components/Stats/MaxWeightChart.vue'))
+const SetsPerSessionChart = graphiqueAsynchrone(() => import('@/Components/Stats/SetsPerSessionChart.vue'))
 const WeightRepsScatterChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeightRepsScatterChart.vue'))
 
 /**
@@ -37,6 +38,13 @@ const props = defineProps({
     progress: Array,
     history: Array,
 })
+
+/*
+ * Le poids du corps est une force au poids nul. Un exercice de cardio ou de
+ * temps n'a ni charge ni répétitions : ses séries sont à 0, et seul le nombre
+ * de séries par séance dit quelque chose.
+ */
+const estUneForce = computed(() => props.exercise.type === 'strength')
 
 /**
  * Les séances de la plus ancienne à la plus récente, avec les séries que
@@ -69,6 +77,13 @@ const maxRepsData = computed(() =>
     seances.value.map((session) => ({
         date: session.date,
         reps: session.seriesDeTravail.length > 0 ? Math.max(...session.seriesDeTravail.map((s) => s.reps || 0)) : null,
+    })),
+)
+
+const setsPerSessionData = computed(() =>
+    seances.value.map((session) => ({
+        date: session.date,
+        sets: session.seriesDeTravail.length,
     })),
 )
 
@@ -124,7 +139,7 @@ const scatterData = computed(() => {
             </p>
 
             <!-- Progress Chart -->
-            <GlassCard class="animate-slide-up">
+            <GlassCard v-if="estUneForce" class="animate-slide-up">
                 <div class="mb-4">
                     <h3 class="titre-carte">Progression 1RM</h3>
                     <p class="text-text-muted text-xs font-semibold">Estimation sur 1 an</p>
@@ -146,13 +161,13 @@ const scatterData = computed(() => {
                     <IndisponibleHorsLigne />
                 </template>
                 <template #fallback>
-                    <HistoriqueEnAttente />
+                    <HistoriqueEnAttente :cartes="estUneForce ? 4 : 1" />
                 </template>
                 <div
                     v-if="history && history.length > 0"
                     class="stagger-1 animate-slide-up grid grid-cols-1 gap-6 md:grid-cols-2"
                 >
-                    <GlassCard>
+                    <GlassCard v-if="estUneForce">
                         <div class="mb-4">
                             <h3 class="titre-carte">Volume</h3>
                             <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
@@ -162,7 +177,7 @@ const scatterData = computed(() => {
                         </div>
                     </GlassCard>
 
-                    <GlassCard>
+                    <GlassCard v-if="estUneForce">
                         <div class="mb-4">
                             <h3 class="titre-carte">Endurance</h3>
                             <p class="text-text-muted text-xs font-semibold">Max Reps par série</p>
@@ -172,7 +187,7 @@ const scatterData = computed(() => {
                         </div>
                     </GlassCard>
 
-                    <GlassCard>
+                    <GlassCard v-if="estUneForce">
                         <div class="mb-4">
                             <h3 class="titre-carte">Charge Max</h3>
                             <p class="text-text-muted text-xs font-semibold">Maximum soulevé par séance (kg)</p>
@@ -182,13 +197,23 @@ const scatterData = computed(() => {
                         </div>
                     </GlassCard>
 
-                    <GlassCard>
+                    <GlassCard v-if="estUneForce">
                         <div class="mb-4">
                             <h3 class="titre-carte">Poids vs Reps</h3>
                             <p class="text-text-muted text-xs font-semibold">Répartition des séries de travail</p>
                         </div>
                         <div class="h-64">
                             <WeightRepsScatterChart :data="scatterData" />
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard v-if="!estUneForce">
+                        <div class="mb-4">
+                            <h3 class="titre-carte">Séries</h3>
+                            <p class="text-text-muted text-xs font-semibold">Nombre de séries par séance</p>
+                        </div>
+                        <div class="h-64">
+                            <SetsPerSessionChart :data="setsPerSessionData" />
                         </div>
                     </GlassCard>
                 </div>

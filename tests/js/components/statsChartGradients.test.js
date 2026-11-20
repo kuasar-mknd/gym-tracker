@@ -10,6 +10,7 @@ const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryCh
 const FastingHistoryChart = (await import('@/Components/Stats/FastingHistoryChart.vue')).default
 const HabitConsistencyChart = (await import('@/Components/Stats/HabitConsistencyChart.vue')).default
 const HabitHistoryChart = (await import('@/Components/Stats/HabitHistoryChart.vue')).default
+const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
 const JournalChart = (await import('@/Components/Stats/JournalChart.vue')).default
 const MaxWeightChart = (await import('@/Components/Stats/MaxWeightChart.vue')).default
 const MonthlyVolumeChart = (await import('@/Components/Stats/MonthlyVolumeChart.vue')).default
@@ -254,6 +255,16 @@ const cases = [
         stops: [
             [0, jetonTransparent('accent-tertiary', 0.2)],
             [1, jetonTransparent('accent-primary', 0)],
+        ],
+    },
+    {
+        chart: 'SetsPerSessionChart',
+        component: SetsPerSessionChart,
+        key: 'backgroundColor',
+        requested: UPWARD,
+        stops: [
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
