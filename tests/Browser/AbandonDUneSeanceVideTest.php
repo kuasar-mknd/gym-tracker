@@ -80,6 +80,40 @@ class AbandonDUneSeanceVideTest extends DuskTestCase
         });
     }
 
+    /**
+     * La barre d'outils de la séance et l'accessoire flottent à 6 px du menu du
+     * bas, à toute largeur : le menu change de hauteur sous 20 rem, et aucun test
+     * unitaire ne mesure la mise en page (#2434).
+     */
+    public function test_la_barre_et_l_accessoire_flottent_a_six_pixels_du_menu(): void
+    {
+        $compte = $this->compte();
+        $seance = Workout::factory()->for($compte)->create(['started_at' => now()->subMinutes(2), 'ended_at' => null]);
+        $ecart = fn (string $dusk): string => "(() => { document.documentElement.style.scrollbarWidth = 'none'; return Math.round(document.querySelector('nav.glass-nav').getBoundingClientRect().top - document.querySelector('[dusk=\"{$dusk}\"]').getBoundingClientRect().bottom) })()";
+
+        $this->browse(function (Browser $browser) use ($compte, $seance, $ecart): void {
+            $browser->loginAs($compte)
+                ->resizeToIphone15()
+                ->visit("/workouts/{$seance->id}")
+                ->disableAnimations()
+                ->waitFor('[dusk="barre-d-outils-de-la-seance"]', 30);
+
+            foreach ([[393, 852], [375, 812], [320, 700]] as [$largeur, $hauteur]) {
+                $browser->resize($largeur, $hauteur)->pause(300);
+                $this->assertSame(6, $browser->script($ecart('barre-d-outils-de-la-seance'))[0], "barre à {$largeur} px");
+            }
+
+            $browser->resize(375, 812)
+                ->visit('/dashboard')
+                ->waitFor('[dusk="active-workout-banner"]', 30);
+
+            foreach ([[375, 812], [320, 700]] as [$largeur, $hauteur]) {
+                $browser->resize($largeur, $hauteur)->pause(300);
+                $this->assertSame(6, $browser->script($ecart('active-workout-banner'))[0], "accessoire à {$largeur} px");
+            }
+        });
+    }
+
     public function test_une_seance_qui_a_un_exercice_ne_propose_pas_d_abandon(): void
     {
         $compte = $this->compte();
