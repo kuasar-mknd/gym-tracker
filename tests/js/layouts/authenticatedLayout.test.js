@@ -401,7 +401,7 @@ describe('AuthenticatedLayout — sans réseau', () => {
         expect(await dismissalTimes(wrapper, [PAGE_INDISPONIBLE])).toEqual({ [PAGE_INDISPONIBLE]: 8000 })
     })
 
-    it('garde « Le réseau ne répond pas » tant que la visite attend, et « Annuler » l’arrête', async () => {
+    it('garde « Réseau lent. Réessaie dans un instant. » tant que la visite attend, et « Annuler » l’arrête', async () => {
         vi.useFakeTimers()
         const annuler = vi.fn()
         const wrapper = mountLayout()

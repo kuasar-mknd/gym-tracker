@@ -71,6 +71,10 @@ describe('GlassEmptyState', () => {
     const candidates = ['orange', 'violet', 'pink', 'cyan', 'green', 'red', 'blue', 'slate']
     const accepted = candidates.filter((color) => GlassEmptyState.props.color.validator(color))
 
+    it('no longer offers cyan, which meant a state and is gone from the charter', () => {
+        expect(GlassEmptyState.props.color.validator('cyan')).toBe(false)
+    })
+
     it('gives every colour it accepts a glow to go with it', () => {
         expect(accepted.length).toBeGreaterThan(0)
 
@@ -189,7 +193,6 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
         ['orange', 'text-accent-primary-deep'],
         ['violet', 'text-accent-tertiary-deep'],
         ['pink', 'text-accent-secondary-deep'],
-        ['cyan', 'text-accent-info-deep'],
         ['green', 'text-accent-state-deep'],
     ])('peint l’icône de %s avec %s', (color, expected) => {
         const wrapper = mountState({ icon: 'search_off', color })
@@ -207,7 +210,7 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
      * faut regarder le fichier, pas le rendu.
      *
      * Mesuré dans le CSS généré, avant correctif : `text-accent-primary-deep`,
-     * `text-accent-tertiary-deep`, `text-accent-secondary-deep` et `text-accent-info-deep` étaient bien
+     * `text-accent-tertiary-deep`, et `text-accent-secondary-deep` étaient bien
      * présents — non pas grâce à ce composant, mais parce que d'autres les
      * écrivent en toutes lettres. `text-accent-state-deep`, que personne d'autre
      * n'emploie, était absent : `color="green"` peignait donc l'icône avec une
@@ -227,7 +230,6 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
             'text-accent-primary-deep',
             'text-accent-tertiary-deep',
             'text-accent-secondary-deep',
-            'text-accent-info-deep',
             'text-accent-state-deep',
         ]) {
             expect(source).toContain(expected)

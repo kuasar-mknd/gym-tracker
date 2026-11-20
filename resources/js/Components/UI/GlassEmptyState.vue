@@ -38,8 +38,8 @@ defineProps({
     },
     color: {
         type: String,
-        default: 'orange', // orange, violet, pink, cyan
-        validator: (value) => ['orange', 'violet', 'pink', 'cyan', 'green'].includes(value),
+        default: 'orange', // orange, violet, pink, green
+        validator: (value) => ['orange', 'violet', 'pink', 'green'].includes(value),
     },
     /**
      * `carte` occupe une page ; `ligne` tient dans une carte déjà titrée.
@@ -60,7 +60,6 @@ const glowColors = {
     orange: 'bg-accent-primary',
     violet: 'bg-accent-tertiary',
     pink: 'bg-accent-secondary',
-    cyan: 'bg-accent-info',
     green: 'bg-accent-state',
 }
 
@@ -78,7 +77,6 @@ const iconColors = {
     orange: 'text-accent-primary-deep',
     violet: 'text-accent-tertiary-deep',
     pink: 'text-accent-secondary-deep',
-    cyan: 'text-accent-info-deep',
     green: 'text-accent-state-deep',
 }
 

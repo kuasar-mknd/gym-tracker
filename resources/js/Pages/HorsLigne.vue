@@ -98,7 +98,7 @@ const attendre = () => {
                 <p class="text-text-muted text-sm font-medium">
                     {{
                         auDelai
-                            ? "Le réseau ne répond pas, et l'appareil n'en garde pas de copie."
+                            ? "Réseau lent, et l'appareil n'en garde pas de copie."
                             : "L'appareil n'en garde pas de copie."
                     }}
                     Ce que tu as saisi pendant une séance reste sur l'appareil, et partira au retour du réseau.

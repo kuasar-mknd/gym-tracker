@@ -45,7 +45,7 @@ export const ATTRIBUT_D_ATTENTE = 'data-attendre-la-reponse'
 export const ATTRIBUT_DU_MOTIF = 'data-motif'
 
 /** Ce que dit la coquille quand le réseau n'a pas répondu à temps (raison `delai`). */
-export const MOTIF_DU_DELAI = "Cette page n'a pas pu s'ouvrir : le réseau ne répond pas."
+export const MOTIF_DU_DELAI = "Cette page n'a pas pu s'ouvrir : réseau lent. Réessaie dans un instant."
 
 /** La phrase qui dit, sans copie, ce qu'il faut faire avant la salle. */
 export const AVANT_LA_SALLE =

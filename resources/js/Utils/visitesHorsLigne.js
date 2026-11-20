@@ -49,7 +49,7 @@ import {
  * et le rapporteur doit la voir.
  *
  * Une visite qui quitte la page et n'a pas abouti au bout de huit secondes
- * l'annonce : « Le réseau ne répond pas », avec « Annuler », qui l'arrête.
+ * l'annonce : « Réseau lent. Réessaie dans un instant. », avec « Annuler », qui l'arrête.
  *
  * Une visite qui veut dire son échec autrement passe `onNetworkError:
  * direSansReseau(message)` : Inertia appelle ce rappel avant l'évènement, et
@@ -188,7 +188,7 @@ export const ECRITURE_NON_CONFIRMEE = "Pas de réponse du serveur : l'enregistre
  * 2026-10-15).
  */
 export const SUPPRESSION_NON_CONFIRMEE = "Pas de réponse du serveur : la suppression n'est pas confirmée."
-export const RESEAU_LENT = 'Le réseau ne répond pas.'
+export const RESEAU_LENT = 'Réseau lent. Réessaie dans un instant.'
 
 /**
  * Ce que dit un démarrage que la file ne peut pas garder : aucun compte

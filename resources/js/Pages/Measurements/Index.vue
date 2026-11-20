@@ -318,7 +318,6 @@ const latestBodyFat = computed(() => {
                     description="Pèse-toi une première fois pour ouvrir la courbe."
                     action-label="Ajouter une mesure"
                     action-id="empty-state-measurement"
-                    color="cyan"
                     @action="showAddForm = true"
                 />
 

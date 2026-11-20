@@ -131,7 +131,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
+                        <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"

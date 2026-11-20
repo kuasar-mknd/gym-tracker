@@ -89,7 +89,7 @@ describe('le contenu statique', () => {
      * réponse demande au worker de lever le délai de l'adresse, puis recharge
      * (`attendreLaReponse`, `messagesDuWorker.js`).
      */
-    it('au délai, dit que le réseau ne répond pas et propose d’attendre la réponse', async () => {
+    it('au délai, dit que le réseau est lent et propose d’attendre la réponse', async () => {
         const fenetre = await fenetreDeLaCoquille('delai')
         const attendre = vi.fn(() => Promise.resolve())
 
@@ -98,6 +98,7 @@ describe('le contenu statique', () => {
         const bouton = fenetre.document.querySelector(`[${ATTRIBUT_D_ATTENTE}]`)
 
         expect(fenetre.document.querySelector(`[${ATTRIBUT_DU_MOTIF}]`).textContent).toBe(MOTIF_DU_DELAI)
+        expect(MOTIF_DU_DELAI).toBe("Cette page n'a pas pu s'ouvrir : réseau lent. Réessaie dans un instant.")
         expect(bouton.hidden).toBe(false)
         expect(attendre).not.toHaveBeenCalled()
 

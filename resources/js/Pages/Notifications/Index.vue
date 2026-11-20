@@ -98,7 +98,6 @@ const formatDate = (date) => {
             <GlassEmptyState
                 v-if="notifications.data.length === 0"
                 icon="notifications_off"
-                color="cyan"
                 title="Aucune notification"
                 description="Tu es à jour !"
             />
@@ -118,9 +117,8 @@ const formatDate = (date) => {
                                     /*
                                      * En aplat avec de l'encre, et non en texte
                                      * colore sur son propre lavis : ce motif-la
-                                     * rendait 2,70:1 pour le rose et 1,36:1
-                                     * pour le cyan, illisible dans les deux cas.
-                                     * En plein, ils rendent 4,73 et 11,61.
+                                     * rendait 2,70:1 pour le rose, illisible.
+                                     * En plein, il rend 4,73.
                                      *
                                      * Le record portait `yellow-500`, qui est la
                                      * valeur de l'alerte : un trophee n'est pas
@@ -129,7 +127,7 @@ const formatDate = (date) => {
                                      */
                                     notification.data.type === 'personal_record'
                                         ? 'bg-accent-secondary text-text-on-accent'
-                                        : 'bg-accent-info text-text-on-accent',
+                                        : 'accent-fill',
                                 ]"
                             >
                                 <svg

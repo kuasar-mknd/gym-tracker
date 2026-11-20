@@ -25,7 +25,7 @@ const toasts = {
 
 /**
  * Le bouton que porte le toast d'erreur, avec le message auquel il appartient :
- * « Annuler » sous « Le réseau ne répond pas » (#2048). Un autre message le
+ * « Annuler » sous « Réseau lent » (#2048). Un autre message le
  * fait disparaître, puisqu'il ne lui appartient pas.
  */
 const actionDuToast = ref(null)
