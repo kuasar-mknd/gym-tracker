@@ -1247,6 +1247,51 @@ describe('les props qu’aucune copie ne garde', () => {
         expect(lue.page.props).not.toHaveProperty('activeGoals')
     })
 
+    /** Progrès tel que le serveur le rend : la pesée, la variation, la masse grasse, et le groupe différé qui porte leurs historiques. */
+    const progresAvecMesures = () =>
+        pageDe({
+            url: '/stats',
+            component: 'Stats/Index',
+            deferredProps: { default: ['deferredData'] },
+            props: {
+                latestWeight: '78.40',
+                weightChange: -1.3,
+                bodyFat: 17.8,
+                exercises: [{ id: 4, name: 'Développé couché' }],
+                selectedPeriod: '30j',
+            },
+        })
+
+    it('ne range de Progrès ni la pesée, ni la variation, ni la masse grasse, ni leurs historiques, par aucune des deux écritures', async () => {
+        const onglet = ouvrirUnOnglet()
+        const progres = progresAvecMesures()
+        const differee = {
+            body: { weightHistory: [{ date: '2026-11-01', weight: 79.7 }], bodyFatHistory: [] },
+            performance: {},
+        }
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+
+        expect(await onglet.ecrireUneCopie(progres)).toBe('ecrite')
+
+        const partielle = { ...progres, props: { ...progres.props, deferredData: differee } }
+
+        expect(await onglet.completerUneCopie(partielle, ['deferredData'])).toBe('sans-props')
+        expect(await onglet.completerUneCopie(partielle, ['latestWeight', 'weightChange', 'bodyFat'])).toBe(
+            'sans-props',
+        )
+
+        const lue = await onglet.lireUneCopie('/stats')
+
+        expect(Object.keys(lue.page.props).sort()).toEqual(['auth', 'errors', 'exercises', 'selectedPeriod'])
+        expect(Object.keys(lue.datesDesProps).sort()).toEqual(['auth', 'errors', 'exercises', 'selectedPeriod'])
+        expect(JSON.stringify(lue.page.props)).not.toMatch(
+            /78\.40|79\.7|17\.8|latestWeight|weightChange|bodyFat|weightHistory/,
+        )
+        expect(lue.page.props).not.toHaveProperty('deferredData')
+    })
+
     it('ne les reprend jamais d’une copie qui les portait encore, ni comme props différées', async () => {
         const cle = cleAuHasard()
         const onglet = ouvrirUnOnglet()

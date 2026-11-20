@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import WeightEvolutionCard from '@/Components/Stats/WeightEvolutionCard.vue'
 import BodyMetricsGrid from '@/Components/Stats/BodyMetricsGrid.vue'
@@ -25,6 +25,13 @@ const props = defineProps({
 })
 
 const currentPeriod = ref(props.selectedPeriod || '30j')
+
+watch(
+    () => props.selectedPeriod,
+    (periode) => {
+        currentPeriod.value = periode || '30j'
+    },
+)
 
 const periods = [
     { value: '7j', label: '7 JOURS' },

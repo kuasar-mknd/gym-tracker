@@ -195,7 +195,7 @@ describe('sorteDeNavigation', () => {
         expect(sorteDeNavigation(`${origine}${chemin}`, origine)).toBe('sans-coquille')
     })
 
-    it.each(['/stats', '/journal', '/workouts?page=2', '/workouts/12/edit', '/login', '/verify-email', '/%E0%A4%A'])(
+    it.each(['/goals', '/journal', '/workouts?page=2', '/workouts/12/edit', '/login', '/verify-email', '/%E0%A4%A'])(
         'laisse %s au réseau, puis à la page « hors ligne »',
         (chemin) => {
             expect(sorteDeNavigation(`${origine}${chemin}`, origine)).toBe('ordinaire')

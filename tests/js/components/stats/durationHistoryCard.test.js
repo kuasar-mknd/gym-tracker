@@ -68,16 +68,15 @@ describe('DurationHistoryCard', () => {
     })
 
     /**
-     * The card is mounted both on the dashboard, where the session stats arrive
-     * as their own deferred prop, and on a page that passes them under
-     * deferredData. Waiting on a key the page never sends leaves the skeleton up
-     * for good.
+     * The page sends the stats under deferredData. A copy served without the
+     * network lists that very key as rescued: waiting on another one would
+     * leave the skeleton up for good.
      */
     it('waits on the deferred prop the page actually sends', async () => {
         const dashboard = await mountCard({ durationHistory: [] })
         const scoped = await mountCard({ durationHistory: [], deferredData: { durationHistory: [] } })
 
-        expect(dashboard.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('performanceStats')
+        expect(dashboard.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
         expect(scoped.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
     })
 })

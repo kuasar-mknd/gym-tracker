@@ -108,8 +108,8 @@ describe('VolumeTrendCard', () => {
         expect(chart(wrapper).props('data')).toEqual(trend)
     })
 
-    it('attend la clé différée de la page', async () => {
-        expect((await mountCard({})).findComponent({ name: 'Deferred' }).props('data')).toBe('performanceStats')
+    it('attend la clé groupée de la page, même quand elle n’est pas encore arrivée', async () => {
+        expect((await mountCard({})).findComponent({ name: 'Deferred' }).props('data')).toBe('deferredData')
     })
 
     it('attend la clé groupée quand la page en fournit une', async () => {

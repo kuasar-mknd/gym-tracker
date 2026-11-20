@@ -1,5 +1,5 @@
 {
-    "version": 3,
+    "version": 4,
     "pages": {
         "Dashboard": {
             "props": {
@@ -206,6 +206,67 @@
                 "vapidPublicKey": "texte"
             },
             "differees": []
+        },
+        "Stats/Index": {
+            "props": {
+                "auth": "objet",
+                "auth.user": "objet",
+                "auth.user.active_workout": "objet",
+                "auth.user.active_workout.id": "nombre",
+                "auth.user.active_workout.idempotency_key": "texte",
+                "auth.user.active_workout.name": "texte",
+                "auth.user.active_workout.started_at": "texte",
+                "auth.user.active_workout.workout_lines_count": "nombre",
+                "auth.user.auto_rest_timer": "booléen",
+                "auth.user.avatar": "texte",
+                "auth.user.current_streak": "nombre",
+                "auth.user.default_rest_time": "nombre",
+                "auth.user.email": "texte",
+                "auth.user.id": "nombre",
+                "auth.user.latest_achievement": "objet",
+                "auth.user.latest_achievement.created_at": "texte",
+                "auth.user.latest_achievement.data": "objet",
+                "auth.user.latest_achievement.data.achieved_at": "texte",
+                "auth.user.latest_achievement.data.achievement_id": "nombre",
+                "auth.user.latest_achievement.data.message": "texte",
+                "auth.user.latest_achievement.data.title": "texte",
+                "auth.user.latest_achievement.data.type": "texte",
+                "auth.user.latest_achievement.description": "texte",
+                "auth.user.latest_achievement.icon": "texte",
+                "auth.user.latest_achievement.id": "texte",
+                "auth.user.latest_achievement.name": "texte",
+                "auth.user.longest_streak": "nombre",
+                "auth.user.name": "texte",
+                "auth.user.unread_notifications_count": "nombre",
+                "errors": "objet vide",
+                "exercises": "liste",
+                "exercises[]": "objet",
+                "exercises[].category": "texte",
+                "exercises[].created_at": "texte",
+                "exercises[].default_rest_time": "nombre|null",
+                "exercises[].id": "nombre",
+                "exercises[].name": "texte",
+                "exercises[].type": "texte",
+                "exercises[].updated_at": "texte",
+                "exercises[].user_id": "nombre",
+                "flash": "objet",
+                "flash.error": "null",
+                "flash.success": "null",
+                "is_local": "booléen",
+                "is_testing": "booléen",
+                "pending_migrations": "null",
+                "selectedPeriod": "texte",
+                "social_login_enabled": "objet",
+                "social_login_enabled.apple": "booléen",
+                "social_login_enabled.github": "booléen",
+                "social_login_enabled.google": "booléen",
+                "vapidPublicKey": "texte"
+            },
+            "differees": {
+                "default": [
+                    "deferredData"
+                ]
+            }
         },
         "Tools/Index": {
             "props": {

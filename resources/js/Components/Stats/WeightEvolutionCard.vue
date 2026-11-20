@@ -43,7 +43,7 @@ defineProps({
 
         <!-- Real Weight Chart (Deferred) -->
         <div class="relative -mx-2 h-40 w-full">
-            <Deferred :data="deferredData ? 'deferredData' : 'bodyStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>

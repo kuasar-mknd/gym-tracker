@@ -150,7 +150,7 @@ describe('la marque et les adresses', () => {
         ).toEqual([true, true, true, true, true, true])
         expect(
             [
-                '/stats',
+                '/goals',
                 '/workouts?type=jambes',
                 '/workouts?page=2',
                 '/exercises/3',
