@@ -59,7 +59,6 @@ test('la page rend les records du compte, exercice par exercice', function (): v
                 ->has('records', 1)
                 ->where('records.0.nom', 'Squat')
                 ->where('records.0.exercice_id', $exercice->id)
-                ->where('records.0.date', '2026-11-10')
                 ->where('records.0.poids_max', ['valeur' => 140, 'repetitions' => 3, 'date' => '2026-11-10'])
                 ->where('records.0.un_rm', ['valeur' => 154, 'date' => '2026-11-10'])
                 ->where('records.0.volume_serie', ['valeur' => 420, 'date' => '2026-11-10'])

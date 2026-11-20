@@ -82,7 +82,6 @@ it('rend les trois records de chaque exercice avec leur jour, le plus récent d�
         ->and($page['records'][1])->toBe([
             'exercice_id' => $squat->id,
             'nom' => 'Squat',
-            'date' => '2026-11-02',
             'poids_max' => ['valeur' => 140.0, 'repetitions' => 3, 'date' => '2026-11-02'],
             'un_rm' => ['valeur' => 154.0, 'date' => '2026-11-02'],
             'volume_serie' => ['valeur' => 420.0, 'date' => '2026-11-02'],
@@ -127,7 +126,7 @@ it('ne rend rien d’un autre compte, ni ses exercices ni ses valeurs sur un exe
         ->and($page['records'][0]['poids_max']['valeur'] ?? null)->toBe(80.0)
         ->and($page['records'][0]['un_rm']['valeur'] ?? null)->toBe(90.0)
         ->and($page['records'][0]['volume_serie']['valeur'] ?? null)->toBe(400.0)
-        ->and($page['records'][0]['date'])->toBe('2026-11-01');
+        ->and($page['records'][0]['poids_max']['date'] ?? null)->toBe('2026-11-01');
 });
 
 it('ne mélange pas les comptes dans le cache', function (): void {
@@ -353,9 +352,9 @@ it('date un record du nouveau début de sa séance quand celui-ci change', funct
 
     $action = app(FetchRecordsAction::class);
 
-    expect($action->execute($user)['records'][0]['date'])->toBe('2026-11-10');
+    expect($action->execute($user)['records'][0]['poids_max']['date'] ?? null)->toBe('2026-11-10');
 
     $seance->update(['started_at' => '2026-11-03 09:00:00', 'ended_at' => '2026-11-03 10:00:00']);
 
-    expect($action->execute($user)['records'][0]['date'])->toBe('2026-11-03');
+    expect($action->execute($user)['records'][0]['poids_max']['date'] ?? null)->toBe('2026-11-03');
 });

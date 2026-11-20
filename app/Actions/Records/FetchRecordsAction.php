@@ -33,7 +33,6 @@ use Illuminate\Support\Facades\Cache;
  * @phpstan-type Mesure array{valeur: float, date: string|null}
  * @phpstan-type Records array{
  *     exercice_id: int,
- *     date: string|null,
  *     poids_max: array{valeur: float, repetitions: int, date: string|null}|null,
  *     un_rm: Mesure|null,
  *     volume_serie: Mesure|null
@@ -41,7 +40,6 @@ use Illuminate\Support\Facades\Cache;
  * @phpstan-type Exercice array{
  *     exercice_id: int,
  *     nom: string,
- *     date: string|null,
  *     poids_max: array{valeur: float, repetitions: int, date: string|null}|null,
  *     un_rm: Mesure|null,
  *     volume_serie: Mesure|null
@@ -83,7 +81,6 @@ final class FetchRecordsAction
                 $records[] = [
                     'exercice_id' => $record['exercice_id'],
                     'nom' => $nom,
-                    'date' => $record['date'],
                     'poids_max' => $record['poids_max'],
                     'un_rm' => $record['un_rm'],
                     'volume_serie' => $record['volume_serie'],
@@ -176,7 +173,6 @@ final class FetchRecordsAction
 
         return [
             'exercice_id' => $identifiant,
-            'date' => $dates === [] ? null : max($dates),
             'poids_max' => $poidsMax,
             'un_rm' => $unRm,
             'volume_serie' => $volumeSerie,
