@@ -30,14 +30,26 @@ class PageBrowserTest extends DuskTestCase
                 '/calendar' => 'CALENDRIER',
                 '/exercises' => 'BIBLIOTHÈQUE',
                 '/stats' => 'ÉVOLUTION',
-                '/profile' => 'PROFIL',
+                '/profile' => $user->email,
             ];
+
+            // L'Accueil et le Profil ne montrent pas leur titre : le h1 reste dans le DOM, masqué aux yeux.
+            $titresMasques = ['/dashboard' => 'Accueil', '/profile' => 'Profil'];
 
             foreach ($pages as $url => $text) {
                 $browser->visit($url)
                     ->disableAnimations()
                     ->waitFor('#main-content', 30)
                     ->waitForText($text, 15);
+
+                if (isset($titresMasques[$url])) {
+                    $browser->assertScript("document.querySelector('header h1').textContent.trim()", $titresMasques[$url]);
+                    // `textContent` ignore le CSS : la boîte du titre doit tenir en un pixel (sr-only), ou ne pas exister.
+                    $browser->assertScript(
+                        "(() => { const r = document.querySelector('header h1').getBoundingClientRect(); return r.width <= 1 && r.height <= 1; })()",
+                        true,
+                    );
+                }
             }
             $browser->assertNoConsoleExceptions();
         } catch (\Exception $e) {

@@ -12,6 +12,11 @@
  * que le serveur ne connaît pas encore, il se désactive de même, avec ce que
  * dit l'état de la séance (`EtatDeLaSeanceEnAttente.vue`).
  *
+ * « Abandonner » ne se montre que sur une séance vide : la question, puis la
+ * suppression de la séance (`useAbandonDeLaSeance`). Le serveur seul la
+ * supprime : sans réseau, sur une copie hors ligne et sur une séance démarrée
+ * sans réseau, il se désactive, avec la raison, comme « Modèle ».
+ *
  * « Terminer » reste toujours ouvert (#2049) : la fin passe par la file hors
  * ligne, à l'heure du geste, et n'envoie rien que la page tire d'une copie
  * (la séance, l'heure). Ajouter un exercice et le repos restent aussi : ils
@@ -20,6 +25,8 @@
 import { computed } from 'vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useAbandonDeLaSeance } from '@/composables/useAbandonDeLaSeance'
 import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import { ID_DE_L_ETAT_DE_LA_SEANCE } from '@/composables/useSeanceEnAttente'
@@ -34,12 +41,26 @@ const props = defineProps({
      * « Terminer » reste : sans lui, une séance vide n'aurait aucun chemin vers sa fin.
      */
     vide: { type: Boolean, default: false },
+    /** La séance que « Abandonner » supprime. */
+    idDeLaSeance: { type: [Number, String], default: null },
 })
 
 const emit = defineEmits(['ajouter-un-exercice', 'demarrer-un-repos', 'enregistrer-comme-modele', 'terminer'])
 
 const { joignable } = useEtatDuReseau()
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
+const abandon = useAbandonDeLaSeance(() => props.vide)
+
+const abandonImpossible = computed(() => !joignable.value || surUneCopie.value || props.seanceEnAttente)
+
+/** Pourquoi « Abandonner » est désactivé, pour un lecteur d'écran. */
+const raisonDeLAbandon = computed(() => {
+    if (props.seanceEnAttente) {
+        return ID_DE_L_ETAT_DE_LA_SEANCE
+    }
+
+    return joignable.value ? raisonDUneEcriture.value : 'abandon-sans-reseau'
+})
 
 /** Pourquoi « Modèle » est désactivé, pour un lecteur d'écran. */
 const raisonDuModele = computed(() => {
@@ -70,6 +91,7 @@ const raisonDuModele = computed(() => {
         >
             <GlassButton
                 @click="emit('ajouter-un-exercice')"
+                :disabled="abandon.enCours.value"
                 class="bouton-de-barre bureau:w-full flex-auto"
                 dusk="add-exercise-existing"
             >
@@ -91,6 +113,7 @@ const raisonDuModele = computed(() => {
             <GlassButton
                 variant="accent"
                 @click="emit('terminer')"
+                :disabled="abandon.enCours.value"
                 class="bouton-de-barre bureau:w-full flex-auto"
                 id="finish-workout-mobile"
                 dusk="finish-workout-mobile"
@@ -119,5 +142,29 @@ const raisonDuModele = computed(() => {
         <p v-if="!joignable && !vide" id="modele-sans-reseau" class="text-text-muted text-center text-sm font-medium">
             Il faut le réseau pour enregistrer la séance comme modèle.
         </p>
+        <!-- Une séance vide n'a rien à garder : sa sortie est ici, à la place de « Modèle ». -->
+        <div v-if="vide" class="bureau:block flex justify-end pt-6">
+            <GlassButton
+                variant="ghost"
+                @click="abandon.demander(idDeLaSeance)"
+                :loading="abandon.enCours.value"
+                :disabled="abandonImpossible || idDeLaSeance === null"
+                :aria-describedby="abandonImpossible ? raisonDeLAbandon : undefined"
+                class="bureau:w-full"
+                dusk="abandonner-la-seance"
+                >Abandonner</GlassButton
+            >
+        </div>
+        <p v-if="!joignable && vide" id="abandon-sans-reseau" class="text-text-muted text-center text-sm font-medium">
+            Il faut le réseau pour abandonner la séance.
+        </p>
+        <ConfirmDialog
+            :ouvert="abandon.ouvert.value"
+            titre="Abandonner cette séance ?"
+            description="Elle est vide : elle sera supprimée."
+            libelle-confirmation="Abandonner"
+            @confirmer="abandon.confirmer"
+            @annuler="abandon.annuler"
+        />
     </div>
 </template>

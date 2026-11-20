@@ -339,6 +339,7 @@ onUnmounted(() => {
             <ActionsDeLaSeance
                 v-if="!lectureSeule"
                 :vide="localWorkout.workout_lines.length === 0"
+                :id-de-la-seance="localWorkout.id"
                 :enregistrement-du-modele="savingTemplate"
                 :seance-en-attente="seanceProvisoire"
                 @ajouter-un-exercice="ouvrirLeChoixDUnExercice"

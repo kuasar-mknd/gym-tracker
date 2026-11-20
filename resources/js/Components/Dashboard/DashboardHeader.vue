@@ -59,10 +59,10 @@ const streakLabel = computed(() => {
             <div class="min-w-0">
                 <p class="etiquette" dusk="dashboard-welcome">Bon retour</p>
                 <!--
-                    Le prénom n'est pas le titre de la page : c'est une salutation.
-                    Le titre est « Accueil », et la barre collante le porte — deux
-                    `<h1>` dans une même page laissent un lecteur d'écran sans
-                    savoir lequel décrit ce qu'il vient d'ouvrir.
+                    Le prénom n'est pas un `<h1>` : la salutation tient lieu de titre à
+                    l'œil, et le layout garde « Accueil » en `<h1>` masqué (`titre-masque`).
+                    Deux `<h1>` laisseraient un lecteur d'écran sans savoir lequel décrit
+                    ce qu'il vient d'ouvrir.
                 -->
                 <p class="font-display text-text-main truncate text-xl leading-tight font-semibold">
                     {{ user.name?.split(' ')[0] }}

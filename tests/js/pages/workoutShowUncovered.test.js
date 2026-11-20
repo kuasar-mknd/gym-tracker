@@ -202,7 +202,12 @@ const passesSlot = { template: '<div><slot /></div>' }
 const LayoutStub = { name: 'LayoutStub', template: '<div><slot name="header-actions" /><slot /></div>' }
 /** The delete behind a swipe is a named slot, and it is a real control. */
 const SwipeStub = { name: 'SwipeStub', template: '<div><slot name="action-right" /><slot /></div>' }
-const ModalStub = { name: 'ModalStub', template: '<div><slot /></div>' }
+/** Comme le vrai `Modal` : fermé, il ne rend rien (deux questions montent sur la page, le retrait et l'abandon). */
+const ModalStub = {
+    name: 'ModalStub',
+    props: { show: { type: Boolean, default: false } },
+    template: '<div v-if="show"><slot /></div>',
+}
 /** A real <button>, so `@click` lands as a native listener and the slot renders. */
 const ButtonStub = { name: 'ButtonStub', template: '<button><slot /></button>' }
 const FieldStub = { name: 'FieldStub', template: '<div />' }
@@ -595,9 +600,9 @@ describe('Workouts/Show — removing an exercise', () => {
 
         await click(wrapper, 'remove-line-0')
 
-        // The confirmation is the second modal on the page; the first is the
-        // exercise picker.
-        wrapper.findAllComponents(ModalStub)[1].vm.$emit('close')
+        // The removal question is the third modal on the page: the abandon
+        // question under the toolbar comes first, then the exercise picker.
+        wrapper.findAllComponents(ModalStub)[2].vm.$emit('close')
         await flushPromises()
 
         expect(wrapper.vm.retraitDemande).toBe(false)
@@ -851,7 +856,8 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         const wrapper = await mountPage()
 
         await openCreateForm(wrapper)
-        await emitOn(wrapper, ModalStub, 'close')
+        wrapper.findComponent(AjoutDExerciceModal).findComponent(ModalStub).vm.$emit('close')
+        await flushPromises()
 
         expect(wrapper.vm.showAddExercise).toBe(false)
         expect(modale(wrapper).showCreateForm).toBe(false)
@@ -1033,6 +1039,21 @@ describe('Workouts/Show — reaching the exercise picker', () => {
         const terminee = await mountPage(session({ ended_at: '2026-07-29T09:00:00.000000Z' }))
 
         expect(terminee.findComponent(ActionsDeLaSeance).exists()).toBe(false)
+    })
+
+    /*
+     * « Abandonner » est dans la barre : la page lui donne la séance à supprimer,
+     * et seule la séance vide le montre. Une séance close n'a plus de barre.
+     */
+    it('lets an empty session be abandoned, and only an empty one', async () => {
+        const vide = await mountPage(session())
+
+        expect(vide.findComponent(ActionsDeLaSeance).props('idDeLaSeance')).toBe(1)
+        expect(vide.find('[dusk="abandonner-la-seance"]').exists()).toBe(true)
+
+        const remplie = await mountPage()
+
+        expect(remplie.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
     })
 
     it('opens from under a session that already has exercises', async () => {

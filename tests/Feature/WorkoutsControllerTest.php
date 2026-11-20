@@ -120,6 +120,38 @@ it('deletes a workout (Happy Path)', function (): void {
         ->assertRedirect(route('workouts.index'));
 });
 
+it('abandons an empty session in progress: it is gone, and so is the banner of the session in progress', function (): void {
+    $user = User::factory()->create();
+    $workout = Workout::factory()->for($user)->create(['started_at' => now()->subMinutes(5), 'ended_at' => null]);
+
+    actingAs($user)
+        ->get(route('workouts.show', $workout))
+        ->assertOk();
+
+    actingAs($user)
+        ->delete(route('workouts.destroy', $workout))
+        ->assertRedirect(route('workouts.index'));
+
+    expect(Workout::query()->whereKey($workout->id)->exists())->toBeFalse();
+
+    actingAs($user)
+        ->get(route('workouts.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('Workouts/Index')
+            ->where('auth.user.active_workout', null));
+});
+
+it('does not abandon the empty session in progress of another account (404, indiscernible)', function (): void {
+    $user = User::factory()->create();
+    $autre = User::factory()->create();
+    $workout = Workout::factory()->for($autre)->create(['started_at' => now()->subMinutes(5), 'ended_at' => null]);
+
+    actingAs($user)->delete(route('workouts.destroy', $workout))->assertNotFound();
+
+    expect($workout->fresh())->not->toBeNull();
+});
+
 it('renews the stats version of the user when a workout is deleted', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);

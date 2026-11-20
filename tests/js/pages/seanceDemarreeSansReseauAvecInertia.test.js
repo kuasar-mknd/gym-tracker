@@ -33,8 +33,6 @@ import {
  */
 
 // Les graphiques de l'accueil et de ses cartes : chargés à la demande, ils arriveraient après le fichier.
-vi.mock('@/Components/Stats/ActiveGoalsChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
-vi.mock('@/Components/Stats/DashboardDurationChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
 vi.mock('@/Components/Stats/DurationDistributionChart.vue', () => ({
     __esModule: true,
     default: { render: () => null },
