@@ -164,7 +164,7 @@ const menuGroups = [
                     {{ group.title }}
                 </h3>
 
-                <div class="grid grid-cols-1 gap-3">
+                <div class="bureau:grid-cols-2 grid grid-cols-1 gap-3">
                     <Link
                         v-for="item in group.items"
                         :key="item.name"

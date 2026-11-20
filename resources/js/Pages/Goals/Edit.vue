@@ -44,7 +44,7 @@ const cancel = () => {
 <template>
     <Head title="Modifier l'objectif" />
 
-    <AuthenticatedLayout show-back back-route="goals.index" page-title="Modifier l'objectif">
+    <AuthenticatedLayout show-back back-route="goals.index" page-title="Modifier l'objectif" retour-propre>
         <template #header>
             <div>
                 <h1 class="titre-section">Modifier l'objectif</h1>

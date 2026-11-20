@@ -1047,19 +1047,96 @@ describe('AuthenticatedLayout — the frame around the page', () => {
     })
 
     /*
-     * Le hub de profil se rejoint depuis le menu.
-     *
-     * « Profil » pointait sur `profile.edit`, la page de modification.
-     * `profile.index`, qui liste toutes les sections, n'etait atteignable sur
-     * ordinateur qu'en tapant l'adresse — la barre du bas y menait deja sur
-     * mobile, mais elle n'existe pas ici (#1314).
+     * Le hub de profil se rejoint par l'onglet « Profil » de la barre de bureau
+     * (lot 8, #2434), les mêmes quatre onglets que la barre du bas : le menu du
+     * compte ne le répète plus, et garde les réglages à un clic. Avant, le
+     * menu portait « Profil », et la barre de bureau six entrées d'avant la
+     * refonte (Calendrier, Stats, Exercices, Outils) que le mobile n'a plus.
      */
-    it('mène au hub de profil, et garde les réglages à un clic', () => {
+    it('mène au hub de profil par son onglet, et garde les réglages à un clic', () => {
         const wrapper = mountLayout()
         const parHref = wrapper.findAll('a').map((a) => [a.text(), a.attributes('href')])
 
-        expect(parHref).toContainEqual(['person Profil', '/resolved/profile.index'])
+        expect(parHref).toContainEqual(['Profil', '/resolved/profile.index'])
         expect(parHref).toContainEqual(['settings Paramètres', '/resolved/profile.edit'])
+        expect(parHref).not.toContainEqual(['person Profil', '/resolved/profile.index'])
+    })
+
+    it('montre les quatre onglets de la barre du bas, dans le même ordre', () => {
+        const wrapper = mountLayout()
+
+        expect(wrapper.findAll('a[data-active]').map((a) => [a.text(), a.attributes('href')])).toEqual([
+            ['Accueil', '/resolved/dashboard'],
+            ['Séances', '/resolved/workouts.index'],
+            ['Progrès', '/resolved/stats.index'],
+            ['Profil', '/resolved/profile.index'],
+        ])
+    })
+
+    it.each([
+        ['dashboard', 'Accueil'],
+        ['workouts.index', 'Séances'],
+        ['calendar.index', 'Séances'],
+        ['templates.index', 'Séances'],
+        ['stats.index', 'Progrès'],
+        ['corps.index', 'Progrès'],
+        ['records.index', 'Progrès'],
+        ['body-measurements.index', 'Progrès'],
+        ['body-parts.show', 'Progrès'],
+        ['exercises.show', 'Progrès'],
+        ['goals.index', 'Progrès'],
+        ['achievements.index', 'Progrès'],
+        ['profile.index', 'Profil'],
+        ['tools.index', 'Profil'],
+        ['plates.index', 'Profil'],
+        ['habits.index', 'Profil'],
+    ])('allume l’onglet « %s » → %s sur bureau, un seul à la fois', (laPage, onglet) => {
+        const wrapper = mountLayout({ onPage: laPage })
+        const allumes = wrapper.findAll('a[data-active="true"]').map((a) => a.text())
+
+        expect(allumes).toEqual([onglet])
+    })
+
+    /*
+     * Les pages secondaires ont leur retour sur bureau (lot 8, #2434) : le
+     * bouton rond de l'en-tête mobile n'y existe pas, et un onglet ne ramène
+     * qu'à la racine de sa famille.
+     */
+    it('pose un retour de bureau sur une page secondaire, dans l’en-tête de page quand elle en a un', () => {
+        const sansEntete = mountLayout({ props: { showBack: true, backRoute: 'stats.index', pageTitle: 'Corps' } })
+
+        expect(sansEntete.findAll('[dusk="retour-de-bureau"]')).toHaveLength(1)
+        expect(sansEntete.get('[dusk="retour-de-bureau"]').attributes('href')).toBe('/resolved/stats.index')
+        expect(sansEntete.get('[dusk="retour-de-bureau"]').text()).toBe('arrow_back Retour')
+
+        const avecEntete = mountLayout({
+            props: { showBack: true, backRoute: 'stats.index', pageTitle: 'Corps' },
+            slots: { header: '<h1>Corps</h1>' },
+        })
+
+        expect(avecEntete.findAll('[dusk="retour-de-bureau"]')).toHaveLength(1)
+        expect(avecEntete.get('header.bureau\\:block [dusk="retour-de-bureau"]').exists()).toBe(true)
+    })
+
+    it('n’ajoute pas son retour quand la page porte déjà le sien', () => {
+        const wrapper = mountLayout({
+            props: { showBack: true, backRoute: 'tools.index', pageTitle: 'Outils', retourPropre: true },
+            slots: { header: '<h1>Outils</h1>' },
+        })
+
+        expect(wrapper.find('[dusk="retour-de-bureau"]').exists()).toBe(false)
+    })
+
+    it('ne pose pas de retour de bureau sur une page racine', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Accueil' } })
+
+        expect(wrapper.find('[dusk="retour-de-bureau"]').exists()).toBe(false)
+    })
+
+    it('n’allume aucun onglet sur les notifications, comme la barre du bas', () => {
+        const wrapper = mountLayout({ onPage: 'notifications.index' })
+
+        expect(wrapper.findAll('a[data-active="true"]')).toHaveLength(0)
     })
 
     it('lights the desktop tab of the section being viewed', () => {
