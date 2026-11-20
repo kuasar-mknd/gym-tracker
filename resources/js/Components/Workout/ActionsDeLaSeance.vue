@@ -49,7 +49,7 @@ const emit = defineEmits(['ajouter-un-exercice', 'demarrer-un-repos', 'enregistr
 
 const { joignable } = useEtatDuReseau()
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
-const abandon = useAbandonDeLaSeance()
+const abandon = useAbandonDeLaSeance(() => props.vide)
 
 const abandonImpossible = computed(() => !joignable.value || surUneCopie.value || props.seanceEnAttente)
 
@@ -91,6 +91,7 @@ const raisonDuModele = computed(() => {
         >
             <GlassButton
                 @click="emit('ajouter-un-exercice')"
+                :disabled="abandon.enCours.value"
                 class="bouton-de-barre bureau:w-full flex-auto"
                 dusk="add-exercise-existing"
             >
@@ -112,6 +113,7 @@ const raisonDuModele = computed(() => {
             <GlassButton
                 variant="accent"
                 @click="emit('terminer')"
+                :disabled="abandon.enCours.value"
                 class="bouton-de-barre bureau:w-full flex-auto"
                 id="finish-workout-mobile"
                 dusk="finish-workout-mobile"

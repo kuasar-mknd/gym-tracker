@@ -44,6 +44,11 @@ class PageBrowserTest extends DuskTestCase
 
                 if (isset($titresMasques[$url])) {
                     $browser->assertScript("document.querySelector('header h1').textContent.trim()", $titresMasques[$url]);
+                    // `textContent` ignore le CSS : la boîte du titre doit tenir en un pixel (sr-only), ou ne pas exister.
+                    $browser->assertScript(
+                        "(() => { const r = document.querySelector('header h1').getBoundingClientRect(); return r.width <= 1 && r.height <= 1; })()",
+                        true,
+                    );
                 }
             }
             $browser->assertNoConsoleExceptions();

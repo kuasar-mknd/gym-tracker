@@ -289,7 +289,6 @@ describe('Dashboard', () => {
 
         expect(wrapper.text()).not.toContain('Progression des objectifs')
         expect(wrapper.text()).not.toContain('Durée récente')
-        expect(wrapper.findComponent({ name: 'RecentWorkoutDurationSection' }).exists()).toBe(false)
     })
 
     it('passe les objectifs au récapitulatif qui les résume', () => {

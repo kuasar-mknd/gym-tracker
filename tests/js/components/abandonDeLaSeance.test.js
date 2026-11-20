@@ -12,7 +12,8 @@ vi.mock('@inertiajs/vue3', async (importOriginal) => ({
 
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
-import { ECRITURES_ENCORE_EN_ROUTE } from '@/composables/useAbandonDeLaSeance'
+import { ECRITURES_ENCORE_EN_ROUTE, SEANCE_PLUS_VIDE } from '@/composables/useAbandonDeLaSeance'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 import SyncService from '@/Utils/SyncService'
 
 /*
@@ -34,6 +35,7 @@ const confirmer = (wrapper) => wrapper.get('[dusk="confirm-dialog-confirm"]')
 
 beforeEach(() => {
     visite.delete.mockReset()
+    visite.page.props = { flash: {} }
     noterQueLeServeurRepond()
 })
 
@@ -126,6 +128,72 @@ describe('« Abandonner » sur une séance vide', () => {
 
         expect(visite.delete).not.toHaveBeenCalled()
         expect(abandonner(wrapper).attributes('disabled')).toBeUndefined()
+    })
+
+    /*
+     * La file se vide pendant l'attente : tant qu'elle ne l'est pas, rien ne
+     * part. Une promesse qu'on résout à la main tient l'attente ouverte.
+     */
+    it('ne supprime qu’une fois la file des écritures vidée, pas avant', async () => {
+        let vider
+        const file = new Promise((resolve) => (vider = resolve))
+        let enAttente = 2
+        vi.spyOn(SyncService, 'attendreLesEcritures').mockReturnValue(file)
+        vi.spyOn(SyncService, 'enAttente').mockImplementation(() => enAttente)
+        const wrapper = monter()
+
+        await abandonner(wrapper).trigger('click')
+        await confirmer(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(visite.delete).not.toHaveBeenCalled()
+
+        enAttente = 0
+        vider()
+        await attendreLaSuppression()
+
+        expect(visite.delete.mock.calls[0][0]).toBe('/workouts.destroy/12')
+    })
+
+    /*
+     * L'attente dure jusqu'à huit secondes : une ligne ajoutée entre-temps rend
+     * la séance pleine, et le serveur supprimerait une séance qui a des données.
+     */
+    it('ne supprime pas une séance devenue non vide pendant l’attente, et verrouille l’ajout en attendant', async () => {
+        let vider
+        vi.spyOn(SyncService, 'attendreLesEcritures').mockReturnValue(new Promise((resolve) => (vider = resolve)))
+        const wrapper = monter()
+        const exercice = () => wrapper.get('[dusk="add-exercise-existing"]')
+
+        expect(exercice().attributes('disabled')).toBeUndefined()
+
+        await abandonner(wrapper).trigger('click')
+        await confirmer(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(exercice().attributes('disabled')).toBeDefined()
+        expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeDefined()
+
+        await wrapper.setProps({ vide: false })
+        vider()
+        await vi.waitFor(() => expect(visite.page.props.flash.error).toBe(SEANCE_PLUS_VIDE))
+
+        expect(visite.delete).not.toHaveBeenCalled()
+        expect(exercice().attributes('disabled')).toBeUndefined()
+    })
+
+    /* Une copie servie après le retour du réseau : la visite serait arrêtée, le bouton le dit d'avance. */
+    it('ne part pas depuis une copie hors ligne, et vise la raison du bandeau', async () => {
+        visite.page.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = monter()
+
+        expect(abandonner(wrapper).attributes('disabled')).toBeDefined()
+        expect(abandonner(wrapper).attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+
+        await abandonner(wrapper).trigger('click')
+
+        expect(wrapper.find('[dusk="confirm-dialog-confirm"]').exists()).toBe(false)
+        expect(visite.delete).not.toHaveBeenCalled()
     })
 
     it('ne part pas sans réseau, et dit pourquoi', async () => {
