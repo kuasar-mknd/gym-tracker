@@ -913,7 +913,10 @@ final class PersonalRecordService
                 try {
                     return $section();
                 } finally {
-                    ClesDeStats::invaliderRecordsDuCompte($idUtilisateur);
+                    $renouveler = static fn () => ClesDeStats::invaliderRecordsDuCompte($idUtilisateur);
+
+                    DB::afterCommit($renouveler);
+                    DB::afterRollBack($renouveler);
                 }
             });
     }

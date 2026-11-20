@@ -13,8 +13,9 @@ use App\Support\VersionDeCache;
  * inatteignables d'un coup. Plus d'énumération manuelle des clefs à oublier,
  * qui avait déjà laissé une entrée derrière elle (#1502).
  *
- * Deux versions : les séances (tout ce qui découle des séances, lignes et
- * séries) et les mesures corporelles, qu'un changement de séance ne périme pas.
+ * Trois versions : les séances (tout ce qui découle des séances, lignes et
+ * séries), les mesures corporelles, qu'un changement de séance ne périme pas,
+ * et les records, que seule l'écriture d'un record périme.
  * Ce sont des ULID, jamais réutilisés : une version que le cache perd ne
  * ramène plus une entrée d'avant une invalidation (`VersionDeCache`, #2151).
  */
