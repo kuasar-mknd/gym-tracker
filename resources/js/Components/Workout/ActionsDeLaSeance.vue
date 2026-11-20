@@ -12,12 +12,12 @@
  * que le serveur ne connaît pas encore, il se désactive de même, avec ce que
  * dit l'état de la séance (`EtatDeLaSeanceEnAttente.vue`).
  *
- * « Abandonner » ne se montre que sur une séance vide : la question, puis la
- * suppression de la séance (`useAbandonDeLaSeance`). Le serveur seul la
+ * « Abandonner » ne se montre que sur une séance vide, à la place de « Terminer » :
+ * la question, puis la suppression de la séance (`useAbandonDeLaSeance`). Le serveur seul la
  * supprime : sans réseau, sur une copie hors ligne et sur une séance démarrée
  * sans réseau, il se désactive, avec la raison, comme « Modèle ».
  *
- * « Terminer » reste ouvert (#2049), sauf pendant un abandon : la fin passe par la file hors
+ * « Terminer » reste ouvert (#2049) : la fin passe par la file hors
  * ligne, à l'heure du geste, et n'envoie rien que la page tire d'une copie
  * (la séance, l'heure). Ajouter un exercice et le repos restent aussi : ils
  * passent par la file, ou ne quittent pas l'appareil.
@@ -37,8 +37,9 @@ const props = defineProps({
     /** La séance a été démarrée sans réseau, et sa création attend la file. */
     seanceEnAttente: { type: Boolean, default: false },
     /**
-     * La séance n'a pas encore d'exercice : ni repos ni modèle à proposer, mais
-     * « Terminer » reste : sans lui, une séance vide n'aurait aucun chemin vers sa fin.
+     * La séance n'a pas encore d'exercice : ni repos ni modèle à proposer, et rien
+     * à terminer : « Abandonner » prend la place de « Terminer », qui reviendra
+     * avec le premier exercice.
      */
     vide: { type: Boolean, default: false },
     /** La séance que « Abandonner » supprime. */
@@ -84,7 +85,7 @@ const raisonDuModele = computed(() => {
             « Repos » prend le contour, « Terminer » est l'action primaire.
         -->
         <div
-            class="verre-epais rounded-capsule bureau:contents bottom-sure-24 left-sure-4 right-sure-4 z-flottant @container fixed mb-0 flex gap-2 p-2"
+            class="verre-epais rounded-capsule bureau:contents bottom-sure-22 left-sure-4 right-sure-4 z-flottant @container fixed mb-0 flex gap-2 p-2"
             role="group"
             aria-label="Actions de la séance"
             dusk="barre-d-outils-de-la-seance"
@@ -111,9 +112,20 @@ const raisonDuModele = computed(() => {
                 <span class="bureau:inline hidden">Démarrer un repos</span>
             </GlassButton>
             <GlassButton
+                v-if="vide"
+                variant="accent"
+                @click="abandon.demander(idDeLaSeance)"
+                :loading="abandon.enCours.value"
+                :disabled="abandonImpossible || idDeLaSeance === null"
+                :aria-describedby="abandonImpossible ? raisonDeLAbandon : undefined"
+                class="bouton-de-barre bureau:w-full flex-auto"
+                dusk="abandonner-la-seance"
+                >Abandonner</GlassButton
+            >
+            <GlassButton
+                v-else
                 variant="accent"
                 @click="emit('terminer')"
-                :disabled="abandon.enCours.value"
                 class="bouton-de-barre bureau:w-full flex-auto"
                 id="finish-workout-mobile"
                 dusk="finish-workout-mobile"
@@ -142,19 +154,6 @@ const raisonDuModele = computed(() => {
         <p v-if="!joignable && !vide" id="modele-sans-reseau" class="text-text-muted text-center text-sm font-medium">
             Il faut le réseau pour enregistrer la séance comme modèle.
         </p>
-        <!-- Une séance vide n'a rien à garder : sa sortie est ici, à la place de « Modèle ». -->
-        <div v-if="vide" class="bureau:block flex justify-end pt-6">
-            <GlassButton
-                variant="ghost"
-                @click="abandon.demander(idDeLaSeance)"
-                :loading="abandon.enCours.value"
-                :disabled="abandonImpossible || idDeLaSeance === null"
-                :aria-describedby="abandonImpossible ? raisonDeLAbandon : undefined"
-                class="bureau:w-full"
-                dusk="abandonner-la-seance"
-                >Abandonner</GlassButton
-            >
-        </div>
         <p v-if="!joignable && vide" id="abandon-sans-reseau" class="text-text-muted text-center text-sm font-medium">
             Il faut le réseau pour abandonner la séance.
         </p>

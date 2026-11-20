@@ -60,7 +60,7 @@ describe('la barre d’outils de la séance', () => {
         const classes = barre().classes()
 
         expect(classes).toEqual(
-            expect.arrayContaining(['fixed', 'mb-0', 'bottom-sure-24', 'left-sure-4', 'right-sure-4']),
+            expect.arrayContaining(['fixed', 'mb-0', 'bottom-sure-22', 'left-sure-4', 'right-sure-4']),
         )
         expect(classes).toContain('bureau:contents')
         expect(classes).toContain('verre-epais')
@@ -70,19 +70,19 @@ describe('la barre d’outils de la séance', () => {
      * Sans le bouton central, une séance sans exercice n'avait plus de chemin
      * vers sa fin : la barre reste, réduite à Exercice et Terminer.
      */
-    it('reste sur une séance vide, avec Exercice et Terminer seulement', async () => {
+    it('met Abandonner à la place de Terminer sur une séance vide, avec Exercice seulement', async () => {
         const wrapper = mount(ActionsDeLaSeance, { props: { vide: true }, global: { directives: { press: {} } } })
         const groupe = wrapper.get('[dusk="barre-d-outils-de-la-seance"]')
 
         expect(groupe.findAll('button').map((bouton) => bouton.attributes('dusk'))).toEqual([
             'add-exercise-existing',
-            'finish-workout-mobile',
+            'abandonner-la-seance',
         ])
         expect(wrapper.find('[dusk="enregistrer-comme-modele"]').exists()).toBe(false)
 
-        await groupe.get('[dusk="finish-workout-mobile"]').trigger('click')
+        await groupe.get('[dusk="abandonner-la-seance"]').trigger('click')
 
-        expect(wrapper.emitted('terminer')).toHaveLength(1)
+        expect(wrapper.emitted('terminer')).toBeUndefined()
     })
 
     it('donne à Terminer l’orange de la charte, en casse de phrase', () => {

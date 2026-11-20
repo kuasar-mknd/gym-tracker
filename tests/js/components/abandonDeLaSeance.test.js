@@ -50,13 +50,13 @@ describe('« Abandonner » sur une séance vide', () => {
         expect(abandonner(monter({ vide: false })).exists()).toBe(false)
     })
 
-    it('reste hors de la barre d’outils : Exercice et Terminer seulement', () => {
+    it('prend la place de « Terminer » dans la barre d’outils : Exercice et Abandonner seulement', () => {
         const barre = monter().get('[dusk="barre-d-outils-de-la-seance"]')
 
-        expect(barre.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
+        expect(barre.find('[dusk="finish-workout-mobile"]').exists()).toBe(false)
         expect(barre.findAll('button').map((bouton) => bouton.attributes('dusk'))).toEqual([
             'add-exercise-existing',
-            'finish-workout-mobile',
+            'abandonner-la-seance',
         ])
     })
 
@@ -172,7 +172,7 @@ describe('« Abandonner » sur une séance vide', () => {
         await flushPromises()
 
         expect(exercice().attributes('disabled')).toBeDefined()
-        expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeDefined()
+        expect(abandonner(wrapper).attributes('disabled')).toBeDefined()
 
         await wrapper.setProps({ vide: false })
         vider()
