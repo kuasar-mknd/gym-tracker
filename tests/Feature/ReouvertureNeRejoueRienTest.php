@@ -136,6 +136,11 @@ class ReouvertureNeRejoueRienTest extends TestCase
 
         $this->terminer()->assertOk();
 
+        $this->actingAs($this->compte)->getJson(route('workouts.records', $this->seance))
+            ->assertOk()
+            ->assertJsonPath('records.0.valeur', 100)
+            ->assertJsonCount(1, 'records');
+
         $this->assertSame($apresLaPremiere, $this->etat());
         $this->assertSame($notifiees, Notification::sent($this->compte, AchievementUnlocked::class)->count());
         $this->assertNotNull($this->seance->refresh()->ended_at);

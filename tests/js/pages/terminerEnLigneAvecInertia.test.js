@@ -100,7 +100,7 @@ afterEach(async () => {
     await fermerLaListeDesSeances()
 })
 
-it('termine par une seule requête, mène à l’accueil, et l’invitation aux notifications ne revient pas par l’historique', async () => {
+it('termine par la fin et la lecture des records du bilan, mène à l’accueil, et l’invitation aux notifications ne revient pas par l’historique', async () => {
     await visiter('/workouts/5', '[dusk="exercise-card-0"]')
     visites.length = 0
 

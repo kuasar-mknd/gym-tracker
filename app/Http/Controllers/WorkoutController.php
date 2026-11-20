@@ -141,6 +141,9 @@ class WorkoutController extends Controller
      */
     public function reopen(Workout $workout, ReouvrirUneSeanceAction $reouvrir): \Illuminate\Http\RedirectResponse
     {
+        // Le droit se juge sur la séance déjà liée, avant toute autre lecture : celle d'autrui ne coûte pas plus qu'un identifiant inconnu. Une séance déjà ouverte est un rejeu, que l'action rend telle quelle.
+        $this->authorize($workout->ended_at === null ? 'view' : 'reopen', $workout);
+
         try {
             $rouverte = $reouvrir->execute($this->user(), $workout->id);
         } catch (UneSeanceEstDejaEnCours $refus) {
