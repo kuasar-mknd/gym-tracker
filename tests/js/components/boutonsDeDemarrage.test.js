@@ -21,8 +21,9 @@ import QuickActions from '@/Components/Dashboard/QuickActions.vue'
  * Ce que le bouton central de la barre du bas prouvait en #2434, repris par le
  * bouton « Démarrer une séance » de l'Accueil, branché comme le fait
  * `Pages/Dashboard.vue` : `useDemarrageDUneSeance()` → `processing` et
- * `@start-workout`. Le bouton central est parti, il ne reste qu'un chemin vers
- * « démarrer » par page : ces cas suivent le geste, pas le bouton disparu.
+ * `@start-workout`. L'hôte ci-dessous est écrit à la main, il ne prouve que le
+ * bouton ; la vraie page d'accueil, avec ou sans copie hors ligne, est montée
+ * dans `dashboardStatsAndGoalEdit.test.js`.
  */
 const Accueil = {
     components: { QuickActions },
@@ -99,8 +100,13 @@ describe('le bouton « Démarrer une séance » de l’Accueil', () => {
         expect(bouton(wrapper).attributes('disabled')).toBeUndefined()
     })
 
-    /** Sur une copie hors ligne, rien ne part par une visite : le bouton reste ouvert, sans raison de désactivation. */
-    it('reste ouvert et sans raison de désactivation, que la page vienne du serveur ou d’une copie hors ligne', async () => {
+    /*
+     * Le bouton ne lit ni la page ni la copie : il n'a que `processing`. Ce cas
+     * prouve donc seulement qu'il est ouvert et sans `aria-describedby` quand
+     * le démarrage ne tourne pas. La page d'accueil entière, servie d'une copie
+     * hors ligne, est montée dans `dashboardStatsAndGoalEdit.test.js`.
+     */
+    it('est ouvert et sans raison de désactivation tant que le démarrage ne tourne pas', async () => {
         const wrapper = monter()
 
         expect(bouton(wrapper).attributes('disabled')).toBeUndefined()

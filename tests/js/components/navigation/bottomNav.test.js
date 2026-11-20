@@ -64,19 +64,15 @@ describe('BottomNav — les quatre onglets', () => {
 
     /*
      * Ce que le bouton central disait selon la page (« Séance » partout, « Exercice »
-     * sur la séance) n'est plus dans la barre : ni ces deux libellés, ni « Plus »
-     * ni « Stats », que la maquette retire.
+     * sur la séance) n'est plus dans la barre : elle ne porte que les quatre
+     * libellés exacts, sans « Plus » ni « Stats », que la maquette retire.
      */
-    it.each(['dashboard', 'workouts.show', 'workouts.en-attente'])(
-        'says neither Séance, Exercice, Plus nor Stats on %s',
-        (page) => {
-            const texte = mountNav(page).text()
+    it.each(['dashboard', 'workouts.show', 'workouts.en-attente'])('says only the four tab names on %s', (page) => {
+        const wrapper = mountNav(page)
 
-            for (const mot of ['Séance ', 'Exercice', 'Plus', 'Stats']) {
-                expect(texte).not.toContain(mot)
-            }
-        },
-    )
+        expect(labels(wrapper)).toEqual(['Accueil', 'Séances', 'Progrès', 'Profil'])
+        expect(wrapper.findAll('button')).toHaveLength(0)
+    })
 
     /*
      * Une séance démarrée sans réseau s'ouvre à l'adresse de sa clé
