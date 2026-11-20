@@ -31,6 +31,7 @@ class PageBrowserTest extends DuskTestCase
                 '/exercises' => 'BIBLIOTHÈQUE',
                 '/stats' => 'ÉVOLUTION',
                 '/corps' => 'CORPS',
+                '/records' => 'RECORDS',
                 '/profile' => $user->email,
             ];
 

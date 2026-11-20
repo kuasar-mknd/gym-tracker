@@ -13,8 +13,9 @@ use App\Support\VersionDeCache;
  * inatteignables d'un coup. Plus d'énumération manuelle des clefs à oublier,
  * qui avait déjà laissé une entrée derrière elle (#1502).
  *
- * Deux versions : les séances (tout ce qui découle des séances, lignes et
- * séries) et les mesures corporelles, qu'un changement de séance ne périme pas.
+ * Trois versions : les séances (tout ce qui découle des séances, lignes et
+ * séries), les mesures corporelles, qu'un changement de séance ne périme pas,
+ * et les records, que seule l'écriture d'un record périme.
  * Ce sont des ULID, jamais réutilisés : une version que le cache perd ne
  * ramène plus une entrée d'avant une invalidation (`VersionDeCache`, #2151).
  */
@@ -23,6 +24,12 @@ final class ClesDeStats
     public static function seances(User $user, string $suffixe): string
     {
         return "stats.{$suffixe}.{$user->id}.s".VersionDeCache::lire("stats-version.seances.{$user->id}");
+    }
+
+    public static function records(User $user, string $suffixe): string
+    {
+        return "stats.{$suffixe}.{$user->id}.s".VersionDeCache::lire("stats-version.seances.{$user->id}")
+            .'.r'.VersionDeCache::lire("stats-version.records.{$user->id}");
     }
 
     public static function mesures(User $user, string $suffixe): string
@@ -42,6 +49,11 @@ final class ClesDeStats
     public static function invaliderSeancesDuCompte(int $idUtilisateur): void
     {
         VersionDeCache::renouveler("stats-version.seances.{$idUtilisateur}");
+    }
+
+    public static function invaliderRecordsDuCompte(int $idUtilisateur): void
+    {
+        VersionDeCache::renouveler("stats-version.records.{$idUtilisateur}");
     }
 
     public static function invaliderMesures(User $user): void

@@ -532,6 +532,13 @@ describe('Stats/Index', () => {
             expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).not.toContain('/corps.index')
         })
 
+        it('ne propose pas Records, qui demande le réseau', () => {
+            const wrapper = mountStats({ exercises: [], selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).not.toContain('/records.index')
+            expect(wrapper.text()).not.toContain('Charge max')
+        })
+
         it('remontre les cartes et le choix de période quand la page n’est plus une copie', () => {
             pageDInertia.props = {}
             const wrapper = mountStats({ selectedPeriod: '30j' })
@@ -547,6 +554,15 @@ describe('Stats/Index', () => {
 
         expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).toContain('/corps.index')
         expect(wrapper.text()).toContain('Poids, masse grasse, mensurations')
+    })
+
+    it('mène à Records, avant Corps', () => {
+        const wrapper = mountStats()
+        const liens = wrapper.findAll('a').map((lien) => lien.attributes('href'))
+
+        expect(liens).toContain('/records.index')
+        expect(liens.indexOf('/records.index')).toBeLessThan(liens.indexOf('/corps.index'))
+        expect(wrapper.text()).toContain('Charge max, 1RM estimé, meilleur volume')
     })
 
     it('ne monte aucune carte de poids ni de masse grasse', () => {

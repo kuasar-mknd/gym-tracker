@@ -170,6 +170,7 @@ class ProgresHorsLigneTest extends DuskTestCase
             ->assertScript("document.querySelector('#main-content [data-indisponible-hors-ligne]').textContent.includes('Les mesures reviennent avec le réseau.')", true)
             ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 15, 'une carte de Progrès pulse sans fin hors ligne')
             ->assertMissing('#main-content a[href$="/corps"]')
+            ->assertMissing('#main-content a[href$="/records"]')
             ->assertMissing('[dusk="page-hors-ligne"]')
             ->assertScript('(() => /\\b83[.,]7\\b|\\b19[.,]3\\b/.test(document.querySelector("#main-content")?.textContent ?? ""))()', false);
     }

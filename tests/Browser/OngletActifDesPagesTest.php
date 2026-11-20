@@ -39,7 +39,7 @@ class OngletActifDesPagesTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($compte): void {
             $browser->loginAs(User::findOrFail($compte->id))->resizeToIphone15();
 
-            foreach (['/goals', '/calendar', '/habits', '/daily-journals', '/supplements', '/achievements', '/corps'] as $adresse) {
+            foreach (['/goals', '/calendar', '/habits', '/daily-journals', '/supplements', '/achievements', '/corps', '/records'] as $adresse) {
                 $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitFor('nav[aria-label="Navigation principale"]', 30);
 
                 /** @var array{retour: ?string, allumes: list<string>} $page */

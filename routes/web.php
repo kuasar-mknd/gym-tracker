@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('templates', \App\Http\Controllers\WorkoutTemplateController::class)->only(['index', 'show', 'create', 'edit']);
     Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index', 'show']);
     Route::get('/corps', [\App\Http\Controllers\CorpsController::class, 'index'])->name('corps.index');
+    Route::get('/records', [\App\Http\Controllers\RecordsController::class, 'index'])->name('records.index');
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
 
     Route::get('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'index'])->name('body-parts.index');
