@@ -28,8 +28,8 @@ use Tests\Support\ParcoursHorsLigne;
  * de l'issue : l'accueil ouvert par un chargement complet sans rien toucher,
  * puis la séance en cours depuis lui ; les copies attendues dans IndexedDB,
  * comptées par script (le préchauffage écrit celles des pages que le parcours
- * n'ouvre pas) ; puis la coupure. Depuis la séance, Stats, qui n'a pas de
- * copie, le dit et laisse la séance ; la flèche de l'en-tête ouvre la copie
+ * n'ouvre pas) ; puis la coupure. Depuis la séance, Stats, sans copie ici
+ * (`ProgresHorsLigneTest` joue celle de Progrès), le dit et laisse la séance ; la flèche de l'en-tête ouvre la copie
  * des séances, où la prop différée que le préchauffage ne demande jamais dit
  * « Indisponible hors ligne », et le graphique de l'historique, hors du
  * precache, « Graphique indisponible hors ligne » ; le bouton Retour du
@@ -128,7 +128,7 @@ class NavigationHorsLigneTest extends DuskTestCase
             $outils = $this->outilsDuNavigateur($browser);
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $jetons, $cheminDeLaSeance): void {
-                // Stats n'a pas de copie : la séance reste, et le dit.
+                // Progrès est gardé, mais ce parcours ne l'a pas ouvert et le préchauffage le demande en dernier : sans copie, la séance reste, et le dit.
                 $browser->clickWhenSettled('[dusk="nav-stats"]')
                     ->waitUntil($this->laPageDit(self::PAGE_INDISPONIBLE), 15, 'Stats n’a rien dit sans réseau')
                     ->assertPathIs($cheminDeLaSeance)
