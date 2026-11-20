@@ -153,7 +153,7 @@ onUnmounted(() => {
         v-press
         :href="adresse"
         @click="ouvrir"
-        class="verre-epais rounded-capsule text-text-main focus-visible:ring-accent-primary focus-visible:ring-offset-surface-page flex min-h-15 items-center gap-2 py-2 pr-2 pl-5 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
+        class="verre-epais rounded-capsule text-text-main focus-visible:ring-accent-primary focus-visible:ring-offset-surface-page flex min-h-16 items-center gap-2 py-2 pr-2 pl-5 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
         <span class="min-w-0 flex-1">

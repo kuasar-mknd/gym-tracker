@@ -209,3 +209,9 @@ describe('ActiveWorkoutBanner — une séance démarrée sans réseau', () => {
         expect(wrapper.emitted('ouvrir')).toBeUndefined()
     })
 })
+
+describe('ActiveWorkoutBanner : la capsule', () => {
+    it('fait 64 px, la hauteur de la barre d’outils de la séance', () => {
+        expect(mountBanner({ started_at: startedSecondsAgo(5) }).classes()).toContain('min-h-16')
+    })
+})

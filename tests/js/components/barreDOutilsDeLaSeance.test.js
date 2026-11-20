@@ -59,28 +59,41 @@ describe('la barre d’outils de la séance', () => {
     it('flotte au-dessus de la zone sûre et de la barre du bas, hors de la colonne de bureau', () => {
         const classes = barre().classes()
 
-        expect(classes).toEqual(expect.arrayContaining(['fixed', 'bottom-sure-30', 'left-sure-4', 'right-sure-4']))
+        expect(classes).toEqual(
+            expect.arrayContaining(['fixed', 'mb-0', 'au-dessus-du-menu', 'left-sure-4', 'right-sure-4']),
+        )
         expect(classes).toContain('bureau:contents')
         expect(classes).toContain('verre-epais')
     })
 
-    /*
-     * Sans le bouton central, une séance sans exercice n'avait plus de chemin
-     * vers sa fin : la barre reste, réduite à Exercice et Terminer.
-     */
-    it('reste sur une séance vide, avec Exercice et Terminer seulement', async () => {
-        const wrapper = mount(ActionsDeLaSeance, { props: { vide: true }, global: { directives: { press: {} } } })
+    /* Une séance vide garde un chemin vers sa fin quand l'abandon ne peut pas partir (#2049). */
+    it('envoie « terminer » depuis une séance vide dont l’abandon ne peut pas partir', async () => {
+        const wrapper = mount(ActionsDeLaSeance, {
+            props: { vide: true, idDeLaSeance: 'temp-1', seanceEnAttente: true },
+            global: { directives: { press: {} } },
+        })
+
+        await wrapper.get('[dusk="finish-workout-mobile"]').trigger('click')
+
+        expect(wrapper.emitted('terminer')).toHaveLength(1)
+    })
+
+    it('met Abandonner à la place de Terminer sur une séance vide, avec Exercice seulement', async () => {
+        const wrapper = mount(ActionsDeLaSeance, {
+            props: { vide: true, idDeLaSeance: 12 },
+            global: { directives: { press: {} } },
+        })
         const groupe = wrapper.get('[dusk="barre-d-outils-de-la-seance"]')
 
         expect(groupe.findAll('button').map((bouton) => bouton.attributes('dusk'))).toEqual([
             'add-exercise-existing',
-            'finish-workout-mobile',
+            'abandonner-la-seance',
         ])
         expect(wrapper.find('[dusk="enregistrer-comme-modele"]').exists()).toBe(false)
 
-        await groupe.get('[dusk="finish-workout-mobile"]').trigger('click')
+        await groupe.get('[dusk="abandonner-la-seance"]').trigger('click')
 
-        expect(wrapper.emitted('terminer')).toHaveLength(1)
+        expect(wrapper.emitted('terminer')).toBeUndefined()
     })
 
     it('donne à Terminer l’orange de la charte, en casse de phrase', () => {
