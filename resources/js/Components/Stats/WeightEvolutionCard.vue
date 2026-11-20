@@ -31,7 +31,7 @@ defineProps({
             <div
                 v-if="weightChange"
                 :class="[
-                    'flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold',
+                    'flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold',
                     weightChange > 0 ? 'bg-trend-down/10 text-trend-down' : 'bg-trend-up/10 text-trend-up',
                 ]"
             >
@@ -63,7 +63,7 @@ defineProps({
 
         <Link
             :href="route('body-measurements.index')"
-            class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-semibold hover:underline"
+            class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-bold hover:underline"
         >
             {{ latestWeight ? "Voir tout l'historique" : 'Ajouter une pesée' }}
             <GlassIcon name="arrow_forward" size="xs" />

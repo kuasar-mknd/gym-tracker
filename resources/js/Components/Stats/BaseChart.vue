@@ -167,7 +167,7 @@ const legende = () => {
         position: 'bottom',
         labels: {
             color: jeton('text-muted'),
-            font: { size: 10, weight: 500 },
+            font: { size: 10, weight: 'bold' },
             padding: 12,
             boxHeight: 8,
             usePointStyle: true,
@@ -321,7 +321,7 @@ onBeforeUnmount(() => {
             <li
                 v-for="entree in legendeSousLAnneau"
                 :key="entree.label"
-                class="font-display text-text-muted flex items-center gap-1.5 text-xs font-medium"
+                class="font-display text-text-muted flex items-center gap-1.5 text-xs font-bold"
             >
                 <span
                     class="inline-block h-2 w-2 rounded-full"

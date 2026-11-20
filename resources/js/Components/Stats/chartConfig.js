@@ -43,7 +43,7 @@ export function infobulle({ accent = 'accent-primary', opaque = false } = {}) {
 export function graduations({ taille = 10, gras = true } = {}) {
     return {
         color: jeton('text-muted'),
-        font: { size: taille, weight: gras ? 500 : 'normal', family: 'sans-serif' },
+        font: { size: taille, weight: gras ? 'bold' : 'normal', family: 'sans-serif' },
     }
 }
 

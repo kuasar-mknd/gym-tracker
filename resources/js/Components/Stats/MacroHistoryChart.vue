@@ -64,7 +64,7 @@ const infobulle = {
     opaque: true,
     displayColors: true,
     boxPadding: 4,
-    titleFont: { family: 'Space Grotesk', weight: 500 },
+    titleFont: { family: 'Space Grotesk', weight: 'bold' },
     bodyFont: { family: 'Space Grotesk' },
     callbacks: { label: (context) => `${context.dataset.label}: ${context.parsed.y}` },
 }

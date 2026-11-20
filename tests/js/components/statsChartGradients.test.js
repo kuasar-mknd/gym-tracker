@@ -201,7 +201,7 @@ const flats = [
         chart: 'DurationHistoryChart',
         component: DurationHistoryChart,
         key: 'backgroundColor',
-        expected: () => jetonTransparent('accent-primary', 0.7),
+        expected: () => jetonTransparent('accent-primary', 0.6),
     },
     {
         chart: 'FastingHistoryChart',
@@ -269,7 +269,7 @@ const flats = [
         chart: 'SupplementUsageChart',
         component: SupplementUsageChart,
         key: 'backgroundColor',
-        expected: () => jetonTransparent('accent-primary', 0.7),
+        expected: () => jetonTransparent('accent-primary', 0.6),
     },
     {
         chart: 'VolumePerWorkoutChart',
@@ -287,7 +287,7 @@ const flats = [
         chart: 'WaterHistoryChart',
         component: WaterHistoryChart,
         key: 'backgroundColor',
-        expected: () => jetonTransparent('accent-primary', 0.7),
+        expected: () => jetonTransparent('accent-primary', 0.6),
     },
     {
         chart: 'WeightHistoryChart',

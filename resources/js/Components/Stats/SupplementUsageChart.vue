@@ -17,7 +17,7 @@ const datasets = computed(() => [
     {
         label: 'Doses prises',
         data: props.data.map((item) => item.count),
-        backgroundColor: jetonTransparent('accent-primary', 0.7),
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderRadius: 6,
         hoverBackgroundColor: jeton('accent-primary'),
     },

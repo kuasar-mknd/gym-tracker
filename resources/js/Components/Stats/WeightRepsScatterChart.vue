@@ -24,7 +24,7 @@ const datasets = computed(() => [
     },
 ])
 
-const titre = (text) => ({ display: true, text, color: jeton('text-muted'), font: { size: 10, weight: 500 } })
+const titre = (text) => ({ display: true, text, color: jeton('text-muted'), font: { size: 10, weight: 'bold' } })
 
 const infobulle = {
     accent: 'shadow-cast',

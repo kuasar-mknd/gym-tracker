@@ -39,7 +39,7 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
                 <div
                     v-if="variationDuMois !== null"
                     :class="[
-                        'flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-semibold whitespace-nowrap',
+                        'flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold whitespace-nowrap',
                         variationDuMois > 0
                             ? 'bg-trend-up/10 text-trend-up'
                             : variationDuMois < 0

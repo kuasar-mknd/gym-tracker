@@ -129,6 +129,9 @@ describe('l’historique différé (#2351)', () => {
         expect(wrapper.find('[data-deferred="history"]').exists()).toBe(true)
         expect(wrapper.find('[data-historique-en-attente]').exists()).toBe(true)
         expect(wrapper.findAll('[data-historique-en-attente] [data-carte-en-attente]')).toHaveLength(4)
+        // Les squelettes pulsent à la place de la carte : une seule animation par carte.
+        expect(wrapper.findAll('[data-carte-en-attente] .glass-skeleton')).toHaveLength(8)
+        expect(wrapper.findAll('[data-carte-en-attente].animate-pulse')).toHaveLength(0)
         expect(wrapper.text()).not.toContain('Pas assez de données pour afficher les statistiques')
         expect(wrapper.vm.volumeData).toEqual([])
     })

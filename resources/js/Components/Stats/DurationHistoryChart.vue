@@ -16,7 +16,7 @@ const datasets = computed(() => [
     {
         label: 'Durée (min)',
         data: props.data.map((item) => item.duration),
-        backgroundColor: jetonTransparent('accent-primary', 0.7),
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderRadius: 6,
         hoverBackgroundColor: jeton('accent-primary'),
     },

@@ -304,7 +304,7 @@ describe.each([
         'DurationHistoryChart',
         DurationHistoryChart,
         { data: [{ date: '01/07', duration: 45 }] },
-        jetonTransparent('accent-primary', 0.7),
+        jetonTransparent('accent-primary', 0.6),
     ],
     ['SetsPerSessionChart', SetsPerSessionChart, { data: [{ date: '01/07', sets: 12 }] }, jeton('accent-secondary')],
     [

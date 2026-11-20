@@ -263,6 +263,7 @@ describe.each([
         const wrapper = await monter(type, SEANCES[nom])
 
         expect(wrapper.findAll('[data-historique-en-attente] [data-carte-en-attente]')).toHaveLength(1)
+        expect(wrapper.findAll('[data-carte-en-attente] .glass-skeleton')).toHaveLength(2)
     })
 })
 
@@ -271,4 +272,5 @@ it('réserve quatre cartes au squelette d’une force', async () => {
     const wrapper = await monter('strength', SEANCES.force)
 
     expect(wrapper.findAll('[data-historique-en-attente] [data-carte-en-attente]')).toHaveLength(4)
+    expect(wrapper.findAll('[data-carte-en-attente] .glass-skeleton')).toHaveLength(8)
 })

@@ -20,7 +20,7 @@ const datasets = computed(() => [
     {
         label: 'Volume (ml)',
         data: props.data.map((item) => item.total),
-        backgroundColor: jetonTransparent('accent-primary', 0.7),
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderRadius: 6,
         hoverBackgroundColor: jeton('accent-primary'),
     },
