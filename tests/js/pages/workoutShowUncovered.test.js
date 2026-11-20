@@ -242,7 +242,7 @@ const RestTimerStub = {
  */
 const pages = suivreLesPagesMontees()
 
-const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDIO, TIMED]) => {
+const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDIO, TIMED], layout = LayoutStub) => {
     const wrapper = mount(WorkoutShow, {
         props: { workout: JSON.parse(JSON.stringify(workout)), exercises },
         shallow: true,
@@ -250,7 +250,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
             directives: { press: {} },
             mocks: { route: (...args) => globalThis.route(...args) },
             stubs: {
-                AuthenticatedLayout: LayoutStub,
+                AuthenticatedLayout: layout,
                 GlassCard: passesSlot,
                 SwipeableRow: SwipeStub,
                 Modal: ModalStub,
@@ -871,6 +871,26 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
  * modal in the way.
  */
 describe('Workouts/Show — the session’s own settings', () => {
+    /*
+     * Sur bureau, l'en-tête mobile (nom de la séance, réglages) n'existe pas :
+     * la page pose les siens dans l'emplacement `header`, que le layout montre
+     * à partir de 1 024 px (lot 8, #2434). Sans lui, la séance n'avait ni titre
+     * visible ni accès aux réglages.
+     */
+    it('porte le nom de la séance et ses réglages dans l’en-tête de bureau', async () => {
+        const wrapper = await mountPage(strengthWorkout, [STRENGTH, CARDIO, TIMED], {
+            name: 'LayoutDeBureauStub',
+            template: '<div><div data-testid="bureau"><slot name="header" /></div><slot /></div>',
+        })
+        const entete = wrapper.get('[data-testid="bureau"]')
+
+        expect(entete.get('h1').text()).toBe(wrapper.vm.localWorkout.name || 'Séance')
+
+        await click(wrapper, 'workout-settings-button-desktop')
+
+        expect(wrapper.vm.showSettingsModal).toBe(true)
+    })
+
     it('sends a changed start time back as UTC after the form held it in local time', async () => {
         const wrapper = await mountPage()
 

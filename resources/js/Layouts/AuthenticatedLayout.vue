@@ -19,12 +19,13 @@ import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
 import { oublierLeReposDUneAutreSeance, reposAMontrer } from '@/Utils/reposEnCours'
+import { ONGLETS, ongletDeLaRoute } from '@/Utils/ongletsDeLaBarre'
 import { useSeanceEnCoursDeLAppareil } from '@/composables/useSeanceEnCoursDeLAppareil'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { messageDesEcrituresAbandonnees, reprendreLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
 import { SESSION_FINIE_DANS_UN_AUTRE_ONGLET } from '@/Utils/ecrituresEffaceesALaDeconnexion'
 
-defineProps({
+const props = defineProps({
     pageTitle: {
         type: String,
         default: '',
@@ -83,6 +84,14 @@ defineProps({
     },
 })
 
+/*
+ * Le retour des pages secondaires sur bureau : le bouton rond de l'en-tête mobile
+ * n'y existe pas (`bureau:hidden`), et les quatre onglets ne ramènent qu'à la
+ * racine de leur famille, pas à la page d'où l'on vient.
+ */
+const CLASSES_DU_RETOUR_DE_BUREAU =
+    'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none'
+
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
 // `?` ouvre la liste des raccourcis, d'où qu'on soit — le seul moyen de la
@@ -94,6 +103,8 @@ useRaccourciClavier(
 
 const page = usePage()
 
+const hrefDuRetour = computed(() => (props.backRoute ? route(props.backRoute) : 'javascript:history.back()'))
+
 /*
  * La séance en cours sur l'appareil : celle du serveur, ou celle qu'une
  * création en file fait naître (#2049). La page de séance se reconnaît à son
@@ -101,6 +112,8 @@ const page = usePage()
  * que `route().current('workouts.show')` ne nomme pas.
  */
 const { seanceEnCours: activeWorkout, ouvrir: ouvrirLaSeanceEnCours } = useSeanceEnCoursDeLAppareil({ page })
+// L'onglet de bureau allumé : les mêmes quatre que la barre du bas, par la même table (`ongletsDeLaBarre.js`).
+const ongletAllume = () => ongletDeLaRoute(route().current())?.cle ?? null
 const isWorkoutShow = computed(() => page.component === 'Workouts/Show')
 // Le repos que la page de CETTE séance a laissé en partant (#2434) : le bandeau le montre à la place de la durée.
 const reposLaisse = computed(() => reposAMontrer(page.props.auth?.user?.id, activeWorkout.value))
@@ -214,6 +227,7 @@ onUnmounted(() => {
             faisait déborder le bouton du compte hors de la barre.
         -->
         <nav
+            aria-label="Navigation de bureau"
             class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b backdrop-blur-xl"
         >
             <div class="px-sure-8 mx-auto max-w-7xl">
@@ -228,24 +242,13 @@ onUnmounted(() => {
 
                         <!-- Desktop Navigation Links -->
                         <div class="bureau:flex ms-8 hidden space-x-1">
-                            <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
-                                Accueil
-                            </NavLink>
-                            <NavLink :href="route('workouts.index')" :active="route().current('workouts.*')">
-                                Séances
-                            </NavLink>
-                            <NavLink :href="route('calendar.index')" :active="route().current('calendar.*')">
-                                Calendrier
-                            </NavLink>
-                            <NavLink :href="route('stats.index')" :active="route().current('stats.*')"> Stats </NavLink>
-                            <NavLink :href="route('exercises.index')" :active="route().current('exercises.*')">
-                                Exercices
-                            </NavLink>
                             <NavLink
-                                :href="route('tools.index')"
-                                :active="route().current('tools.*') || route().current('plates.*')"
+                                v-for="onglet in ONGLETS"
+                                :key="onglet.cle"
+                                :href="route(onglet.route)"
+                                :active="ongletAllume() === onglet.cle"
                             >
-                                Outils
+                                {{ onglet.nom }}
                             </NavLink>
                         </div>
                     </div>
@@ -291,10 +294,6 @@ onUnmounted(() => {
                                 </template>
 
                                 <template #content>
-                                    <DropdownLink :href="route('profile.index')">
-                                        <GlassIcon name="person" size="sm" class="mr-2" />
-                                        Profil
-                                    </DropdownLink>
                                     <DropdownLink :href="route('profile.edit')">
                                         <GlassIcon name="settings" size="sm" class="mr-2" />
                                         Paramètres
@@ -374,6 +373,10 @@ onUnmounted(() => {
             class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 bureau:block hidden border-b"
         >
             <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto py-6" :class="LARGEURS[largeur]">
+                <Link v-if="showBack" :href="hrefDuRetour" :class="CLASSES_DU_RETOUR_DE_BUREAU" dusk="retour-de-bureau">
+                    <GlassIcon name="arrow_back" size="sm" />
+                    Retour
+                </Link>
                 <slot name="header" />
             </div>
         </header>
@@ -407,6 +410,15 @@ onUnmounted(() => {
                 page en cacherait le haut (#2048).
             -->
             <div class="mx-auto" :class="LARGEURS[largeur]">
+                <Link
+                    v-if="showBack && !$slots.header"
+                    :href="hrefDuRetour"
+                    :class="CLASSES_DU_RETOUR_DE_BUREAU"
+                    dusk="retour-de-bureau"
+                >
+                    <GlassIcon name="arrow_back" size="sm" />
+                    Retour
+                </Link>
                 <BandeauHorsLigne />
             </div>
 
@@ -417,7 +429,7 @@ onUnmounted(() => {
                 soit l'Accueil, les séances ou une autre.
             -->
             <div v-if="accessoireDeSeance" class="bureau:mb-6 mx-auto" :class="LARGEURS[largeur]">
-                <div class="au-dessus-du-menu left-sure-4 right-sure-4 z-flottant bureau:static fixed">
+                <div class="au-dessus-du-menu left-sure-4 right-sure-4 z-flottant bureau:static bureau:max-w-xl fixed">
                     <ActiveWorkoutBanner
                         :workout="activeWorkout"
                         :repos="reposLaisse"

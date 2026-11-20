@@ -60,7 +60,7 @@ const jour = (date) => dateSansJour(parseCalendarDate(date))
         />
 
         <div v-else class="space-y-6">
-            <ul class="space-y-3">
+            <ul class="bureau:grid-cols-2 grid grid-cols-1 gap-3">
                 <li v-for="exercice in records" :key="exercice.exercice_id" data-record>
                     <GlassCard padding="p-4">
                         <Link

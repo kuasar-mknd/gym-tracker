@@ -3,7 +3,6 @@
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { useOrdreDeLaSeance } from '@/composables/useOrdreDeLaSeance'
 import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
@@ -18,7 +17,7 @@ import { useRechargementApresLeVidage } from '@/composables/useRechargementApres
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
-import { ID_DE_L_ETAT_DE_LA_SEANCE, useSeanceEnAttente } from '@/composables/useSeanceEnAttente'
+import { useSeanceEnAttente } from '@/composables/useSeanceEnAttente'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -30,6 +29,7 @@ import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import SeriesHorsDeLaCopie from '@/Components/Workout/SeriesHorsDeLaCopie.vue'
 import EtatDeLaSeanceEnAttente from '@/Components/Workout/EtatDeLaSeanceEnAttente.vue'
+import BoutonDesReglagesDeLaSeance from '@/Components/Workout/BoutonDesReglagesDeLaSeance.vue'
 import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
@@ -271,22 +271,23 @@ onUnmounted(() => {
     >
         <ErreurDeSaisie v-bind="erreurDeSaisie" />
 
+        <template #header>
+            <div class="flex items-center justify-between gap-4">
+                <h1 class="titre-carte min-w-0 truncate">{{ localWorkout.name || 'Séance' }}</h1>
+                <BoutonDesReglagesDeLaSeance
+                    :desactive="seanceProvisoire"
+                    dusk="workout-settings-button-desktop"
+                    @click="showSettingsModal = true"
+                />
+            </div>
+        </template>
+
         <template #header-actions>
-            <button
-                v-press
-                @click="showSettingsModal = true"
-                :disabled="seanceProvisoire"
-                :aria-describedby="seanceProvisoire ? ID_DE_L_ETAT_DE_LA_SEANCE : undefined"
+            <BoutonDesReglagesDeLaSeance
+                :desactive="seanceProvisoire"
                 dusk="workout-settings-button"
-                :class="[
-                    'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
-                    'border-surface-card bg-surface-card/60 border transition',
-                    'focus-visible:ring-accent-primary focus-visible:ring-2 focus-visible:outline-none',
-                ]"
-                aria-label="Paramètres de la séance"
-            >
-                <GlassIcon name="settings" />
-            </button>
+                @click="showSettingsModal = true"
+            />
         </template>
 
         <div :class="showTimer ? 'pb-main-safe-repos' : 'pb-main-safe'">

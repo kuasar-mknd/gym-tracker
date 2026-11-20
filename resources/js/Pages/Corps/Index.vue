@@ -50,7 +50,7 @@ const mensurations = computed(() =>
             <h1 class="titre-carte">Corps</h1>
         </template>
 
-        <div class="space-y-6">
+        <div class="bureau:grid-cols-2 grid grid-cols-1 gap-6">
             <WeightEvolutionCard
                 :latest-weight="latestWeight"
                 :weight-change="weightChange"
@@ -60,7 +60,7 @@ const mensurations = computed(() =>
 
             <BodyFatCard :body-fat="bodyFat" :body-fat-history="bodyStats?.bodyFatHistory" />
 
-            <GlassCard>
+            <GlassCard class="bureau:col-span-2">
                 <h2 class="text-accent-primary-deep sur-titre mb-3">Mensurations</h2>
 
                 <GlassEmptyState
