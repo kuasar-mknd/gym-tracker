@@ -25,9 +25,9 @@ use Illuminate\Support\Facades\Cache;
  * récent, puis les records de ceux-là, puis leurs noms par clef. Trois lectures
  * à froid, quel que soit le nombre d'exercices ; la seule lecture des noms
  * quand l'entrée de cache est là, pour qu'un exercice renommé ou supprimé ne
- * reste pas dit comme avant. L'entrée vit sous la version des séances
- * (`ClesDeStats`), que `PersonalRecordService` renouvelle à chaque écriture de
- * record : un record écrit par la file après la requête qui a validé la série
+ * reste pas dit comme avant. L'entrée vit sous la version des séances et
+ * celle des records (`ClesDeStats::records`), que `PersonalRecordService`
+ * renouvelle à chaque écriture de record : un record écrit par la file après la requête qui a validé la série
  * ne reste pas caché derrière une entrée d'avant.
  *
  * @phpstan-type Mesure array{valeur: float, date: string|null}
@@ -60,7 +60,7 @@ final class FetchRecordsAction
     public function execute(User $user): array
     {
         $lus = Cache::remember(
-            ClesDeStats::seances($user, 'personal_records'),
+            ClesDeStats::records($user, 'personal_records'),
             now()->addMinutes(30),
             fn (): array => $this->lire($user),
         );

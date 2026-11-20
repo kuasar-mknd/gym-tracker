@@ -25,6 +25,12 @@ final class ClesDeStats
         return "stats.{$suffixe}.{$user->id}.s".VersionDeCache::lire("stats-version.seances.{$user->id}");
     }
 
+    public static function records(User $user, string $suffixe): string
+    {
+        return "stats.{$suffixe}.{$user->id}.s".VersionDeCache::lire("stats-version.seances.{$user->id}")
+            .'.r'.VersionDeCache::lire("stats-version.records.{$user->id}");
+    }
+
     public static function mesures(User $user, string $suffixe): string
     {
         return "stats.{$suffixe}.{$user->id}.m".VersionDeCache::lire("stats-version.mesures.{$user->id}");
@@ -42,6 +48,11 @@ final class ClesDeStats
     public static function invaliderSeancesDuCompte(int $idUtilisateur): void
     {
         VersionDeCache::renouveler("stats-version.seances.{$idUtilisateur}");
+    }
+
+    public static function invaliderRecordsDuCompte(int $idUtilisateur): void
+    {
+        VersionDeCache::renouveler("stats-version.records.{$idUtilisateur}");
     }
 
     public static function invaliderMesures(User $user): void

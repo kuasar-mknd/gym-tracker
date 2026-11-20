@@ -897,7 +897,8 @@ final class PersonalRecordService
      * Un verrou resté pris plus de `ATTENTE_DU_VERROU` secondes lève une
      * `LockTimeoutException`, et la section ne s'exécute pas. Ce que la
      * section lève remonte tel quel, verrou rendu. Chaque section renouvelle la
-     * version des statistiques du compte, que la page Records lit.
+     * version des records du compte, que la page Records lit sans toucher à
+     * celle des séances.
      *
      * @template TResultat
      *
@@ -912,7 +913,7 @@ final class PersonalRecordService
                 try {
                     return $section();
                 } finally {
-                    ClesDeStats::invaliderSeancesDuCompte($idUtilisateur);
+                    ClesDeStats::invaliderRecordsDuCompte($idUtilisateur);
                 }
             });
     }

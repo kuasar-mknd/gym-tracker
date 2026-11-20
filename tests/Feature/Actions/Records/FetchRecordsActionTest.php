@@ -322,7 +322,7 @@ it('montre un record que la file écrit après la requête qui a validé la sér
 
     expect($action->execute($user)['records'])->toBe([]);
 
-    (new SyncPersonalRecord(Set::query()->findOrFail($serie->id), $user))->handle(app(PersonalRecordService::class));
+    new SyncPersonalRecord(Set::query()->findOrFail($serie->id), $user)->handle(app(PersonalRecordService::class));
 
     expect($action->execute($user)['records'][0]['poids_max']['valeur'] ?? null)->toBe(100.0);
 });
