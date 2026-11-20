@@ -20,20 +20,22 @@ use Tests\Support\ParcoursHorsLigne;
  * celles du poids et des mensurations, et y lit les trois : le poids et la
  * masse grasse du compte, la dernière mensuration de chaque partie. Le retour
  * mène à Progrès, qui reste l'onglet allumé. Sans réseau, la tuile ne mène à
- * aucune copie : la page « Hors ligne » s'ouvre, sans une mesure du compte, et
- * le réseau rendu la page s'ouvre sur ses mesures.
+ * aucune copie : l'application dit que la page n'est pas disponible et reste
+ * sur le Profil, sans une mesure du compte ; le réseau rendu, la page s'ouvre
+ * sur ses mesures.
  */
 class CorpsTest extends DuskTestCase
 {
     use ParcoursHorsLigne;
 
-    private const string LES_MESURES_SONT_A_L_ECRAN = <<<'SCRIPT'
-        (() => {
-            const texte = document.querySelector('#main-content')?.textContent ?? '';
+    /**
+     * Le poids, la masse grasse et la mensuration du compte, sous la forme que
+     * `nombre()` leur donne (point ou virgule). Lu en `innerText` (le texte brut colle la date à la valeur). Une seule ligne : `waitUntil`
+     * la fait suivre d'un `return`, que des retours à la ligne rendraient nul.
+     */
+    private const string LES_MESURES_SONT_A_L_ECRAN = "(() => { const texte = document.querySelector('#main-content')?.innerText ?? ''; return /(?<![\\d.,])83[.,]7(?![\\d])/.test(texte) && /(?<![\\d.,])19[.,]3(?![\\d])/.test(texte) && /(?<![\\d.,])81(?![\\d.,])/.test(texte); })()";
 
-            return /\b83[.,]7\b/.test(texte) && /\b19[.,]3\b/.test(texte) && /\b81\b/.test(texte);
-        })()
-    SCRIPT;
+    private const string PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau.";
 
     private function unCompteAvecDesMesures(): User
     {
@@ -75,8 +77,8 @@ class CorpsTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'les cartes de Corps attendent encore leurs données')
                 ->waitUntil(self::LES_MESURES_SONT_A_L_ECRAN, 30, 'le poids, la masse grasse et la mensuration ne sont pas à l’écran')
-                ->assertScript("document.querySelectorAll('h1').length", 1)
-                ->assertScript("document.querySelector('main h1, header h1').textContent.trim().toLowerCase()", 'corps')
+                ->assertScript("[...document.querySelectorAll('h1')].filter((titre) => titre.getClientRects().length > 0).length", 1)
+                ->assertScript("[...document.querySelectorAll('h1')].find((titre) => titre.getClientRects().length > 0).textContent.trim().toLowerCase()", 'corps')
                 ->assertScript("[...document.querySelectorAll('#main-content a')].map((a) => new URL(a.href).pathname).filter((p) => ['/body-measurements', '/body-metrics'].includes(p)).length > 0", true);
 
             // Poids et mensurations renvoient à Corps, et Progrès reste allumé.
@@ -105,14 +107,15 @@ class CorpsTest extends DuskTestCase
             $this->attendreLeWorker($browser);
             $this->attendreLesCopies($browser, ['/profile']);
 
-            $outils = $this->outilsDuNavigateur($browser);
-            $texteDe = $this->texteDe(...);
+            $this->noterLesMessages($browser);
 
-            $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $texteDe): void {
+            $outils = $this->outilsDuNavigateur($browser);
+
+            $this->sansReseauNiConstruction($browser, $outils, function () use ($browser): void {
                 $browser->clickWhenSettled('main a[href$="/corps"]')
-                    ->waitFor('[dusk="page-hors-ligne"]', 30)
-                    ->assertScript($texteDe('[dusk="page-hors-ligne"] h1'), 'Pas de réseau')
-                    ->assertScript('!/\b83[.,]7\b|\b19[.,]3\b/.test(document.body.textContent)');
+                    ->waitUntil($this->laPageDit(self::PAGE_INDISPONIBLE), 15, 'Corps n’a rien dit sans réseau')
+                    ->assertPathIs('/profile')
+                    ->assertScript('!/(?<![\d.,])(83[.,]7|19[.,]3)(?![\d])/.test(document.body.textContent)');
             });
 
             // Le réseau rendu, la page s'ouvre sur ses mesures.
