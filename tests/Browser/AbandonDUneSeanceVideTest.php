@@ -89,7 +89,7 @@ class AbandonDUneSeanceVideTest extends DuskTestCase
     {
         $compte = $this->compte();
         $seance = Workout::factory()->for($compte)->create(['started_at' => now()->subMinutes(2), 'ended_at' => null]);
-        $ecart = fn (string $dusk): string => "(() => { document.documentElement.style.scrollbarWidth = 'none'; return Math.round(document.querySelector('nav.glass-nav').getBoundingClientRect().top - document.querySelector('[dusk=\"{$dusk}\"]').getBoundingClientRect().bottom) })()";
+        $ecart = fn (string $dusk): string => "return (() => { document.documentElement.style.scrollbarWidth = 'none'; return Math.round(document.querySelector('nav.glass-nav').getBoundingClientRect().top - document.querySelector('[dusk=\"{$dusk}\"]').getBoundingClientRect().bottom) })()";
 
         $this->browse(function (Browser $browser) use ($compte, $seance, $ecart): void {
             $browser->loginAs($compte)
@@ -101,6 +101,11 @@ class AbandonDUneSeanceVideTest extends DuskTestCase
             foreach ([[393, 852], [375, 812], [320, 700]] as [$largeur, $hauteur]) {
                 $browser->resize($largeur, $hauteur)->pause(300);
                 $this->assertSame(6, $browser->script($ecart('barre-d-outils-de-la-seance'))[0], "barre à {$largeur} px");
+                $this->assertSame(
+                    $largeur <= 320 ? 66 : 70,
+                    $browser->script("return Math.round(document.querySelector('nav.glass-nav').getBoundingClientRect().height)")[0],
+                    "menu à {$largeur} px",
+                );
             }
 
             $browser->resize(375, 812)
