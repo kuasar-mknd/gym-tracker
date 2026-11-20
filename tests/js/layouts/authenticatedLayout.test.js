@@ -1118,6 +1118,15 @@ describe('AuthenticatedLayout — the frame around the page', () => {
         expect(avecEntete.get('header.bureau\\:block [dusk="retour-de-bureau"]').exists()).toBe(true)
     })
 
+    it('n’ajoute pas son retour quand la page porte déjà le sien', () => {
+        const wrapper = mountLayout({
+            props: { showBack: true, backRoute: 'tools.index', pageTitle: 'Outils', retourDansLaPage: true },
+            slots: { header: '<h1>Outils</h1>' },
+        })
+
+        expect(wrapper.find('[dusk="retour-de-bureau"]').exists()).toBe(false)
+    })
+
     it('ne pose pas de retour de bureau sur une page racine', () => {
         const wrapper = mountLayout({ props: { pageTitle: 'Accueil' } })
 

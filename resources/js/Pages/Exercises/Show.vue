@@ -147,7 +147,7 @@ const scatterData = computed(() => {
 <template>
     <Head :title="exercise.name" />
 
-    <AuthenticatedLayout :page-title="exercise.name" show-back back-route="exercises.index">
+    <AuthenticatedLayout :page-title="exercise.name" show-back back-route="exercises.index" retour-dans-la-page>
         <template #header>
             <div class="flex items-center gap-4">
                 <Link

@@ -82,6 +82,15 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * La page pose déjà son retour dans son en-tête de bureau (les outils, la
+     * fiche d'un exercice, le jeûne, la modification d'un objectif) : le
+     * layout n'ajoute pas le sien, qui le doublerait (lot 8, #2434).
+     */
+    retourDansLaPage: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 /*
@@ -103,6 +112,7 @@ useRaccourciClavier(
 
 const page = usePage()
 
+const retourDeBureau = computed(() => props.showBack && !props.retourDansLaPage)
 const hrefDuRetour = computed(() => (props.backRoute ? route(props.backRoute) : 'javascript:history.back()'))
 
 /*
@@ -241,7 +251,7 @@ onUnmounted(() => {
                         </div>
 
                         <!-- Desktop Navigation Links -->
-                        <div class="bureau:flex ms-8 hidden space-x-1">
+                        <div class="bureau:flex ms-8 hidden space-x-1" dusk="onglets-de-bureau">
                             <NavLink
                                 v-for="onglet in ONGLETS"
                                 :key="onglet.cle"
@@ -373,7 +383,12 @@ onUnmounted(() => {
             class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 bureau:block hidden border-b"
         >
             <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto py-6" :class="LARGEURS[largeur]">
-                <Link v-if="showBack" :href="hrefDuRetour" :class="CLASSES_DU_RETOUR_DE_BUREAU" dusk="retour-de-bureau">
+                <Link
+                    v-if="retourDeBureau"
+                    :href="hrefDuRetour"
+                    :class="CLASSES_DU_RETOUR_DE_BUREAU"
+                    dusk="retour-de-bureau"
+                >
                     <GlassIcon name="arrow_back" size="sm" />
                     Retour
                 </Link>
@@ -411,7 +426,7 @@ onUnmounted(() => {
             -->
             <div class="mx-auto" :class="LARGEURS[largeur]">
                 <Link
-                    v-if="showBack && !$slots.header"
+                    v-if="retourDeBureau && !$slots.header"
                     :href="hrefDuRetour"
                     :class="CLASSES_DU_RETOUR_DE_BUREAU"
                     dusk="retour-de-bureau"

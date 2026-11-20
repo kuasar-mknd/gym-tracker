@@ -1,5 +1,5 @@
 <template>
-    <AuthenticatedLayout page-title="Outils" show-back back-route="profile.index">
+    <AuthenticatedLayout page-title="Outils" show-back back-route="profile.index" retour-dans-la-page>
         <template #header>
             <div class="flex items-center gap-4">
                 <Link

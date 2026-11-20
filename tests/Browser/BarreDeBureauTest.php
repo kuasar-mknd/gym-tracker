@@ -24,15 +24,14 @@ class BarreDeBureauTest extends DuskTestCase
 
     private const string LIT = <<<'JS'
         const visible = (element) => element.getClientRects().length > 0;
-        const onglets = [...document.querySelectorAll('nav[aria-label="Navigation de bureau"] a')]
-            .filter((lien) => lien.textContent.trim() !== '' && lien.getAttribute('aria-label') === null && !lien.querySelector('img, svg'));
+        const onglets = [...document.querySelectorAll('[dusk="onglets-de-bureau"] a')];
         const titres = [...document.querySelectorAll('h1')].filter((titre) => visible(titre) && !titre.classList.contains('sr-only'));
         const retour = document.querySelector('[dusk="retour-de-bureau"]');
 
         return {
             onglets: onglets.map((lien) => lien.textContent.trim()),
             allumes: onglets.filter((lien) => lien.getAttribute('aria-current') === 'page').map((lien) => lien.textContent.trim()),
-            titres: titres.length,
+            titres: titres.map((titre) => titre.textContent.trim()),
             retour: retour !== null && visible(retour) ? new URL(retour.href).pathname : null,
             debordement: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         };
@@ -67,13 +66,14 @@ class BarreDeBureauTest extends DuskTestCase
                 foreach ($pages as $adresse => [$onglet, $retour]) {
                     $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitFor('nav[aria-label="Navigation de bureau"]', 30);
 
-                    /** @var array{onglets: list<string>, allumes: list<string>, titres: int, retour: ?string, debordement: int} $page */
+                    /** @var array{onglets: list<string>, allumes: list<string>, titres: list<string>, retour: ?string, debordement: int} $page */
                     $page = $browser->script(self::LIT)[0];
                     $ou = "$adresse à $largeur px";
 
                     $this->assertSame(['Accueil', 'Séances', 'Progrès', 'Profil'], $page['onglets'], "$ou : les onglets ne sont pas ceux de la barre du bas.");
                     $this->assertSame([$onglet], $page['allumes'], "$ou n'allume pas $onglet.");
                     $this->assertSame($retour, $page['retour'], "$ou : le retour de bureau est faux.");
+                    $this->assertLessThanOrEqual(1, count($page['titres']), "$ou montre plusieurs titres : ".implode(' | ', $page['titres']));
                     $this->assertLessThanOrEqual(0, $page['debordement'], "$ou défile de côté.");
                 }
             }
