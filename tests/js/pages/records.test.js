@@ -17,7 +17,6 @@ beforeAll(() => {
 const exercice = (surcharge = {}) => ({
     exercice_id: 7,
     nom: 'Squat',
-    date: '2026-11-10',
     poids_max: { valeur: 140, repetitions: 3, date: '2026-11-10' },
     un_rm: { valeur: 154, date: '2026-11-02' },
     volume_serie: { valeur: 420, date: '2026-10-28' },

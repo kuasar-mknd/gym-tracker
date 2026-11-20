@@ -140,7 +140,6 @@ final class FetchRecordsAction
         $poidsMax = null;
         $unRm = null;
         $volumeSerie = null;
-        $dates = [];
 
         foreach ($lignes as $ligne) {
             if (! is_numeric($ligne->value)) {
@@ -149,10 +148,6 @@ final class FetchRecordsAction
 
             $valeur = (float) $ligne->value;
             $date = is_string($ligne->achieved_at) ? substr($ligne->achieved_at, 0, 10) : null;
-
-            if ($date !== null) {
-                $dates[] = $date;
-            }
 
             switch ($ligne->type) {
                 case PersonalRecordType::MaxWeight->value:

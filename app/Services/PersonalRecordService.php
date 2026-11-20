@@ -50,6 +50,15 @@ final class PersonalRecordService
     private const int ATTENTE_DU_VERROU = 15;
 
     /**
+     * Les couples (compte, exercice) dont la section en cours a écrit ou retiré
+     * un record : la version des records du compte ne se renouvelle que alors.
+     * Un couple a un seul verrou, donc une seule section à la fois.
+     *
+     * @var array<string, true>
+     */
+    private array $ecrits = [];
+
+    /**
      * Confronte une série terminée aux records de son exercice, et crée ou met
      * à jour ceux qu'elle bat.
      *
@@ -115,6 +124,7 @@ final class PersonalRecordService
 
         $battu = round($value, 2) > round((float) $pr?->value, 2);
 
+        $this->noterUneEcriture($user->id, $idExercice);
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => $set->workoutLine->workout->debutALHeureMurale()])->save();
 
@@ -268,6 +278,10 @@ final class PersonalRecordService
                 ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)
                 ->delete();
 
+            if ($retires > 0) {
+                $this->noterUneEcriture($user->id, $idExercice);
+            }
+
             $this->reconstruire($user, $idExercice, null);
 
             return $retires;
@@ -417,8 +431,10 @@ final class PersonalRecordService
             // l'annonce ; un record en place qui change attend l'instruction
             // groupee, et un record inchange ne s'ecrit pas.
             if (! $record->exists) {
+                $this->noterUneEcriture($user->id, $idExercice);
                 $record->save();
             } elseif ($record->isDirty()) {
+                $this->noterUneEcriture($user->id, $idExercice);
                 $aReecrire[] = $record;
             }
 
@@ -433,6 +449,7 @@ final class PersonalRecordService
         $this->reecrire($aReecrire);
 
         if ($aSupprimer !== []) {
+            $this->noterUneEcriture($user->id, $idExercice);
             PersonalRecord::query()->whereKey($aSupprimer)->delete();
         }
 
@@ -896,9 +913,9 @@ final class PersonalRecordService
      *
      * Un verrou resté pris plus de `ATTENTE_DU_VERROU` secondes lève une
      * `LockTimeoutException`, et la section ne s'exécute pas. Ce que la
-     * section lève remonte tel quel, verrou rendu. Chaque section renouvelle la
-     * version des records du compte, que la page Records lit sans toucher à
-     * celle des séances.
+     * section lève remonte tel quel, verrou rendu. Une section qui écrit ou
+     * retire un record renouvelle la version des records du compte, que la page
+     * Records lit sans toucher à celle des séances.
      *
      * @template TResultat
      *
@@ -909,15 +926,26 @@ final class PersonalRecordService
     {
         /** @var TResultat */
         return Cache::lock("records:{$idUtilisateur}:{$idExercice}", self::VIE_DU_VERROU)
-            ->block(self::ATTENTE_DU_VERROU, function () use ($idUtilisateur, $section): mixed {
+            ->block(self::ATTENTE_DU_VERROU, function () use ($idUtilisateur, $idExercice, $section): mixed {
+                unset($this->ecrits["{$idUtilisateur}:{$idExercice}"]);
+
                 try {
                     return $section();
                 } finally {
-                    $renouveler = static fn () => ClesDeStats::invaliderRecordsDuCompte($idUtilisateur);
+                    if (isset($this->ecrits["{$idUtilisateur}:{$idExercice}"])) {
+                        $renouveler = static fn () => ClesDeStats::invaliderRecordsDuCompte($idUtilisateur);
 
-                    DB::afterCommit($renouveler);
-                    DB::afterRollBack($renouveler);
+                        DB::afterCommit($renouveler);
+                        DB::afterRollBack($renouveler);
+                    }
+
+                    unset($this->ecrits["{$idUtilisateur}:{$idExercice}"]);
                 }
             });
+    }
+
+    private function noterUneEcriture(int $idUtilisateur, int $idExercice): void
+    {
+        $this->ecrits["{$idUtilisateur}:{$idExercice}"] = true;
     }
 }
