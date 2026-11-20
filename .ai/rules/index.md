@@ -7,6 +7,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Actions/** | .ai/rules/actions.md |
 | routes/api.php, app/Http/Controllers/Api/** | .ai/rules/api.md |
 | tests/Browser/**, tests/DuskTestCase.php, tests/Support/PiloteDesParcours.php, tests/Support/NavigateurDesParcours.php, tests/Support/ParcoursHorsLigne.php | .ai/rules/browser.md |
+| resources/js/Components/** | .ai/rules/components.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/**, app/**, config/**, routes/** | .ai/rules/database.md |
 | package.json, package-lock.json, composer.json, composer.lock, docker-compose.prod.yml, compose.yaml | .ai/rules/dependencies.md |
