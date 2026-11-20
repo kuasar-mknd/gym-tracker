@@ -21,8 +21,9 @@ use Tests\Support\ParcoursHorsLigne;
  * masse grasse du compte, la dernière mensuration de chaque partie. Le retour
  * mène à Progrès, qui reste l'onglet allumé. Sans réseau, la tuile ne mène à
  * aucune copie : l'application dit que la page n'est pas disponible et reste
- * sur le Profil, sans une mesure du compte ; le réseau rendu, la page s'ouvre
- * sur ses mesures.
+ * sur le Profil, et une navigation complète sur /corps n'ouvre que la page
+ * hors ligne, sans une mesure du compte ; le réseau rendu, la page s'ouvre sur
+ * ses mesures.
  */
 class CorpsTest extends DuskTestCase
 {
@@ -94,7 +95,7 @@ class CorpsTest extends DuskTestCase
         });
     }
 
-    public function test_sans_reseau_corps_ouvre_la_page_hors_ligne_sans_une_mesure(): void
+    public function test_sans_reseau_corps_dit_qu_il_est_indisponible_sans_une_mesure(): void
     {
         $compte = $this->unCompteAvecDesMesures();
 
@@ -116,6 +117,12 @@ class CorpsTest extends DuskTestCase
                     ->waitUntil($this->laPageDit(self::PAGE_INDISPONIBLE), 15, 'Corps n’a rien dit sans réseau')
                     ->assertPathIs('/profile')
                     ->assertScript('!/(?<![\d.,])(83[.,]7|19[.,]3)(?![\d])/.test(document.body.textContent)');
+
+                // Une navigation complète sur Corps, sans copie : la page qui dit ce qui s'ouvre sans réseau, sans une mesure.
+                $this->attendreLaCoquilleServieA($browser->visit('/corps'), '/corps')
+                    ->waitUsing(15, 200, fn (): bool => (bool) $browser->script('return document.querySelector(\'[dusk="page-hors-ligne-sans-copie"], [dusk="page-hors-ligne"]\') !== null')[0])
+                    ->assertPathIs('/corps')
+                    ->assertScript('!/(?<![\d.,])(83[.,]7|19[.,]3)(?![\d])/.test(document.documentElement.outerHTML)');
             });
 
             // Le réseau rendu, la page s'ouvre sur ses mesures.
