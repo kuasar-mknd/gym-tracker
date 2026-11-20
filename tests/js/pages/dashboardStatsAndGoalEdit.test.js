@@ -497,6 +497,55 @@ describe('Stats/Index', () => {
         expect(pressedPeriod(wrapper)).toEqual(['1 AN'])
     })
 
+    /*
+     * Sur une copie hors ligne (#2434, lot 4a), aucune carte n'a de quoi se
+     * remplir, et les contrôles de la page demandent le réseau : `/stats?period=…`
+     * n'est jamais gardée, la courbe d'un exercice est une requête. Une phrase,
+     * et ce qui s'ouvre sans réseau.
+     */
+    describe('servie depuis une copie hors ligne', () => {
+        beforeEach(() => {
+            pageDInertia.props = { horsLigne: { copieDu: 1_700_000_000_000, raison: 'reseau' } }
+        })
+
+        it('dit une seule fois que les mesures reviennent avec le réseau, sans carte', () => {
+            const wrapper = mountStats({ exercises: [{ id: 1, name: 'Squat' }], selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('[data-indisponible-hors-ligne]')).toHaveLength(1)
+            expect(wrapper.get('[data-indisponible-hors-ligne]').text()).toContain(
+                'Les mesures reviennent avec le réseau.',
+            )
+            expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'BodyMetricsGrid' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'SummaryStatsGrid' }).exists()).toBe(false)
+        })
+
+        it('ne propose ni période ni courbe d’exercice, qui mèneraient à « Hors ligne »', () => {
+            const wrapper = mountStats({ exercises: [{ id: 1, name: 'Squat' }], selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('button').filter((bouton) => bouton.text().includes('JOURS'))).toEqual([])
+            expect(wrapper.findComponent({ name: 'GlassSegmented' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'ExerciseProgressCard' }).exists()).toBe(false)
+            expect(routerVisit).not.toHaveBeenCalled()
+        })
+
+        it('laisse la bibliothèque, qui s’ouvre sans réseau', () => {
+            const wrapper = mountStats({ exercises: [], selectedPeriod: '30j' })
+
+            expect(wrapper.get('a').attributes('href')).toBe('/exercises.index')
+        })
+
+        it('remontre les cartes et le choix de période quand la page n’est plus une copie', () => {
+            pageDInertia.props = {}
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('[data-indisponible-hors-ligne]')).toHaveLength(0)
+            expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).exists()).toBe(true)
+            expect(pressedPeriod(wrapper)).toEqual(['30 JOURS'])
+        })
+    })
+
     it('survit à des données différées encore absentes', () => {
         const wrapper = mountStats({ latestWeight: '75.50', weightChange: -1.2 })
 

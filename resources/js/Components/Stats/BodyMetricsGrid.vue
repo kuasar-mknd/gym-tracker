@@ -42,7 +42,7 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
 
             <!-- Real Body Fat Chart (Deferred) -->
             <div class="mt-4 h-32 w-full">
-                <Deferred :data="deferredData ? 'deferredData' : 'bodyStats'">
+                <Deferred data="deferredData">
                     <template #rescue>
                         <IndisponibleHorsLigne />
                     </template>
@@ -57,7 +57,7 @@ const variationDuMois = computed(() => props.monthlyComparison?.percentage ?? nu
 
         <!-- This Month Volume -->
         <GlassCard padding="p-5">
-            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>

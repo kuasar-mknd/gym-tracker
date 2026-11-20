@@ -64,12 +64,14 @@ const COMPOSANTS = {
     '/plates': 'Tools/PlateCalculator',
     '/tools/1rm': 'Tools/OneRepMax',
     '/tools/warmup': 'Tools/WarmupCalculator',
+    '/stats': 'Stats/Index',
 }
 
 /** Les props différées que le serveur annonce, par composant (le contrat des pages gardées). */
 const DIFFEREES = {
     Dashboard: { default: ['analyticalStats'] },
     'Workouts/Index': { default: ['deferredData'] },
+    'Stats/Index': { default: ['deferredData'] },
 }
 
 /**
@@ -393,7 +395,7 @@ describe('le préchauffage', () => {
         await recevoir(pageDe('/tools'))
         const premiers = cheminsDemandes()
 
-        // Il manque encore le 1RM et l'échauffement, mais la demi-heure n'est pas passée.
+        // Il manque encore le 1RM, l'échauffement et Progrès, mais la demi-heure n'est pas passée.
         maintenant += INTERVALLE_DU_PRECHAUFFAGE_MS - 1
         await recevoir(pageDe('/profile'))
 
@@ -406,7 +408,7 @@ describe('le préchauffage', () => {
         maintenant += 1
         await recevoir(pageDe('/profile'))
 
-        expect(cheminsDemandes().slice(premiers.length)).toEqual(['/tools/1rm', '/tools/warmup'])
+        expect(cheminsDemandes().slice(premiers.length)).toEqual(['/tools/1rm', '/tools/warmup', '/stats'])
 
         // Une nouvelle session : une autre clé, un magasin qui repart de zéro.
         document.cookie = `${TEMOIN}=${cleAuHasard()}; path=/`

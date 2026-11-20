@@ -154,10 +154,10 @@ describe('BodyMetricsGrid', () => {
         expect(chart(wrapper).props('data')).toEqual(history)
     })
 
-    it('attend les clés différées de la page', async () => {
+    it('attend la clé groupée de la page, même quand elle n’est pas encore arrivée', async () => {
         const keys = (await mountGrid({})).findAllComponents({ name: 'Deferred' }).map((d) => d.props('data'))
 
-        expect(keys).toEqual(['bodyStats', 'performanceStats'])
+        expect(keys).toEqual(['deferredData', 'deferredData'])
     })
 
     it('attend la clé groupée quand la page en fournit une', async () => {

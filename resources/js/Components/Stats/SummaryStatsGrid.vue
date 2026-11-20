@@ -66,7 +66,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
             class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
             <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Séances</div>
-            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>
@@ -84,7 +84,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
             class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
             <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Muscles</div>
-            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>
@@ -112,7 +112,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
             class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
             <div class="text-text-muted text-2xs font-black tracking-wider uppercase">vs Mois -1</div>
-            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>

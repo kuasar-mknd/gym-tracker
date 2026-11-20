@@ -22,7 +22,7 @@ defineProps({
             <p class="text-text-muted text-xs font-semibold">Volume par groupe musculaire</p>
         </div>
         <div class="min-h-52">
-            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>

@@ -50,7 +50,7 @@ const totalVolume = computed(() => {
             </div>
         </div>
         <div class="h-48">
-            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>

@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { Head, Link, router } from '@inertiajs/vue3'
+import { ref, watch } from 'vue'
 
 import WeightEvolutionCard from '@/Components/Stats/WeightEvolutionCard.vue'
 import BodyMetricsGrid from '@/Components/Stats/BodyMetricsGrid.vue'
@@ -10,7 +10,10 @@ import DurationHistoryCard from '@/Components/Stats/DurationHistoryCard.vue'
 import MuscleDistributionCard from '@/Components/Stats/MuscleDistributionCard.vue'
 import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
 const props = defineProps({
@@ -24,7 +27,16 @@ const props = defineProps({
     selectedPeriod: String,
 })
 
+const { surUneCopie } = useCopieHorsLigne()
+
 const currentPeriod = ref(props.selectedPeriod || '30j')
+
+watch(
+    () => props.selectedPeriod,
+    (periode) => {
+        currentPeriod.value = periode || '30j'
+    },
+)
 
 const periods = [
     { value: '7j', label: '7 JOURS' },
@@ -85,6 +97,7 @@ const handlePeriodChange = (period) => {
                 </div>
 
                 <GlassSegmented
+                    v-if="!surUneCopie"
                     :model-value="currentPeriod"
                     :options="periods"
                     label="Période"
@@ -94,47 +107,68 @@ const handlePeriodChange = (period) => {
                 />
             </header>
 
-            <WeightEvolutionCard
-                :latest-weight="latestWeight"
-                :weight-change="weightChange"
-                :weight-history="deferredData?.body?.weightHistory"
-                :deferred-data="deferredData"
-            />
+            <!--
+                Sur une copie hors ligne, aucune carte n'a de quoi se remplir : ni
+                mesure ni série n'est gardée, et les contrôles de la page
+                demandent le réseau (une période, une courbe d'exercice : des
+                visites que rien ne garde). Une seule phrase le dit, puis la
+                page offre ce qui s'ouvre sans réseau, la bibliothèque.
+            -->
+            <template v-if="surUneCopie">
+                <IndisponibleHorsLigne texte="Les mesures reviennent avec le réseau." />
 
-            <BodyMetricsGrid
-                :body-fat="bodyFat"
-                :body-fat-history="deferredData?.body?.bodyFatHistory"
-                :monthly-comparison="deferredData?.performance?.monthlyComparison"
-                :deferred-data="deferredData"
-            />
+                <Link
+                    :href="route('exercises.index')"
+                    class="text-accent-info-deep inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase"
+                >
+                    Bibliothèque d'exercices
+                    <GlassIcon name="arrow_forward" size="xs" />
+                </Link>
+            </template>
 
-            <VolumeTrendCard
-                :volume-trend="deferredData?.performance?.volumeTrend"
-                :current-period="currentPeriod"
-                :deferred-data="deferredData"
-            />
-
-            <DurationHistoryCard
-                :duration-history="deferredData?.performance?.durationHistory"
-                :deferred-data="deferredData"
-            />
-
-            <div class="stagger-4 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <MuscleDistributionCard
-                    :muscle-distribution="deferredData?.performance?.muscleDistribution"
+            <template v-else>
+                <WeightEvolutionCard
+                    :latest-weight="latestWeight"
+                    :weight-change="weightChange"
+                    :weight-history="deferredData?.body?.weightHistory"
                     :deferred-data="deferredData"
                 />
 
-                <ExerciseProgressCard :exercises="exercises" />
-            </div>
+                <BodyMetricsGrid
+                    :body-fat="bodyFat"
+                    :body-fat-history="deferredData?.body?.bodyFatHistory"
+                    :monthly-comparison="deferredData?.performance?.monthlyComparison"
+                    :deferred-data="deferredData"
+                />
 
-            <SummaryStatsGrid
-                :volume-trend="deferredData?.performance?.volumeTrend"
-                :muscle-distribution="deferredData?.performance?.muscleDistribution"
-                :exercises="exercises"
-                :monthly-comparison="deferredData?.performance?.monthlyComparison"
-                :deferred-data="deferredData"
-            />
+                <VolumeTrendCard
+                    :volume-trend="deferredData?.performance?.volumeTrend"
+                    :current-period="currentPeriod"
+                    :deferred-data="deferredData"
+                />
+
+                <DurationHistoryCard
+                    :duration-history="deferredData?.performance?.durationHistory"
+                    :deferred-data="deferredData"
+                />
+
+                <div class="stagger-4 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <MuscleDistributionCard
+                        :muscle-distribution="deferredData?.performance?.muscleDistribution"
+                        :deferred-data="deferredData"
+                    />
+
+                    <ExerciseProgressCard :exercises="exercises" />
+                </div>
+
+                <SummaryStatsGrid
+                    :volume-trend="deferredData?.performance?.volumeTrend"
+                    :muscle-distribution="deferredData?.performance?.muscleDistribution"
+                    :exercises="exercises"
+                    :monthly-comparison="deferredData?.performance?.monthlyComparison"
+                    :deferred-data="deferredData"
+                />
+            </template>
         </div>
     </AuthenticatedLayout>
 </template>

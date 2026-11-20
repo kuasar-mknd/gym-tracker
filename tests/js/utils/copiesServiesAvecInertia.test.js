@@ -477,7 +477,7 @@ describe('ce qui ne reçoit jamais de copie', () => {
     it('une page hors de la liste blanche, ou filtrée, ne demande rien au magasin', async () => {
         await garderUneCopie(pageDe())
 
-        await visiter('/stats')
+        await visiter('/goals')
         await visiter('/workouts?type=jambes')
         await vi.waitUntil(() => annonces.length === 2)
 

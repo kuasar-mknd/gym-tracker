@@ -124,8 +124,8 @@ describe('SummaryStatsGrid deferred loading', () => {
         ])
     })
 
-    it('falls back to the performance stats key when there is no consolidated payload', () => {
-        expect(deferredKeys(mountGrid())).toEqual(['performanceStats', 'performanceStats', 'performanceStats'])
+    it('waits on the consolidated key even before the payload has arrived', () => {
+        expect(deferredKeys(mountGrid())).toEqual(['deferredData', 'deferredData', 'deferredData'])
     })
 
     it('skeletons the three deferred cards, and only those, while the data loads', () => {

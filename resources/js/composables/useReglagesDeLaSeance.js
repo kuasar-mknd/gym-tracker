@@ -252,7 +252,13 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
         const bilan = bilanDeFin.value
         const realWorkoutId = idReelDeLaSeance()
 
-        if (bilan === null || bilan.enAttente || repriseEnCours.value || realWorkoutId === null) {
+        if (
+            bilan === null ||
+            bilan.enAttente ||
+            !bilan.peutReprendre ||
+            repriseEnCours.value ||
+            realWorkoutId === null
+        ) {
             return
         }
 
