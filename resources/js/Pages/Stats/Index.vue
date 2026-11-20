@@ -124,18 +124,39 @@ const handlePeriodChange = (period) => {
             </template>
 
             <template v-else>
-                <Link v-press :href="route('corps.index')" class="block">
-                    <GlassCard padding="p-4" class="transition duration-300 hover:-translate-y-0.5 active:scale-[0.99]">
-                        <div class="flex items-center gap-3">
-                            <GlassIcon name="accessibility_new" class="text-accent-secondary-deep" />
-                            <div class="min-w-0 flex-1">
-                                <h2 class="titre-carte">Corps</h2>
-                                <p class="text-text-muted text-xs">Poids, masse grasse, mensurations</p>
+                <div class="space-y-3">
+                    <Link v-press :href="route('records.index')" class="block">
+                        <GlassCard
+                            padding="p-4"
+                            class="transition duration-300 hover:-translate-y-0.5 active:scale-[0.99]"
+                        >
+                            <div class="flex items-center gap-3">
+                                <GlassIcon name="emoji_events" class="text-accent-warning-deep" />
+                                <div class="min-w-0 flex-1">
+                                    <h2 class="titre-carte">Records</h2>
+                                    <p class="text-text-muted text-xs">Charge max, 1RM estimé, meilleur volume</p>
+                                </div>
+                                <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />
                             </div>
-                            <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />
-                        </div>
-                    </GlassCard>
-                </Link>
+                        </GlassCard>
+                    </Link>
+
+                    <Link v-press :href="route('corps.index')" class="block">
+                        <GlassCard
+                            padding="p-4"
+                            class="transition duration-300 hover:-translate-y-0.5 active:scale-[0.99]"
+                        >
+                            <div class="flex items-center gap-3">
+                                <GlassIcon name="accessibility_new" class="text-accent-secondary-deep" />
+                                <div class="min-w-0 flex-1">
+                                    <h2 class="titre-carte">Corps</h2>
+                                    <p class="text-text-muted text-xs">Poids, masse grasse, mensurations</p>
+                                </div>
+                                <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />
+                            </div>
+                        </GlassCard>
+                    </Link>
+                </div>
 
                 <MonthlyVolumeCard :monthly-comparison="deferredData?.performance?.monthlyComparison" />
 

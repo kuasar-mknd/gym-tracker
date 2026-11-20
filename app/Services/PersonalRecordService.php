@@ -9,6 +9,7 @@ use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
 use App\Notifications\PersonalRecordAchieved;
+use App\Services\Stats\ClesDeStats;
 use App\Traits\CalculatesOneRepMax;
 use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -895,7 +896,8 @@ final class PersonalRecordService
      *
      * Un verrou resté pris plus de `ATTENTE_DU_VERROU` secondes lève une
      * `LockTimeoutException`, et la section ne s'exécute pas. Ce que la
-     * section lève remonte tel quel, verrou rendu.
+     * section lève remonte tel quel, verrou rendu. Chaque section renouvelle la
+     * version des statistiques du compte, que la page Records lit.
      *
      * @template TResultat
      *
@@ -906,6 +908,12 @@ final class PersonalRecordService
     {
         /** @var TResultat */
         return Cache::lock("records:{$idUtilisateur}:{$idExercice}", self::VIE_DU_VERROU)
-            ->block(self::ATTENTE_DU_VERROU, $section);
+            ->block(self::ATTENTE_DU_VERROU, function () use ($idUtilisateur, $section): mixed {
+                try {
+                    return $section();
+                } finally {
+                    ClesDeStats::invaliderSeancesDuCompte($idUtilisateur);
+                }
+            });
     }
 }
