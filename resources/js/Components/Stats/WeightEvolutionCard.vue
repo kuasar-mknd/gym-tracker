@@ -14,7 +14,7 @@ defineProps({
     latestWeight: [Number, String],
     weightChange: Number,
     weightHistory: Array,
-    periode: { type: String, default: 'cette période' },
+    periode: { type: String, required: true },
 })
 </script>
 

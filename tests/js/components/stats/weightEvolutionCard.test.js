@@ -57,7 +57,7 @@ describe('WeightEvolutionCard headline', () => {
 
 describe('WeightEvolutionCard sans pesée sur la période', () => {
     it('ne dit pas « pas encore de données » quand un poids est affiché', async () => {
-        const card = await mountCard({ latestWeight: '45', weightHistory: [] })
+        const card = await mountCard({ latestWeight: '45', weightHistory: [], periode: 'cette période' })
 
         expect(card.text()).toContain('Aucune pesée sur cette période')
         expect(card.text()).not.toContain('Pas encore de données de poids')
