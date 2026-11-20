@@ -46,12 +46,12 @@ const adresseActuelle = computed(() => page.props.auth?.user?.email ?? '')
         class="bg-surface-card border-accent-warning/60 rounded-xl border p-3"
         data-testid="profile-social-password-help"
     >
-        <p v-if="props.peutRecevoirLeLienDeReinitialisation" class="text-text-main text-sm">
+        <p v-if="props.peutRecevoirLeLienDeReinitialisation" class="text-text-main text-sm break-words">
             Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de passe,
             choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien
             part à ton adresse actuelle, {{ adresseActuelle }}.
         </p>
-        <p v-else class="text-text-main text-sm">
+        <p v-else class="text-text-main text-sm break-words">
             Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de passe, aucun
             lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle, {{ adresseActuelle }}. Demande
             à un administrateur de l’application de la changer.
