@@ -151,7 +151,7 @@ onUnmounted(() => {
                 >
                     <div
                         :class="[
-                            'verre-epais flex items-center gap-3 rounded-2xl border-l-6 p-4',
+                            'verre-epais flex items-center gap-3 rounded-2xl border-l-6 p-4 backdrop-blur-xl',
                             type === 'success' ? 'border-l-accent-state' : 'border-l-accent-danger',
                         ]"
                     >

@@ -28,7 +28,10 @@ defineProps({
 </script>
 
 <template>
-    <component :is="as" class="verre-regulier rounded-carte bg-surface-card/90 p-6 backdrop-blur-none">
+    <component
+        :is="as"
+        class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 rounded-3xl border p-6 backdrop-blur-md transition duration-300"
+    >
         <header class="mb-6">
             <h2 class="titre-plat">
                 {{ title }}

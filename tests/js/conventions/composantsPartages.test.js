@@ -16,7 +16,8 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
 const INTERDITS = [
     [/\buppercase\b/, 'capitales : la casse de phrase se garde'],
     [/\btracking-(?:wide|wider|widest)\b|tracking-\[/, 'interlettrage étiré'],
-    [/\bfont-(?:extrabold|black)\b/, 'graisse 800 ou 900'],
+    [/\bfont-(?:extrabold|black)\b|font-\[(?:8|9)00\]|font-weight:\s*(?:8|9)00\b/, 'graisse 800 ou 900'],
+    [/text-transform:\s*uppercase|letter-spacing:\s*0?\.[1-9]/, 'capitales ou interlettrage étiré en style'],
     [/\bitalic\b(?<!not-italic)/, 'italique'],
     [/\bshadow-(?:glow|neon)/, 'ombre colorée'],
     [/\bdrop-shadow/, 'ombre portée sur un glyphe'],
@@ -40,5 +41,24 @@ it('ne garde dans Components/UI rien de ce qui datait d’avant le verre', () =>
                 ),
         )
 
+    expect(fautifs).toEqual([])
+})
+
+/**
+ * `glass-badge` reste en capitales 800 : seuls RecentActivity et CarteDeSeance
+ * l'emploient, hors Components/UI, et le lot P1 n'y touche pas.
+ */
+const GARDES_POUR_UN_AUTRE_LOT = ['glass-badge']
+
+it('ne garde dans les utilitaires glass-* de app.css ni capitales, ni italique, ni graisse 800 ou 900', () => {
+    const css = readFileSync(`${jsRoot}/../css/app.css`, 'utf8')
+    const blocs = [...css.matchAll(/^@utility (glass-[\w-]+) \{[\s\S]*?^\}/gm)]
+
+    const fautifs = blocs
+        .filter(([, nom]) => !GARDES_POUR_UN_AUTRE_LOT.includes(nom))
+        .filter(([bloc]) => /text-transform:\s*uppercase|font-style:\s*italic|font-weight:\s*(?:8|9)00\b/.test(bloc))
+        .map(([, nom]) => nom)
+
+    expect(blocs.length).toBeGreaterThan(5)
     expect(fautifs).toEqual([])
 })

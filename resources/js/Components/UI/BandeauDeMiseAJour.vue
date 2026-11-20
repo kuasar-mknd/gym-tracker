@@ -32,7 +32,7 @@ const { joignable } = useEtatDuReseau()
         aria-live="polite"
         dusk="bandeau-mise-a-jour"
     >
-        <div class="verre-epais flex items-center gap-3 rounded-2xl p-4">
+        <div class="verre-epais flex items-center gap-3 rounded-2xl p-4 backdrop-blur-xl">
             <div class="flex-1 space-y-1">
                 <p class="text-text-main text-sm font-medium">Nouvelle version prête</p>
                 <p v-if="!joignable" id="recharger-sans-reseau" class="text-text-muted text-xs font-medium">
