@@ -22,7 +22,11 @@ vi.mock('@/Components/Stats/MaxWeightChart.vue', async (importOriginal) => await
 vi.mock('@/Components/Stats/WeightRepsScatterChart.vue', async (importOriginal) => await importOriginal())
 vi.mock('@/Components/Stats/SetsPerSessionChart.vue', async (importOriginal) => await importOriginal())
 
-const historique = vi.hoisted(() => ({ arrive: true }))
+const historique = await vi.hoisted(async () => {
+    const { reactive } = await import('vue')
+
+    return reactive({ arrive: true })
+})
 
 vi.mock('@inertiajs/vue3', async () => {
     const { h } = await import('vue')
@@ -69,7 +73,6 @@ const seance = (date, series) => ({
     workout_id: 1,
     workout_name: 'Séance',
     formatted_date: date,
-    best_1rm: null,
     sets: series,
 })
 
@@ -157,6 +160,82 @@ describe('une fiche de force', () => {
         await flushPromises()
 
         expect(titres(wrapper)).toEqual(['Progression 1RM'])
+    })
+})
+
+describe('les cas limites des séries de travail', () => {
+    it('ne compte pas une série au poids positif sans répétitions comme une charge', async () => {
+        const wrapper = await monter('strength', [serie(50, 0), serie(0, 12)])
+
+        expect(titres(wrapper)).toEqual(['Endurance'])
+    })
+
+    it.each([
+        ['d’échauffements seuls', [{ ...serie(40, 10), is_warmup: true }]],
+        ['de séries jamais cochées', [{ ...serie(60, 8), is_completed: false }]],
+    ])('garde les états vides pour une force faite %s', async (_, series) => {
+        const wrapper = await monter('strength', series)
+
+        expect(titres(wrapper)).toEqual(['Progression 1RM'])
+        expect(wrapper.text()).toContain('Pas assez de données pour afficher les statistiques')
+    })
+
+    it('garde l’état vide pour un cardio dont aucune série n’est cochée', async () => {
+        const wrapper = await monter('cardio', [{ ...serie(0, 0), is_completed: false }])
+
+        expect(titres(wrapper)).toEqual([])
+        expect(wrapper.text()).toContain('Pas assez de données pour afficher les statistiques')
+    })
+})
+
+describe('une fiche dont l’historique n’est pas encore arrivé', () => {
+    const monterEnAttente = (type, progress) =>
+        mount(ExerciseShow, {
+            props: { exercise: { id: 1, name: 'Exercice', type, category: 'Pectoraux' }, progress },
+            global: { mocks: { route: globalThis.route }, stubs: { AuthenticatedLayout: passesSlot } },
+        })
+
+    const faireArriver = async (wrapper, series) => {
+        historique.arrive = true
+        await wrapper.setProps({ history: [seance('03/02/2026', series)] })
+        await vi.dynamicImportSettled()
+        await flushPromises()
+    }
+
+    it('ne montre jamais « Progression 1RM » pour le poids du corps, ni avant ni après', async () => {
+        historique.arrive = false
+        const wrapper = monterEnAttente('strength', [])
+        await flushPromises()
+
+        expect(titres(wrapper)).toEqual([])
+
+        await faireArriver(wrapper, SEANCES['poids du corps'])
+
+        expect(titres(wrapper)).toEqual(['Endurance'])
+    })
+
+    it('montre « Progression 1RM » avant et après pour une force chargée dont la progression est connue', async () => {
+        historique.arrive = false
+        const wrapper = monterEnAttente('strength', [{ date: '03/02', full_date: '2026-02-03', one_rep_max: 120 }])
+        await flushPromises()
+
+        expect(titres(wrapper)).toEqual(['Progression 1RM'])
+
+        await faireArriver(wrapper, SEANCES.force)
+
+        expect(titres(wrapper)).toEqual(CINQ_CARTES)
+    })
+
+    it('ne montre jamais « Progression 1RM » pour un cardio, ni avant ni après', async () => {
+        historique.arrive = false
+        const wrapper = monterEnAttente('cardio', [])
+        await flushPromises()
+
+        expect(titres(wrapper)).toEqual([])
+
+        await faireArriver(wrapper, SEANCES.cardio)
+
+        expect(titres(wrapper)).toEqual(['Séries'])
     })
 })
 

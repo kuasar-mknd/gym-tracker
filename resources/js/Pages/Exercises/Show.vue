@@ -47,27 +47,35 @@ const props = defineProps({
 const estUneForce = computed(() => props.exercise.type === 'strength')
 
 /*
- * Une force dont aucune série de travail ne porte de charge (le poids du corps)
- * n'a ni volume en kilos, ni charge max, ni nuage poids contre répétitions, ni
- * 1RM : seules ses répétitions disent quelque chose. Dès qu'une série porte une
- * charge, les cinq cartes reviennent.
+ * Une série de travail validée : ce que la fiche lit. Un historique où il n'y
+ * en a aucune (séries jamais cochées, ou échauffements seuls) n'a rien à
+ * tracer et garde les états vides de la page, comme un historique vide.
  */
-const aDesCharges = computed(() =>
-    (props.history ?? []).some((session) => seriesDeTravail(session.sets).some((s) => parseFloat(s.weight) > 0)),
+const aDesSeriesDeTravail = computed(() =>
+    (props.history ?? []).some((session) => seriesDeTravail(session.sets).length > 0),
 )
+
+/*
+ * Une charge est une série qui peut établir un record : poids et répétitions
+ * positifs, comme « Charge max », « Poids vs Reps » et la progression du 1RM.
+ * Une force qui n'en a aucune (le poids du corps) n'a ni volume en kilos, ni
+ * charge max, ni nuage, ni 1RM : seules ses répétitions disent quelque chose.
+ * Dès qu'une série porte une charge, les cinq cartes reviennent.
+ */
+const aDesCharges = computed(() => (props.history ?? []).some((session) => session.sets.some(peutEtablirUnRecord)))
 
 const afficheLesCharges = computed(() => estUneForce.value && aDesCharges.value)
 
 /*
  * La progression du 1RM arrive avec la page, avant l'historique : tant qu'il
  * n'est pas là, une courbe vide ne la montre pas, de peur de la voir
- * disparaître pour le poids du corps. Un exercice sans aucune séance garde son
- * état vide.
+ * disparaître pour le poids du corps. Un exercice sans série de travail garde
+ * son état vide.
  */
 const afficheLaProgression = computed(
     () =>
         estUneForce.value &&
-        (props.progress.length > 0 || (props.history != null && (props.history.length === 0 || aDesCharges.value))),
+        (props.progress.length > 0 || (props.history != null && (!aDesSeriesDeTravail.value || aDesCharges.value))),
 )
 
 /**
@@ -188,7 +196,7 @@ const scatterData = computed(() => {
                     <HistoriqueEnAttente :cartes="estUneForce ? 4 : 1" />
                 </template>
                 <div
-                    v-if="history && history.length > 0"
+                    v-if="aDesSeriesDeTravail"
                     class="stagger-1 animate-slide-up grid grid-cols-1 gap-6 md:grid-cols-2"
                 >
                     <GlassCard v-if="afficheLesCharges">

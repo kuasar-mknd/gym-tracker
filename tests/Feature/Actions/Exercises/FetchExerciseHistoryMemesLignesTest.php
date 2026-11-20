@@ -55,19 +55,11 @@ function historiqueDAvantLaLectureDenormalisee(User $compte, Exercise $exercice)
         ->map(function (WorkoutLine $ligne) use ($calcul): array {
             $seance = $ligne->workout;
 
-            $meilleur = $ligne->sets
-                ->filter(fn (Set $serie): bool => $serie->is_completed && ! $serie->is_warmup
-                    && $serie->weight !== null && $serie->weight > 0.0
-                    && $serie->reps !== null && $serie->reps > 0)
-                ->map(fn (Set $serie): float => $calcul->un1rm((float) $serie->weight, (int) $serie->reps))
-                ->max();
-
             return [
                 'id' => $ligne->id,
                 'workout_id' => $seance->id,
                 'workout_name' => $seance->name,
                 'formatted_date' => $seance->started_at?->format('d/m'),
-                'best_1rm' => $meilleur,
                 'sets' => $ligne->sets->map(fn (Set $serie): array => [
                     'weight' => (float) $serie->weight,
                     'reps' => (int) $serie->reps,
