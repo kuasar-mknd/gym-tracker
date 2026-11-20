@@ -45,6 +45,7 @@ vi.mock('@/Utils/SyncService', () => ({
 }))
 
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
+import BilanDeFinDeSeance from '@/Components/Workout/BilanDeFinDeSeance.vue'
 import { FIN_NON_ENREGISTREE } from '@/Utils/seanceEnAttente'
 import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
 import { PendingIds } from '@/Utils/pendingIds'
@@ -70,6 +71,12 @@ const monter = ({ seance = {}, pendingIds } = {}) => {
 }
 
 /** La fin acceptée par le serveur, telle que l'API la rend. */
+const SEANCE_DU_BILAN = {
+    started_at: '2026-10-19T07:00:00.000Z',
+    ended_at: '2026-10-19T08:00:00.000Z',
+    workout_lines: [],
+}
+
 const finAcceptee = (meta = {}) => ({
     data: {
         data: { id: 5, ended_at: HEURE_DU_GESTE.toISOString() },
@@ -289,6 +296,37 @@ describe('les réglages de la séance', () => {
 
             expect(inertia.post).not.toHaveBeenCalled()
             expect(reglages.bilanDeFin.value).toMatchObject({ peutReprendre: false, reprisePerimee: true })
+        })
+
+        /*
+         * « Le délai pour reprendre est passé. » explique la disparition d'un « Reprendre » qui a été offert.
+         * Une séance oubliée, close à une heure déjà passée, n'en a jamais reçu : la phrase serait alors fausse,
+         * et un appel égaré ne doit ni rouvrir la séance ni la faire apparaître.
+         */
+        it.each([
+            [
+                'une séance oubliée, close à une heure passée',
+                { peut_reprendre: false, reprise_jusqu_a: '2026-10-19T08:15:00.000Z' },
+            ],
+            ['une réponse sans peut_reprendre', {}],
+        ])('%s : « Reprendre » n’a jamais été offert, aucune phrase de délai, aucune réouverture', async (_, meta) => {
+            file.patch.mockResolvedValue(finAcceptee(meta))
+            const reglages = monter()
+            await reglages.confirmFinishWorkout()
+
+            reglages.reprendreLaSeance()
+
+            expect(inertia.post).not.toHaveBeenCalled()
+            expect(reglages.bilanDeFin.value.peutReprendre).toBe(false)
+            expect(reglages.bilanDeFin.value.reprisePerimee).toBeUndefined()
+
+            const bilan = mount(BilanDeFinDeSeance, {
+                props: { bilan: reglages.bilanDeFin.value, seance: SEANCE_DU_BILAN },
+                global: { stubs: { Modal: { props: ['show'], template: '<div v-if="show"><slot /></div>' } } },
+            })
+
+            expect(bilan.text()).not.toContain('Le délai pour reprendre est passé.')
+            expect(bilan.find('[dusk="bilan-de-fin-reprendre"]').exists()).toBe(false)
         })
 
         it('une fin en file dit « enregistrée sur cet appareil » : ni records ni reprise, et « Fermer » reste sur la séance', async () => {
