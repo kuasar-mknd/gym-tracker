@@ -99,27 +99,57 @@ describe('Corps/Index', () => {
         expect(liens(wrapper)).toContain('/body-parts.index')
     })
 
+    it('choisit les six mensurations par pertinence, pas par ordre alphabétique', async () => {
+        const noms = [
+            'Biceps L',
+            'Biceps R',
+            'Calf L',
+            'Calf R',
+            'Chest',
+            'Forearm L',
+            'Hips',
+            'Neck',
+            'Thigh L',
+            'Waist',
+        ]
+        const wrapper = await monter({ latestMeasurements: noms.map((nom) => mensuration(nom, 30)) })
+        const parties = wrapper.findAll('li').map((ligne) => ligne.get('.titre-carte').text())
+
+        expect(parties).toEqual(['Waist', 'Chest', 'Hips', 'Thigh L', 'Biceps L', 'Biceps R'])
+        expect(wrapper.text()).not.toContain('Neck')
+        expect(wrapper.text()).not.toContain('Forearm')
+    })
+
     it('ne signale pas d’écart quand la mensuration n’a pas bougé, et colore les autres', async () => {
         const wrapper = await monter({
             latestMeasurements: [
-                mensuration('Bras', 40, 0),
                 mensuration('Taille', 81, -1),
                 mensuration('Cuisse', 60, 2),
+                mensuration('Bras', 40, 0),
             ],
         })
         const lignes = wrapper.findAll('li')
 
-        expect(lignes[0].find('.text-trend-up, .text-trend-down').exists()).toBe(false)
-        expect(lignes[1].find('.text-trend-down').exists()).toBe(true)
-        expect(lignes[2].find('.text-trend-up').exists()).toBe(true)
+        expect(lignes[0].find('.text-trend-down').exists()).toBe(true)
+        expect(lignes[1].find('.text-trend-up').exists()).toBe(true)
+        expect(lignes[2].find('.text-trend-up, .text-trend-down').exists()).toBe(false)
     })
 
     it('survit à des courbes encore absentes', async () => {
         const wrapper = await monter({ latestWeight: '80.40' })
 
         expect(wrapper.find('.weight-chart').exists()).toBe(false)
-        expect(wrapper.text()).toContain('Aucune pesée sur cette période')
+        expect(wrapper.text()).toContain('Aucune pesée sur les 90 derniers jours')
+        expect(wrapper.text()).not.toContain('cette période')
         expect(wrapper.text()).toContain('Pas de données historiques')
+    })
+
+    it('propose d’ajouter une pesée, et non l’historique, quand rien n’a été pesé', async () => {
+        const wrapper = await monter()
+
+        expect(wrapper.text()).toContain('Ajouter une pesée')
+        expect(wrapper.text()).not.toContain("Voir tout l'historique")
+        expect(liens(wrapper)).toContain('/body-measurements.index')
     })
 
     it('ne pose pas de titre de niveau 1 de plus que celui de l’en-tête', async () => {

@@ -14,6 +14,7 @@ defineProps({
     latestWeight: [Number, String],
     weightChange: Number,
     weightHistory: Array,
+    periode: { type: String, default: 'cette période' },
 })
 </script>
 
@@ -55,7 +56,7 @@ defineProps({
                     v-else
                     taille="ligne"
                     icon="monitor_weight"
-                    :title="latestWeight ? 'Aucune pesée sur cette période' : 'Pas encore de données de poids'"
+                    :title="latestWeight ? `Aucune pesée sur ${periode}` : 'Pas encore de données de poids'"
                 />
             </Deferred>
         </div>
@@ -64,7 +65,7 @@ defineProps({
             :href="route('body-measurements.index')"
             class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition hover:gap-3"
         >
-            Voir tout l'historique
+            {{ latestWeight ? "Voir tout l'historique" : 'Ajouter une pesée' }}
             <GlassIcon name="arrow_forward" size="xs" />
         </Link>
     </GlassCard>

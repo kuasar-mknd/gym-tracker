@@ -69,6 +69,7 @@ test('la page ne montre rien du compte d’un autre', function (): void {
             fn (Assert $page): Assert => $page
                 ->where('latestWeight', null)
                 ->has('latestMeasurements', 0)
+                ->loadDeferredProps(fn (Assert $page): Assert => $page->has('bodyStats.weightHistory', 0)->has('bodyStats.bodyFatHistory', 0))
         );
 });
 

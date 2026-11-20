@@ -63,10 +63,32 @@ describe('WeightEvolutionCard sans pesée sur la période', () => {
         expect(card.text()).not.toContain('Pas encore de données de poids')
     })
 
+    it('nomme la période que la page lui donne', async () => {
+        const card = await mountCard({ latestWeight: '45', weightHistory: [], periode: 'les 90 derniers jours' })
+
+        expect(card.text()).toContain('Aucune pesée sur les 90 derniers jours')
+    })
+
     it('garde « pas encore de données » quand rien n’a jamais été pesé', async () => {
         const card = await mountCard({ latestWeight: null, weightHistory: [] })
 
         expect(card.text()).toContain('Pas encore de données de poids')
+    })
+})
+
+describe('WeightEvolutionCard lien vers l’historique', () => {
+    it('renvoie vers l’historique quand un poids est affiché', async () => {
+        const card = await mountCard({ latestWeight: '45', weightHistory: [] })
+
+        expect(card.text()).toContain("Voir tout l'historique")
+        expect(card.text()).not.toContain('Ajouter une pesée')
+    })
+
+    it('propose d’ajouter une pesée quand rien n’a été pesé', async () => {
+        const card = await mountCard({ latestWeight: null, weightHistory: [] })
+
+        expect(card.text()).toContain('Ajouter une pesée')
+        expect(card.text()).not.toContain("Voir tout l'historique")
     })
 })
 

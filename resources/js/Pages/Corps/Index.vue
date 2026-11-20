@@ -12,6 +12,22 @@ import { dateCourte, parseCalendarDate } from '@/Utils/date'
 import { nombre, variation } from '@/Utils/nombre'
 
 const MENSURATIONS_AFFICHEES = 6
+const JOURS_DES_COURBES = 90
+const ORDRE_DES_MENSURATIONS = [
+    ['waist', 'taille'],
+    ['chest', 'poitrine'],
+    ['hips', 'hanches'],
+    ['thigh', 'cuisse'],
+    ['biceps'],
+    ['calf', 'mollet'],
+]
+
+const rang = (mensuration) => {
+    const nom = String(mensuration.part).toLowerCase()
+    const position = ORDRE_DES_MENSURATIONS.findIndex((noms) => noms.some((debut) => nom.startsWith(debut)))
+
+    return position === -1 ? ORDRE_DES_MENSURATIONS.length : position
+}
 
 const props = defineProps({
     latestWeight: [Number, String],
@@ -21,7 +37,9 @@ const props = defineProps({
     bodyStats: Object,
 })
 
-const mensurations = computed(() => props.latestMeasurements.slice(0, MENSURATIONS_AFFICHEES))
+const mensurations = computed(() =>
+    [...props.latestMeasurements].sort((a, b) => rang(a) - rang(b)).slice(0, MENSURATIONS_AFFICHEES),
+)
 </script>
 
 <template>
@@ -37,6 +55,7 @@ const mensurations = computed(() => props.latestMeasurements.slice(0, MENSURATIO
                 :latest-weight="latestWeight"
                 :weight-change="weightChange"
                 :weight-history="bodyStats?.weightHistory"
+                :periode="`les ${JOURS_DES_COURBES} derniers jours`"
             />
 
             <BodyFatCard :body-fat="bodyFat" :body-fat-history="bodyStats?.bodyFatHistory" />
