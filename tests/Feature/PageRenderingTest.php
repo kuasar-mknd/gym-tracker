@@ -350,6 +350,7 @@ test('unauthenticated users are redirected to login for all protected pages', fu
     '/exercises',
     '/templates',
     '/corps',
+    '/records',
     '/body-measurements',
     '/daily-journals',
     '/notifications',

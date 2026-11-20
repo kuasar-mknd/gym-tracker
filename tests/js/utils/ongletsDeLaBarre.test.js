@@ -63,6 +63,7 @@ describe('l’onglet d’une route', () => {
         ['goals.index', 'progres'],
         ['achievements.index', 'progres'],
         ['corps.index', 'progres'],
+        ['records.index', 'progres'],
         ['body-measurements.index', 'progres'],
         ['body-parts.show', 'progres'],
         ['exercises.index', 'progres'],
@@ -107,6 +108,7 @@ describe('la cible de chaque retour déclaré par une page', () => {
             'Goals/Edit.vue': 'goals.edit',
             'Achievements/Index.vue': 'achievements.index',
             'Corps/Index.vue': 'corps.index',
+            'Records/Index.vue': 'records.index',
             'Measurements/Index.vue': 'body-measurements.index',
             'Measurements/Parts/Index.vue': 'body-parts.index',
             'Exercises/Index.vue': 'exercises.index',
@@ -148,6 +150,7 @@ describe('l’onglet que la barre allume sur une page', () => {
         ['/supplements', 'supplements.index', 'profile.index'],
         ['/achievements', 'achievements.index', 'stats.index'],
         ['/corps', 'corps.index', 'stats.index'],
+        ['/records', 'records.index', 'stats.index'],
         ['/body-measurements', 'body-measurements.index', 'stats.index'],
         ['/body-metrics', 'body-parts.index', 'stats.index'],
     ]
@@ -182,6 +185,7 @@ describe('l’onglet que la barre allume sur une page', () => {
             'Supplements/Index.vue': 'profile.index',
             'Achievements/Index.vue': 'stats.index',
             'Corps/Index.vue': 'stats.index',
+            'Records/Index.vue': 'stats.index',
             'Measurements/Index.vue': 'corps.index',
             'Measurements/Parts/Index.vue': 'corps.index',
         }
