@@ -84,7 +84,7 @@ const raisonDuModele = computed(() => {
             « Repos » prend le contour, « Terminer » est l'action primaire.
         -->
         <div
-            class="verre-epais rounded-capsule bureau:contents bottom-sure-30 left-sure-4 right-sure-4 z-flottant @container fixed flex gap-2 p-2"
+            class="verre-epais rounded-capsule bureau:contents bottom-sure-24 left-sure-4 right-sure-4 z-flottant @container fixed flex gap-2 p-2"
             role="group"
             aria-label="Actions de la séance"
             dusk="barre-d-outils-de-la-seance"

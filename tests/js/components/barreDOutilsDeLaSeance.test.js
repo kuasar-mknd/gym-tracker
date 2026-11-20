@@ -59,7 +59,7 @@ describe('la barre d’outils de la séance', () => {
     it('flotte au-dessus de la zone sûre et de la barre du bas, hors de la colonne de bureau', () => {
         const classes = barre().classes()
 
-        expect(classes).toEqual(expect.arrayContaining(['fixed', 'bottom-sure-30', 'left-sure-4', 'right-sure-4']))
+        expect(classes).toEqual(expect.arrayContaining(['fixed', 'bottom-sure-24', 'left-sure-4', 'right-sure-4']))
         expect(classes).toContain('bureau:contents')
         expect(classes).toContain('verre-epais')
     })
