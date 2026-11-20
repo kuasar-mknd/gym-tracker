@@ -275,41 +275,6 @@
     --color-accent-warning-deep: #8a6803;
 
     /*
-     * --- La seance en cours ---------------------------------------------
-     *
-     * Le bandeau du tableau de bord, et lui seul. Un degrade vert-emeraude vers
-     * cyan, qui n'appartient a aucune autre famille : ce n'est ni un accent —
-     * il ne demande rien — ni une categorie. C'est une identite, celle d'une
-     * seance ouverte.
-     *
-     * Il portait `emerald-500`, `teal-500` et `cyan-500` de Tailwind. La
-     * conversion vers la charte les a envoyes sur `accent-state` et
-     * `accent-info`, les jetons VIFS, bien plus clairs : le texte blanc y est
-     * passe de 2,5:1 a 1,2:1, et pas un mot du bandeau ne se lisait. C'est le
-     * piege de ce genre de table — remplacer une nuance par un role change la
-     * luminosite, pas seulement le nom.
-     *
-     * Ce sont les trois tons d'ORIGINE, a l'identique.
-     *
-     * Ils ont d'abord ete assombris ici pour que le blanc y tienne 4,5:1 —
-     * mesure, le blanc n'y rend que 2,5:1. Sam a demande les couleurs d'avant,
-     * et les a redemandees : c'est donc une decision assumee, pas un oubli.
-     *
-     * Ce qui la rend defendable : ce bandeau ne porte aucune information qu'on
-     * ne retrouve ailleurs. Il annonce une seance ouverte, l'annonce aussi par
-     * sa pastille « En cours », et mene a la page qui porte le detail. Le seuil
-     * AA protege la lecture d'un contenu ; il s'agit ici d'une banniere de
-     * navigation, et personne n'y lit longtemps.
-     *
-     * Si un jour on veut les deux, la reponse n'est pas d'assombrir ces trois
-     * tons : c'est de poser un voile sombre sous le texte, qui laisse le degrade
-     * intact la ou il se voit et donne au mot le fond qu'il lui faut.
-     */
-    --color-session-from: #10b981;
-    --color-session-via: #14b8a6;
-    --color-session-to: #06b6d4;
-
-    /*
      * --- Tendance ------------------------------------------------------
      *
      * Une direction, pas un jugement. `comparison > 0 ? trend-up : trend-down`
@@ -1388,7 +1353,7 @@
     flex: 1;
     min-width: 0;
     height: 3.5rem;
-    padding: 0;
+    padding: 0 0 0.25rem;
     border-radius: var(--radius-capsule);
     color: var(--color-text-muted);
     font-size: 0.6875rem;
@@ -1400,15 +1365,19 @@
         background-color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
 
+    /* L'icône occupe sa propre hauteur : la ligne de la police de symboles la portait à 1,33 fois, et le libellé descendait contre la courbe. */
     & > .material-symbols-outlined {
-        font-size: 1.375rem;
+        font-size: 1.25rem;
+        line-height: 1;
+        height: 1.25rem;
     }
 
     @media (width <= 20rem) {
         font-size: 0.625rem;
 
         & > .material-symbols-outlined {
-            font-size: 1.25rem;
+            font-size: 1.125rem;
+            height: 1.125rem;
         }
     }
 

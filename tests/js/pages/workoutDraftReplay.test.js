@@ -257,7 +257,7 @@ describe('Workouts/Show — offline draft replay', () => {
 
         const wrapper = await mountPage()
 
-        const taken = added.mock.calls.filter(([type]) => type.startsWith('sync:') || type === 'open-add-exercise')
+        const taken = added.mock.calls.filter(([type]) => type.startsWith('sync:'))
 
         expect(taken.length).toBeGreaterThan(0)
 

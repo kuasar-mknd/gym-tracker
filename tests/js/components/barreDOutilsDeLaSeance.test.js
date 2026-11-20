@@ -89,4 +89,24 @@ describe('la barre d’outils de la séance', () => {
         expect(terminer.classes()).toEqual(expect.arrayContaining(['accent-fill', 'bouton-de-barre']))
         expect(terminer.classes()).not.toContain('glass-button-primary')
     })
+
+    /*
+     * Une séance démarrée sans réseau s'ouvre à l'adresse de sa clé (#2049) : le
+     * bouton central y démarrait une seconde séance au lieu d'ajouter un exercice.
+     * La barre d'outils, elle, ajoute l'exercice à celle-ci, même hors ligne.
+     */
+    it('ajoute un exercice à une séance démarrée sans réseau, sans la raison d’un bouton fermé', async () => {
+        const wrapper = mount(ActionsDeLaSeance, {
+            props: { seanceEnAttente: true },
+            global: { directives: { press: {} } },
+        })
+        const exercice = wrapper.get('[dusk="add-exercise-existing"]')
+
+        expect(exercice.attributes('disabled')).toBeUndefined()
+        expect(exercice.attributes('aria-describedby')).toBeUndefined()
+
+        await exercice.trigger('click')
+
+        expect(wrapper.emitted('ajouter-un-exercice')).toHaveLength(1)
+    })
 })

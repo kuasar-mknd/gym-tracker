@@ -1022,15 +1022,25 @@ describe('Workouts/Show — reaching the exercise picker', () => {
         expect(wrapper.vm.showAddExercise).toBe(true)
     })
 
-    it('opens when the layout’s floating button asks it to', async () => {
+    it('opens when the toolbar asks it to', async () => {
         const wrapper = await mountPage()
 
         expect(wrapper.vm.showAddExercise).toBe(false)
 
-        window.dispatchEvent(new CustomEvent('open-add-exercise'))
+        wrapper.findComponent(ActionsDeLaSeance).vm.$emit('ajouter-un-exercice')
         await flushPromises()
 
         expect(wrapper.vm.showAddExercise).toBe(true)
+    })
+
+    /** Le bouton central de la barre du bas, seul émetteur de l'évènement, n'existe plus : la page ne l'écoute plus. */
+    it('no longer listens for the central button’s window event', async () => {
+        const wrapper = await mountPage()
+
+        window.dispatchEvent(new CustomEvent('open-add-exercise'))
+        await flushPromises()
+
+        expect(wrapper.vm.showAddExercise).toBe(false)
     })
 
     it('ignores an exercise that is not in the picker', async () => {

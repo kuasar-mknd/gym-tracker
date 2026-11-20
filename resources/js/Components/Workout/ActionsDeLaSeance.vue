@@ -70,7 +70,7 @@ const raisonDuModele = computed(() => {
         >
             <GlassButton
                 @click="emit('ajouter-un-exercice')"
-                class="bouton-de-barre bureau:w-full flex-1"
+                class="bouton-de-barre bureau:w-full flex-auto"
                 dusk="add-exercise-existing"
             >
                 <GlassIcon name="add" size="sm" class="bureau:hidden @max-[19rem]:hidden" />
@@ -81,7 +81,7 @@ const raisonDuModele = computed(() => {
                 v-if="!vide"
                 variant="secondary"
                 @click="emit('demarrer-un-repos')"
-                class="bouton-de-barre bureau:w-full flex-1"
+                class="bouton-de-barre bureau:w-full flex-auto"
                 dusk="open-rest-timer"
             >
                 <GlassIcon name="timer" size="sm" class="bureau:hidden @max-[19rem]:hidden" />
@@ -91,7 +91,7 @@ const raisonDuModele = computed(() => {
             <GlassButton
                 variant="accent"
                 @click="emit('terminer')"
-                class="bouton-de-barre bureau:w-full flex-1"
+                class="bouton-de-barre bureau:w-full flex-auto"
                 id="finish-workout-mobile"
                 dusk="finish-workout-mobile"
                 >Terminer</GlassButton

@@ -62,6 +62,34 @@ describe('BottomNav — les quatre onglets', () => {
         }
     })
 
+    /*
+     * Ce que le bouton central disait selon la page (« Séance » partout, « Exercice »
+     * sur la séance) n'est plus dans la barre : ni ces deux libellés, ni « Plus »
+     * ni « Stats », que la maquette retire.
+     */
+    it.each(['dashboard', 'workouts.show', 'workouts.en-attente'])(
+        'says neither Séance, Exercice, Plus nor Stats on %s',
+        (page) => {
+            const texte = mountNav(page).text()
+
+            for (const mot of ['Séance ', 'Exercice', 'Plus', 'Stats']) {
+                expect(texte).not.toContain(mot)
+            }
+        },
+    )
+
+    /*
+     * Une séance démarrée sans réseau s'ouvre à l'adresse de sa clé
+     * (`workouts.en-attente`, #2049) : la barre y démarrait une seconde séance.
+     * Sans bouton, il ne reste qu'à allumer le bon onglet, sans rien démarrer.
+     */
+    it('lights Séances on a session started offline, at its key’s address, and has nothing to start', () => {
+        const wrapper = mountNav('workouts.en-attente')
+
+        expect(activeLabels(wrapper)).toEqual(['Séances'])
+        expect(wrapper.findAll('button')).toHaveLength(0)
+    })
+
     it('does not ask the open session for an exercise when a tab is pressed', async () => {
         const wrapper = mountNav('workouts.show')
         const opened = vi.fn()

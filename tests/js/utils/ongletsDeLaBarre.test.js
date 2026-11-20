@@ -1,7 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
+vi.mock('@inertiajs/vue3', () => ({
+    Link: { props: ['href'], template: '<a :href="href"><slot /></a>' },
+    usePage: () => ({ props: {}, component: 'Dashboard' }),
+}))
+
+import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import { ONGLETS, ongletDeLaRoute } from '@/Utils/ongletsDeLaBarre'
 
 /*
@@ -120,6 +127,63 @@ describe('la cible de chaque retour déclaré par une page', () => {
             expect(ongletDeLaRoute(route)?.cle, `${page} (${route}) mène à ${retour.cible}`).toBe(
                 ongletDeLaRoute(retour.cible)?.cle,
             )
+        }
+    })
+})
+
+/**
+ * La page elle-même, pas seulement la cible de son retour : on monte la vraie
+ * barre sur la route de la page, et l'onglet qu'elle allume est celui où mène
+ * son bouton Retour. Les routes sont celles que chaque page porte ; le
+ * parcours Dusk `OngletActifDesPagesTest` le refait sur les vraies adresses.
+ */
+describe('l’onglet que la barre allume sur une page', () => {
+    const PAGES = [
+        ['/goals', 'goals.index', 'stats.index'],
+        ['/calendar', 'calendar.index', 'workouts.index'],
+        ['/habits', 'habits.index', 'profile.index'],
+        ['/daily-journals', 'daily-journals.index', 'profile.index'],
+        ['/supplements', 'supplements.index', 'profile.index'],
+        ['/achievements', 'achievements.index', 'stats.index'],
+        ['/body-measurements', 'body-measurements.index', 'stats.index'],
+    ]
+
+    const allumes = (courante) => {
+        const route = (nom) => (nom === undefined ? { current: () => courante } : `/resolved/${nom}`)
+        globalThis.route = route
+
+        return mount(BottomNav, { global: { directives: { press: {} }, mocks: { route } } })
+            .findAll('a[aria-current="page"]')
+            .map((lien) => lien.attributes('href'))
+    }
+
+    it.each(PAGES)('%s allume l’onglet où mène son retour (%s → %s)', (_adresse, routeDeLaPage, retour) => {
+        expect(allumes(routeDeLaPage)).toEqual([`/resolved/${retour}`])
+        expect(retoursDeclares.some(({ cible }) => cible === retour)).toBe(true)
+    })
+
+    it('n’en allume aucun sur les notifications, dont le retour mène à l’Accueil', () => {
+        expect(allumes('notifications.index')).toEqual([])
+        expect(
+            retoursDeclares.filter(({ page }) => page.startsWith('Notifications/')).map(({ cible }) => cible),
+        ).toEqual(['dashboard'])
+    })
+
+    it('déclare, dans chaque page de la liste, le retour que le test attend', () => {
+        const attendus = {
+            'Goals/Index.vue': 'stats.index',
+            'Calendar/Index.vue': 'workouts.index',
+            'Habits/Index.vue': 'profile.index',
+            'Journal/Index.vue': 'profile.index',
+            'Supplements/Index.vue': 'profile.index',
+            'Achievements/Index.vue': 'stats.index',
+            'Measurements/Index.vue': 'stats.index',
+        }
+
+        for (const [page, cible] of Object.entries(attendus)) {
+            expect(retoursDeclares.filter((declaration) => declaration.page === page).map((d) => d.cible)).toEqual([
+                cible,
+            ])
         }
     })
 })
