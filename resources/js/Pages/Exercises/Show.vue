@@ -48,11 +48,15 @@ const estUneForce = computed(() => props.exercise.type === 'strength')
 
 /*
  * Une série de travail validée : ce que la fiche lit. Un historique où il n'y
- * en a aucune (séries jamais cochées, ou échauffements seuls) n'a rien à
- * tracer et garde les états vides de la page, comme un historique vide.
+ * en a aucune (séries jamais cochées, échauffements seuls, ou séries de force
+ * sans répétition) n'a rien à tracer et garde les états vides de la page,
+ * comme un historique vide. Le cardio et le temps n'ont jamais de répétitions :
+ * leurs séries comptent sans.
  */
+const compteCommeTravail = (serie) => !estUneForce.value || Number(serie.reps) > 0
+
 const aDesSeriesDeTravail = computed(() =>
-    (props.history ?? []).some((session) => seriesDeTravail(session.sets).length > 0),
+    (props.history ?? []).some((session) => seriesDeTravail(session.sets).some(compteCommeTravail)),
 )
 
 /*

@@ -180,6 +180,13 @@ describe('les cas limites des séries de travail', () => {
         expect(wrapper.text()).toContain('Pas assez de données pour afficher les statistiques')
     })
 
+    it('garde les états vides pour une force dont la seule série validée n’a pas de répétition', async () => {
+        const wrapper = await monter('strength', [serie(60, 0)])
+
+        expect(titres(wrapper)).toEqual(['Progression 1RM'])
+        expect(wrapper.text()).toContain('Pas assez de données pour afficher les statistiques')
+    })
+
     it('garde l’état vide pour un cardio dont aucune série n’est cochée', async () => {
         const wrapper = await monter('cardio', [{ ...serie(0, 0), is_completed: false }])
 
