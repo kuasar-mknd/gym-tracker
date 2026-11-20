@@ -124,7 +124,7 @@ const handlePeriodChange = (period) => {
             </template>
 
             <template v-else>
-                <div class="bureau:grid-cols-2 grid grid-cols-1 gap-3">
+                <div class="bureau:grid bureau:grid-cols-2 bureau:gap-3 bureau:space-y-0 space-y-3">
                     <Link v-press :href="route('records.index')" class="block">
                         <GlassCard
                             padding="p-4"

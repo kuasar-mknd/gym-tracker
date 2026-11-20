@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Browser;
 
 use App\Models\Exercise;
+use App\Models\Goal;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
@@ -48,23 +49,23 @@ class BarreDeBureauTest extends DuskTestCase
             foreach ([1024, 1280, 1536] as $largeur) {
                 $browser->loginAs(User::findOrFail($compte->id))->resize($largeur, 900);
 
-                // Adresse, onglet allumé, retour attendu (null : une page racine).
+                // Adresse, onglet allumé, retour attendu (null : une page racine), et nombre de titres visibles.
                 $pages = [
-                    '/dashboard' => ['Accueil', null],
-                    '/workouts' => ['Séances', null],
-                    '/calendar' => ['Séances', '/workouts'],
-                    '/stats' => ['Progrès', null],
-                    '/corps' => ['Progrès', '/stats'],
-                    '/records' => ['Progrès', '/stats'],
-                    '/body-measurements' => ['Progrès', '/corps'],
-                    '/goals' => ['Progrès', '/stats'],
-                    '/profile' => ['Profil', null],
+                    '/dashboard' => ['Accueil', null, 0],
+                    '/workouts' => ['Séances', null, 1],
+                    '/calendar' => ['Séances', '/workouts', 0],
+                    '/stats' => ['Progrès', null, 1],
+                    '/corps' => ['Progrès', '/stats', 1],
+                    '/records' => ['Progrès', '/stats', 1],
+                    '/body-measurements' => ['Progrès', '/corps', 1],
+                    '/goals' => ['Progrès', '/stats', 1],
+                    '/profile' => ['Profil', null, 0],
                     // Outils pose son retour lui-même dans son en-tête : le layout n'ajoute pas le sien.
-                    '/tools' => ['Profil', null],
-                    '/habits' => ['Profil', '/profile'],
+                    '/tools' => ['Profil', null, 1],
+                    '/habits' => ['Profil', '/profile', 1],
                 ];
 
-                foreach ($pages as $adresse => [$onglet, $retour]) {
+                foreach ($pages as $adresse => [$onglet, $retour, $titres]) {
                     $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitFor('nav[aria-label="Navigation de bureau"]', 30);
 
                     /** @var array{onglets: list<string>, allumes: list<string>, titres: list<string>, retour: ?string, debordement: int} $page */
@@ -74,7 +75,7 @@ class BarreDeBureauTest extends DuskTestCase
                     $this->assertSame(['Accueil', 'Séances', 'Progrès', 'Profil'], $page['onglets'], "$ou : les onglets ne sont pas ceux de la barre du bas.");
                     $this->assertSame([$onglet], $page['allumes'], "$ou n'allume pas $onglet.");
                     $this->assertSame($retour, $page['retour'], "$ou : le retour de bureau est faux.");
-                    $this->assertLessThanOrEqual(1, count($page['titres']), "$ou montre plusieurs titres : ".implode(' | ', $page['titres']));
+                    $this->assertCount($titres, $page['titres'], "$ou montre plusieurs titres : ".implode(' | ', $page['titres']));
                     $this->assertLessThanOrEqual(0, $page['debordement'], "$ou défile de côté.");
                 }
             }
@@ -96,7 +97,7 @@ class BarreDeBureauTest extends DuskTestCase
 
             $browser->assertVisible('@workout-settings-button-desktop')
                 ->assertScript('[...document.querySelectorAll("h1")].filter((titre) => titre.getClientRects().length > 0 && !titre.classList.contains("sr-only")).map((titre) => titre.textContent.trim()).join("|")', 'Pousser')
-                ->assertPresent('@retour-de-bureau');
+                ->assertVisible('@retour-de-bureau');
 
             // L'accessoire de séance, ici absent sur la page de la séance elle-même, tient sur bureau dans sa mesure.
             $browser->visit('/dashboard')->disableAnimations()->waitFor('#main-content', 30)->waitFor('[dusk="active-workout-banner"]', 30);
@@ -105,6 +106,37 @@ class BarreDeBureauTest extends DuskTestCase
             $largeur = $browser->script('return document.querySelector(\'[dusk="active-workout-banner"]\').getBoundingClientRect().width')[0];
 
             $this->assertLessThanOrEqual(576, $largeur, "L'accessoire de séance s'étire sur {$largeur} px à 1280.");
+        });
+    }
+
+    /**
+     * Outils, la fiche d'un exercice, le jeûne et la modification d'un objectif
+     * posent leur retour dans leur en-tête : `retour-propre` empêche le layout
+     * d'en ajouter un second. Un seul retour visible sur chacune.
+     */
+    public function test_les_pages_qui_ont_leur_retour_n_en_montrent_qu_un_sur_bureau(): void
+    {
+        $compte = User::factory()->create([
+            'email' => 'bureau-retour-'.time().random_int(0, 999).'@example.com',
+            'email_verified_at' => now(),
+        ]);
+        $exercice = Exercise::factory()->create(['user_id' => $compte->id, 'type' => 'strength']);
+        $objectif = Goal::factory()->create(['user_id' => $compte->id]);
+
+        $this->browse(function (Browser $browser) use ($compte, $exercice, $objectif): void {
+            $browser->loginAs(User::findOrFail($compte->id))->resize(1280, 900);
+
+            foreach (['/tools', "/exercises/{$exercice->id}", '/tools/fasting', "/goals/{$objectif->id}/edit"] as $adresse) {
+                $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitForStableLayout();
+
+                $retours = $browser->script(<<<'JS'
+                    return [...document.querySelectorAll('a')]
+                        .filter((lien) => lien.getClientRects().length > 0 && /Retour/.test(lien.getAttribute('aria-label') ?? lien.textContent.trim()))
+                        .map((lien) => lien.getAttribute('aria-label') ?? lien.textContent.trim());
+                    JS)[0];
+
+                $this->assertCount(1, $retours, "$adresse montre ".count($retours).' retours sur bureau : '.implode(' | ', $retours));
+            }
         });
     }
 }
