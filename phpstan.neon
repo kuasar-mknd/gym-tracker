@@ -89,13 +89,6 @@ parameters:
         - identifier: shipmonk.deadMethod
           path: app/Policies/*
           message: '#::deleteAny\b#'
-        # reopen est consultee par son nom, a travers le Gate (`can('reopen')` de la
-        # reponse de la fin, `Gate::authorize('reopen')` de ReouvrirUneSeanceAction) :
-        # aucun appel PHP n'existe. Le chemin est tenu par ReouvertureNeRejoueRienTest
-        # et ReouvrirUneSeanceTest.
-        - identifier: shipmonk.deadMethod
-          path: app/Policies/WorkoutPolicy.php
-          message: '#::reopen\b#'
         # Filament appelle l'action afficherLeJeton par son nom (`{nom}Action`),
         # jamais en toutes lettres.
         - identifier: shipmonk.deadMethod
