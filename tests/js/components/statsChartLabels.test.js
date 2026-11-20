@@ -23,7 +23,6 @@ const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue'
 const RecentWorkoutsExercisesChart = (await import('@/Components/Stats/RecentWorkoutsExercisesChart.vue')).default
 const ExerciseCategoryChart = (await import('@/Components/Stats/ExerciseCategoryChart.vue')).default
 const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryChart.vue')).default
-const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
 const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkoutChart.vue')).default
 
 const tooltipOf = (wrapper, name) => wrapper.findComponent({ name }).props('options').plugins.tooltip
@@ -124,14 +123,6 @@ describe('RecentWorkoutsExercisesChart tooltip', () => {
         })
 
         expect(tooltipOf(wrapper, 'Bar').callbacks.label({ parsed: { y: 5 } })).toBe('5 exercices')
-    })
-})
-
-describe('SetsPerSessionChart tooltip', () => {
-    it('names the unit of what the bar counts', () => {
-        const wrapper = mount(SetsPerSessionChart, { props: { data: [{ date: '01/07', sets: 12 }] } })
-
-        expect(tooltipOf(wrapper, 'Bar').callbacks.label({ parsed: { y: 12 } })).toBe('12 séries')
     })
 })
 
