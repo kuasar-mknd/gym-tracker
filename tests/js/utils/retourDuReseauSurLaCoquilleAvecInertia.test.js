@@ -145,9 +145,8 @@ describe('la page HorsLigne démarrée par la coquille', () => {
     it('montre ce qui s’ouvre sans réseau, puis se recharge en entier quand le serveur répond', async () => {
         await vi.waitUntil(() => pageInertia?.component === 'HorsLigne' && bandeau() !== null)
 
-        expect(document.querySelector('[dusk="bandeau-hors-ligne-titre"]').textContent).toMatch(
-            /^Hors ligne · copie du /,
-        )
+        expect(document.querySelector('[dusk="bandeau-hors-ligne-titre"]').textContent.trim()).toBe('Hors ligne')
+        expect(document.querySelector('[dusk="bandeau-hors-ligne-date"]').textContent).toMatch(/^\s*Copie du /)
         expect(
             [...document.querySelectorAll('[dusk="page-sans-reseau"]')].map((lien) => lien.getAttribute('href')),
         ).toEqual(['/dashboard'])

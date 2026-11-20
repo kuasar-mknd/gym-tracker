@@ -715,6 +715,8 @@ describe('AuthenticatedLayout — the session in progress', () => {
  */
 describe('AuthenticatedLayout — une copie hors ligne', () => {
     it('montre le bandeau de la copie en tête du contenu, avant la page', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date(2026, 10, 20, 8, 0))
         const wrapper = mountLayout()
 
         expect(wrapper.find('[dusk="bandeau-hors-ligne"]').exists()).toBe(false)
@@ -726,7 +728,8 @@ describe('AuthenticatedLayout — une copie hors ligne', () => {
         const bandeau = main.get('[dusk="bandeau-hors-ligne"]')
         const contenu = main.get('[data-testid="page-content"]')
 
-        expect(bandeau.text()).toContain('Hors ligne · copie du lun. 12 oct. 2026 à 18:04')
+        expect(bandeau.get('[dusk="bandeau-hors-ligne-titre"]').text()).toBe('Hors ligne')
+        expect(bandeau.get('[dusk="bandeau-hors-ligne-date"]').text()).toBe('Copie du 12 oct. à 18:04')
         expect(bandeau.element.compareDocumentPosition(contenu.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
 })

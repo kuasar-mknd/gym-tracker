@@ -19,7 +19,7 @@ use Tests\Support\ParcoursHorsLigne;
  * elle laisserait la session ouverte à la personne suivante. Le premier
  * parcours le joue sur un réseau lent (sept secondes par requête, par les
  * outils de Chrome) : « Plus » s'ouvre au bout de cinq secondes depuis sa
- * copie, sous « Le réseau ne répond pas », et « Se déconnecter » part de là
+ * copie, sous « Réseau lent », et « Se déconnecter » part de là
  * et aboutit. Le second la joue sans réseau, sur la copie que la coquille
  * démarre à froid : la déconnexion n'a pas lieu, le dit, et les copies sont
  * pourtant effacées, avant l'envoi (décision 6 du propriétaire) ; le réseau
@@ -63,7 +63,7 @@ class DeconnexionHorsLigneTest extends DuskTestCase
                     ->clickWhenSettled('[dusk="nav-profile"]')
                     ->waitForLocation('/profile', 15)
                     ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
-                    ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Le réseau ne répond pas · copie du ')")
+                    ->assertScript($this->leBandeauDit('Réseau lent'))
                     ->waitFor('[data-testid="logout-button"]', 15);
 
                 // « Se déconnecter » part de la copie, et aboutit sur la page de connexion.

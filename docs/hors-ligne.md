@@ -126,7 +126,7 @@ Une réponse arrivée avant les cinq secondes passe toujours devant la copie.
 
 Ce que la personne voit :
 
-- **Un bandeau** date la copie (« Hors ligne · copie du … »), avec « Réessayer ».
+- **Un bandeau** dit l'état (« Hors ligne », ou « Réseau lent ») et date la copie (« Copie du 20 nov. à 05:02 »), avec « Réessayer ».
 - **Ce que la copie n'a pas** (le dernier poids, les objectifs, les graphiques, ce que la page charge après elle) est dit indisponible hors ligne.
 - **Les boutons qui enregistreraient** se désactivent et disent pourquoi. Rien ne part d'une copie, sauf la déconnexion et ce qui passe par la file : démarrer ou terminer une séance, et lancer un modèle tel que la copie le montre.
 - **La séance** garde ses modifications en file, comme avant.

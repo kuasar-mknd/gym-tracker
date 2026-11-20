@@ -85,7 +85,8 @@ const file = { enAttente: 0 }
 
 const contenu = () => document.getElementById('contenu')?.textContent
 const bandeau = () => document.querySelector('[dusk="bandeau-hors-ligne"]')
-const titreDuBandeau = () => document.querySelector('[dusk="bandeau-hors-ligne-titre"]')?.textContent
+const titreDuBandeau = () => document.querySelector('[dusk="bandeau-hors-ligne-titre"]')?.textContent.trim()
+const dateDuBandeau = () => document.querySelector('[dusk="bandeau-hors-ligne-date"]')?.textContent.trim()
 const boutonReessayer = () => document.querySelector('[dusk="reessayer-hors-ligne"]')
 
 /** Les requêtes parties depuis `depuis`, réduites à ce qu'on en lit. */
@@ -153,6 +154,8 @@ const Page = {
 }
 
 beforeAll(async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 10, 20, 8, 0))
     vi.stubGlobal('XMLHttpRequest', RequeteSimulee)
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     document.body.innerHTML = '<div id="app"></div>'
@@ -227,6 +230,7 @@ afterEach(async () => {
 })
 
 afterAll(async () => {
+    vi.useRealTimers()
     window.removeEventListener(visites.EVENEMENT_SANS_RESEAU, ecouterLesAnnonces)
     application.unmount()
     await magasin.fermer()
@@ -241,9 +245,10 @@ describe('le bandeau d’une copie', () => {
         await servirLaCopieDe(pageDe())
 
         expect(contenu()).toBe('Séances')
-        expect(titreDuBandeau()).toBe('Hors ligne · copie du lun. 12 oct. 2026 à 18:04')
-        expect(bandeau().querySelector('[role="status"]').textContent).toContain(
-            "Ce qui a changé depuis n'apparaît pas ici.",
+        expect(titreDuBandeau()).toBe('Hors ligne')
+        expect(dateDuBandeau()).toBe('Copie du 12 oct. à 18:04')
+        expect(bandeau().querySelector('[role="status"]').textContent.trim()).toBe(
+            'cloud_offHors ligneCopie du 12 oct. à 18:04 Réessayer',
         )
         expect(annonces).toEqual([])
         expect(relais.rejets).toEqual([])
@@ -257,7 +262,8 @@ describe('le bandeau d’une copie', () => {
         expect(annonces).toEqual([{ message: visites.PAGE_INDISPONIBLE, annuler: null }])
         expect(window.location.pathname).toBe('/workouts')
         expect(contenu()).toBe('Séances')
-        expect(titreDuBandeau()).toBe('Hors ligne · copie du lun. 12 oct. 2026 à 18:04')
+        expect(titreDuBandeau()).toBe('Hors ligne')
+        expect(dateDuBandeau()).toBe('Copie du 12 oct. à 18:04')
         expect(relais.rejets).toEqual([])
     })
 
@@ -268,7 +274,8 @@ describe('le bandeau d’une copie', () => {
         routeur.visit('/workouts')
         await attendreLeBandeau('/workouts')
 
-        expect(titreDuBandeau()).toBe('Le réseau ne répond pas · copie du lun. 12 oct. 2026 à 18:04')
+        expect(titreDuBandeau()).toBe('Réseau lent')
+        expect(dateDuBandeau()).toBe('Copie du 12 oct. à 18:04')
     })
 })
 

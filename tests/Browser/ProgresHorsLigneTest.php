@@ -174,7 +174,7 @@ class ProgresHorsLigneTest extends DuskTestCase
         }
 
         $browser->waitFor('[dusk="bandeau-hors-ligne"]', 15)
-            ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
+            ->assertScript($this->leBandeauDit('Hors ligne'))
             ->waitUntil('history.state?.page instanceof ArrayBuffer', 15, "l’entrée d’historique de la copie de {$chemin} n’est pas chiffrée");
     }
 }
