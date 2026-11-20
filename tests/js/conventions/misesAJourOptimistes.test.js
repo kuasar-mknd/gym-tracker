@@ -106,11 +106,6 @@ const EXEMPTIONS = [
     },
     {
         fichier: 'resources/js/composables/useReglagesDeLaSeance.js',
-        etat: 'localWorkout',
-        raison: 'la fin que le serveur vient d’accepter, posée avant la visite de l’accueil : sa réponse la confirme, et l’échec de la visite ne la défait pas',
-    },
-    {
-        fichier: 'resources/js/composables/useReglagesDeLaSeance.js',
         etat: 'showFinishModal',
         raison: 'la question de fin, fermée une fois la fin acceptée par le serveur : la visite de l’accueil qui suit ne décide rien',
     },

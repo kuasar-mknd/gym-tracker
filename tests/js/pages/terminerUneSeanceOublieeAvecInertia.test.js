@@ -93,11 +93,16 @@ it('propose l’heure de la dernière série saisie, et clôt la séance avec el
     await cliquer('[dusk="confirm-finish-button"]')
     await vi.waitUntil(() => reseau.serveur.requetes.length > 0)
     vi.useRealTimers()
+    // La fin acceptée ouvre le bilan sur la page, sans visite ; « Fermer » mène à l'accueil (#2434).
+    await vi.waitUntil(() => present('dialog[open] [dusk="bilan-de-fin"]'))
+    expect(visites).toEqual([])
+    await cliquer('[dusk="bilan-de-fin-fermer"]')
     await vi.waitUntil(() => present('#accueil'))
     await flushPromises()
 
     expect(reseau.serveur.resume()).toEqual([
         `patch /api/v1/workouts/finish {"workout_id":5,"ended_at":"2026-10-19T06:42:00.000Z","fin_choisie":"${DERNIERE_SERIE}"}`,
+        'get /workouts/5/records',
     ])
     expect(visites).toEqual(['/dashboard'])
     expect(fileDurable()).toEqual([])

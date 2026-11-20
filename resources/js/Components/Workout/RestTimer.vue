@@ -78,6 +78,23 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+
+    /**
+     * Un repos repris en route (#2434) : la page l'avait laissé en partant, et
+     * le minuteur remonté part de ce qu'il reste, sur la durée d'origine
+     * (la barre de progression se mesure sur elle). Sans lui, il part de
+     * `duration`, comme avant.
+     */
+    secondesRestantes: {
+        type: Number,
+        default: null,
+    },
+
+    /** Le repos repris était en pause : le minuteur attend le geste de reprise. */
+    enPause: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 /**
@@ -87,12 +104,12 @@ const props = defineProps({
  *   after the end of the rest, que la carte annonce entre-temps
  *   (« Repos terminé », `role="status"`). Un parent ferme la carte sur `close`.
  */
-const emit = defineEmits(['close', 'update:autoRestTimer'])
+const emit = defineEmits(['close', 'update:autoRestTimer', 'pause', 'reprise'])
 
 // --- State ---
 
 /** Remaining time in seconds. */
-const timeLeft = ref(props.duration)
+const timeLeft = ref(props.secondesRestantes ?? props.duration)
 
 /** Whether the timer is currently running. */
 const isActive = ref(false)
@@ -207,9 +224,11 @@ const toggleTimer = () => {
     triggerHaptic('toggle')
     if (isActive.value) {
         pauseTimer()
+        emit('pause', timeLeft.value)
     } else {
         sortieAudio.preparer()
         startTimer()
+        emit('reprise', timeLeft.value)
     }
 }
 
@@ -289,7 +308,7 @@ const handleVisibilityChange = () => {
 // Lifecycle Hooks
 onMounted(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    if (props.autoStart) {
+    if (props.autoStart && !props.enPause) {
         startTimer()
     }
 })

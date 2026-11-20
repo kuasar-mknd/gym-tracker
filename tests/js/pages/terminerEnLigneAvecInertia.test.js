@@ -100,7 +100,7 @@ afterEach(async () => {
     await fermerLaListeDesSeances()
 })
 
-it('termine par une seule requête, mène à l’accueil, et l’invitation aux notifications ne revient pas par l’historique', async () => {
+it('termine par la fin et la lecture des records du bilan, mène à l’accueil, et l’invitation aux notifications ne revient pas par l’historique', async () => {
     await visiter('/workouts/5', '[dusk="exercise-card-0"]')
     visites.length = 0
 
@@ -112,12 +112,17 @@ it('termine par une seule requête, mène à l’accueil, et l’invitation aux 
     await cliquer('[dusk="confirm-finish-button"]')
     await vi.waitUntil(() => reseau.serveur.requetes.length > 0)
     vi.useRealTimers()
+    // La fin acceptée ouvre le bilan sur la page, sans visite ; « Fermer » mène à l'accueil (#2434).
+    await vi.waitUntil(() => present('dialog[open] [dusk="bilan-de-fin"]'))
+    expect(visites).toEqual([])
+    await cliquer('[dusk="bilan-de-fin-fermer"]')
     await vi.waitUntil(() => present('#accueil'))
     await flushPromises()
 
-    // Une seule requête, la fin, et aucune visite qui écrive : l'accueil seul.
+    // Deux requêtes : la fin, puis la lecture des records que le bilan ouvert fait (#2434) ; aucune visite qui écrive : l'accueil seul.
     expect(reseau.serveur.resume()).toEqual([
         'patch /api/v1/workouts/finish {"workout_id":5,"ended_at":"2026-10-19T06:42:00.000Z"}',
+        'get /workouts/5/records',
     ])
     /*
      * L'heure de l'appareil au départ de la fin, lue à l'envoi, à côté de

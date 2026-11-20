@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PersonalRecordType;
 use App\Models\Casts\InstantAvecSonDecalage;
 use App\Services\RecommendedValuesService;
 use App\Services\Stats\ClesDeStats;
@@ -44,6 +45,9 @@ class Workout extends Model
      * d'elle.
      */
     public const int JOURS_EN_FILE_AU_PLUS = 30;
+
+    /** Combien de temps après sa fin une séance se rouvre (« Reprendre » du bilan, #2434). */
+    public const int DELAI_DE_REOUVERTURE_MINUTES = 15;
 
     /**
      * Le début d'une séance que l'appareil a démarrée : maintenant, moins
@@ -315,6 +319,41 @@ class Workout extends Model
     public function recopierLeDebutSurSesLignes(): int
     {
         return $this->workoutLines()->update(['workout_started_at' => $this->debutALHeureMurale()]);
+    }
+
+    /**
+     * Les records de poids que cette séance tient, les plus lourds d'abord
+     * (#2434) : de quoi remplir le bilan de fin, où cinq lignes suffisent.
+     * Un record est daté du début de la séance qui le porte, et lui reste
+     * rattaché par `workout_id` ; ceux que la synchronisation n'a pas encore
+     * écrits manquent, et le bilan ne les dit pas.
+     *
+     * @return list<array{exercice: string, valeur: float}>
+     */
+    public function recordsDePoids(): array
+    {
+        $lignes = PersonalRecord::query()
+            ->join('exercises', 'exercises.id', '=', 'personal_records.exercise_id')
+            ->where('personal_records.workout_id', $this->getKey())
+            ->where('personal_records.type', PersonalRecordType::MaxWeight->value)
+            ->orderByDesc('personal_records.value')
+            ->orderBy('personal_records.id')
+            ->limit(5)
+            ->toBase()
+            ->get(['exercises.name as exercice', 'personal_records.value as valeur']);
+
+        $records = [];
+
+        foreach ($lignes as $ligne) {
+            $exercice = $ligne->exercice;
+            $valeur = $ligne->valeur;
+
+            if (is_string($exercice) && is_numeric($valeur)) {
+                $records[] = ['exercice' => $exercice, 'valeur' => (float) $valeur];
+            }
+        }
+
+        return $records;
     }
 
     /**

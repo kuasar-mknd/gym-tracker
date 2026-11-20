@@ -1317,6 +1317,56 @@
         bottom 0.3s ease;
 }
 
+/*
+ * Un bouton de la barre d'outils de la séance (#2434), sur téléphone : une
+ * capsule de 48 px en casse de phrase, sans ombre (ni portée ni colorée : le
+ * verre qui la porte a la sienne). Sur bureau, le bouton garde le sien : la
+ * barre y disparaît, et ses boutons rejoignent la colonne.
+ */
+@utility bouton-de-barre {
+    &.glass-button {
+        @media not (width >= 64rem) {
+            min-height: 3rem;
+            padding-inline: 0.5rem;
+            border-radius: var(--radius-capsule);
+            font-family: var(--font-sans);
+            font-size: 0.875rem;
+            font-style: normal;
+            font-weight: 500;
+            letter-spacing: 0;
+            text-transform: none;
+            box-shadow: none;
+
+            &:hover {
+                box-shadow: none;
+            }
+        }
+    }
+}
+
+/*
+ * Un bouton du bilan de fin de séance (#2434), à toute largeur : une capsule
+ * en casse de phrase, sans ombre. L'action principale garde le vert d'état de
+ * `GlassButton` : la maquette la veut orange, ce qu'aucune variante ne porte.
+ */
+@utility bouton-de-bilan {
+    &.glass-button {
+        min-height: 3rem;
+        border-radius: var(--radius-capsule);
+        font-family: var(--font-sans);
+        font-size: 0.875rem;
+        font-style: normal;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+        box-shadow: none;
+
+        &:hover {
+            box-shadow: none;
+        }
+    }
+}
+
 /* L'onglet : un carré de 56 px à rayon plein, donc un disque exact, qui devient une bulle de verre épais quand il est actif. */
 @utility glass-nav-item {
     display: flex;

@@ -19,6 +19,7 @@
  */
 import { computed } from 'vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import { ID_DE_L_ETAT_DE_LA_SEANCE } from '@/composables/useSeanceEnAttente'
@@ -46,38 +47,67 @@ const raisonDuModele = computed(() => {
 </script>
 
 <template>
-    <div class="mt-8 space-y-3 px-1">
+    <div class="bureau:flex bureau:flex-col bureau:gap-3 mt-8 space-y-3 px-1">
         <!--
-            Pas de variante : la carte pleine. Ajouter un exercice est
-            l'action courante de cette page ; « Modele », en dessous, est
-            occasionnelle et prend le contour. Elles etaient inversees —
-            et invisiblement, puisque ni `secondary` ni `solid`
-            n'existaient dans l'objet de classes.
+            Les trois gestes de la séance : sur téléphone, la barre d'outils
+            flottante au-dessus de la barre du bas (#2434) ; sur bureau, la
+            colonne d'avant (`contents` : la barre n'a plus de boîte, ses
+            boutons rejoignent la colonne). Le même bouton, le même `dusk`, sur
+            l'un et l'autre : la barre ne double rien. Pas de variante pour
+            « Exercice » : la carte pleine, l'action courante de cette page ;
+            « Repos » prend le contour, « Terminer » est l'action primaire.
         -->
-        <GlassButton @click="emit('ajouter-un-exercice')" class="w-full" dusk="add-exercise-existing"
-            >Ajouter un exercice</GlassButton
+        <div
+            class="verre-epais rounded-capsule bureau:contents bottom-sure-30 left-sure-4 right-sure-4 z-flottant @container fixed flex gap-2 p-2"
+            role="group"
+            aria-label="Actions de la séance"
+            dusk="barre-d-outils-de-la-seance"
         >
-        <GlassButton variant="secondary" @click="emit('demarrer-un-repos')" class="w-full" dusk="open-rest-timer"
-            >Démarrer un repos</GlassButton
-        >
-        <div class="grid grid-cols-2 gap-3">
+            <GlassButton
+                @click="emit('ajouter-un-exercice')"
+                class="bouton-de-barre bureau:w-full flex-1"
+                dusk="add-exercise-existing"
+            >
+                <GlassIcon name="add" size="sm" class="bureau:hidden @max-[19rem]:hidden" />
+                <span class="bureau:hidden">Exercice</span>
+                <span class="bureau:inline hidden">Ajouter un exercice</span>
+            </GlassButton>
             <GlassButton
                 variant="secondary"
+                @click="emit('demarrer-un-repos')"
+                class="bouton-de-barre bureau:w-full flex-1"
+                dusk="open-rest-timer"
+            >
+                <GlassIcon name="timer" size="sm" class="bureau:hidden @max-[19rem]:hidden" />
+                <span class="bureau:hidden">Repos</span>
+                <span class="bureau:inline hidden">Démarrer un repos</span>
+            </GlassButton>
+            <GlassButton
+                variant="primary"
+                @click="emit('terminer')"
+                class="bouton-de-barre bureau:w-full flex-1"
+                id="finish-workout-mobile"
+                dusk="finish-workout-mobile"
+                >Terminer</GlassButton
+            >
+        </div>
+        <!--
+            « Modèle » enregistre une séance et quitte la page : sur téléphone, il
+            n'occupe plus la largeur, que l'on touche pour fermer le clavier. Petit,
+            effacé, à droite et à distance de la liste, un toucher dans le vide ne
+            l'atteint plus (#2434). Sur bureau, pas de clavier à fermer : il reprend
+            la largeur de la colonne, mais garde la variante effacée.
+        -->
+        <div class="bureau:block flex justify-end pt-6">
+            <GlassButton
+                variant="ghost"
                 @click="emit('enregistrer-comme-modele')"
                 :loading="enregistrementDuModele"
                 :disabled="!joignable || surUneCopie || seanceEnAttente"
                 :aria-describedby="raisonDuModele"
-                class="w-full"
+                class="bureau:w-full"
                 dusk="enregistrer-comme-modele"
                 >Modèle</GlassButton
-            >
-            <GlassButton
-                variant="primary"
-                @click="emit('terminer')"
-                class="w-full"
-                id="finish-workout-mobile"
-                dusk="finish-workout-mobile"
-                >Terminer</GlassButton
             >
         </div>
         <p v-if="!joignable" id="modele-sans-reseau" class="text-text-muted text-center text-sm font-medium">

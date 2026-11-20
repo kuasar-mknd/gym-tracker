@@ -87,6 +87,8 @@ Route::middleware('auth')->group(function (): void {
 
         Route::post('/workouts', [\App\Http\Controllers\WorkoutController::class, 'store'])->name('workouts.store');
         Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'update'])->name('workouts.update');
+        Route::get('/workouts/{workout}/records', [\App\Http\Controllers\WorkoutController::class, 'records'])->name('workouts.records');
+        Route::post('/workouts/{workout}/reopen', [\App\Http\Controllers\WorkoutController::class, 'reopen'])->name('workouts.reopen');
         Route::delete('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'destroy'])->name('workouts.destroy');
 
         Route::resource('templates', \App\Http\Controllers\WorkoutTemplateController::class)->except(['index', 'show', 'create', 'edit']);

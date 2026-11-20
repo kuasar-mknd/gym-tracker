@@ -26,6 +26,7 @@ vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
 import { titresExposes } from '../conventions/exposition'
+import { deposerLeRepos, effacerLeRepos, reposDuCompte } from '@/Utils/reposEnCours'
 import { PAGE_INDISPONIBLE, RESEAU_LENT, annoncerSansReseau, retirerLAnnonce } from '@/Utils/visitesHorsLigne'
 import { chargerSyncService, horodatageRecent, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
@@ -59,7 +60,7 @@ const stubs = {
     NavLink: { props: ['href', 'active'], template: '<a :href="href" :data-active="String(active)"><slot /></a>' },
     DropdownLink: { props: ['href'], template: '<a :href="href"><slot /></a>' },
     Dropdown: { template: '<div><slot name="trigger" :open="false" /><slot name="content" /></div>' },
-    ActiveWorkoutBanner: { name: 'ActiveWorkoutBanner', props: ['workout'], template: '<div />' },
+    ActiveWorkoutBanner: { name: 'ActiveWorkoutBanner', props: ['workout', 'repos'], template: '<div />' },
     // La question d'avant la déconnexion a ses propres tests (questionDeDeconnexion.test.js).
     QuestionDeDeconnexion: true,
 }
@@ -584,6 +585,47 @@ describe('AuthenticatedLayout — the session in progress', () => {
 
         expect(banner.exists()).toBe(true)
         expect(banner.props('workout')).toEqual(active)
+    })
+
+    /*
+     * Le repos laissé par la page de séance (#2434) ne se montre que sur le
+     * bandeau de la séance qui l'a déposé : une autre séance en cours, ou
+     * aucune, l'efface au lieu de l'annoncer.
+     */
+    describe('le repos laissé par la page de séance', () => {
+        const repos = (seance) => ({
+            duree: 90,
+            echeance: Date.now() + 60_000,
+            restantEnPause: null,
+            adresse: '/workouts/7',
+            seance,
+            intitule: 'Push A',
+            compte: 1,
+        })
+
+        afterEach(effacerLeRepos)
+
+        it('le passe au bandeau de la séance qui l’a déposé', () => {
+            deposerLeRepos(repos(7))
+            const wrapper = mountLayout({ auth: { user: user({ id: 1, active_workout: active }) } })
+
+            expect(wrapper.findComponent({ name: 'ActiveWorkoutBanner' }).props('repos')).toMatchObject({ seance: 7 })
+        })
+
+        it('ne le passe pas au bandeau d’une autre séance, et l’efface', () => {
+            deposerLeRepos(repos(3))
+            const wrapper = mountLayout({ auth: { user: user({ id: 1, active_workout: active }) } })
+
+            expect(wrapper.findComponent({ name: 'ActiveWorkoutBanner' }).props('repos') ?? null).toBeNull()
+            expect(reposDuCompte(1)).toBeNull()
+        })
+
+        it('l’efface quand plus aucune séance n’est en cours (séance supprimée)', () => {
+            deposerLeRepos(repos(7))
+            mountLayout({ auth: { user: user({ id: 1, active_workout: null }) } })
+
+            expect(reposDuCompte(1)).toBeNull()
+        })
     })
 
     /** On the session's own page the banner links to where the user already is. */

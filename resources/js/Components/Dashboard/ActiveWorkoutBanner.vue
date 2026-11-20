@@ -7,19 +7,28 @@
  * le bandeau la nomme par l'adresse de sa clé, et l'ouvre côté client
  * (`ouvrir`, que le layout tient de `useSeanceEnCoursDeLAppareil`), au lieu
  * d'une visite que le serveur, injoignable, ne servirait pas.
+ *
+ * Un repos laissé par la page de séance (#2434, `Utils/reposEnCours.js`) se lit
+ * ici, à la place de la durée : le décompte continue sur l'horloge, ailleurs
+ * dans l'application. Il s'annonce une fois, à sa fin (« Repos terminé »,
+ * `role="status"`), jamais à chaque seconde, puis le dépôt s'efface.
  */
 import { Link } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { compte, entier } from '@/Utils/nombre'
 import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
 import { jourEtMois } from '@/Utils/date'
 import { SEUIL_D_UNE_SEANCE_OUBLIEE_S } from '@/Utils/seanceOubliee'
+import { DELAI_DE_L_ANNONCE_MS, effacerLeRepos, noterLAnnonceDuRepos, secondesRestantes } from '@/Utils/reposEnCours'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const props = defineProps({
     workout: { type: Object, required: true },
     /** Une ligne au lieu d'une carte : partout où la séance n'est pas le sujet. */
     compact: { type: Boolean, default: false },
+    /** Le repos que la page de séance a laissé (`reposDuCompte`), ou null. */
+    repos: { type: Object, default: null },
 })
 
 const emit = defineEmits(['ouvrir'])
@@ -51,7 +60,58 @@ const ouvrir = (evenement) => {
 const elapsed = ref('')
 let intervalId = null
 
+/** L'horloge du décompte du repos, avancée par le tic de la durée. */
+const maintenant = ref(Date.now())
+
+/** Ce qu'il reste au repos : sa fin tombe à zéro, qu'il soit en pause (reste figé) ou en marche. */
+const resteDuRepos = computed(() => (props.repos === null ? null : secondesRestantes(props.repos, maintenant.value)))
+
+const reposAffiche = computed(() => {
+    if (resteDuRepos.value === null || resteDuRepos.value === 0) {
+        return null
+    }
+
+    return `${props.repos.echeance === null ? 'Repos en pause' : 'Repos'} ${Math.floor(resteDuRepos.value / 60)}:${String(resteDuRepos.value % 60).padStart(2, '0')}`
+})
+
+const reposTermine = computed(() => resteDuRepos.value === 0)
+
+let fermetureDuRepos = null
+let annonceCommencee = false
+
+/*
+ * La fin se dit une fois : le retour haptique ne part qu'au passage à zéro
+ * (`avant === false`), pas quand un bandeau remonté sur une autre page retrouve
+ * un repos déjà fini. Le dépôt s'efface après l'annonce, sans effacer celui qui
+ * l'aurait remplacé entre-temps.
+ */
+watch(
+    reposTermine,
+    (fini, avant) => {
+        if (!fini || fermetureDuRepos !== null) {
+            return
+        }
+
+        if (avant === false) {
+            triggerHaptic('timer')
+        }
+
+        annonceCommencee = true
+
+        fermetureDuRepos = setTimeout(() => {
+            fermetureDuRepos = null
+            annonceCommencee = false
+
+            if (reposTermine.value) {
+                effacerLeRepos()
+            }
+        }, DELAI_DE_L_ANNONCE_MS)
+    },
+    { immediate: true },
+)
+
 const updateElapsed = () => {
+    maintenant.value = Date.now()
     const start = new Date(props.workout.started_at)
     const now = new Date()
     // Une horloge décalée ou un fuseau changé ne donnent jamais une durée négative.
@@ -76,6 +136,12 @@ onMounted(() => {
 
 onUnmounted(() => {
     if (intervalId) clearInterval(intervalId)
+    clearTimeout(fermetureDuRepos)
+
+    // Partie avant l'effacement : le bandeau de la page suivante ne redit pas « Repos terminé ».
+    if (annonceCommencee) {
+        noterLAnnonceDuRepos()
+    }
 })
 </script>
 
@@ -111,10 +177,11 @@ onUnmounted(() => {
     >
         <GlassIcon name="fitness_center" size="sm" fill />
         <span class="min-w-0 flex-1 truncate text-sm font-black uppercase italic">{{ workout.name || 'Séance' }}</span>
-        <span class="flex items-center gap-1 text-xs font-bold tabular-nums">
+        <span class="flex items-center gap-1 text-xs font-bold tabular-nums" dusk="active-workout-elapsed">
             <GlassIcon name="timer" size="xs" />
-            {{ elapsed }}
+            {{ reposAffiche ?? elapsed }}
         </span>
+        <span class="sr-only" role="status">{{ reposTermine ? 'Repos terminé' : '' }}</span>
         <GlassIcon name="chevron_right" size="sm" class="opacity-70" />
     </component>
     <component
@@ -158,10 +225,14 @@ onUnmounted(() => {
                     {{ workout.name || 'Séance' }}
                 </h3>
                 <div class="mt-1 flex items-center gap-3">
-                    <span class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold">
+                    <span
+                        class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold"
+                        dusk="active-workout-elapsed"
+                    >
                         <GlassIcon name="timer" size="xs" />
-                        {{ elapsed }}
+                        {{ reposAffiche ?? elapsed }}
                     </span>
+                    <span class="sr-only" role="status">{{ reposTermine ? 'Repos terminé' : '' }}</span>
                     <span
                         v-if="workout.workout_lines_count"
                         class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold"

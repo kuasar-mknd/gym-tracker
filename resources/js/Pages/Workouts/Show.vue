@@ -1,9 +1,5 @@
 <script setup>
-/**
- * La seance en cours : ce que la page garde apres son eclatement — la copie
- * locale de la seance, sa fusion avec les props, et le cablage des composables
- * qui font le reste.
- */
+// La seance en cours : la copie locale, sa fusion avec les props, et le cablage des composables qui font le reste.
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -16,7 +12,7 @@ import { useSeriesDeLaSeance } from '@/composables/useSeriesDeLaSeance'
 import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
-import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { memoireDeLaPage, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useSortieAudio } from '@/composables/useSortieAudio'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
@@ -29,6 +25,7 @@ import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
+import BilanDeFinDeSeance from '@/Components/Workout/BilanDeFinDeSeance.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import SeriesHorsDeLaCopie from '@/Components/Workout/SeriesHorsDeLaCopie.vue'
@@ -41,8 +38,7 @@ import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
 const props = defineProps({
     workout: { type: Object, required: true },
     exercises: { type: Array, required: true },
-    // Les plafonds d'une série (`Set::bornes()`), sous lesquels une série
-    // ajoutée ramène ce qu'elle recopie.
+    // Les plafonds d'une série (`Set::bornes()`), sous lesquels une série ajoutée ramène ce qu'elle recopie.
     bornesDUneSerie: { type: Object, default: null },
 })
 
@@ -83,8 +79,10 @@ watch(
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const sortieAudio = useSortieAudio()
-const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
-    useMinuteurDeRepos({ sortieAudio })
+const { showTimer, liaisonDuMinuteur, openRestTimer, apresValidation } = useMinuteurDeRepos({
+    sortieAudio,
+    memoire: memoireDeLaPage({ page, localWorkout, estClose: isFinished }),
+})
 // Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
@@ -212,6 +210,7 @@ const {
     finishWorkout,
     annulerLaCloture,
     confirmFinishWorkout,
+    liaisonDuBilan,
     showSettingsModal,
     settingsForm,
     updateSettings,
@@ -345,7 +344,7 @@ onUnmounted(() => {
                 v-if="localWorkout.workout_lines.length > 0 && !lectureSeule"
                 :enregistrement-du-modele="savingTemplate"
                 :seance-en-attente="seanceProvisoire"
-                @ajouter-un-exercice="showAddExercise = true"
+                @ajouter-un-exercice="handleFabAddExercise"
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"
                 @terminer="finishWorkout"
@@ -377,6 +376,8 @@ onUnmounted(() => {
             @confirm="confirmFinishWorkout"
         />
 
+        <BilanDeFinDeSeance v-bind="liaisonDuBilan" />
+
         <ConfirmDialog
             :ouvert="retraitDemande"
             :titre="titreDuRetrait"
@@ -386,14 +387,12 @@ onUnmounted(() => {
 
         <RestTimer
             v-if="showTimer"
-            :key="timerRun"
-            :duration="timerDuration"
-            :auto-rest-timer="autoRestTimer"
+            v-bind="liaisonDuMinuteur"
+            class="bureau:translate-y-0 -translate-y-18"
             :reglage-desactive="surUneCopie"
             :raison-du-reglage="raisonDUneEcriture"
             :sortie-audio="sortieAudio"
             @close="showTimer = false"
-            @update:auto-rest-timer="setAutoRestTimer"
             dusk="rest-timer"
         />
     </AuthenticatedLayout>
