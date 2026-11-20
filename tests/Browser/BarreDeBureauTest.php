@@ -129,6 +129,7 @@ class BarreDeBureauTest extends DuskTestCase
             foreach (['/tools', "/exercises/{$exercice->id}", '/tools/fasting', "/goals/{$objectif->id}/edit"] as $adresse) {
                 $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitForStableLayout();
 
+                /** @var list<string> $retours */
                 $retours = $browser->script(<<<'JS'
                     return [...document.querySelectorAll('a')]
                         .filter((lien) => lien.getClientRects().length > 0 && /Retour/.test(lien.getAttribute('aria-label') ?? lien.textContent.trim()))
