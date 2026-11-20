@@ -99,7 +99,7 @@ class AbandonDUneSeanceVideTest extends DuskTestCase
                 ->waitFor('[dusk="barre-d-outils-de-la-seance"]', 30);
 
             foreach ([[393, 852], [375, 812], [320, 700]] as [$largeur, $hauteur]) {
-                $browser->resize($largeur, $hauteur)->pause(300);
+                $browser->resize($largeur, $hauteur)->waitForStableLayout();
                 $this->assertSame(6, $browser->script($ecart('barre-d-outils-de-la-seance'))[0], "barre à {$largeur} px");
                 $this->assertSame(
                     $largeur <= 320 ? 66 : 70,
@@ -113,7 +113,7 @@ class AbandonDUneSeanceVideTest extends DuskTestCase
                 ->waitFor('[dusk="active-workout-banner"]', 30);
 
             foreach ([[375, 812], [320, 700]] as [$largeur, $hauteur]) {
-                $browser->resize($largeur, $hauteur)->pause(300);
+                $browser->resize($largeur, $hauteur)->waitForStableLayout();
                 $this->assertSame(6, $browser->script($ecart('active-workout-banner'))[0], "accessoire à {$largeur} px");
             }
         });
