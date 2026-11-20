@@ -63,4 +63,30 @@ describe('la barre d’outils de la séance', () => {
         expect(classes).toContain('bureau:contents')
         expect(classes).toContain('verre-epais')
     })
+
+    /*
+     * Sans le bouton central, une séance sans exercice n'avait plus de chemin
+     * vers sa fin : la barre reste, réduite à Exercice et Terminer.
+     */
+    it('reste sur une séance vide, avec Exercice et Terminer seulement', async () => {
+        const wrapper = mount(ActionsDeLaSeance, { props: { vide: true }, global: { directives: { press: {} } } })
+        const groupe = wrapper.get('[dusk="barre-d-outils-de-la-seance"]')
+
+        expect(groupe.findAll('button').map((bouton) => bouton.attributes('dusk'))).toEqual([
+            'add-exercise-existing',
+            'finish-workout-mobile',
+        ])
+        expect(wrapper.find('[dusk="enregistrer-comme-modele"]').exists()).toBe(false)
+
+        await groupe.get('[dusk="finish-workout-mobile"]').trigger('click')
+
+        expect(wrapper.emitted('terminer')).toHaveLength(1)
+    })
+
+    it('donne à Terminer l’orange de la charte, en casse de phrase', () => {
+        const terminer = barre().get('[dusk="finish-workout-mobile"]')
+
+        expect(terminer.classes()).toEqual(expect.arrayContaining(['accent-fill', 'bouton-de-barre']))
+        expect(terminer.classes()).not.toContain('glass-button-primary')
+    })
 })

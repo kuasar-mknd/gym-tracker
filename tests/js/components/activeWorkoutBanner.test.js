@@ -35,6 +35,9 @@ const mountRunningFor = async (seconds) => {
     return wrapper
 }
 
+/** La ligne du nom de la séance, dans l'accessoire. */
+const NOM = 'a > span:first-child > span:first-child'
+
 beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(NOW)
@@ -98,19 +101,19 @@ describe('ActiveWorkoutBanner content', () => {
     })
 
     /*
-     * Read off the heading rather than off the whole banner: the kicker above
-     * it already says "Séance active", so a `toContain('Séance')` on the text
-     * of the card passes whether or not the fallback exists.
+     * Read off the name line rather than off the whole accessory: its « Reprendre »
+     * pill and the elapsed line are around it, so a `toContain('Séance')` on the
+     * text passes whether or not the fallback exists.
      */
     it('names the session, and falls back to a generic name when it has none', () => {
         expect(
             mountBanner({ name: 'Push A', started_at: startedSecondsAgo(60) })
-                .get('h3')
+                .get(NOM)
                 .text(),
         ).toBe('Push A')
         expect(
             mountBanner({ name: null, started_at: startedSecondsAgo(60) })
-                .get('h3')
+                .get(NOM)
                 .text(),
         ).toBe('Séance')
     })
@@ -136,7 +139,7 @@ describe('ActiveWorkoutBanner content', () => {
     })
 })
 
-describe('ActiveWorkoutBanner — horloge décalée et forme compacte', () => {
+describe('ActiveWorkoutBanner — horloge décalée et forme d’accessoire', () => {
     it('ne compte jamais en négatif quand la séance commence dans le futur', async () => {
         const wrapper = mountBanner({ started_at: startedSecondsAgo(-90) })
         await wrapper.vm.$nextTick()
@@ -146,11 +149,10 @@ describe('ActiveWorkoutBanner — horloge décalée et forme compacte', () => {
         wrapper.unmount()
     })
 
-    it('tient sur une ligne en compact : le nom, le chronomètre, pas le compte d’exercices', async () => {
+    it('dit le nom et le chronomètre, sans le badge « En cours » de l’ancienne carte', async () => {
         const wrapper = mount(ActiveWorkoutBanner, {
             props: {
                 workout: { id: 12, name: 'Push A', started_at: startedSecondsAgo(125), lines_count: 3 },
-                compact: true,
             },
             global: {
                 directives: { press: {} },
@@ -182,9 +184,9 @@ describe('ActiveWorkoutBanner — une séance démarrée sans réseau', () => {
         started_at: startedSecondsAgo(60),
     }
 
-    it.each([false, true])('mène à l’adresse de sa clé et l’ouvre côté client (compact : %s)', async (compact) => {
+    it('mène à l’adresse de sa clé et l’ouvre côté client', async () => {
         const wrapper = mount(ActiveWorkoutBanner, {
-            props: { workout: { name: 'Séance', ...enAttente }, compact },
+            props: { workout: { name: 'Séance', ...enAttente } },
             global: { directives: { press: {} }, mocks: { route: globalThis.route } },
         })
         const lien = wrapper.get('[dusk="active-workout-banner"]')

@@ -341,7 +341,8 @@ onUnmounted(() => {
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
 
             <ActionsDeLaSeance
-                v-if="localWorkout.workout_lines.length > 0 && !lectureSeule"
+                v-if="!lectureSeule"
+                :vide="localWorkout.workout_lines.length === 0"
                 :enregistrement-du-modele="savingTemplate"
                 :seance-en-attente="seanceProvisoire"
                 @ajouter-un-exercice="handleFabAddExercise"

@@ -127,7 +127,7 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
             <div class="mt-6 flex flex-col gap-3">
                 <GlassButton
                     ref="fermer"
-                    variant="primary"
+                    variant="accent"
                     class="bouton-de-bilan w-full"
                     dusk="bilan-de-fin-fermer"
                     :disabled="enCours"

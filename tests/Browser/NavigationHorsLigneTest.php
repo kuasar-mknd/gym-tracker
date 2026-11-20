@@ -151,14 +151,19 @@ class NavigationHorsLigneTest extends DuskTestCase
                     ->waitForText($jetons['exercice'], 15, true)
                     ->assertMissing('[dusk="bandeau-hors-ligne"]');
 
-                // Depuis la séance : Séances, Plus, Outils, puis le minuteur d'intervalles.
+                // Depuis la séance : Séances, Accueil, Profil, Outils, puis le minuteur d'intervalles.
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
                 $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
 
-                $browser->clickWhenSettled('[dusk="nav-profile"]');
-                $this->attendreLaCopie($browser, '/profile', 'Plus');
                 // Démarrer reste ouvert sur une copie (#2049) : rien n'y est tiré d'elle, et sans réseau la séance s'ouvre depuis la file.
-                $browser->assertScript("(() => { const bouton = document.querySelector('button.glass-nav-fab'); return bouton !== null && !bouton.disabled && !bouton.hasAttribute('aria-describedby'); })()");
+                $browser->clickWhenSettled('[dusk="nav-dashboard"]');
+                $this->attendreLaCopie($browser, '/dashboard', 'Accueil');
+                $browser->assertScript("(() => { const bouton = document.querySelector('[dusk=\"start-workout-button\"]'); return bouton !== null && !bouton.disabled && !bouton.hasAttribute('aria-describedby'); })()");
+
+                // La barre du bas n'a plus de bouton central : Profil n'a pas de « démarrer ».
+                $browser->clickWhenSettled('[dusk="nav-profile"]');
+                $this->attendreLaCopie($browser, '/profile', 'Profil');
+                $browser->assertMissing('button.glass-nav-fab');
 
                 $browser->clickWhenSettled('main a[href$="/tools"]');
                 $this->attendreLaCopie($browser, '/tools', 'Outils');

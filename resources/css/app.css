@@ -1308,13 +1308,18 @@
     border-radius: var(--radius-capsule);
     padding: 0.375rem;
     display: flex;
-    justify-content: space-around;
+    gap: 0.25rem;
     align-items: center;
     box-shadow: var(--verre-reflet), var(--verre-ombre-flottante);
     z-index: 50;
     transition:
         transform 0.3s ease,
         bottom 0.3s ease;
+
+    @media (width <= 20rem) {
+        padding: 0.25rem;
+        gap: 0;
+    }
 }
 
 /*
@@ -1346,8 +1351,8 @@
 
 /*
  * Un bouton du bilan de fin de séance (#2434), à toute largeur : une capsule
- * en casse de phrase, sans ombre. L'action principale garde le vert d'état de
- * `GlassButton` : la maquette la veut orange, ce qu'aucune variante ne porte.
+ * en casse de phrase, sans ombre. L'action principale est `variant="accent"`,
+ * l'orange de la maquette.
  */
 @utility bouton-de-bilan {
     &.glass-button {
@@ -1367,23 +1372,45 @@
     }
 }
 
-/* L'onglet : un carré de 56 px à rayon plein, donc un disque exact, qui devient une bulle de verre épais quand il est actif. */
+/*
+ * L'onglet : une capsule de 56 px de haut, de largeur égale à ses voisines
+ * (#2434). L'onglet actif est la capsule entière, pas un disque de 56 px : le
+ * libellé n'a plus à tenir dans un cercle. Sur un téléphone de 320 px, la barre
+ * (288 px) passe à 10 px de libellé, 4 px de remplissage et une icône de 20 px,
+ * pour que le bas du texte reste à plus de 9 px de la courbe.
+ */
 @utility glass-nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.125rem;
-    flex: none;
-    width: 3.5rem;
+    gap: 0;
+    flex: 1;
+    min-width: 0;
     height: 3.5rem;
     padding: 0;
     border-radius: var(--radius-capsule);
     color: var(--color-text-muted);
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    font-weight: 500;
+    white-space: nowrap;
     transition:
         color 0.2s ease,
         background-color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
+
+    & > .material-symbols-outlined {
+        font-size: 1.375rem;
+    }
+
+    @media (width <= 20rem) {
+        font-size: 0.625rem;
+
+        & > .material-symbols-outlined {
+            font-size: 1.25rem;
+        }
+    }
 
     &:hover {
         color: var(--color-text-main);
@@ -1402,18 +1429,6 @@
     &.glass-nav-item {
         color: var(--color-accent-primary-deep);
     }
-}
-
-/* Le bouton central : `accent-fill` et `verre-plein` lui donnent un orange uni, sans dégradé ni halo. */
-@utility glass-nav-fab {
-    position: relative;
-    top: -1.25rem;
-    width: 4.5rem;
-    height: 4.5rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 @utility glass-overlay {
@@ -1532,6 +1547,11 @@
 
 @utility pb-main-safe {
     padding-bottom: calc(9rem + var(--safe-area-bottom));
+}
+
+/* Le bas de la page avec l'accessoire de séance (60 px) au-dessus de la barre : `pb-main-safe` plus de quoi le franchir. */
+@utility pb-main-safe-accessoire {
+    padding-bottom: calc(13.25rem + var(--safe-area-bottom));
 }
 
 @utility pb-main-safe-repos {

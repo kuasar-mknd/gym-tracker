@@ -125,7 +125,7 @@ const menuGroups = [
 <template>
     <Head title="Menu" />
 
-    <AuthenticatedLayout page-title="Plus">
+    <AuthenticatedLayout page-title="Profil">
         <div class="space-y-6">
             <!-- User Profile Quick View -->
             <div class="animate-fade-in flex items-center gap-4 py-2">
