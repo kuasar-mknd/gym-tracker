@@ -79,7 +79,7 @@ function courbe1RMDeLaLigne(User $user, WorkoutLine $ligne): array
 }
 
 /**
- * Le meilleur 1RM de chaque séance de l'historique de l'exercice.
+ * Le meilleur 1RM de chaque séance, relu dans les séries que la page reçoit.
  *
  * @return list<float|null>
  */
@@ -87,7 +87,11 @@ function meilleurs1RMDeLHistorique(User $user, WorkoutLine $ligne): array
 {
     return array_values(app(FetchExerciseHistoryAction::class)
         ->execute($user, Exercise::query()->findOrFail($ligne->exercise_id))
-        ->map(fn (array $seance): ?float => $seance['best_1rm'])
+        ->map(fn (array $seance): ?float => collect($seance['sets'])
+            ->filter(fn (array $serie): bool => $serie['is_completed'] && ! $serie['is_warmup']
+                && $serie['weight'] > 0.0 && $serie['reps'] > 0)
+            ->map(fn (array $serie): float => $serie['one_rep_max'])
+            ->max())
         ->all());
 }
 
@@ -283,7 +287,6 @@ it('envoie à la page d’exercice chaque série avec ses drapeaux de validation
         ->assertInertia(fn (Assert $page): Assert => $page
             ->component('Exercises/Show')
             ->loadDeferredProps(fn (Assert $page): Assert => $page
-                ->where('history.0.best_1rm', 116.67)
                 ->where('history.0.sets', [
                     ['weight' => 100, 'reps' => 5, 'one_rep_max' => 116.67, 'is_completed' => true, 'is_warmup' => false],
                     ['weight' => 40, 'reps' => 10, 'one_rep_max' => 53.33, 'is_completed' => true, 'is_warmup' => true],

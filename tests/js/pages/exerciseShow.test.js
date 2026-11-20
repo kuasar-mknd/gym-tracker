@@ -1,17 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 
-vi.mock('@/Components/Stats/AverageWeightChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'AverageWeightChart', props: ['data'], template: '<div />' },
-}))
-vi.mock('@/Components/Stats/Estimated1RMHistoryChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'Estimated1RMHistoryChart', props: ['data'], template: '<div />' },
-}))
-vi.mock('@/Components/Stats/HistoryChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'HistoryChart', props: ['data'], template: '<div />' },
-}))
 vi.mock('@/Components/Stats/MaxRepsChart.vue', () => ({
     __esModule: true,
     default: { name: 'MaxRepsChart', props: ['data'], template: '<div />' },
@@ -24,29 +12,13 @@ vi.mock('@/Components/Stats/OneRepMaxChart.vue', () => ({
     __esModule: true,
     default: { name: 'OneRepMaxChart', props: ['data'], template: '<div />' },
 }))
-vi.mock('@/Components/Stats/SessionPerformanceChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'SessionPerformanceChart', props: ['data'], template: '<div />' },
-}))
-vi.mock('@/Components/Stats/SetWeightProgressionChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'SetWeightProgressionChart', props: ['data'], template: '<div />' },
-}))
 vi.mock('@/Components/Stats/SetsPerSessionChart.vue', () => ({
     __esModule: true,
     default: { name: 'SetsPerSessionChart', props: ['data'], template: '<div />' },
 }))
-vi.mock('@/Components/Stats/TotalRepsChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'TotalRepsChart', props: ['data'], template: '<div />' },
-}))
 vi.mock('@/Components/Stats/VolumeTrendChart.vue', () => ({
     __esModule: true,
     default: { name: 'VolumeTrendChart', props: ['data'], template: '<div />' },
-}))
-vi.mock('@/Components/Stats/WeightDistributionChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'WeightDistributionChart', props: ['data'], template: '<div />' },
 }))
 vi.mock('@/Components/Stats/WeightRepsScatterChart.vue', () => ({
     __esModule: true,
@@ -82,7 +54,7 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 /*
- * The fourteen charts are not loaded at all here.
+ * The six charts are not loaded at all here.
  *
  * The page pulls them in through defineAsyncComponent, and those import chains
  * keep resolving after the test that started them has returned. Whatever they
@@ -115,10 +87,9 @@ beforeAll(() => {
  * mention contraire : c'est ce que « une série » veut dire quand on n'en
  * précise pas davantage, comme la fabrique côté serveur.
  */
-const session = (date, sets, best1rm = 0) => ({
+const session = (date, sets) => ({
     formatted_date: date,
     sets: sets.map((set) => ({ is_completed: true, is_warmup: false, ...set })),
-    best_1rm: best1rm,
 })
 
 /**
@@ -157,7 +128,7 @@ describe('l’historique différé (#2351)', () => {
 
         expect(wrapper.find('[data-deferred="history"]').exists()).toBe(true)
         expect(wrapper.find('[data-historique-en-attente]').exists()).toBe(true)
-        expect(wrapper.findAll('[data-historique-en-attente] .animate-pulse')).toHaveLength(13)
+        expect(wrapper.findAll('[data-historique-en-attente] .animate-pulse')).toHaveLength(4)
         expect(wrapper.text()).not.toContain('Pas assez de données pour afficher les statistiques')
         expect(wrapper.vm.volumeData).toEqual([])
     })
@@ -213,68 +184,14 @@ describe('the series feeding the charts', () => {
     })
 
     it('reports no point, neither minus infinity nor zero, for a session with no sets', async () => {
-        const wrapper = await mountPage([session('01/02/2026', [], null)])
+        const wrapper = await mountPage([session('01/02/2026', [])])
 
         // Math.max of nothing is -Infinity, which drags every axis on the page
         // down with it. Zero is no better: it reads as a session where the bar
         // came down to nothing. null is the point Chart.js does not draw.
         expect(wrapper.vm.maxRepsData[0].reps).toBeNull()
         expect(wrapper.vm.maxWeightData[0].weight).toBeNull()
-        expect(wrapper.vm.averageWeightData[0].weight).toBeNull()
-        expect(wrapper.vm.estimated1rmData[0].weight).toBeNull()
         expect(wrapper.vm.setsPerSessionData[0].sets).toBe(0)
-    })
-
-    it('leaves bodyweight sets out of the average load', async () => {
-        const wrapper = await mountPage([
-            session('01/02/2026', [
-                { weight: 0, reps: 15 },
-                { weight: 80, reps: 5 },
-                { weight: 100, reps: 3 },
-            ]),
-        ])
-
-        // Averaging the zeros in would report 60 kg for a session whose real
-        // loaded average was 90.
-        expect(parseFloat(wrapper.vm.averageWeightData[0].weight)).toBe(90)
-    })
-
-    it('adds up every rep of the session, not just the best set', async () => {
-        const wrapper = await mountPage([
-            session('01/02/2026', [
-                { weight: 60, reps: 10 },
-                { weight: 60, reps: 8 },
-            ]),
-        ])
-
-        expect(wrapper.vm.totalRepsData[0].reps).toBe(18)
-    })
-})
-
-describe('the weight distribution', () => {
-    it('bins by five kilos and keeps the empty bins between', async () => {
-        const wrapper = await mountPage([
-            session('01/02/2026', [
-                { weight: 60, reps: 5 },
-                { weight: 62, reps: 5 },
-                { weight: 75, reps: 5 },
-            ]),
-        ])
-
-        // The gap matters: dropping the empty bins would draw 60 and 75 side by
-        // side and hide the fact that nothing was ever lifted in between.
-        expect(wrapper.vm.weightDistributionData).toEqual([
-            { label: '60', count: 2 },
-            { label: '65', count: 0 },
-            { label: '70', count: 0 },
-            { label: '75', count: 1 },
-        ])
-    })
-
-    it('draws nothing when no set carries a weight', async () => {
-        const wrapper = await mountPage([])
-
-        expect(wrapper.vm.weightDistributionData).toEqual([])
     })
 })
 
@@ -303,14 +220,10 @@ describe('the weight-against-reps scatter', () => {
 describe('only the sets that were done', () => {
     /** 100 × 5 cochée, 140 × 5 jamais cochée : le volume de séance vaut 500, le record 100 kg. */
     const seanceAvecUneSeriePrevue = () =>
-        session(
-            '13/06/2026',
-            [
-                { weight: 100, reps: 5, one_rep_max: 116.67 },
-                { weight: 140, reps: 5, one_rep_max: 163.33, is_completed: false },
-            ],
-            116.67,
-        )
+        session('13/06/2026', [
+            { weight: 100, reps: 5, one_rep_max: 116.67 },
+            { weight: 140, reps: 5, one_rep_max: 163.33, is_completed: false },
+        ])
 
     it('gives the Volume card the session volume, not the planned one', async () => {
         const wrapper = await mountPage([seanceAvecUneSeriePrevue()])
@@ -322,7 +235,6 @@ describe('only the sets that were done', () => {
         const wrapper = await mountPage([seanceAvecUneSeriePrevue()])
 
         expect(wrapper.vm.maxWeightData[0].weight).toBe(100)
-        expect(wrapper.vm.estimated1rmData[0].weight).toBe(116.67)
     })
 
     it('leaves the set never ticked out of every other card', async () => {
@@ -334,10 +246,7 @@ describe('only the sets that were done', () => {
         ])
 
         expect(wrapper.vm.maxRepsData[0].reps).toBe(5)
-        expect(wrapper.vm.totalRepsData[0].reps).toBe(5)
         expect(wrapper.vm.setsPerSessionData[0].sets).toBe(1)
-        expect(wrapper.vm.averageWeightData[0].weight).toBe(100)
-        expect(wrapper.vm.weightDistributionData).toEqual([{ label: '100', count: 1 }])
         expect(wrapper.vm.scatterData).toEqual([{ x: 100, y: 5 }])
     })
 
@@ -353,7 +262,7 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.maxWeightData[0].weight).toBe(100)
     })
 
-    it('leaves a ticked warm-up out of Volume (Reps), Séries, Charges and Poids vs Reps (#2333)', async () => {
+    it('leaves a ticked warm-up out of Séries and Poids vs Reps (#2333)', async () => {
         const wrapper = await mountPage([
             session('13/06/2026', [
                 { weight: 100, reps: 5 },
@@ -362,22 +271,19 @@ describe('only the sets that were done', () => {
             ]),
         ])
 
-        expect(wrapper.vm.totalRepsData[0].reps).toBe(5)
         expect(wrapper.vm.setsPerSessionData[0].sets).toBe(1)
-        expect(wrapper.vm.weightDistributionData).toEqual([{ label: '100', count: 1 }])
         expect(wrapper.vm.scatterData).toEqual([{ x: 100, y: 5 }])
     })
 
-    it('draws nothing in the distribution and the scatter for a session made only of warm-ups (#2333)', async () => {
+    it('draws nothing in the scatter for a session made only of warm-ups (#2333)', async () => {
         const wrapper = await mountPage([session('13/06/2026', [{ weight: 40, reps: 10, is_warmup: true }])])
 
-        expect(wrapper.vm.weightDistributionData).toEqual([])
         expect(wrapper.vm.scatterData).toEqual([])
         expect(wrapper.vm.setsPerSessionData[0].sets).toBe(0)
         expect(wrapper.vm.volumeData[0].volume).toBe(0)
     })
 
-    it('leaves a ticked warm-up out of Répétitions max and Charge moyenne, as out of the records (#2333)', async () => {
+    it('leaves a ticked warm-up out of Répétitions max and Charge Max, as out of the records (#2333)', async () => {
         const wrapper = await mountPage([
             session('13/06/2026', [
                 { weight: 100, reps: 5 },
@@ -388,7 +294,6 @@ describe('only the sets that were done', () => {
         ])
 
         expect(wrapper.vm.maxRepsData.map((point) => point.reps)).toEqual([null, 5])
-        expect(wrapper.vm.averageWeightData.map((point) => point.weight)).toEqual([null, 100])
         expect(wrapper.vm.maxWeightData.map((point) => point.weight)).toEqual([null, 100])
     })
 
@@ -405,15 +310,13 @@ describe('only the sets that were done', () => {
 
     it('draws no point at 0 kg for a session abandoned before its first set', async () => {
         const wrapper = await mountPage([
-            session('15/06/2026', [{ weight: 100, reps: 5 }], 116.67),
-            session('13/06/2026', [{ weight: 100, reps: 5, is_completed: false }], null),
-            session('11/06/2026', [{ weight: 95, reps: 5 }], 110.83),
+            session('15/06/2026', [{ weight: 100, reps: 5 }]),
+            session('13/06/2026', [{ weight: 100, reps: 5, is_completed: false }]),
+            session('11/06/2026', [{ weight: 95, reps: 5 }]),
         ])
 
-        expect(wrapper.vm.estimated1rmData.map((point) => point.weight)).toEqual([110.83, null, 116.67])
         expect(wrapper.vm.maxWeightData.map((point) => point.weight)).toEqual([95, null, 100])
         expect(wrapper.vm.maxRepsData.map((point) => point.reps)).toEqual([5, null, 5])
-        expect(wrapper.vm.averageWeightData.map((point) => point.weight)).toEqual([95, null, 100])
         // Rien n'a été soulevé : un volume nul est la vérité, pas un trou.
         expect(wrapper.vm.volumeData.map((point) => point.volume)).toEqual([475, 0, 500])
     })

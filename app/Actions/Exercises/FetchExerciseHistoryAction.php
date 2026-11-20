@@ -23,17 +23,11 @@ class FetchExerciseHistoryAction
      * validees, comme le volume de la seance et les records (#1956). La liste
      * elle-meme reste complete.
      *
-     * `best_1rm` vaut null quand aucune serie ne peut etablir le record : une
-     * seance lancee depuis un modele puis abandonnee, ou faite seulement
-     * d'echauffements, n'a pas de 1RM, et les graphiques n'y tracent pas de
-     * point plutot qu'une chute a zero.
-     *
      * @return \Illuminate\Support\Collection<int, array{
      *     id: int,
      *     workout_id: int,
      *     workout_name: string|null,
      *     formatted_date: string,
-     *     best_1rm: float|null,
      *     sets: \Illuminate\Support\Collection<int, array{weight: float, reps: int, one_rep_max: float, is_completed: bool, is_warmup: bool}>
      * }>
      */
@@ -69,53 +63,13 @@ class FetchExerciseHistoryAction
                     'is_warmup' => $set->is_warmup,
                 ]);
 
-                /*
-                 * La liste reste complete, le meilleur 1RM non : il ne lit que
-                 * les series qui peuvent etablir le record (#1956), et reste
-                 * nul quand aucune ne le peut.
-                 */
-                $best1rm = $line->sets
-                    ->filter(fn (Set $set): bool => self::peutEtablirLeRecord($set))
-                    ->map(fn (Set $set): float => $this->calculate1RM((float) $set->weight, (int) $set->reps))
-                    ->max();
-
                 return [
                     'id' => $line->id,
                     'workout_id' => $workout->id,
                     'workout_name' => $workout->name,
                     'formatted_date' => $workout->started_at?->format('d/m'),
-                    'best_1rm' => $best1rm,
                     'sets' => $sets,
                 ];
             });
-    }
-
-    /**
-     * La serie compte dans le meilleur 1RM de la seance.
-     *
-     * Les memes conditions que le record « 1RM estime »
-     * (`PersonalRecordService`) : validee, hors echauffement, avec un poids et
-     * des repetitions. Le meilleur 1RM lisait toutes les series, et une serie
-     * prevue a 140 kg puis jamais faite le portait au-dessus du record.
-     */
-    private static function peutEtablirLeRecord(Set $set): bool
-    {
-        return self::estUneSerieDeTravailValidee($set) && self::aUnPoidsEtDesRepetitions($set);
-    }
-
-    /**
-     * La serie a ete validee, et n'est pas un echauffement.
-     */
-    private static function estUneSerieDeTravailValidee(Set $set): bool
-    {
-        return $set->is_completed && ! $set->is_warmup;
-    }
-
-    /**
-     * La serie porte un poids et des repetitions, tous deux positifs.
-     */
-    private static function aUnPoidsEtDesRepetitions(Set $set): bool
-    {
-        return ($set->weight ?? 0.0) > 0.0 && ($set->reps ?? 0) > 0;
     }
 }

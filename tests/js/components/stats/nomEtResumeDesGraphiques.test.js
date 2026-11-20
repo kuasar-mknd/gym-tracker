@@ -55,7 +55,7 @@ const JOURNAL = [
  * `ExerciseCategoryChart` ne trace pas une prop `data`. `JournalChart` et
  * `BodyPartDiffChart` montrent leur état vide, sans canevas, tant qu'ils n'ont
  * rien à tracer : sans point, la garde ci-dessous n'aurait rien lu chez eux.
- * Avec ces props, chacune des quarante-cinq cartes rend son canevas.
+ * Avec ces props, chacune des trente-huit cartes rend son canevas.
  */
 const PROPS_PROPRES = {
     'ExerciseCategoryChart.vue': { exercises: [] },
@@ -68,8 +68,8 @@ const carte = (nom) => cartes[`/resources/js/Components/Stats/${nom}.vue`]
 const boutonNomme = (wrapper, nom) => wrapper.findAll('button').find((bouton) => bouton.text() === nom)
 
 describe('un graphique se lit sans le voir', () => {
-    it('trouve les quarante-cinq cartes de graphique', () => {
-        expect(Object.keys(cartes)).toHaveLength(45)
+    it('trouve les trente-huit cartes de graphique', () => {
+        expect(Object.keys(cartes)).toHaveLength(38)
     })
 
     it('nomme le canevas des habitudes et écrit les valeurs tracées', () => {
@@ -145,23 +145,15 @@ describe('un graphique se lit sans le voir', () => {
     })
 
     it('écrit une phrase par série, chacune sous son nom', () => {
-        const wrapper = monter(carte('SessionPerformanceChart'), {
+        const wrapper = monter(carte('MacroHistoryChart'), {
             data: [
-                {
-                    formatted_date: '08/10/2026',
-                    best_1rm: 105,
-                    sets: [{ weight: 100, reps: 5, is_completed: true, is_warmup: false }],
-                },
-                {
-                    formatted_date: '01/10/2026',
-                    best_1rm: 100,
-                    sets: [{ weight: 90, reps: 5, is_completed: true, is_warmup: false }],
-                },
+                { created_at: '2026-10-08T10:00:00Z', target_calories: 250, tdee: 270 },
+                { created_at: '2026-10-01T10:00:00Z', target_calories: 240, tdee: 260 },
             ],
         })
 
         expect(lectureDuCanevas(wrapper).description).toBe(
-            'Meilleur 1RM (kg) — 01/10 : 100 ; 08/10 : 105. Volume total — 01/10 : 450 ; 08/10 : 500.',
+            'Cible (kcal) — 01/10 : 240 ; 08/10 : 250. TDEE (kcal) — 01/10 : 260 ; 08/10 : 270.',
         )
     })
 

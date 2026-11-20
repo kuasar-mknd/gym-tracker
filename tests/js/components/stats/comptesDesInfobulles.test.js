@@ -45,13 +45,6 @@ const cartes = [
         attendus: [' 1 séance (25%)', ' 2 séances (50%)'],
     },
     {
-        nom: 'WeightDistributionChart',
-        trace: 'Bar',
-        data: [{ label: '60', count: 1 }],
-        contexte: (n) => ({ raw: n }),
-        attendus: ['1 série', '2 séries'],
-    },
-    {
         nom: 'HabitHistoryChart',
         trace: 'Bar',
         data: [{ date: '01/07', count: 1 }],
@@ -71,13 +64,6 @@ const cartes = [
         data: [{ date: '01/07', count: 1 }],
         contexte: (n) => ({ raw: n }),
         attendus: ['1 dose', '2 doses'],
-    },
-    {
-        nom: 'TotalRepsChart',
-        trace: 'Bar',
-        data: [{ date: '01/07', reps: 1 }],
-        contexte: (n) => ({ parsed: { y: n } }),
-        attendus: ['1 rep', '2 reps'],
     },
     {
         nom: 'RecentWorkoutsTimelineChart',

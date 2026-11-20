@@ -5,14 +5,12 @@ import { chartDataOf } from './chartRecorder.js'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
 
-const AverageWeightChart = (await import('@/Components/Stats/AverageWeightChart.vue')).default
 const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue')).default
 const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryChart.vue')).default
-const Estimated1RMHistoryChart = (await import('@/Components/Stats/Estimated1RMHistoryChart.vue')).default
 const FastingHistoryChart = (await import('@/Components/Stats/FastingHistoryChart.vue')).default
 const HabitConsistencyChart = (await import('@/Components/Stats/HabitConsistencyChart.vue')).default
 const HabitHistoryChart = (await import('@/Components/Stats/HabitHistoryChart.vue')).default
-const HistoryChart = (await import('@/Components/Stats/HistoryChart.vue')).default
+const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
 const JournalChart = (await import('@/Components/Stats/JournalChart.vue')).default
 const MaxWeightChart = (await import('@/Components/Stats/MaxWeightChart.vue')).default
 const MonthlyVolumeChart = (await import('@/Components/Stats/MonthlyVolumeChart.vue')).default
@@ -21,9 +19,7 @@ const RecentPRsChart = (await import('@/Components/Stats/RecentPRsChart.vue')).d
 const RecentWorkoutsChart = (await import('@/Components/Stats/RecentWorkoutsChart.vue')).default
 const RecentWorkoutsExercisesChart = (await import('@/Components/Stats/RecentWorkoutsExercisesChart.vue')).default
 const RecentWorkoutsTimelineChart = (await import('@/Components/Stats/RecentWorkoutsTimelineChart.vue')).default
-const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
 const SupplementUsageChart = (await import('@/Components/Stats/SupplementUsageChart.vue')).default
-const TotalRepsChart = (await import('@/Components/Stats/TotalRepsChart.vue')).default
 const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkoutChart.vue')).default
 const VolumeTrendChart = (await import('@/Components/Stats/VolumeTrendChart.vue')).default
 const WaterHistoryChart = (await import('@/Components/Stats/WaterHistoryChart.vue')).default
@@ -105,17 +101,6 @@ const paintOf = (component, key, { type = 'Bar', datasetIndex = 0 } = {}) =>
  */
 const cases = [
     {
-        chart: 'AverageWeightChart',
-        component: AverageWeightChart,
-        type: 'Line',
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jetonTransparent('accent-tertiary', 0.2)],
-            [1, jetonTransparent('accent-tertiary', 0)],
-        ],
-    },
-    {
         chart: 'BodyFatLineChart',
         component: BodyFatLineChart,
         type: 'Line',
@@ -145,17 +130,6 @@ const cases = [
         stops: [
             [0, jeton('accent-info')],
             [1, jetonTransparent('accent-info', 0.55)],
-        ],
-    },
-    {
-        chart: 'Estimated1RMHistoryChart',
-        component: Estimated1RMHistoryChart,
-        type: 'Line',
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jetonTransparent('accent-secondary', 0.2)],
-            [1, jetonTransparent('accent-secondary', 0)],
         ],
     },
     {
@@ -198,17 +172,6 @@ const cases = [
         stops: [
             [0, jeton('accent-tertiary')],
             [1, jeton('accent-secondary')],
-        ],
-    },
-    {
-        chart: 'HistoryChart',
-        component: HistoryChart,
-        type: 'Line',
-        key: 'backgroundColor',
-        requested: UPWARD,
-        stops: [
-            [0, jetonTransparent('accent-secondary', 0.05)],
-            [1, jetonTransparent('accent-secondary', 0.4)],
         ],
     },
     {
@@ -309,16 +272,6 @@ const cases = [
         component: SupplementUsageChart,
         key: 'backgroundColor',
         requested: DOWNWARD,
-        stops: [
-            [0, jeton('accent-info')],
-            [1, jetonTransparent('accent-info', 0.55)],
-        ],
-    },
-    {
-        chart: 'TotalRepsChart',
-        component: TotalRepsChart,
-        key: 'backgroundColor',
-        requested: UPWARD,
         stops: [
             [0, jeton('accent-info')],
             [1, jetonTransparent('accent-info', 0.55)],
