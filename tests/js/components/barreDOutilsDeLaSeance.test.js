@@ -71,7 +71,10 @@ describe('la barre d’outils de la séance', () => {
      * vers sa fin : la barre reste, réduite à Exercice et Terminer.
      */
     it('met Abandonner à la place de Terminer sur une séance vide, avec Exercice seulement', async () => {
-        const wrapper = mount(ActionsDeLaSeance, { props: { vide: true }, global: { directives: { press: {} } } })
+        const wrapper = mount(ActionsDeLaSeance, {
+            props: { vide: true, idDeLaSeance: 12 },
+            global: { directives: { press: {} } },
+        })
         const groupe = wrapper.get('[dusk="barre-d-outils-de-la-seance"]')
 
         expect(groupe.findAll('button').map((bouton) => bouton.attributes('dusk'))).toEqual([

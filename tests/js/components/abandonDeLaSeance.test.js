@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { ID_DE_L_ETAT_DE_LA_SEANCE } from '@/composables/useSeanceEnAttente'
 
 const visite = vi.hoisted(() => ({ delete: vi.fn(), page: { props: { flash: {} } } }))
 
@@ -13,7 +12,6 @@ vi.mock('@inertiajs/vue3', async (importOriginal) => ({
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
 import { ECRITURES_ENCORE_EN_ROUTE, SEANCE_PLUS_VIDE } from '@/composables/useAbandonDeLaSeance'
-import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 import SyncService from '@/Utils/SyncService'
 
 /*
@@ -182,43 +180,37 @@ describe('« Abandonner » sur une séance vide', () => {
         expect(exercice().attributes('disabled')).toBeUndefined()
     })
 
-    /* Une copie servie après le retour du réseau : la visite serait arrêtée, le bouton le dit d'avance. */
-    it('ne part pas depuis une copie hors ligne, et vise la raison du bandeau', async () => {
+    /* Une copie servie après le retour du réseau : la visite serait arrêtée, « Terminer » reste la sortie. */
+    it('laisse « Terminer » sur une copie hors ligne, sans bouton désactivé', () => {
         visite.page.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
         const wrapper = monter()
 
-        expect(abandonner(wrapper).attributes('disabled')).toBeDefined()
-        expect(abandonner(wrapper).attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
-
-        await abandonner(wrapper).trigger('click')
-
-        expect(wrapper.find('[dusk="confirm-dialog-confirm"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
         expect(visite.delete).not.toHaveBeenCalled()
     })
 
-    it('ne part pas sans réseau, et dit pourquoi', async () => {
+    it('laisse « Terminer » sans réseau', () => {
         noterQueLeServeurNeRepondPas()
         const wrapper = monter()
 
-        expect(abandonner(wrapper).attributes('disabled')).toBeDefined()
-        expect(abandonner(wrapper).attributes('aria-describedby')).toBe('abandon-sans-reseau')
-        expect(wrapper.get('#abandon-sans-reseau').text()).toBe('Il faut le réseau pour abandonner la séance.')
-
-        await abandonner(wrapper).trigger('click')
-
-        expect(wrapper.find('[dusk="confirm-dialog-confirm"]').exists()).toBe(false)
-        expect(visite.delete).not.toHaveBeenCalled()
+        expect(wrapper.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
+        expect(wrapper.find('#abandon-sans-reseau').exists()).toBe(false)
     })
 
-    it('ne part pas d’une séance démarrée sans réseau, que le serveur ne connaît pas encore', async () => {
+    it('laisse « Terminer » à une séance démarrée sans réseau, que le serveur ne connaît pas encore', () => {
         const wrapper = monter({ seanceEnAttente: true, idDeLaSeance: 'temp-1' })
 
-        expect(abandonner(wrapper).attributes('disabled')).toBeDefined()
-        expect(abandonner(wrapper).attributes('aria-describedby')).toBe(ID_DE_L_ETAT_DE_LA_SEANCE)
+        expect(wrapper.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="finish-workout-mobile"]').exists()).toBe(true)
+    })
 
-        await abandonner(wrapper).trigger('click')
+    it('laisse « Terminer » tant que la séance n’a pas d’identifiant', () => {
+        const wrapper = monter({ idDeLaSeance: null })
 
-        expect(visite.delete).not.toHaveBeenCalled()
+        expect(wrapper.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="finish-workout-mobile"]').exists()).toBe(true)
     })
 
     it('laisse « Modèle » à la séance qui a des exercices', () => {

@@ -15,7 +15,7 @@
  * « Abandonner » ne se montre que sur une séance vide, à la place de « Terminer » :
  * la question, puis la suppression de la séance (`useAbandonDeLaSeance`). Le serveur seul la
  * supprime : sans réseau, sur une copie hors ligne et sur une séance démarrée
- * sans réseau, il se désactive, avec la raison, comme « Modèle ».
+ * sans réseau, « Terminer » reste à sa place.
  *
  * « Terminer » reste ouvert (#2049) : la fin passe par la file hors
  * ligne, à l'heure du geste, et n'envoie rien que la page tire d'une copie
@@ -52,16 +52,14 @@ const { joignable } = useEtatDuReseau()
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 const abandon = useAbandonDeLaSeance(() => props.vide)
 
-const abandonImpossible = computed(() => !joignable.value || surUneCopie.value || props.seanceEnAttente)
-
-/** Pourquoi « Abandonner » est désactivé, pour un lecteur d'écran. */
-const raisonDeLAbandon = computed(() => {
-    if (props.seanceEnAttente) {
-        return ID_DE_L_ETAT_DE_LA_SEANCE
-    }
-
-    return joignable.value ? raisonDUneEcriture.value : 'abandon-sans-reseau'
-})
+/**
+ * Sans réseau, sur une copie hors ligne ou sur une séance que le serveur ne
+ * connaît pas encore, la suppression ne partirait pas : « Terminer » reste
+ * alors la sortie d'une séance vide (#2049), sans bouton désactivé.
+ */
+const peutAbandonner = computed(
+    () => props.vide && props.idDeLaSeance !== null && joignable.value && !surUneCopie.value && !props.seanceEnAttente,
+)
 
 /** Pourquoi « Modèle » est désactivé, pour un lecteur d'écran. */
 const raisonDuModele = computed(() => {
@@ -112,12 +110,10 @@ const raisonDuModele = computed(() => {
                 <span class="bureau:inline hidden">Démarrer un repos</span>
             </GlassButton>
             <GlassButton
-                v-if="vide"
+                v-if="peutAbandonner"
                 variant="accent"
                 @click="abandon.demander(idDeLaSeance)"
                 :loading="abandon.enCours.value"
-                :disabled="abandonImpossible || idDeLaSeance === null"
-                :aria-describedby="abandonImpossible ? raisonDeLAbandon : undefined"
                 class="bouton-de-barre bureau:w-full flex-auto"
                 dusk="abandonner-la-seance"
                 >Abandonner</GlassButton
@@ -153,9 +149,6 @@ const raisonDuModele = computed(() => {
         </div>
         <p v-if="!joignable && !vide" id="modele-sans-reseau" class="text-text-muted text-center text-sm font-medium">
             Il faut le réseau pour enregistrer la séance comme modèle.
-        </p>
-        <p v-if="!joignable && vide" id="abandon-sans-reseau" class="text-text-muted text-center text-sm font-medium">
-            Il faut le réseau pour abandonner la séance.
         </p>
         <ConfirmDialog
             :ouvert="abandon.ouvert.value"
