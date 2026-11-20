@@ -160,7 +160,7 @@ class OuvertureHorsLigneTest extends DuskTestCase
                 $this->sansReseauNiConstruction($browser, $outils, function () use ($browser): void {
                     $this->attendreLaCoquilleServieA($browser->visit('/dashboard'), '/dashboard')
                         ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
-                        ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
+                        ->assertScript($this->leBandeauDit('Hors ligne'))
                         // Le logo tracé dans la barre, à sa taille.
                         ->assertScript("(() => { const logo = document.querySelector('nav a svg'); return logo !== null && logo.getBoundingClientRect().width > 0 && logo.querySelectorAll('path').length > 0; })()")
                         ->waitUntil(

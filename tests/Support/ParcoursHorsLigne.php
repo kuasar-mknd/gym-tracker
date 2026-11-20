@@ -417,6 +417,17 @@ trait ParcoursHorsLigne
     }
 
     /**
+     * Si le bandeau d'une copie dit cet état (« Hors ligne », « Réseau lent »)
+     * et date la copie (« Copie du … »).
+     */
+    private function leBandeauDit(string $etat): string
+    {
+        return '(() => { const titre = document.querySelector(\'[dusk="bandeau-hors-ligne-titre"]\'); const date = document.querySelector(\'[dusk="bandeau-hors-ligne-date"]\'); return titre !== null && date !== null && titre.textContent.trim() === '
+            .json_encode($etat, JSON_THROW_ON_ERROR)
+            .' && date.textContent.trim().startsWith(\'Copie du \'); })()';
+    }
+
+    /**
      * Si la page porte ce texte quelque part.
      */
     private function laPageDit(string $texte): string
