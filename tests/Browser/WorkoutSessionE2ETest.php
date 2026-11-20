@@ -107,8 +107,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // Wait for all cards to be present and stabilize
             $browser->waitFor('@exercise-card-4', 25)
                 ->waitForServerIds()
-                ->assertSee('BRAND NEW EXERCISE')
-                ->assertSee('RECOMMENDER EX');
+                ->assertSee('Brand New Exercise')
+                ->assertSee('Recommender Ex');
 
             // 4. Fill Strength set
             $html = $browser->script('return document.body.innerHTML;')[0];
@@ -209,7 +209,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->type('@workout-name-input', 'Workout Updated')
                 ->click('@save-settings-button')
                 ->waitUntilMissing('[role="dialog"]', 15)
-                ->waitForText('WORKOUT UPDATED', 15);
+                ->waitForText('Workout Updated', 15);
 
             // 6e. Delete Cardio exercise (Index 1)
             $browser->script("document.querySelector('[dusk=\"remove-line-1\"]').scrollIntoView({block: 'center'});");
@@ -223,7 +223,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitUntilMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]", 15);
 
             $browser->within('@exercise-list', function (Browser $list) use ($cardioLineId): void {
-                $list->assertDontSee('CARDIO EX');
+                $list->assertDontSee('Cardio Ex');
                 $list->assertMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]");
             });
 

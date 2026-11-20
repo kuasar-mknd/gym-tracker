@@ -37,36 +37,36 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->waitFor('#main-content', 30);
 
             // 1. Check listing
-            $browser->assertSee('BENCH PRESS')
-                ->assertSee('SQUAT')
-                ->assertSee('DEADLIFT');
+            $browser->assertSee('Bench Press')
+                ->assertSee('Squat')
+                ->assertSee('Deadlift');
 
             // 2. Test Search
             $browser->type('@search-exercises', 'Bench')
-                ->waitUntilMissingText('SQUAT', 10)
-                ->assertSee('BENCH PRESS')
-                ->assertDontSee('SQUAT')
-                ->assertDontSee('DEADLIFT');
+                ->waitUntilMissingText('Squat', 10)
+                ->assertSee('Bench Press')
+                ->assertDontSee('Squat')
+                ->assertDontSee('Deadlift');
 
             $browser->clear('@search-exercises')
                 ->type('@search-exercises', ' ') // Clear properly
                 ->keys('@search-exercises', ['{backspace}'])
-                ->waitForText('SQUAT', 10);
+                ->waitForText('Squat', 10);
 
             // 3. Test Filter by Category
             // Le filtrage est un re-rendu Vue : attendre son résultat, pas une durée.
             // Avec un simple pause(), l'assertion pouvait porter sur le DOM d'avant
             // le filtrage et passer au vert sans que le filtre ait rien fait.
             $browser->click('@category-pill-Jambes')
-                ->waitForText('SQUAT', 10)
-                ->waitUntilMissingText('BENCH PRESS', 10)
-                ->assertSee('SQUAT')
-                ->assertDontSee('BENCH PRESS')
-                ->assertDontSee('DEADLIFT');
+                ->waitForText('Squat', 10)
+                ->waitUntilMissingText('Bench Press', 10)
+                ->assertSee('Squat')
+                ->assertDontSee('Bench Press')
+                ->assertDontSee('Deadlift');
 
             $browser->click('@category-pill-all')
-                ->waitForText('BENCH PRESS', 10)
-                ->assertSee('BENCH PRESS');
+                ->waitForText('Bench Press', 10)
+                ->assertSee('Bench Press');
 
             // 4. Create Exercise
             $newExerciseName = 'Pull Up '.time().random_int(0, 999);

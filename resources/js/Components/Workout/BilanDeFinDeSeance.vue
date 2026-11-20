@@ -75,7 +75,7 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
         @close="emit('fermer')"
     >
         <div class="p-6 text-center" dusk="bilan-de-fin">
-            <h3 id="bilan-de-fin-titre" class="titre-carte mb-4" dusk="bilan-de-fin-titre">Séance terminée</h3>
+            <h3 id="bilan-de-fin-titre" class="titre-plat mb-4" dusk="bilan-de-fin-titre">Séance terminée</h3>
             <p
                 v-if="bilan?.enAttente"
                 role="status"

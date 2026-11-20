@@ -341,12 +341,10 @@ watch(
 <template>
     <div
         ref="carte"
-        class="animate-bounce-in z-flottant right-sure-4 bottom-sure-36 left-sure-4 sm:right-sure-4 fixed sm:left-auto sm:w-80"
+        class="animate-slide-up z-flottant right-sure-4 bottom-sure-36 left-sure-4 sm:right-sure-4 fixed sm:left-auto sm:w-80"
     >
         <!-- Liquid Glass Card -->
-        <div
-            class="border-surface-card/20 bg-surface-card/10 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition duration-300"
-        >
+        <div class="verre-epais overflow-hidden rounded-3xl">
             <!-- Progress bar -->
             <div
                 class="bg-surface-sunken/50 h-1 w-full"
@@ -367,13 +365,13 @@ watch(
                     <div class="min-w-0">
                         <div
                             role="status"
-                            class="text-xs font-bold tracking-wider uppercase"
+                            class="text-xs font-medium"
                             :class="termine ? 'text-text-main' : 'text-text-main/60'"
                             dusk="rest-timer-status"
                         >
                             {{ termine ? 'Repos terminé' : 'Repos en cours' }}
                         </div>
-                        <div class="text-text-main text-3xl font-black tabular-nums" role="timer" aria-atomic="true">
+                        <div class="text-text-main text-3xl font-semibold tabular-nums" role="timer" aria-atomic="true">
                             {{ formatTime(timeLeft) }}
                         </div>
                     </div>
@@ -383,7 +381,7 @@ watch(
                             v-if="!termine"
                             ref="boutonPause"
                             @click="toggleTimer"
-                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
                             :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
                         >
@@ -440,26 +438,3 @@ watch(
         </div>
     </div>
 </template>
-
-<style scoped>
-.animate-bounce-in {
-    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-@keyframes bounceIn {
-    0% {
-        transform: scale(0.3);
-        opacity: 0;
-    }
-    50% {
-        transform: scale(1.05);
-    }
-    70% {
-        transform: scale(0.9);
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-</style>

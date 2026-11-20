@@ -37,19 +37,11 @@ const formatDate = (dateStr) =>
                 @click="$emit('supprimer', seance)"
                 :dusk="`delete-workout-${seance.id}`"
                 :aria-label="`Supprimer la séance ${seance.name || 'sans nom'}`"
-                class="text-text-on-dark-accent focus-visible:ring-accent-primary flex h-full w-full items-center justify-center transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                style="
-                    background: linear-gradient(
-                        135deg,
-                        var(--color-accent-danger) 0%,
-                        var(--color-accent-danger-deep) 100%
-                    );
-                    box-shadow: inset 0 2px 4px rgb(from var(--color-surface-card) r g b / 0.2);
-                "
+                class="danger-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
             >
-                <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">
+                <div class="flex flex-col items-center" aria-hidden="true">
                     <GlassIcon name="delete" />
-                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-semibold">Supprimer</span>
                 </div>
             </button>
         </template>

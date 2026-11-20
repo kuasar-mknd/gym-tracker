@@ -43,7 +43,7 @@ const fermer = () => {
             v-if="message"
             role="alert"
             dusk="set-edit-error"
-            class="border-accent-danger/30 danger-fill z-toast left-sure-3 right-sure-3 top-sure-20 fixed rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
+            class="border-accent-danger/30 danger-fill z-toast left-sure-3 right-sure-3 top-sure-20 fixed rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg"
         >
             {{ message }}
             <div v-if="persistant" class="mt-2 flex flex-wrap gap-2">

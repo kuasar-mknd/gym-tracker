@@ -86,7 +86,7 @@ const emit = defineEmits(['startWorkout'])
                 </div>
                 <div class="flex shrink-0 flex-col items-end">
                     <span v-if="workout.ended_at" class="glass-badge glass-badge-success">Fait</span>
-                    <span v-else class="glass-badge glass-badge-warning animate-pulse">En cours</span>
+                    <span v-else class="glass-badge glass-badge-warning">En cours</span>
                     <span class="text-text-muted mt-1 text-xs tabular-nums">
                         {{
                             new Date(workout.started_at).toLocaleTimeString('fr-FR', {

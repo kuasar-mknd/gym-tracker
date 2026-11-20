@@ -97,7 +97,7 @@ export const useValidationDeSerie = ({
         const writeKey = `completion:${set._rowKey ?? set.id}`
         const seq = nextWrite(writeKey)
 
-        // ⚡ Perf: Optimistic update — no router.reload
+        // Optimistic update — no router.reload
         set.is_completed = newState
         if (newState) {
             apresValidation(exerciseRestTime)

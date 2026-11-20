@@ -268,12 +268,13 @@ onUnmounted(() => {
         :show-back="true"
         back-route="workouts.index"
         largeur="moyenne"
+        titre-plat
     >
         <ErreurDeSaisie v-bind="erreurDeSaisie" />
 
         <template #header>
             <div class="flex items-center justify-between gap-4">
-                <h1 class="titre-carte min-w-0 truncate">{{ localWorkout.name || 'Séance' }}</h1>
+                <h1 class="titre-ecran min-w-0 truncate">{{ localWorkout.name || 'Séance' }}</h1>
                 <BoutonDesReglagesDeLaSeance
                     :desactive="seanceProvisoire"
                     dusk="workout-settings-button-desktop"
@@ -298,7 +299,7 @@ onUnmounted(() => {
                     v-if="localWorkout.workout_lines.length === 0"
                     class="flex flex-col items-center justify-center p-12 text-center"
                 >
-                    <h3 class="titre-section mb-4">Séance vide</h3>
+                    <h3 class="titre-plat mb-4">Séance vide</h3>
                     <GlassButton
                         v-if="!lectureSeule"
                         variant="primary"

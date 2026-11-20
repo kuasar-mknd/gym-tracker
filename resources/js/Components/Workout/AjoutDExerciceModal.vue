@@ -121,7 +121,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
             son bouton garde la marge du bas au lieu d'être rogné par l'arrondi.
         -->
         <div class="flex flex-col p-6" :class="{ 'min-h-0': !showCreateForm }">
-            <h2 id="add-exercise-title" class="titre-section mb-6">Ajouter un exercice</h2>
+            <h2 id="add-exercise-title" class="titre-plat mb-6">Ajouter un exercice</h2>
             <div v-if="!showCreateForm" class="flex min-h-0 flex-col">
                 <div class="pb-4">
                     <GlassInput
@@ -150,12 +150,8 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         dusk="quick-create-exercise"
                         class="border-border hover:border-accent-state focus-visible:ring-accent-state flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition focus-visible:ring-2 focus-visible:outline-none"
                     >
-                        <span class="text-text-muted mb-2 block text-sm italic"
-                            >Aucun résultat pour "{{ requete }}"</span
-                        >
-                        <span class="text-accent-state-deep font-bold tracking-wider uppercase"
-                            >Créer "{{ requete }}"</span
-                        >
+                        <span class="text-text-muted mb-2 block text-sm">Aucun résultat pour "{{ requete }}"</span>
+                        <span class="text-accent-state-deep font-medium">Créer "{{ requete }}"</span>
                     </button>
 
                     <!-- Un bouton, pas un div : ajouter un exercice est l'action première de
@@ -169,8 +165,8 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         :dusk="`select-exercise-${exercise.id}`"
                         class="verre-regulier hover:border-accent-primary/50 focus-visible:ring-accent-primary block w-full cursor-pointer rounded-2xl p-4 text-left transition focus-visible:ring-2 focus-visible:outline-none"
                     >
-                        <span class="text-text-main block font-bold">{{ exercise.name }}</span>
-                        <span class="text-text-muted block text-xs uppercase">{{ exercise.category }}</span>
+                        <span class="text-text-main block font-semibold">{{ exercise.name }}</span>
+                        <span class="etiquette block">{{ exercise.category }}</span>
                     </button>
                 </div>
             </div>
@@ -178,7 +174,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
             <div v-else class="space-y-6">
                 <div class="flex items-center gap-4">
                     <GlassIconButton icon="arrow_back" label="Retour" @click="showCreateForm = false" />
-                    <h3 class="titre-carte">Nouvel Exercice</h3>
+                    <h3 class="titre-plat">Nouvel exercice</h3>
                 </div>
 
                 <form @submit.prevent="createAndAddExercise" class="space-y-4">

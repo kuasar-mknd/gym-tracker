@@ -181,7 +181,7 @@ class RestTimerTest extends DuskTestCase
             // 1. Trigger timer by completing set
             $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
             $browser->waitFor('[dusk="skip-rest-timer"]', 15)
-                ->assertSee('REPOS');
+                ->assertSee('Repos en cours');
             $this->waitForCompletionInDatabase($browser, $workout, true);
 
             /*

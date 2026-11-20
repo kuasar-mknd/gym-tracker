@@ -211,7 +211,7 @@ const formatDateFull = (dateStr) => {
 <template>
     <Head title="Calendrier" />
 
-    <AuthenticatedLayout show-back back-route="workouts.index" page-title="Calendrier">
+    <AuthenticatedLayout show-back back-route="workouts.index" page-title="Calendrier" titre-plat>
         <div class="space-y-6">
             <!-- Calendar Navigation -->
             <div class="flex items-center justify-between">
@@ -220,7 +220,7 @@ const formatDateFull = (dateStr) => {
                 </GlassButton>
 
                 <div class="flex min-w-0 flex-col items-center gap-1">
-                    <h2 class="titre-carte" dusk="calendar-heading">
+                    <h2 class="titre-plat" dusk="calendar-heading">
                         {{ currentMonthName }} <span class="text-accent-primary-deep">{{ currentYear }}</span>
                     </h2>
                     <GlassButton
@@ -243,11 +243,7 @@ const formatDateFull = (dateStr) => {
             <GlassCard class="overflow-hidden" padding="p-0">
                 <!-- Weekday Headers -->
                 <div class="border-border bg-surface-sunken/80 grid grid-cols-7 border-b py-2">
-                    <div
-                        v-for="day in weekDays"
-                        :key="day"
-                        class="text-text-muted text-2xs text-center font-bold tracking-wider uppercase"
-                    >
+                    <div v-for="day in weekDays" :key="day" class="text-text-muted text-2xs text-center font-medium">
                         {{ day }}
                     </div>
                 </div>
@@ -290,14 +286,8 @@ const formatDateFull = (dateStr) => {
                             <!-- Indicators. Their meaning lives in aria-label; as bare
                                  colour they say nothing. -->
                             <div class="mt-1 flex gap-1" aria-hidden="true">
-                                <span
-                                    v-if="day.hasWorkout"
-                                    class="bg-accent-tertiary shadow-glow-tertiary-sharp h-1.5 w-1.5 rounded-full"
-                                ></span>
-                                <span
-                                    v-if="day.hasJournal"
-                                    class="bg-accent-state shadow-glow-state-sharp h-1.5 w-1.5 rounded-full"
-                                ></span>
+                                <span v-if="day.hasWorkout" class="bg-accent-tertiary h-1.5 w-1.5 rounded-full"></span>
+                                <span v-if="day.hasJournal" class="bg-accent-state h-1.5 w-1.5 rounded-full"></span>
                             </div>
                         </button>
                     </template>
@@ -312,16 +302,16 @@ const formatDateFull = (dateStr) => {
                 class="animate-slide-up scroll-mb-32 space-y-4"
             >
                 <div class="flex items-center gap-2">
-                    <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
-                    <h3 class="titre-carte">
+                    <div class="bg-border h-px flex-1"></div>
+                    <h3 class="titre-plat">
                         {{ formatDateFull(selectedDayDetails.dateStr) }}
                     </h3>
-                    <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
+                    <div class="bg-border h-px flex-1"></div>
                 </div>
 
                 <!-- Workouts -->
                 <div v-if="selectedDayDetails.workouts.length > 0" class="space-y-3">
-                    <h4 class="text-text-muted text-xs font-black tracking-widest uppercase">Séances</h4>
+                    <h4 class="etiquette">Séances</h4>
                     <Link
                         v-for="workout in selectedDayDetails.workouts"
                         :key="workout.id"
@@ -354,7 +344,7 @@ const formatDateFull = (dateStr) => {
 
                 <!-- Journal -->
                 <div v-if="selectedDayDetails.journal" class="space-y-3">
-                    <h4 class="text-text-muted text-xs font-black tracking-widest uppercase">Journal</h4>
+                    <h4 class="etiquette">Journal</h4>
                     <GlassCard padding="p-4">
                         <div class="flex items-start gap-3">
                             <div
@@ -364,7 +354,7 @@ const formatDateFull = (dateStr) => {
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-text-main font-bold">Entrée Journal</span>
+                                    <span class="text-text-main font-bold">Entrée du journal</span>
                                     <span
                                         v-if="selectedDayDetails.journal.mood_score"
                                         class="text-text-main bg-surface-sunken text-2xs rounded px-1.5 py-0.5 font-bold"
@@ -375,7 +365,7 @@ const formatDateFull = (dateStr) => {
                                 <div v-if="selectedDayDetails.journal.has_note" class="text-text-muted mt-1 text-sm">
                                     Notes ajoutées...
                                 </div>
-                                <div v-else class="text-text-muted mt-1 text-sm italic">Aucune note écrite.</div>
+                                <div v-else class="text-text-muted mt-1 text-sm">Aucune note écrite.</div>
                             </div>
                         </div>
                     </GlassCard>
@@ -391,7 +381,7 @@ const formatDateFull = (dateStr) => {
             </div>
 
             <div v-else class="text-text-muted py-12 text-center">
-                <GlassIcon name="touch_app" size="xl" class="mb-2 animate-pulse" />
+                <GlassIcon name="touch_app" size="xl" class="mb-2" />
                 <p>Sélectionne une date pour voir les détails</p>
             </div>
         </div>

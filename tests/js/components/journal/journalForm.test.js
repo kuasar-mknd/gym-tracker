@@ -7,11 +7,11 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 
 /** The mood scale the journal page hands down, best first. */
 const moods = [
-    { value: 5, label: '🤩 Excellent' },
-    { value: 4, label: '🙂 Bon' },
-    { value: 3, label: '😐 Moyen' },
-    { value: 2, label: '🙁 Mauvais' },
-    { value: 1, label: '😫 Terrible' },
+    { value: 5, label: 'Excellent' },
+    { value: 4, label: 'Bon' },
+    { value: 3, label: 'Moyen' },
+    { value: 2, label: 'Mauvais' },
+    { value: 1, label: 'Terrible' },
 ]
 
 const makeForm = (overrides = {}) =>
@@ -92,16 +92,16 @@ describe('the mood scale', () => {
     it('offers one radio per mood, named in full', () => {
         const { wrapper } = mountForm()
 
-        // The button shows only the emoji, which is nothing to a screen reader;
-        // the whole label has to be the accessible name.
+        // The button shows only its score, which says nothing about the scale to
+        // a screen reader; the whole label has to be the accessible name.
         expect(moodRadios(wrapper).map((radio) => radio.attributes('aria-label'))).toEqual([
-            '🤩 Excellent',
-            '🙂 Bon',
-            '😐 Moyen',
-            '🙁 Mauvais',
-            '😫 Terrible',
+            'Excellent',
+            'Bon',
+            'Moyen',
+            'Mauvais',
+            'Terrible',
         ])
-        expect(moodRadios(wrapper).map((radio) => radio.text())).toEqual(['🤩', '🙂', '😐', '🙁', '😫'])
+        expect(moodRadios(wrapper).map((radio) => radio.text())).toEqual(['5', '4', '3', '2', '1'])
     })
 
     it('records the mood that was picked, by value and not by position', async () => {

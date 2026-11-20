@@ -215,7 +215,7 @@ const setColumnRef = (key) => (element) => {
 
     <Modal :show="open" position="bottom" max-width="sm" aria-labelledby="duration-wheel-title" @close="open = false">
         <div class="p-5">
-            <h2 id="duration-wheel-title" class="titre-carte mb-4 text-center">Durée</h2>
+            <h2 id="duration-wheel-title" class="titre-plat mb-4 text-center">Durée</h2>
 
             <div class="wheel-frame">
                 <div
