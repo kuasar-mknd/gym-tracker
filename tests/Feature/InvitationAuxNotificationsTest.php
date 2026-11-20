@@ -155,7 +155,10 @@ describe('la fin de séance par l’API', function (): void {
             $parLaPage->assertInertiaFlashMissing('proposerLesNotifications');
         }
 
-        expect($parLApi->json('meta'))->toBe(['proposer_les_notifications' => $attendu]);
+        // La fin porte aussi, depuis le bilan (#2434), le droit de reprendre et son échéance.
+        $meta = $parLApi->json('meta');
+        expect(array_keys($meta))->toBe(['proposer_les_notifications', 'peut_reprendre', 'reprise_jusqu_a'])
+            ->and($meta['proposer_les_notifications'])->toBe($attendu);
     })->with([
         'aucun abonnement' => [fn (User $utilisateur): null => null, true],
         'un abonnement tenu' => [fn (User $utilisateur): PushSubscription => $utilisateur->updatePushSubscription('https://fcm.googleapis.com/fcm/send/telephone', 'cle', 'jeton'), false],
