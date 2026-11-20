@@ -44,6 +44,7 @@ function pagesPriveesEcartees(): array
 {
     return [
         'daily-journals.index' => 'Journal/Index',
+        'corps.index' => 'Corps/Index',
         'body-measurements.index' => 'Measurements/Index',
         'body-parts.index' => 'Measurements/Parts/Index',
         'body-parts.show' => 'Measurements/Parts/Show',

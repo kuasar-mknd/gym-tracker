@@ -51,7 +51,7 @@ const selectCommonPart = (part) => {
 <template>
     <Head title="Mensurations" />
 
-    <AuthenticatedLayout show-back back-route="stats.index" page-title="Mensurations">
+    <AuthenticatedLayout show-back back-route="corps.index" page-title="Mensurations">
         <template #header-actions>
             <GlassButton
                 :variant="showAddForm ? 'secondary' : 'primary'"

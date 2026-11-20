@@ -14,16 +14,14 @@ defineProps({
     latestWeight: [Number, String],
     weightChange: Number,
     weightHistory: Array,
-    deferredData: Object,
 })
 </script>
 
 <template>
-    <!-- Weight Evolution Card -->
     <GlassCard class="stagger-1 animate-slide-up relative overflow-hidden">
         <div class="mb-4 flex items-start justify-between">
             <div>
-                <h3 class="text-accent-info-deep sur-titre mb-1">Poids Corporel</h3>
+                <h3 class="text-accent-primary-deep sur-titre mb-1">Poids Corporel</h3>
                 <p class="font-display text-text-main text-5xl font-black tracking-tighter">
                     {{ latestWeight ? nombre(latestWeight) : '—' }}
                     <span class="text-text-muted text-lg">kg</span>
@@ -43,7 +41,7 @@ defineProps({
 
         <!-- Real Weight Chart (Deferred) -->
         <div class="relative -mx-2 h-40 w-full">
-            <Deferred data="deferredData">
+            <Deferred data="bodyStats">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>
@@ -64,7 +62,7 @@ defineProps({
 
         <Link
             :href="route('body-measurements.index')"
-            class="text-accent-info-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition hover:gap-3"
+            class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition hover:gap-3"
         >
             Voir tout l'historique
             <GlassIcon name="arrow_forward" size="xs" />

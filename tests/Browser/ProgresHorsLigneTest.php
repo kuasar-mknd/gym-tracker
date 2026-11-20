@@ -22,14 +22,16 @@ use Tests\Support\ParcoursHorsLigne;
  * « Hors ligne ». La page est désormais gardée, et le dépôt refuse toujours
  * qu'une copie garde une mesure ou un objectif : la pesée, sa variation, la
  * masse grasse et le groupe différé qui porte leurs historiques n'entrent dans
- * aucune copie (`PROPS_JAMAIS_GARDEES`). Le parcours le joue dans un vrai
- * Chrome : en ligne, Progrès montre le poids et la masse grasse du compte (le
- * témoin positif : sans lui, leur absence hors ligne ne prouverait rien), et
- * la copie rangée, déchiffrée, n'en porte aucun chiffre ; puis, la coupure
+ * aucune copie (`PROPS_JAMAIS_GARDEES`). Le lot 4b les a rangés sous la page
+ * Corps, que la racine n'offre plus qu'en ligne. Le parcours le joue dans un
+ * vrai Chrome : en ligne, Corps montre le poids et la masse grasse du compte
+ * (le témoin positif : sans lui, leur absence hors ligne ne prouverait rien),
+ * Progrès n'en montre plus aucun et mène à Corps, et la copie rangée de
+ * Progrès, déchiffrée, n'en porte aucun chiffre ; puis, la coupure
  * faite, la flèche de la bibliothèque et l'onglet Progrès ouvrent la racine
  * légère, où une seule phrase dit que les mesures reviennent avec le réseau
- * (ni carte, ni choix de période, ni courbe d'exercice), et rien d'autre n'est dit. Le réseau rendu, la page se
- * recharge et les mesures reviennent.
+ * (ni carte, ni choix de période, ni courbe d'exercice, ni accès à Corps), et rien d'autre n'est dit. Le réseau rendu, la page se
+ * recharge, l'accès à Corps revient et la page des mesures s'ouvre.
  *
  * Comme les autres parcours hors ligne, il exige un contexte sûr, et rend
  * public/build introuvable pendant la coupure (`.ai/rules/browser.md`).
@@ -66,17 +68,24 @@ class ProgresHorsLigneTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($compte): void {
-            // Progrès en ligne : les mesures sont à l'écran, et les cartes ne sont plus des squelettes.
+            // Corps en ligne : les mesures sont à l'écran, et les cartes ne sont plus des squelettes.
             $browser->loginAs($compte)
-                ->visit('/stats')
+                ->visit('/corps')
                 ->waitFor('#main-content', 30);
 
             $this->exigerUnContexteSur($browser);
             $this->attendreLeWorker($browser);
 
             $browser->disableAnimations()
-                ->waitUntil(self::LES_MESURES_SONT_A_L_ECRAN, 30, 'le poids et la masse grasse ne sont pas à l’écran en ligne')
-                ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'les cartes de Progrès attendent encore leurs données en ligne');
+                ->waitUntil(self::LES_MESURES_SONT_A_L_ECRAN, 30, 'le poids et la masse grasse ne sont pas à l’écran sur Corps en ligne')
+                ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'les cartes de Corps attendent encore leurs données en ligne');
+
+            // Progrès en ligne : plus une seule mesure, et l'accès à Corps.
+            $browser->clickWhenSettled('[dusk="nav-stats"]')
+                ->waitForLocation('/stats', 15)
+                ->waitFor('#main-content a[href$="/corps"]', 30)
+                ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'les cartes de Progrès attendent encore leurs données en ligne')
+                ->assertScript(self::LES_MESURES_SONT_A_L_ECRAN, false);
 
             // Profil, puis la bibliothèque : leurs copies, et celle de Progrès, que la page vient de recevoir.
             $browser->clickWhenSettled('[dusk="nav-profile"]')
@@ -113,9 +122,12 @@ class ProgresHorsLigneTest extends DuskTestCase
                     ->assertPathIs('/stats');
             });
 
-            // Le réseau rendu, la copie se recharge : le bandeau part, et les mesures reviennent.
+            // Le réseau rendu, la copie se recharge : le bandeau part, l'accès à Corps revient, et Corps montre les mesures.
             $browser->waitUntilMissing('[dusk="bandeau-hors-ligne"]', 90)
                 ->assertPathIs('/stats')
+                ->waitFor('#main-content a[href$="/corps"]', 30)
+                ->clickWhenSettled('#main-content a[href$="/corps"]')
+                ->waitForLocation('/corps', 15)
                 ->waitUntil(self::LES_MESURES_SONT_A_L_ECRAN, 30, 'les mesures ne reviennent pas avec le réseau');
         });
     }
@@ -157,6 +169,7 @@ class ProgresHorsLigneTest extends DuskTestCase
             ->assertScript("document.querySelectorAll('#main-content [data-indisponible-hors-ligne]').length", 1)
             ->assertScript("document.querySelector('#main-content [data-indisponible-hors-ligne]').textContent.includes('Les mesures reviennent avec le réseau.')", true)
             ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 15, 'une carte de Progrès pulse sans fin hors ligne')
+            ->assertMissing('#main-content a[href$="/corps"]')
             ->assertMissing('[dusk="page-hors-ligne"]')
             ->assertScript('(() => /\\b83[.,]7\\b|\\b19[.,]3\\b/.test(document.querySelector("#main-content")?.textContent ?? ""))()', false);
     }

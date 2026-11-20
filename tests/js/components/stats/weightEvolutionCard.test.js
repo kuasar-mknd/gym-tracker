@@ -131,16 +131,13 @@ describe('WeightEvolutionCard chart', () => {
     })
 
     /**
-     * The page sends the body stats under deferredData. A copy served without
-     * the network lists that very key as rescued: waiting on another one would
-     * leave the skeleton up for good.
+     * The Corps page sends the body stats under bodyStats. Waiting on another
+     * key would leave the skeleton up for good.
      */
     it('waits on the deferred prop the page actually sends', async () => {
         const carte = await mountCard({ latestWeight: '82.5', weightHistory: [] })
-        const scoped = await mountCard({ latestWeight: '82.5', weightHistory: [], deferredData: { weightHistory: [] } })
 
-        expect(carte.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
-        expect(scoped.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('deferredData')
+        expect(carte.find('[data-deferred-key]').attributes('data-deferred-key')).toBe('bodyStats')
     })
 
     it('leads to the page where the measurement is taken', async () => {

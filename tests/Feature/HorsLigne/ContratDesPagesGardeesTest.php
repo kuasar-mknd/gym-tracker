@@ -328,6 +328,20 @@ function contratDesPagesGroupesDifferes(stdClass $page): array
 }
 
 /**
+ * Les props que `PROPS_JAMAIS_GARDEES` nomme encore pour une page qui ne les
+ * rend plus : le poids, sa variation et la masse grasse sont passés de la
+ * racine de Progrès à la page Corps, qu'aucune copie ne garde (#2434, lot 4b).
+ * Les noms restent dans la liste, pour que le magasin les écarte si un serveur
+ * les renvoyait un jour ; la page, elle, ne doit pas les rendre.
+ *
+ * @return array<string, list<string>>
+ */
+function contratDesPagesPropsRetirees(): array
+{
+    return ['Stats/Index' => ['latestWeight', 'weightChange', 'bodyFat']];
+}
+
+/**
  * La page complète, puis chaque groupe de props différées, demandé comme la
  * page le demande (`X-Inertia-Partial-Data`), et versé dans ses props ; puis
  * telle qu'une copie la garde, sans les props que `PROPS_JAMAIS_GARDEES`
@@ -355,6 +369,12 @@ function contratDesPagesPageEntiere(User $compte, string $chemin, string $compos
     }
 
     foreach (PagesGardees::propsJamaisGardees()[$composant] ?? [] as $prop) {
+        if (in_array($prop, contratDesPagesPropsRetirees()[$composant] ?? [], true)) {
+            expect(property_exists($props, $prop))->toBeFalse("`{$prop}` est classée retirée de `{$composant}` (page Corps), et la page la rend de nouveau : une copie ne la garde pas, mais ce n’est plus sa page.");
+
+            continue;
+        }
+
         expect(property_exists($props, $prop))->toBeTrue("`PROPS_JAMAIS_GARDEES` nomme `{$prop}`, que `{$composant}` ne rend plus : nomme la prop qui l’a remplacée.");
         unset($props->{$prop});
     }

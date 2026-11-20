@@ -62,6 +62,7 @@ describe('l’onglet d’une route', () => {
         ['workouts.show', 'seances'],
         ['goals.index', 'progres'],
         ['achievements.index', 'progres'],
+        ['corps.index', 'progres'],
         ['body-measurements.index', 'progres'],
         ['body-parts.show', 'progres'],
         ['exercises.index', 'progres'],
@@ -105,6 +106,7 @@ describe('la cible de chaque retour déclaré par une page', () => {
             'Goals/Index.vue': 'goals.index',
             'Goals/Edit.vue': 'goals.edit',
             'Achievements/Index.vue': 'achievements.index',
+            'Corps/Index.vue': 'corps.index',
             'Measurements/Index.vue': 'body-measurements.index',
             'Measurements/Parts/Index.vue': 'body-parts.index',
             'Exercises/Index.vue': 'exercises.index',
@@ -145,7 +147,9 @@ describe('l’onglet que la barre allume sur une page', () => {
         ['/daily-journals', 'daily-journals.index', 'profile.index'],
         ['/supplements', 'supplements.index', 'profile.index'],
         ['/achievements', 'achievements.index', 'stats.index'],
+        ['/corps', 'corps.index', 'stats.index'],
         ['/body-measurements', 'body-measurements.index', 'stats.index'],
+        ['/body-metrics', 'body-parts.index', 'stats.index'],
     ]
 
     const allumes = (courante) => {
@@ -177,7 +181,9 @@ describe('l’onglet que la barre allume sur une page', () => {
             'Journal/Index.vue': 'profile.index',
             'Supplements/Index.vue': 'profile.index',
             'Achievements/Index.vue': 'stats.index',
-            'Measurements/Index.vue': 'stats.index',
+            'Corps/Index.vue': 'stats.index',
+            'Measurements/Index.vue': 'corps.index',
+            'Measurements/Parts/Index.vue': 'corps.index',
         }
 
         for (const [page, cible] of Object.entries(attendus)) {

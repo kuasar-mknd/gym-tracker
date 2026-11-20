@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h, nextTick } from 'vue'
 import { noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
-import { nombre } from '@/Utils/nombre'
 import { RequeteSimulee, reponseInertia, requetes, reseau, uneTache } from '../utils/reseauSimule'
 
 /*
@@ -40,8 +39,6 @@ const graphique = (nom) => ({
     },
 })
 
-vi.mock('@/Components/Stats/WeightHistoryChart.vue', () => graphique('WeightHistoryChart'))
-vi.mock('@/Components/Stats/BodyFatChart.vue', () => graphique('BodyFatChart'))
 vi.mock('@/Components/Stats/VolumeTrendChart.vue', () => graphique('VolumeTrendChart'))
 vi.mock('@/Components/Stats/DurationHistoryChart.vue', () => graphique('DurationHistoryChart'))
 vi.mock('@/Components/Stats/MuscleDistributionChart.vue', () => graphique('MuscleDistributionChart'))
@@ -107,16 +104,13 @@ const calendrier = (mois) => ({
 })
 
 /** Les statistiques d'une période, ses props différées annoncées et absentes. */
-const statistiques = (periode, poids) => ({
+const statistiques = (periode) => ({
     component: 'Stats/Index',
     url: periode === '30j' ? '/stats' : `/stats?period=${periode}`,
     version: 'v',
     props: {
         ...partage(),
-        exercises: [],
-        latestWeight: poids,
-        weightChange: null,
-        bodyFat: null,
+        exercises: [{ id: 1, name: `Exercice ${periode}`, category: 'Pectoraux' }],
         selectedPeriod: periode,
     },
     deferredProps: { default: ['deferredData'] },
@@ -129,10 +123,6 @@ const donneesDifferees = (periode) => ({
         durationHistory: [{ date: periode, duration: 45 }],
         muscleDistribution: [{ category: `muscles ${periode}`, volume: 10 }],
         monthlyComparison: null,
-    },
-    body: {
-        weightHistory: [{ date: periode, weight: 80 }],
-        bodyFatHistory: [{ date: periode, body_fat: 15 }],
     },
 })
 
@@ -197,12 +187,8 @@ const enTeteDuCalendrier = () => textes('[dusk="calendar-heading"]').map((texte)
 const donneesDuGraphique = (nom) =>
     [...document.querySelectorAll(`[data-graphique="${nom}"]`)].map((noeud) => JSON.parse(noeud.textContent))
 
-/** Le poids que la carte du poids corporel affiche. */
-const poidsAffiche = () =>
-    [...document.querySelectorAll('h3')]
-        .find((titre) => titre.textContent.trim() === 'Poids Corporel')
-        ?.nextElementSibling.textContent.replace(/\s+/g, ' ')
-        .trim()
+/** Les exercices que la carte de progression propose : la valeur immédiate de la période. */
+const exercicesProposes = () => document.body.textContent.match(/Exercice \d+[ja]/g) ?? []
 
 const boutonDePeriode = (libelle) =>
     [...document.querySelectorAll('[role="group"][aria-label="Période"] button')].find(
@@ -287,12 +273,12 @@ describe('le mois du calendrier', () => {
 describe('la période des statistiques', () => {
     it('pose la nouvelle période dès la réponse, puis chaque graphique avec les données de cette période', async () => {
         routeCourante = 'stats.index'
-        const trenteJours = statistiques('30j', 81)
+        const trenteJours = statistiques('30j')
 
         await ouvrir(trenteJours)
         await servirSansImage(await requeteSuivante(), reponseDifferee(trenteJours, '30j'))
 
-        expect(poidsAffiche()).toBe(`${nombre(81)} kg`)
+        expect(exercicesProposes()).toEqual(['Exercice 30j'])
         expect(donneesDuGraphique('VolumeTrendChart')).toEqual([donneesDifferees('30j').performance.volumeTrend])
 
         boutonDePeriode('7 JOURS').click()
@@ -301,11 +287,11 @@ describe('la période des statistiques', () => {
 
         expect(cheminEtRequete(visite)).toBe('/stats?period=7j')
 
-        const septJours = statistiques('7j', 79.5)
+        const septJours = statistiques('7j')
         await servirSansImage(visite, reponseInertia(septJours))
 
         // La valeur immédiate de la nouvelle période, dès sa réponse ; les graphiques attendent leurs props.
-        expect(poidsAffiche()).toBe(`${nombre(79.5)} kg`)
+        expect(exercicesProposes()).toEqual(['Exercice 7j'])
         expect(donneesDuGraphique('VolumeTrendChart')).toEqual([])
 
         await servirSansImage(await requeteSuivante(), reponseDifferee(septJours, '7j'))
@@ -314,8 +300,6 @@ describe('la période des statistiques', () => {
         expect(donneesDuGraphique('VolumeTrendChart')).toEqual([sept.performance.volumeTrend])
         expect(donneesDuGraphique('DurationHistoryChart')).toEqual([sept.performance.durationHistory])
         expect(donneesDuGraphique('MuscleDistributionChart')).toEqual([sept.performance.muscleDistribution])
-        expect(donneesDuGraphique('WeightHistoryChart')).toEqual([sept.body.weightHistory])
-        expect(donneesDuGraphique('BodyFatChart')).toEqual([sept.body.bodyFatHistory])
         expect(document.body.textContent).toContain('7 derniers jours')
         expect(erreurs).toEqual([])
     })

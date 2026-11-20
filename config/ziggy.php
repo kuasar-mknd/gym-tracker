@@ -34,6 +34,7 @@ return [
         'goals.*',
         'supplements.*',
         'daily-journals.*',
+        'corps.*',
         'body-parts.*',
         'body-measurements.*',
         'achievements.*',

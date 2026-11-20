@@ -57,10 +57,8 @@ describe('DashboardHeader body weight', () => {
         expect(hauteurDuRendu(lien.element)).toBeGreaterThanOrEqual(CIBLE)
     })
 
-    it('leads to the measurements page, where the figure can be changed', () => {
-        expect(mountHeader('75.50').find('[dusk="dashboard-latest-weight"]').attributes('href')).toBe(
-            '/body-measurements.index',
-        )
+    it('leads to the body page, where the figure sits with the other measurements', () => {
+        expect(mountHeader('75.50').find('[dusk="dashboard-latest-weight"]').attributes('href')).toBe('/corps.index')
     })
 })
 

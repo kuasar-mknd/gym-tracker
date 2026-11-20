@@ -9,6 +9,8 @@ import { PAGES_GARDEES, PROPS_JAMAIS_GARDEES, propJamaisGardee } from '@/Utils/p
  * La racine de Progrès est gardée hors ligne sans une seule mesure (#2434,
  * lot 4a) : le poids, sa variation, la masse grasse et le groupe différé qui
  * porte leurs historiques ne vont dans aucune copie (`PROPS_JAMAIS_GARDEES`).
+ * Le lot 4b les retire de la page elle-même, qui les range sous Corps ; les
+ * noms restent dans la liste, pour le jour où un serveur les renverrait.
  *
  * Ce test lit les props que la page déclare. Une nouvelle prop n'y entre pas
  * sans qu'on la classe : une mesure ou un objectif rejoint la liste des props
@@ -36,10 +38,14 @@ describe('la racine de Progrès gardée hors ligne', () => {
         expect(PROPS_JAMAIS_GARDEES['Stats/Index']).toEqual(['latestWeight', 'weightChange', 'bodyFat', 'deferredData'])
     })
 
-    it('lit les props de la page', () => {
-        expect(propsDeclareesParLaPage()).toEqual(
-            expect.arrayContaining(['deferredData', 'exercises', 'latestWeight', 'weightChange', 'bodyFat']),
-        )
+    it('ne déclare plus la pesée, la variation ni la masse grasse, passées sur la page Corps (lot 4b)', () => {
+        expect(propsDeclareesParLaPage().sort()).toEqual(['deferredData', 'exercises', 'selectedPeriod'])
+    })
+
+    it('ne monte aucune carte de poids ni de masse grasse', () => {
+        const page = readFileSync(join(jsRoot, 'Pages', 'Stats', 'Index.vue'), 'utf8')
+
+        expect(page).not.toMatch(/WeightEvolutionCard|BodyFatCard|weightHistory|bodyFatHistory/)
     })
 
     it('ne laisse entrer dans la copie que des props classées : aucune mesure, aucun objectif', () => {

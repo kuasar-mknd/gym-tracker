@@ -401,7 +401,7 @@ describe('Dashboard', () => {
 
 describe('Stats/Index', () => {
     const cards = {
-        WeightEvolutionCard: recording('WeightEvolutionCard', ['latestWeight', 'weightChange', 'weightHistory']),
+        MonthlyVolumeCard: recording('MonthlyVolumeCard', ['monthlyComparison']),
         VolumeTrendCard: recording('VolumeTrendCard', ['volumeTrend', 'currentPeriod']),
     }
 
@@ -506,9 +506,8 @@ describe('Stats/Index', () => {
             expect(wrapper.get('[data-indisponible-hors-ligne]').text()).toContain(
                 'Les mesures reviennent avec le réseau.',
             )
-            expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(false)
             expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).exists()).toBe(false)
-            expect(wrapper.findComponent({ name: 'BodyMetricsGrid' }).exists()).toBe(false)
             expect(wrapper.findComponent({ name: 'SummaryStatsGrid' }).exists()).toBe(false)
         })
 
@@ -527,38 +526,61 @@ describe('Stats/Index', () => {
             expect(wrapper.get('a').attributes('href')).toBe('/exercises.index')
         })
 
+        it('ne propose pas Corps, dont les mesures ne sont pas gardées', () => {
+            const wrapper = mountStats({ exercises: [], selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).not.toContain('/corps.index')
+        })
+
         it('remontre les cartes et le choix de période quand la page n’est plus une copie', () => {
             pageDInertia.props = {}
             const wrapper = mountStats({ selectedPeriod: '30j' })
 
             expect(wrapper.findAll('[data-indisponible-hors-ligne]')).toHaveLength(0)
-            expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).exists()).toBe(true)
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(true)
             expect(pressedPeriod(wrapper)).toEqual(['30 JOURS'])
         })
     })
 
+    it('mène à Corps, où le poids, la masse grasse et les mensurations ont été rangés', () => {
+        const wrapper = mountStats()
+
+        expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).toContain('/corps.index')
+        expect(wrapper.text()).toContain('Poids, masse grasse, mensurations')
+    })
+
+    it('ne monte aucune carte de poids ni de masse grasse', () => {
+        const wrapper = mountStats({ deferredData: { performance: {} } })
+
+        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).exists()).toBe(false)
+        expect(wrapper.findComponent({ name: 'BodyFatCard' }).exists()).toBe(false)
+    })
+
     it('survit à des données différées encore absentes', () => {
-        const wrapper = mountStats({ latestWeight: '75.50', weightChange: -1.2 })
+        const wrapper = mountStats()
 
         // Every card is fed through `deferredData?.…`; one missing guard and the
         // first render of the page throws before anything is drawn.
-        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).props('weightHistory')).toBeUndefined()
-        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).props('latestWeight')).toBe('75.50')
+        expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).props('monthlyComparison')).toBeUndefined()
+        expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).props('volumeTrend')).toBeUndefined()
     })
 
     it('va chercher chaque série dans la bonne branche des données différées', () => {
         const wrapper = mountStats({
             deferredData: {
-                body: { weightHistory: [{ date: '2026-02-01', weight: 75 }] },
-                performance: { volumeTrend: [{ date: '2026-02-01', volume: 1000 }] },
+                performance: {
+                    monthlyComparison: { current_volume: 5000, percentage: 4 },
+                    volumeTrend: [{ date: '2026-02-01', volume: 1000 }],
+                },
             },
         })
 
-        // Paired card by card: reading both series out of the same branch would
+        // Paired card by card: reading both series out of the same key would
         // hand one card the other's data and still look populated.
-        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).props('weightHistory')).toEqual([
-            { date: '2026-02-01', weight: 75 },
-        ])
+        expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).props('monthlyComparison')).toEqual({
+            current_volume: 5000,
+            percentage: 4,
+        })
         expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).props('volumeTrend')).toEqual([
             { date: '2026-02-01', volume: 1000 },
         ])

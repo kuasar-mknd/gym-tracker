@@ -110,6 +110,7 @@ class NoSidewaysScrollTest extends DuskTestCase
             'objectifs' => ['goals.index'],
             'habitudes' => ['habits.index'],
             'compléments' => ['supplements.index'],
+            'corps' => ['corps.index'],
             'mesures' => ['body-measurements.index'],
             'mensurations' => ['body-parts.index'],
             'calendrier' => ['calendar.index'],

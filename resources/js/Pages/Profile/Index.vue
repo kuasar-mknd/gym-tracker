@@ -55,20 +55,10 @@ const menuGroups = [
                 bgColor: 'bg-accent-state/50',
             },
             {
-                name: 'Poids',
-                icon: 'straighten',
-                route: 'body-measurements.index',
-                description: 'Évolution corporelle',
-                color: 'text-accent-secondary-deep',
-                bgColor: 'bg-accent-secondary/50',
-            },
-            // These four features are routed, tested and fully working, but nothing
-            // in the app linked to them — they were reachable only by typing the URL.
-            {
-                name: 'Mensurations',
+                name: 'Corps',
                 icon: 'accessibility_new',
-                route: 'body-parts.index',
-                description: 'Tour de bras, taille…',
+                route: 'corps.index',
+                description: 'Poids, masse grasse, mensurations',
                 color: 'text-accent-secondary-deep',
                 bgColor: 'bg-accent-secondary/50',
             },
