@@ -17,7 +17,7 @@
  * supprime : sans réseau, sur une copie hors ligne et sur une séance démarrée
  * sans réseau, il se désactive, avec la raison, comme « Modèle ».
  *
- * « Terminer » reste toujours ouvert (#2049) : la fin passe par la file hors
+ * « Terminer » reste ouvert (#2049), sauf pendant un abandon : la fin passe par la file hors
  * ligne, à l'heure du geste, et n'envoie rien que la page tire d'une copie
  * (la séance, l'heure). Ajouter un exercice et le repos restent aussi : ils
  * passent par la file, ou ne quittent pas l'appareil.
@@ -84,7 +84,7 @@ const raisonDuModele = computed(() => {
             « Repos » prend le contour, « Terminer » est l'action primaire.
         -->
         <div
-            class="verre-epais rounded-capsule bureau:contents bottom-sure-24 left-sure-4 right-sure-4 z-flottant @container fixed flex gap-2 p-2"
+            class="verre-epais rounded-capsule bureau:contents bottom-sure-24 left-sure-4 right-sure-4 z-flottant @container fixed mb-0 flex gap-2 p-2"
             role="group"
             aria-label="Actions de la séance"
             dusk="barre-d-outils-de-la-seance"
