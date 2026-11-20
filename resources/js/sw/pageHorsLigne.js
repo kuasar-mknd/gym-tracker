@@ -80,7 +80,7 @@ ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille
     <main id="main-content" class="px-sure-6 py-sure-12 flex min-h-dvh flex-col items-center justify-center gap-8">
         <div class="flex items-center ${MARQUE.sens}">
             ${logoEnSvg(`${TUILE_DU_LOGO} ${MARQUE.logo}`)}
-            <p class="text-gradient font-display ${MARQUE.nom} font-black tracking-tight uppercase italic">GymTracker</p>
+            <p class="font-display ${MARQUE.nom} font-semibold">GymTracker</p>
         </div>
         <section class="verre-regulier w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
             <span class="material-symbols-outlined text-text-muted text-5xl" aria-hidden="true" dusk="icone-hors-ligne">cloud_off</span>

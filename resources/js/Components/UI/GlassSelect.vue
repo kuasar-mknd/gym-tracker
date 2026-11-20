@@ -103,9 +103,9 @@ const describedByIds = computed(() => [props.describedBy, props.error ? errorId.
 const sizeClasses = {
     // text-base (16px) is deliberate even at this compact height: iOS auto-zooms
     // any focused form control below 16px, which the viewport no longer suppresses.
-    sm: 'min-h-[36px] text-base rounded-lg',
+    sm: 'min-h-9 text-base rounded-lg',
     md: 'min-h-touch text-base rounded-xl',
-    lg: 'min-h-[56px] text-lg rounded-2xl',
+    lg: 'min-h-14 text-lg rounded-2xl',
 }
 
 const isRequired = computed(() => {
@@ -116,11 +116,7 @@ const isRequired = computed(() => {
 <template>
     <div class="w-full">
         <!-- Label -->
-        <label
-            v-if="label"
-            :for="selectId"
-            :class="['font-display-label text-text-muted mb-2 block', { 'sr-only': hideLabel }]"
-        >
+        <label v-if="label" :for="selectId" :class="['etiquette mb-2 block', { 'sr-only': hideLabel }]">
             {{ label }}
             <span v-if="isRequired" class="text-accent-danger-deep ml-0.5" aria-hidden="true">*</span>
         </label>

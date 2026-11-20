@@ -15,10 +15,7 @@ defineProps({
         class="z-flottant top-sure-0 px-sure-0 pointer-events-none fixed left-0 flex w-full justify-center transition-transform duration-200 ease-out"
         :style="{ transform: `translateY(${Math.min(distance, 150)}px)` }"
     >
-        <div
-            v-if="distance > 0 || enCours"
-            class="border-border bg-surface-card/90 mt-4 rounded-full border p-3 shadow-lg backdrop-blur-md"
-        >
+        <div v-if="distance > 0 || enCours" class="verre-epais mt-4 rounded-full p-3">
             <svg
                 v-if="enCours"
                 class="text-accent-primary-deep h-6 w-6 animate-spin"

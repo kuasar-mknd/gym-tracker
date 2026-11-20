@@ -17,7 +17,7 @@
  * C'est le mécanisme d'une classe CSS inexistante, transposé aux props : la
  * valeur est acceptée, rien ne s'applique, et personne n'est prévenu.
  */
-export const VARIANTS = ['default', 'primary', 'secondary', 'neon', 'gradient-border', 'danger', 'ghost', 'accent']
+export const VARIANTS = ['default', 'primary', 'secondary', 'danger', 'ghost', 'accent']
 
 export const TAILLES = ['sm', 'md', 'lg', 'xl']
 </script>
@@ -116,8 +116,6 @@ const sizeClasses = {
                 'w-full sm:w-auto': block,
                 'glass-button-primary': variant === 'primary',
                 'accent-fill border-transparent shadow-none': variant === 'accent',
-                'glass-button-neon shadow-neon': variant === 'neon',
-                'glass-button-gradient-border': variant === 'gradient-border',
                 'border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20':
                     variant === 'danger',
                 'border-border-strong hover:bg-surface-sunken bg-transparent shadow-none backdrop-blur-none':

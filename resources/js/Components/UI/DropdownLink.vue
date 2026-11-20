@@ -34,7 +34,7 @@ defineProps({
         v-press
         :href="href ?? undefined"
         :type="href ? undefined : 'button'"
-        class="text-text-main focus-visible:ring-accent-primary hover:bg-surface-sunken focus-visible:bg-surface-sunken mx-2 my-1 block rounded-2xl px-4 py-2.5 text-start text-sm font-medium transition duration-200 hover:scale-[1.02] focus-visible:ring-2 focus-visible:outline-none"
+        class="text-text-main focus-visible:ring-accent-primary hover:bg-surface-sunken focus-visible:bg-surface-sunken mx-2 my-1 block rounded-2xl px-4 py-2.5 text-start text-sm font-medium transition duration-200 focus-visible:ring-2 focus-visible:outline-none"
     >
         <slot />
     </component>

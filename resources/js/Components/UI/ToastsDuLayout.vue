@@ -19,8 +19,8 @@ import { EVENEMENT_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
 const page = usePage()
 
 const toasts = {
-    success: { icon: 'check_circle', color: 'emerald', delay: 5000, id: null },
-    error: { icon: 'error', color: 'red', delay: 8000, id: null },
+    success: { icon: 'check_circle', delay: 5000, id: null },
+    error: { icon: 'error', delay: 8000, id: null },
 }
 
 /**
@@ -151,7 +151,7 @@ onUnmounted(() => {
                 >
                     <div
                         :class="[
-                            'verre-regulier flex items-center gap-3 rounded-2xl border-l-[6px] p-4 shadow-lg backdrop-blur-xl',
+                            'verre-epais flex items-center gap-3 rounded-2xl border-l-6 p-4',
                             type === 'success' ? 'border-l-accent-state' : 'border-l-accent-danger',
                         ]"
                     >
@@ -165,7 +165,7 @@ onUnmounted(() => {
                         >
                             <GlassIcon :name="cfg.icon" />
                         </div>
-                        <p class="text-text-main flex-1 text-sm font-bold">
+                        <p class="text-text-main flex-1 text-sm font-medium">
                             {{ page.props.flash[type] }}
                         </p>
                         <GlassButton

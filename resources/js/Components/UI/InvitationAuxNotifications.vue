@@ -40,7 +40,7 @@ const { visible, activee, enCours, etapeEnCours, erreur, activer, refuser, ferme
         </div>
 
         <div v-if="activee" class="min-w-0 flex-1 space-y-2" role="status">
-            <h3 class="titre-carte">C'est activé</h3>
+            <h3 class="titre-plat">C'est activé</h3>
             <p class="text-text-muted text-sm font-medium">
                 Tes prochains records s'afficheront sur cet appareil. Les rappels d'entraînement se règlent dans ton
                 profil.
@@ -48,13 +48,13 @@ const { visible, activee, enCours, etapeEnCours, erreur, activer, refuser, ferme
         </div>
 
         <div v-else class="min-w-0 flex-1 space-y-3">
-            <h3 class="titre-carte">Ne rate plus un record</h3>
+            <h3 class="titre-plat">Ne rate plus un record</h3>
             <p class="text-text-muted text-sm font-medium">
                 Active les notifications de tes records sur cet appareil : tu sauras dès que tu en bats un, même
                 l'application fermée.
             </p>
 
-            <p v-if="erreur" class="text-accent-danger-deep text-sm font-bold" role="alert">{{ erreur }}</p>
+            <p v-if="erreur" class="text-accent-danger-deep text-sm font-medium" role="alert">{{ erreur }}</p>
 
             <div class="flex flex-wrap gap-2">
                 <GlassButton
