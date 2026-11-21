@@ -65,15 +65,6 @@ const props = defineProps({
         default: false,
     },
     /**
-     * Le titre de l'en-tête mobile en casse de phrase (`titre-ecran`), au lieu
-     * des capitales italiques : les pages qui ont pris le verre le demandent,
-     * les autres gardent leur titre, que des parcours Dusk lisent en capitales.
-     */
-    titrePlat: {
-        type: Boolean,
-        default: false,
-    },
-    /**
      * Le titre de l'en-tête mobile ne se voit pas : une salutation ou une carte
      * d'identité en tient lieu (l'Accueil, le Profil). Le `<h1>` reste, pour les
      * lecteurs d'écran, et l'en-tête garde la cloche des notifications.
@@ -345,11 +336,9 @@ onUnmounted(() => {
                     :class="
                         titreMasque
                             ? 'sr-only'
-                            : titrePlat
-                              ? pageTitle.length > 12
-                                  ? 'titre-plat'
-                                  : 'titre-ecran max-[21rem]:titre-plat'
-                              : ['titre-carte', pageTitle.length > 12 ? 'text-xl' : 'text-2xl max-[21rem]:text-xl']
+                            : pageTitle.length > 12
+                              ? 'titre-plat'
+                              : 'titre-ecran max-[21rem]:titre-plat'
                     "
                 >
                     {{ pageTitle }}

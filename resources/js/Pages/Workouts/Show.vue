@@ -268,7 +268,6 @@ onUnmounted(() => {
         :show-back="true"
         back-route="workouts.index"
         largeur="moyenne"
-        titre-plat
     >
         <ErreurDeSaisie v-bind="erreurDeSaisie" />
 

@@ -120,7 +120,6 @@ const formatDate = (dateString) => {
         back-route="profile.index"
         liquid-variant="subtle"
         page-title="Compléments"
-        titre-plat
         titre-dans-la-page
     >
         <div class="space-y-6">

@@ -450,29 +450,6 @@
      * commentaire dit quoi verifier.
      */
 
-    /*
-     * Les ombres DERIVENT de leur accent, elles ne le recopient pas.
-     *
-     * `rgb(from <couleur> r g b / alpha)` reprend les canaux du jeton et n'en
-     * change que l'opacite : une seule couleur sous un seul nom.
-     */
-    --shadow-glow-primary-soft: 0 0 15px rgb(from var(--color-accent-primary) r g b / 0.3);
-
-    /*
-     * Les degrades ne portent plus d'hexadecimal : ils citent les jetons.
-     *
-     * Ils restent des surfaces DECORATIVES. Aucun texte ne s'ecrit dessus, et
-     * c'est demontre plutot que promis : sur `gradient-main`, du blanc echoue de
-     * 0 a 50 % et de l'encre echoue de 75 a 100 %. Aucune des deux ne traverse.
-     * C'est ce qui a fait retirer le degrade des boutons.
-     */
-    --background-image-gradient-main: linear-gradient(
-        135deg,
-        var(--color-accent-primary) 0%,
-        var(--color-accent-secondary) 50%,
-        var(--color-accent-tertiary) 100%
-    );
-
     @keyframes fade-in {
         from {
             opacity: 0;
@@ -579,28 +556,9 @@
 }
 
 /*
- * Les tailles de titre des pages qui n'ont pas pris le verre.
- *
- * Les `h1`–`h3` du dépôt portaient 28 combinaisons de classes : le titre d'une
- * carte était tantôt en capitales italiques, tantôt en casse de phrase, selon
- * l'écran (#1783). Un rôle par taille, la couleur reste à l'appelant quand elle
- * dit quelque chose.
- */
-@utility titre-carte {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-    color: var(--color-text-main);
-}
-
-/*
- * Les rôles du verre : le titre d'un écran et celui d'une carte, en casse de
- * phrase et graisse 600, et la petite étiquette en gris qui le précède. Le rôle `titre-carte`
- * ci-dessus reste celui des pages restantes ; ceux-ci sont ceux d'un écran qui a
- * quitté le gras italique en capitales.
+ * Les rôles typographiques : le titre d'un écran et celui d'une carte, en casse
+ * de phrase et graisse 600, et la petite étiquette en gris qui le précède. Un
+ * titre en choisit un, et n'écrit plus sa typographie (#1783).
  */
 @utility titre-plat {
     font-family: var(--font-display);

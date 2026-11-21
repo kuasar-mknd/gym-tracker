@@ -42,7 +42,7 @@ const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(n
 <template>
     <Head title="Badges" />
 
-    <AuthenticatedLayout show-back back-route="stats.index" page-title="Badges" titre-plat>
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Badges">
         <template #header>
             <h1 class="titre-ecran">Badges</h1>
         </template>

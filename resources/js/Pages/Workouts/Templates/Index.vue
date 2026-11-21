@@ -71,7 +71,7 @@ const {
 <template>
     <Head title="Mes modèles" />
 
-    <AuthenticatedLayout page-title="Mes modèles" show-back back-route="workouts.index" titre-plat>
+    <AuthenticatedLayout page-title="Mes modèles" show-back back-route="workouts.index">
         <!--
             « Nouveau modèle » est une navigation : `GlassButton` la rend en un
             seul lien par `href`, jamais un bouton posé dans un `Link` (#2117).

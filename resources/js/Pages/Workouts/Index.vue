@@ -118,7 +118,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 <template>
     <Head title="Mes séances" />
 
-    <AuthenticatedLayout page-title="Mes séances" titre-plat>
+    <AuthenticatedLayout page-title="Mes séances">
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header>
             <div class="flex items-center justify-between">

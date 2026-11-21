@@ -45,7 +45,7 @@ const mensurations = computed(() =>
 <template>
     <Head title="Corps" />
 
-    <AuthenticatedLayout show-back back-route="stats.index" page-title="Corps" titre-plat>
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Corps">
         <template #header>
             <h1 class="titre-ecran">Corps</h1>
         </template>

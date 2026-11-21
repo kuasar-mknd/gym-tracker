@@ -13,9 +13,8 @@ const INTERLETTRAGE_POSITIF =
  * colorées, texte dégradé, pulsation hors direct, survol qui agrandit. Un
  * composant partagé y répond pour toutes les pages qui l'emploient.
  *
- * Les rôles `titre-page`, `titre-section`, `titre-carte` et `sur-titre` sont
- * encore ceux des pages en capitales : un composant partagé prend `titre-plat`
- * ou `etiquette`.
+ * Les anciens rôles `titre-page`, `titre-section`, `titre-carte` et `sur-titre`
+ * n'existent plus : un composant partagé prend `titre-plat` ou `etiquette`.
  */
 const INTERDITS = [
     [/\buppercase\b/, 'capitales : la casse de phrase se garde'],
