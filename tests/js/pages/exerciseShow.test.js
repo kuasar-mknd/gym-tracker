@@ -234,7 +234,7 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.volumeData[0].volume).toBe(500)
     })
 
-    it('gives the Charge Max card the record, not the heavier set never ticked', async () => {
+    it('gives the Charge max card the record, not the heavier set never ticked', async () => {
         const wrapper = await mountPage([seanceAvecUneSeriePrevue()])
 
         expect(wrapper.vm.maxWeightData[0].weight).toBe(100)
@@ -265,7 +265,7 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.maxWeightData[0].weight).toBe(100)
     })
 
-    it('leaves a ticked warm-up out of Séries and Poids vs Reps (#2333)', async () => {
+    it('leaves a ticked warm-up out of Séries and Poids vs reps (#2333)', async () => {
         const wrapper = await mountPage([
             session('13/06/2026', [
                 { weight: 100, reps: 5 },
@@ -286,7 +286,7 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.volumeData[0].volume).toBe(0)
     })
 
-    it('leaves a ticked warm-up out of Répétitions max and Charge Max, as out of the records (#2333)', async () => {
+    it('leaves a ticked warm-up out of Répétitions max and Charge max, as out of the records (#2333)', async () => {
         const wrapper = await mountPage([
             session('13/06/2026', [
                 { weight: 100, reps: 5 },
