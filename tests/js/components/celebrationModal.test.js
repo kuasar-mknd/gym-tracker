@@ -111,7 +111,7 @@ describe('CelebrationModal', () => {
         const wrapper = await mountModal({ is_testing: false, auth: { user: { latest_achievement: supprime } } })
 
         expect(dialogOf(wrapper).open).toBe(true)
-        expect(wrapper.find('[aria-hidden="true"]').text()).toBe('🏆')
+        expect(wrapper.find('[aria-hidden="true"]').text()).toBe('military_tech')
         expect(wrapper.find('#achievement-name').exists()).toBe(false)
         expect(wrapper.find('#achievement-description').text()).toBe(
             'Félicitations ! Tu as débloqué le badge : Premier record.',

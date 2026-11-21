@@ -120,21 +120,22 @@ const formatDate = (dateString) => {
         back-route="profile.index"
         liquid-variant="subtle"
         page-title="Compléments"
+        titre-plat
         titre-dans-la-page
     >
         <div class="space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="titre-page bureau:block hidden">Mes <span class="text-gradient">Compléments</span></h1>
-                    <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
+                    <h1 class="titre-ecran bureau:block hidden">Mes compléments</h1>
+                    <p class="etiquette mt-2">
                         {{ compte(supplements.length, 'produit suivi', 'produits suivis') }}
                     </p>
                 </div>
                 <GlassButton
                     @click="showAddForm = true"
                     variant="primary"
-                    class="bureau:flex hidden size-11 shrink-0 items-center justify-center"
+                    class="bureau:inline-flex hidden shrink-0 items-center justify-center"
                 >
                     <GlassIcon name="add" class="mr-2" />
                     Ajouter
@@ -144,15 +145,15 @@ const formatDate = (dateString) => {
             <!-- Usage Chart -->
             <GlassCard v-if="usageHistory && usageHistory.some((d) => d.count > 0)" class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="titre-carte">Consommation Mensuelle</h3>
-                    <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
+                    <h3 class="titre-plat">Consommation mensuelle</h3>
+                    <p class="etiquette">30 derniers jours</p>
                 </div>
                 <SupplementUsageChart :data="usageHistory" />
             </GlassCard>
 
             <!-- Add Form -->
             <GlassCard v-if="showAddForm" class="animate-scale-in" variant="solid">
-                <h3 class="titre-carte mb-5">Nouveau Complément</h3>
+                <h3 class="titre-plat mb-5">Nouveau complément</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <GlassInput
                         v-model="form.name"
@@ -203,7 +204,7 @@ const formatDate = (dateString) => {
             <GlassEmptyState
                 v-if="supplements.length === 0 && !showAddForm"
                 class="animate-slide-up"
-                icon="💊"
+                icon="medication"
                 color="pink"
                 title="Aucun complément"
                 description="Ajoute tes compléments pour suivre ton stock et ta consommation."
@@ -221,7 +222,7 @@ const formatDate = (dateString) => {
                 >
                     <!-- Edit Mode -->
                     <div v-if="editingSupplement === supplement.id" class="space-y-4 p-4">
-                        <h3 class="titre-carte">Modifier</h3>
+                        <h3 class="titre-plat">Modifier</h3>
                         <!-- Les libellés du formulaire d'ajout : les champs s'ouvrent remplis,
                              un placeholder n'y nommerait rien (#1972). -->
                         <GlassInput v-model="editForm.name" label="Nom" :error="editForm.errors.name" />
@@ -266,14 +267,12 @@ const formatDate = (dateString) => {
                         <div class="flex-1 p-4">
                             <div class="mb-2 flex items-start justify-between">
                                 <div class="flex items-center gap-3">
-                                    <div
-                                        class="accent-fill flex size-10 items-center justify-center rounded-lg shadow-md"
-                                    >
+                                    <div class="accent-fill flex size-10 items-center justify-center rounded-lg">
                                         <GlassIcon name="medication" />
                                     </div>
                                     <div>
-                                        <h3 class="titre-carte">{{ supplement.name }}</h3>
-                                        <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
+                                        <h3 class="titre-plat">{{ supplement.name }}</h3>
+                                        <p class="etiquette">
                                             {{ supplement.brand || 'Générique' }}
                                         </p>
                                     </div>
@@ -298,9 +297,9 @@ const formatDate = (dateString) => {
 
                             <div class="mt-4 flex items-end justify-between">
                                 <div>
-                                    <p class="text-text-muted mb-1 text-xs font-semibold uppercase">Stock</p>
+                                    <p class="etiquette mb-1">Stock</p>
                                     <p
-                                        class="font-display text-2xl font-black"
+                                        class="font-display text-2xl font-semibold tabular-nums"
                                         :class="
                                             supplement.servings_remaining <= supplement.low_stock_threshold
                                                 ? 'text-accent-danger-deep'
@@ -314,7 +313,7 @@ const formatDate = (dateString) => {
                                     </p>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-text-muted mb-1 text-xs font-semibold uppercase">Dernière prise</p>
+                                    <p class="etiquette mb-1">Dernière prise</p>
                                     <p class="text-text-main text-sm font-bold">
                                         {{ formatDate(supplement.last_taken_at) }}
                                     </p>

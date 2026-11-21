@@ -30,13 +30,13 @@ class ProfileEditTest extends DuskTestCase
                 ->disableAnimations()
                 ->waitFor('#main-content', 30);
 
-            $browser->assertSee('MON PROFIL');
+            $browser->assertSee('Mon profil');
 
             // Verify Profile Info Section
             // Le champ d'adresse porte la nouvelle adresse (`email`) ;
             // l'identifiant du compte, pour les gestionnaires de mots de passe,
             // est à part, caché (#2076).
-            $browser->assertSee('INFORMATIONS DU PROFIL')
+            $browser->assertSee('Informations du profil')
                 ->waitFor('@profile-name-input', 15)
                 ->assertInputValue('@profile-name-input', 'Original Name')
                 ->assertInputValue('input[type="email"][autocomplete="email"]', $user->email)
@@ -74,7 +74,7 @@ class ProfileEditTest extends DuskTestCase
             // Le formulaire du mot de passe porte l'adresse du compte pour les
             // gestionnaires de mots de passe (#2076), dans un champ que personne
             // ne voit : présent, à la bonne valeur, et caché.
-            $browser->assertSee('MOT DE PASSE')
+            $browser->assertSee('Mot de passe')
                 ->assertAttribute('[data-testid="identifiant-du-compte"]', 'autocomplete', 'username')
                 ->assertInputValue('[data-testid="identifiant-du-compte"]', $user->email)
                 ->assertMissing('[data-testid="identifiant-du-compte"]')
@@ -104,10 +104,10 @@ class ProfileEditTest extends DuskTestCase
 
             // Verify Delete Account Section
             $browser->script("document.querySelector('[data-testid=\"delete-account-button\"]').scrollIntoView({block: 'center'});");
-            $browser->assertSee('SUPPRIMER LE COMPTE')
+            $browser->assertSee('Supprimer le compte')
                 ->script("document.querySelector('[data-testid=\"delete-account-button\"]').click();");
 
-            $browser->waitForText('CONFIRMER LA SUPPRESSION', 15)
+            $browser->waitForText('Confirmer la suppression', 15)
                 ->assertSee('Cette action est irréversible.');
 
             // La fenêtre ouverte retient le défilement de la page. Sans ce
@@ -130,7 +130,7 @@ class ProfileEditTest extends DuskTestCase
             // le panneau se cache aussitôt, mais le <dialog> ne se ferme que
             // 200 ms plus tard, et un dialogue modal resté ouvert, même vide,
             // rend toute la page inerte.
-            $browser->waitUntilMissingText('CONFIRMER LA SUPPRESSION', 15)
+            $browser->waitUntilMissingText('Confirmer la suppression', 15)
                 ->waitUntil(
                     '! document.querySelector("dialog[open]")',
                     15,

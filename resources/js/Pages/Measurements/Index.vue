@@ -154,7 +154,7 @@ const latestBodyFat = computed(() => {
 <template>
     <Head title="Poids" />
 
-    <AuthenticatedLayout show-back back-route="corps.index" page-title="Poids">
+    <AuthenticatedLayout show-back back-route="corps.index" page-title="Poids" titre-plat>
         <template #header-actions>
             <!--
                 Le variant suit l'ÉTAT : ce bouton bascule, et il dit
@@ -175,7 +175,7 @@ const latestBodyFat = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Poids</h1>
+                <h1 class="titre-ecran">Poids</h1>
                 <GlassButton
                     :variant="showAddForm ? 'secondary' : 'primary'"
                     data-bascule-mesure
@@ -194,7 +194,6 @@ const latestBodyFat = computed(() => {
                     :valeur="latestWeight ? nombre(latestWeight) : '—'"
                     :unite="latestWeight ? 'kg' : null"
                     libelle="Poids"
-                    ton="text-gradient"
                 />
                 <GlassStat
                     :valeur="weightDiff !== null ? variation(weightDiff, null) : '—'"
@@ -206,13 +205,12 @@ const latestBodyFat = computed(() => {
                     :valeur="latestBodyFat ? nombre(latestBodyFat) : '—'"
                     :unite="latestBodyFat ? '%' : null"
                     libelle="Masse grasse"
-                    ton="text-accent-secondary-deep"
                 />
             </div>
 
             <!-- Add Form (collapsible) -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="titre-carte mb-4">Nouvelle entrée</h3>
+                <h3 class="titre-plat mb-4">Nouvelle entrée</h3>
                 <form ref="formulaire" @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <GlassInput
@@ -275,7 +273,7 @@ const latestBodyFat = computed(() => {
                 <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <!-- Weight Chart -->
                     <GlassCard>
-                        <h3 class="text-accent-info-deep sur-titre mb-4">Évolution Poids</h3>
+                        <h3 class="titre-plat mb-4">Évolution du poids</h3>
                         <div class="h-64">
                             <WeightHistoryChart
                                 hauteur="h-full"
@@ -294,7 +292,7 @@ const latestBodyFat = computed(() => {
 
                     <!-- Body Fat Chart -->
                     <GlassCard>
-                        <h3 class="text-accent-secondary-deep sur-titre mb-4">Évolution Masse Grasse</h3>
+                        <h3 class="titre-plat mb-4">Évolution de la masse grasse</h3>
                         <div class="h-64">
                             <BodyFatLineChart
                                 hauteur="h-full"
@@ -309,11 +307,11 @@ const latestBodyFat = computed(() => {
 
             <!-- History -->
             <div class="stagger-4 animate-slide-up">
-                <h3 class="text-accent-info-deep sur-titre mb-3">Historique</h3>
+                <h3 class="titre-plat mb-3">Historique</h3>
 
                 <GlassEmptyState
                     v-if="measurements.length === 0"
-                    icon="⚖️"
+                    icon="monitor_weight"
                     title="Aucune mesure"
                     description="Pèse-toi une première fois pour ouvrir la courbe."
                     action-label="Ajouter une mesure"
@@ -338,7 +336,7 @@ const latestBodyFat = computed(() => {
                                 <div class="text-text-muted text-sm font-medium">
                                     {{ dateAvecJour(parseCalendarDate(measurement.measured_at)) }}
                                 </div>
-                                <div v-if="measurement.notes" class="text-text-muted mt-1 text-xs italic">
+                                <div v-if="measurement.notes" class="text-text-muted mt-1 text-xs">
                                     {{ measurement.notes }}
                                 </div>
                             </div>

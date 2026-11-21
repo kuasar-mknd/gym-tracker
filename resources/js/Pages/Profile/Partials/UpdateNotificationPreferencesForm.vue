@@ -201,9 +201,7 @@ const updatePreferences = () => {
                         leave-to-class="translate-y-1 opacity-0"
                     >
                         <div v-if="form.preferences.training_reminder" class="border-border ml-2 border-l-2 pl-4">
-                            <p class="text-text-muted mb-2 text-xs font-semibold tracking-wider uppercase">
-                                Jours de rappel
-                            </p>
+                            <p class="etiquette mb-2">Jours de rappel</p>
                             <div class="flex flex-wrap gap-x-4 gap-y-1" dusk="reminder-days">
                                 <label
                                     v-for="jour in JOURS"

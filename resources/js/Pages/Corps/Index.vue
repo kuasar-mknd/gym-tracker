@@ -45,9 +45,9 @@ const mensurations = computed(() =>
 <template>
     <Head title="Corps" />
 
-    <AuthenticatedLayout show-back back-route="stats.index" page-title="Corps">
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Corps" titre-plat>
         <template #header>
-            <h1 class="titre-carte">Corps</h1>
+            <h1 class="titre-ecran">Corps</h1>
         </template>
 
         <div class="bureau:grid bureau:grid-cols-2 bureau:gap-6 bureau:space-y-0 space-y-6">
@@ -61,7 +61,7 @@ const mensurations = computed(() =>
             <BodyFatCard :body-fat="bodyFat" :body-fat-history="bodyStats?.bodyFatHistory" />
 
             <GlassCard class="bureau:col-span-2 bureau:self-start">
-                <h2 class="text-accent-primary-deep sur-titre mb-3">Mensurations</h2>
+                <h2 class="titre-plat mb-3">Mensurations</h2>
 
                 <GlassEmptyState
                     v-if="mensurations.length === 0"
@@ -77,7 +77,7 @@ const mensurations = computed(() =>
                             class="flex items-center justify-between gap-3 py-3"
                         >
                             <span class="min-w-0">
-                                <span class="titre-carte block truncate">{{ item.label ?? item.part }}</span>
+                                <span class="titre-plat block truncate">{{ item.label ?? item.part }}</span>
                                 <span class="text-text-muted block text-xs">
                                     {{ dateCourte(parseCalendarDate(item.date)) }}
                                 </span>
@@ -103,7 +103,7 @@ const mensurations = computed(() =>
 
                 <Link
                     :href="route('body-parts.index')"
-                    class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition hover:gap-3"
+                    class="text-accent-primary-deep mt-4 inline-flex items-center gap-2 text-xs font-bold hover:underline"
                 >
                     {{ latestMeasurements.length > 0 ? 'Toutes les mensurations' : 'Ajouter une mensuration' }}
                     <GlassIcon name="arrow_forward" size="xs" />

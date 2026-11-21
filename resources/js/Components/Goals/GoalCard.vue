@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
 import { dateCourte, parseCalendarDate } from '@/Utils/date'
@@ -28,15 +29,15 @@ const parSemaine = computed(() => props.goal.type === 'frequency' && props.goal.
 const typeIcon = computed(() => {
     switch (props.goal.type) {
         case 'weight':
-            return '🏋️‍♂️'
+            return 'fitness_center'
         case 'frequency':
-            return '📅'
+            return 'calendar_month'
         case 'volume':
-            return '📊'
+            return 'bar_chart'
         case 'measurement':
-            return '📏'
+            return 'straighten'
         default:
-            return '🎯'
+            return 'flag'
     }
 })
 
@@ -66,47 +67,36 @@ const formattedDeadline = computed(() => dateCourte(parseCalendarDate(props.goal
 
 const statusColor = computed(() => {
     if (isCompleted.value) return 'text-accent-state-deep'
-    if (progress.value > 75) return 'text-accent-info-deep'
     if (progress.value > 25) return 'text-accent-primary-deep'
     return 'text-text-muted'
 })
 </script>
 
 <template>
-    <div
-        v-press
-        class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-5 shadow-lg backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl"
-    >
-        <!-- Liquid Glow Background behind the card (subtle) -->
-        <div
-            class="bg-surface-card/5 absolute inset-0 z-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        ></div>
-
+    <GlassCard v-press padding="p-5" class="relative overflow-hidden">
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
-            class="bg-accent-state text-text-on-accent text-2xs absolute -top-2 -right-2 z-10 rotate-12 px-3 py-1.5 font-bold shadow-lg"
+            class="bg-accent-state text-text-on-accent text-2xs absolute top-0 right-0 z-10 rounded-bl-xl px-3 py-1.5 font-semibold"
         >
-            {{ parSemaine ? 'SEMAINE FAITE' : 'COMPLÉTÉ' }}
+            {{ parSemaine ? 'Semaine faite' : 'Complété' }}
         </div>
 
         <div class="relative z-10 mb-4 flex items-start justify-between">
             <div class="flex items-center gap-3">
-                <div
-                    class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl shadow-sm backdrop-blur-md transition-transform duration-300 group-hover:scale-110"
-                >
-                    {{ typeIcon }}
+                <div class="bg-surface-sunken text-text-muted rounded-icone flex h-12 w-12 items-center justify-center">
+                    <GlassIcon :name="typeIcon" />
                 </div>
                 <div>
-                    <h4 class="font-display text-text-main line-clamp-1 text-lg font-black uppercase italic">
+                    <h4 class="titre-plat line-clamp-1">
                         {{ goal.title }}
                     </h4>
-                    <span class="text-text-muted text-2xs font-bold tracking-wider uppercase">{{ typeLabel }}</span>
+                    <span class="etiquette">{{ typeLabel }}</span>
                 </div>
             </div>
 
             <div class="shrink-0 text-right whitespace-nowrap">
-                <div class="font-display text-lg font-black italic drop-shadow-sm" :class="statusColor">
+                <div class="font-display text-lg font-semibold tabular-nums" :class="statusColor">
                     {{ pourcentage(pourcentageAffiche, 0) }}
                 </div>
             </div>
@@ -115,57 +105,47 @@ const statusColor = computed(() => {
         <div class="relative z-10 space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div class="text-text-muted text-2xs flex justify-between font-bold tracking-widest uppercase">
+                <div class="etiquette flex justify-between">
                     <span>{{ nombre(goal.start_value) }} {{ uniteDe(goal.start_value) }}</span>
                     <span>{{ nombre(goal.target_value) }} {{ uniteDeLaCible(goal.target_value) }}</span>
                 </div>
                 <div
-                    class="border-surface-card/20 bg-surface-card/10 h-2 w-full overflow-hidden rounded-full border shadow-inner backdrop-blur-md"
+                    class="bg-surface-sunken h-2 w-full overflow-hidden rounded-full"
                     role="progressbar"
                     :aria-valuenow="progress"
                     aria-valuemin="0"
                     aria-valuemax="100"
                 >
                     <div
-                        class="relative h-full transition duration-1000 ease-out"
+                        class="h-full transition-[width] duration-300 ease-out"
                         :class="
                             isCompleted
                                 ? // Le vert acide ne se detache d'aucune piste claire : 1,13:1
                                   // contre la sienne. Le contour, lui, rend 4,02:1 — la
                                   // barre garde son neon et devient perceptible.
                                   'bg-accent-state ring-accent-state-deep ring-1 ring-inset'
-                                : 'from-accent-primary to-accent-secondary shadow-glow-orange bg-linear-to-r'
+                                : 'bg-accent-primary'
                         "
                         :style="{ width: progress + '%' }"
-                    >
-                        <div
-                            class="to-surface-card/30 absolute inset-0 animate-pulse bg-linear-to-r from-transparent"
-                        ></div>
-                    </div>
+                    ></div>
                 </div>
             </div>
 
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-3">
-                <div
-                    class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 rounded-2xl border p-3 shadow-sm backdrop-blur-md transition-colors"
-                >
-                    <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Actuel</p>
-                    <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
+                <div class="bg-surface-sunken rounded-xl p-3">
+                    <p class="etiquette">Actuel</p>
+                    <p class="font-display text-text-main mt-0.5 text-lg font-semibold tabular-nums">
                         {{ nombre(goal.current_value) }}
-                        <span class="text-text-muted text-2xs font-bold not-italic">{{
-                            uniteDe(goal.current_value)
-                        }}</span>
+                        <span class="text-text-muted text-2xs font-medium">{{ uniteDe(goal.current_value) }}</span>
                     </p>
                 </div>
-                <div
-                    class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 rounded-2xl border p-3 shadow-sm backdrop-blur-md transition-colors"
-                >
-                    <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Cible</p>
-                    <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
+                <div class="bg-surface-sunken rounded-xl p-3">
+                    <p class="etiquette">Cible</p>
+                    <p class="font-display text-text-main mt-0.5 text-lg font-semibold tabular-nums">
                         {{ nombre(goal.target_value) }}
                         <span
-                            class="text-text-muted text-2xs font-bold not-italic"
+                            class="text-text-muted text-2xs font-medium"
                             :class="parSemaine ? 'block leading-tight' : ''"
                             >{{ uniteDeLaCible(goal.target_value) }}</span
                         >
@@ -173,10 +153,7 @@ const statusColor = computed(() => {
                 </div>
             </div>
 
-            <div
-                v-if="goal.deadline"
-                class="text-text-muted text-2xs flex items-center gap-1.5 pt-1 font-bold tracking-wider uppercase"
-            >
+            <div v-if="goal.deadline" class="etiquette flex items-center gap-1.5 pt-1">
                 <GlassIcon name="schedule" size="xs" />
                 <span>Échéance : {{ formattedDeadline }}</span>
             </div>
@@ -186,12 +163,12 @@ const statusColor = computed(() => {
               controls of a page holding six goals otherwise reads "Modifier,
               Supprimer" six times over with nothing to tell them apart.
             -->
-            <div class="border-surface-card/10 flex items-center gap-2 border-t pt-3">
+            <div class="border-border flex items-center gap-2 border-t pt-3">
                 <Link
                     :href="route('goals.edit', { goal: goal.id })"
                     :dusk="`edit-goal-${goal.id}`"
                     :aria-label="`Modifier l'objectif ${goal.title}`"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch bg-surface-sunken inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <GlassIcon name="edit" size="sm" />
                     Modifier
@@ -200,7 +177,7 @@ const statusColor = computed(() => {
                     type="button"
                     :dusk="`delete-goal-${goal.id}`"
                     :aria-label="`Supprimer l'objectif ${goal.title}`"
-                    class="focus-visible:ring-accent-primary min-h-touch border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="focus-visible:ring-accent-primary min-h-touch bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     @click="emit('delete', goal)"
                 >
                     <GlassIcon name="delete" size="sm" />
@@ -208,5 +185,5 @@ const statusColor = computed(() => {
                 </button>
             </div>
         </div>
-    </div>
+    </GlassCard>
 </template>

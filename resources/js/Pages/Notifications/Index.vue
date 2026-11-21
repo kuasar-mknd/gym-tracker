@@ -61,7 +61,7 @@ const formatDate = (date) => {
 <template>
     <Head title="Notifications" />
 
-    <AuthenticatedLayout show-back back-route="dashboard" page-title="Notifications">
+    <AuthenticatedLayout show-back back-route="dashboard" page-title="Notifications" titre-plat>
         <!--
             Le jumeau de « Tout marquer comme lu » pour l'en-tête mobile : celui
             de l'en-tête de page ne se montre qu'avec la barre de bureau, et un
@@ -82,7 +82,7 @@ const formatDate = (date) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Notifications</h1>
+                <h1 class="titre-ecran">Notifications</h1>
                 <GlassButton
                     v-if="aDesNonLues"
                     @click="markAllAsRead"
@@ -99,7 +99,6 @@ const formatDate = (date) => {
                 v-if="notifications.data.length === 0"
                 icon="notifications_off"
                 title="Aucune notification"
-                description="Tu es à jour !"
             />
 
             <div v-else class="space-y-3">
@@ -173,7 +172,7 @@ const formatDate = (date) => {
                                     {{ notification.data.title }}
                                 </h4>
                                 <p class="text-text-muted text-sm">{{ notification.data.message }}</p>
-                                <span class="text-text-muted text-2xs mt-2 block tracking-wider uppercase">
+                                <span class="text-text-muted text-2xs mt-2 block">
                                     {{ formatDate(notification.created_at) }}
                                 </span>
                             </div>

@@ -162,8 +162,8 @@ const submit = () => {
     <Modal :show="show" max-width="lg" aria-labelledby="habit-form-title" @close="$emit('close')">
         <div class="p-6">
             <div class="mb-4 flex items-center justify-between">
-                <h3 id="habit-form-title" class="titre-carte">
-                    {{ habitude ? 'Modifier' : 'Nouvelle Habitude' }}
+                <h3 id="habit-form-title" class="titre-plat">
+                    {{ habitude ? 'Modifier' : 'Nouvelle habitude' }}
                 </h3>
                 <GlassIconButton icon="close" label="Fermer le formulaire" @click="$emit('close')" />
             </div>

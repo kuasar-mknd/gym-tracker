@@ -683,7 +683,7 @@ describe('Measurements/Parts/Index part picker', () => {
         // porte `form.part`, que la pastille vient d'écrire.
         expect(wrapper.find('[placeholder="Ex. : Taille"]').exists()).toBe(true)
         expect(wrapper.vm.form.part).toBe('Taille')
-        expect(wrapper.findAll('h3.titre-carte').map((titre) => titre.text())).toEqual(
+        expect(wrapper.findAll('h3.titre-plat').map((titre) => titre.text())).toEqual(
             expect.arrayContaining(['Taille', 'Biceps gauche', 'Poitrine']),
         )
         expect(wrapper.text()).not.toMatch(/\b(Waist|Biceps L|Chest|Neck)\b/)

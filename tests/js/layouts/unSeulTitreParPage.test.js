@@ -82,7 +82,7 @@ describe('un seul h1 par page, sur téléphone comme sur bureau (#2120)', () => 
     it('les compléments : l’en-tête mobile, puis le titre que la page pose sur bureau', async () => {
         const wrapper = await monter(SupplementsIndex, { supplements: [], usageHistory: [] })
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Compléments'], bureau: ['Mes Compléments'] })
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Compléments'], bureau: ['Mes compléments'] })
     })
 
     /*

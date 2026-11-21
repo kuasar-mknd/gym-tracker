@@ -113,7 +113,7 @@ describe('Corps/Index', () => {
             'Waist',
         ]
         const wrapper = await monter({ latestMeasurements: noms.map((nom) => mensuration(nom, 30)) })
-        const parties = wrapper.findAll('li').map((ligne) => ligne.get('.titre-carte').text())
+        const parties = wrapper.findAll('li').map((ligne) => ligne.get('.titre-plat').text())
 
         expect(parties).toEqual(['Waist', 'Chest', 'Hips', 'Thigh L', 'Biceps L', 'Biceps R'])
         expect(wrapper.text()).not.toContain('Neck')

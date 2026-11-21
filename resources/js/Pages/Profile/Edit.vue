@@ -25,11 +25,11 @@ const props = defineProps({
 </script>
 
 <template>
-    <Head title="Mon Profil" />
+    <Head title="Mon profil" />
 
-    <AuthenticatedLayout page-title="Mon Profil" show-back back-route="profile.index">
+    <AuthenticatedLayout page-title="Mon profil" titre-plat show-back back-route="profile.index">
         <template #header>
-            <h1 class="titre-carte">Mon Profil</h1>
+            <h1 class="titre-ecran">Mon profil</h1>
         </template>
 
         <div class="space-y-6">
