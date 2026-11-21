@@ -1,16 +1,16 @@
 <template>
-    <AuthenticatedLayout page-title="Outils" show-back back-route="profile.index" retour-propre>
+    <AuthenticatedLayout page-title="Outils" show-back back-route="profile.index" retour-propre titre-plat>
         <template #header>
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('profile.index')"
-                    class="text-text-muted hover:text-accent-primary-deep focus-visible:ring-accent-primary border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-accent-primary-deep focus-visible:ring-accent-primary border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     aria-label="Retour au profil"
                     v-press
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h1 class="titre-carte">Outils</h1>
+                <h1 class="titre-ecran">Outils</h1>
             </div>
         </template>
 
@@ -18,7 +18,7 @@
             <!-- Plate Calculator -->
             <Link :href="route('plates.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
@@ -38,7 +38,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="titre-carte">Calculateur de Plaques</h3>
+                        <h3 class="titre-plat">Calculateur de plaques</h3>
                         <p class="text-text-muted text-sm">
                             Calcule quelles plaques charger sur la barre pour un poids spécifique.
                         </p>
@@ -49,7 +49,7 @@
             <!-- 1RM Calculator -->
             <Link :href="route('tools.1rm')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-secondary/20 text-accent-secondary-deep rounded-full p-4">
@@ -69,7 +69,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="titre-carte">Calculateur 1RM</h3>
+                        <h3 class="titre-plat">Calculateur 1RM</h3>
                         <p class="text-text-muted text-sm">
                             Estime ton maximum sur une répétition basé sur le poids soulevé et les répétitions.
                         </p>
@@ -80,7 +80,7 @@
             <!-- Wilks Calculator -->
             <Link :href="route('tools.wilks')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
@@ -100,7 +100,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="titre-carte">Calculateur Wilks</h3>
+                        <h3 class="titre-plat">Calculateur Wilks</h3>
                         <p class="text-text-muted text-sm">
                             Calcule ton score de force relative indépendamment de ton poids de corps.
                         </p>
@@ -111,13 +111,13 @@
             <!-- Macro Calculator -->
             <Link :href="route('tools.macro-calculator')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-state/20 text-accent-state-deep rounded-full p-4">
                             <GlassIcon name="local_fire_department" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Calculateur de Macros</h3>
+                        <h3 class="titre-plat">Calculateur de macros</h3>
                         <p class="text-text-muted text-sm">
                             Estime tes besoins quotidiens en calories et macros selon tes objectifs.
                         </p>
@@ -128,7 +128,7 @@
             <!-- Warmup Calculator -->
             <Link :href="route('tools.warmup')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
@@ -148,7 +148,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="titre-carte">Calculateur d'Échauffement</h3>
+                        <h3 class="titre-plat">Calculateur d'échauffement</h3>
                         <p class="text-text-muted text-sm">
                             Calcule tes séries d'échauffement basées sur ton poids de travail.
                         </p>
@@ -159,13 +159,13 @@
             <!-- Water Tracker -->
             <Link :href="route('tools.water.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
+                        <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
                             <GlassIcon name="water_drop" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Suivi Hydratation</h3>
+                        <h3 class="titre-plat">Suivi d'hydratation</h3>
                         <p class="text-text-muted text-sm">Suis ta consommation d'eau quotidienne et reste hydraté.</p>
                     </div>
                 </GlassCard>
@@ -174,13 +174,13 @@
             <!-- Interval Timer -->
             <Link :href="route('tools.interval-timer.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <GlassIcon name="timer" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Minuteur d'Intervalle</h3>
+                        <h3 class="titre-plat">Minuteur d'intervalle</h3>
                         <p class="text-text-muted text-sm">
                             Crée et lance tes propres minuteurs pour tes entraînements HIIT ou Tabata.
                         </p>
@@ -191,13 +191,13 @@
             <!-- Fasting Tracker -->
             <Link :href="route('tools.fasting.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border transition-colors"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <GlassIcon name="schedule" size="lg" />
                         </div>
-                        <h3 class="titre-carte">Suivi de Jeûne</h3>
+                        <h3 class="titre-plat">Suivi de jeûne</h3>
                         <p class="text-text-muted text-sm">
                             Suis tes fenêtres de jeûne intermittent et ta progression.
                         </p>

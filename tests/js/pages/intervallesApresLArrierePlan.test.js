@@ -87,7 +87,7 @@ const affichage = (wrapper) => {
     const texte = wrapper.text()
 
     return {
-        phase: ['ÉCHAUFFEMENT', 'TRAVAIL', 'REPOS', 'TERMINÉ', 'PRÊT'].find((nom) => texte.includes(nom)),
+        phase: wrapper.get('[aria-live="polite"]').text(),
         horloge: texte.match(/\d{2}:\d{2}/)?.[0],
         tour: texte.match(/(\d+)\s*\/\s*8/)?.[1],
     }
@@ -139,18 +139,18 @@ describe('le minuteur d’intervalles après l’arrière-plan (#2113)', () => {
         const wrapper = await ouvrirLeTabata()
         await dansUnGeste(() => bouton(wrapper, 'Démarrer').trigger('click'))
         await avancer(wrapper, 6_000)
-        expect(affichage(wrapper)).toEqual({ phase: 'ÉCHAUFFEMENT', horloge: '00:04', tour: '1' })
+        expect(affichage(wrapper)).toEqual({ phase: 'Échauffement', horloge: '00:04', tour: '1' })
 
         await passerEnArrierePlan(wrapper, 60_000)
 
-        expect(affichage(wrapper)).toEqual({ phase: 'REPOS', horloge: '00:04', tour: '2' })
+        expect(affichage(wrapper)).toEqual({ phase: 'Repos', horloge: '00:04', tour: '2' })
         expect(verrous[0].relachePar).toBe('systeme')
         expect(verrousActifs()).toEqual([verrous[1]])
         expect(notesAudibles()).toEqual([])
 
         await avancer(wrapper, 4_000)
 
-        expect(affichage(wrapper)).toEqual({ phase: 'TRAVAIL', horloge: '00:20', tour: '3' })
+        expect(affichage(wrapper)).toEqual({ phase: 'Travail', horloge: '00:20', tour: '3' })
         expect(notesAudibles()).toEqual([440, 440, 440, 880])
     })
 
@@ -163,7 +163,7 @@ describe('le minuteur d’intervalles après l’arrière-plan (#2113)', () => {
         await avancer(wrapper, 1_000)
 
         // Le bip de 67 s est demandé sur la sortie interrompue : il ne s'entend pas, et ne partira pas à contretemps.
-        expect(affichage(wrapper)).toEqual({ phase: 'REPOS', horloge: '00:03', tour: '2' })
+        expect(affichage(wrapper)).toEqual({ phase: 'Repos', horloge: '00:03', tour: '2' })
         expect(notesAudibles()).toEqual([])
 
         await dansUnGeste(() => bouton(wrapper, 'Mettre en pause').trigger('click'))
@@ -172,7 +172,7 @@ describe('le minuteur d’intervalles après l’arrière-plan (#2113)', () => {
         await avancer(wrapper, 3_000)
 
         expect(sorties).toHaveLength(1)
-        expect(affichage(wrapper)).toEqual({ phase: 'TRAVAIL', horloge: '00:20', tour: '3' })
+        expect(affichage(wrapper)).toEqual({ phase: 'Travail', horloge: '00:20', tour: '3' })
         expect(notesAudibles()).toEqual([440, 440, 880])
         expect(sorties[0].sons.some((son) => son.aContretemps)).toBe(false)
     })
@@ -185,7 +185,7 @@ describe('le minuteur d’intervalles après l’arrière-plan (#2113)', () => {
         // 10 + 8 × 20 + 7 × 10 = 240 s de séance.
         await passerEnArrierePlan(wrapper, 10 * 60_000)
 
-        expect(affichage(wrapper)).toEqual({ phase: 'TERMINÉ', horloge: '00:00', tour: '8' })
+        expect(affichage(wrapper)).toEqual({ phase: 'Terminé', horloge: '00:00', tour: '8' })
         expect(notesAudibles()).toEqual([])
         expect(vi.getTimerCount()).toBe(0)
         expect(verrousActifs()).toEqual([])

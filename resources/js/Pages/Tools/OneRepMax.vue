@@ -5,19 +5,14 @@
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1 class="titre-page">
-                    Calculatrice<br />
-                    <span class="text-gradient">1RM</span>
-                </h1>
-                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                    Estime ton maximum sur une répétition
-                </p>
+                <h1 class="titre-ecran">Calculatrice 1RM</h1>
+                <p class="etiquette mt-2">Estime ton maximum sur une répétition</p>
             </header>
 
-            <div class="grid gap-6 lg:grid-cols-2">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <!-- Calculator Input -->
                 <div class="space-y-6">
-                    <GlassCard class="stagger-1 animate-slide-up shadow-2xl">
+                    <GlassCard class="stagger-1 animate-slide-up">
                         <div class="space-y-6 p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <GlassBigNumber
@@ -56,36 +51,28 @@
                         v-if="oneRepMax > 0"
                         class="stagger-2 animate-slide-up mt-6 flex flex-col items-center justify-center p-8 text-center"
                     >
-                        <p class="text-text-muted text-sm font-bold tracking-wider uppercase">1RM estimé</p>
-                        <div
-                            class="from-accent-primary to-accent-secondary font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
-                        >
+                        <p class="etiquette">1RM estimé</p>
+                        <div class="font-display text-text-main mt-2 text-6xl font-semibold tabular-nums">
                             {{ nombre(oneRepMax) }}
                         </div>
-                        <div class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                            Basé sur {{ poids(weight) }} × {{ entier(reps) }}
-                        </div>
+                        <div class="etiquette mt-2">Basé sur {{ poids(weight) }} × {{ entier(reps) }}</div>
                     </GlassCard>
                 </div>
 
                 <!-- Percentages Table -->
                 <div v-if="oneRepMax > 0">
-                    <GlassCard class="stagger-2 animate-slide-up h-full shadow-2xl">
+                    <GlassCard class="stagger-2 animate-slide-up h-full">
                         <div class="p-6">
-                            <h2 class="titre-carte mb-4">Pourcentages d'Entraînement</h2>
+                            <h2 class="titre-plat mb-4">Pourcentages d'entraînement</h2>
 
                             <!-- Chart Component -->
                             <div class="mb-6 h-48 w-full">
                                 <OneRepMaxPercentagesChart :data="percentages" />
                             </div>
 
-                            <div
-                                class="border-border bg-surface-card/50 overflow-hidden rounded-3xl border shadow-inner"
-                            >
+                            <div class="border-border bg-surface-card/50 overflow-hidden rounded-3xl border">
                                 <table class="text-text-muted w-full text-left text-sm">
-                                    <thead
-                                        class="text-text-main border-border bg-surface-sunken/80 border-b text-xs uppercase"
-                                    >
+                                    <thead class="text-text-main border-border bg-surface-sunken/80 border-b text-xs">
                                         <tr>
                                             <th class="px-6 py-3 font-medium">Pourcentage</th>
                                             <th class="px-6 py-3 font-medium">Poids</th>
@@ -110,9 +97,9 @@
                         </div>
                     </GlassCard>
                 </div>
-                <GlassCard v-else class="animate-slide-up mt-8 py-12 text-center shadow-2xl">
+                <GlassCard v-else class="animate-slide-up mt-8 py-12 text-center">
                     <GlassIcon name="calculate" size="2xl" class="text-text-muted mb-3" />
-                    <p class="text-text-muted font-medium">Entre un poids et des répétitions pour voir les résultats</p>
+                    <p class="text-text-muted">Entre un poids et des répétitions pour voir les résultats</p>
                 </GlassCard>
             </div>
         </div>

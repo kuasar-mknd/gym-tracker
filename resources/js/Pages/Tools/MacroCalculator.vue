@@ -1,17 +1,12 @@
 <template>
-    <Head title="Calculateur de Macros" />
+    <Head title="Calculateur de macros" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1 class="titre-page">
-                    Calculateur<br />
-                    <span class="text-gradient">Macros</span>
-                </h1>
-                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                    Estime tes besoins caloriques
-                </p>
+                <h1 class="titre-ecran">Calculateur de macros</h1>
+                <p class="etiquette mt-2">Estime tes besoins caloriques</p>
             </header>
 
             <!-- Calculator Section -->
@@ -19,7 +14,7 @@
                 <div class="space-y-6">
                     <!-- Gender Selection -->
                     <div>
-                        <span id="macro-gender-label" class="font-display-label text-text-muted mb-2 block">Sexe</span>
+                        <span id="macro-gender-label" class="etiquette mb-2 block">Sexe</span>
                         <div class="grid grid-cols-2 gap-3" role="group" aria-labelledby="macro-gender-label">
                             <GlassTile label="Homme" :active="form.gender === 'male'" @click="form.gender = 'male'" />
                             <GlassTile
@@ -33,7 +28,7 @@
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <!-- Age -->
-                        <GlassInput type="number" v-model="form.age" label="Age" placeholder="25" size="lg" />
+                        <GlassInput type="number" v-model="form.age" label="Âge" placeholder="25" size="lg" />
                         <!-- Height -->
                         <GlassInput
                             type="number"
@@ -64,9 +59,7 @@
 
                     <!-- Goal -->
                     <div>
-                        <span id="macro-goal-label" class="font-display-label text-text-muted mb-2 block"
-                            >Objectif</span
-                        >
+                        <span id="macro-goal-label" class="etiquette mb-2 block">Objectif</span>
                         <div class="grid grid-cols-3 gap-3" role="group" aria-labelledby="macro-goal-label">
                             <button
                                 v-for="goalOption in ['cut', 'maintain', 'bulk']"
@@ -74,14 +67,14 @@
                                 type="button"
                                 @click="form.goal = goalOption"
                                 :aria-pressed="form.goal === goalOption"
-                                class="focus-visible:ring-accent-primary flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary flex h-12 items-center justify-center rounded-xl border transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.goal === goalOption
-                                        ? 'border-accent-primary accent-fill shadow-glow-primary-soft'
+                                        ? 'border-accent-primary accent-fill'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
-                                <span class="font-display font-bold uppercase">{{
+                                <span class="font-display font-semibold">{{
                                     goalOption === 'cut' ? 'Sèche' : goalOption === 'maintain' ? 'Maintien' : 'Prise'
                                 }}</span>
                             </button>
@@ -94,35 +87,29 @@
                         class="border-border bg-surface-card/50 mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border p-6 text-center"
                     >
                         <div>
-                            <p class="text-text-muted text-sm font-bold tracking-wider uppercase">
-                                Cibles Journalières
-                            </p>
-                            <div
-                                class="from-accent-primary to-accent-secondary font-display mt-1 bg-linear-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent italic"
-                            >
+                            <p class="etiquette">Cibles journalières</p>
+                            <div class="font-display text-text-main mt-1 text-5xl font-semibold tabular-nums">
                                 {{ entier(calculatedResults.targetCalories) }} kcal
                             </div>
-                            <p class="text-text-muted text-xs font-semibold">
-                                TDEE : {{ entier(calculatedResults.tdee) }} kcal
-                            </p>
+                            <p class="etiquette">TDEE : {{ entier(calculatedResults.tdee) }} kcal</p>
                         </div>
 
                         <div class="border-border grid w-full grid-cols-3 gap-4 border-t pt-4">
                             <div>
-                                <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
-                                <p class="font-display text-text-main text-2xl font-black">
+                                <p class="etiquette">Protéines</p>
+                                <p class="font-display text-text-main text-2xl font-semibold tabular-nums">
                                     {{ entier(calculatedResults.protein) }} g
                                 </p>
                             </div>
                             <div>
-                                <p class="text-text-muted text-xs font-bold uppercase">Glucides</p>
-                                <p class="font-display text-text-main text-2xl font-black">
+                                <p class="etiquette">Glucides</p>
+                                <p class="font-display text-text-main text-2xl font-semibold tabular-nums">
                                     {{ entier(calculatedResults.carbs) }} g
                                 </p>
                             </div>
                             <div>
-                                <p class="text-text-muted text-xs font-bold uppercase">Lipides</p>
-                                <p class="font-display text-text-main text-2xl font-black">
+                                <p class="etiquette">Lipides</p>
+                                <p class="font-display text-text-main text-2xl font-semibold tabular-nums">
                                     {{ entier(calculatedResults.fat) }} g
                                 </p>
                             </div>
@@ -140,7 +127,7 @@
 
                             <p
                                 v-if="Object.keys(form.errors).length"
-                                class="text-accent-danger-deep mt-3 text-sm font-bold"
+                                class="text-accent-danger-deep mt-3 text-sm font-medium"
                                 role="alert"
                                 dusk="macro-error"
                             >
@@ -154,8 +141,8 @@
             <!-- Trends Chart -->
             <GlassCard v-if="history.length > 1" class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="titre-carte">Tendances</h3>
-                    <p class="text-text-muted text-xs font-semibold">Évolution de tes objectifs</p>
+                    <h3 class="titre-plat">Tendances</h3>
+                    <p class="etiquette">Évolution de tes objectifs</p>
                 </div>
                 <MacroHistoryChart :data="history" />
             </GlassCard>
@@ -163,7 +150,7 @@
             <!-- History Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
-                    <h2 class="titre-carte">Historique</h2>
+                    <h2 class="titre-plat">Historique</h2>
 
                     <GlassEmptyState
                         v-if="history.length === 0"
@@ -177,19 +164,19 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 relative flex flex-col justify-between rounded-2xl border p-4 transition hover:shadow-lg sm:flex-row sm:items-center"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 relative flex flex-col justify-between rounded-2xl border p-4 transition-colors sm:flex-row sm:items-center"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="text-text-main bg-surface-sunken flex h-12 w-16 items-center justify-center rounded-xl text-lg font-bold"
+                                    class="text-text-main bg-surface-sunken flex h-12 w-16 items-center justify-center rounded-xl text-lg font-semibold"
                                 >
                                     {{ entier(entry.target_calories) }}
                                 </div>
                                 <div>
-                                    <p class="text-text-main font-bold">
+                                    <p class="text-text-main font-semibold">
                                         {{ entry.protein }}P / {{ entry.carbs }}C / {{ entry.fat }}L
                                     </p>
-                                    <p class="text-text-muted text-xs tracking-wider uppercase">
+                                    <p class="etiquette">
                                         {{
                                             entry.goal === 'cut'
                                                 ? 'Sèche'

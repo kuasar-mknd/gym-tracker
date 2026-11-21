@@ -1366,13 +1366,6 @@
     background-clip: text;
 }
 
-@utility font-display-label {
-    font-family: var(--font-sans);
-    font-weight: 500;
-    font-size: 0.75rem;
-    line-height: 1rem;
-}
-
 @utility pt-main-safe {
     /* Additive utilities for main content areas */
     padding-top: calc(1.5rem + var(--safe-area-top));

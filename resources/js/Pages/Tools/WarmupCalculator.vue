@@ -1,17 +1,11 @@
 <template>
-    <Head title="Calculateur d'Échauffement" />
+    <Head title="Calculateur d'échauffement" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1 class="titre-page">
-                    Calculateur<br />
-                    <span class="text-gradient">d'Échauffement</span>
-                </h1>
-                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                    Prépare ton corps intelligemment
-                </p>
+                <h1 class="titre-ecran">Calculateur d'échauffement</h1>
             </header>
 
             <!-- Calculator Section -->
@@ -37,22 +31,22 @@
 
                     <!-- Warmup Sets -->
                     <GlassCard class="mt-6">
-                        <h3 class="titre-carte mb-4">Séries d'échauffement</h3>
+                        <h3 class="titre-plat mb-4">Séries d'échauffement</h3>
 
                         <div class="space-y-3">
                             <div
                                 v-for="(set, index) in calculatedSets"
                                 :key="index"
-                                class="border-border bg-surface-card/50 flex items-center justify-between rounded-xl border p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
+                                class="border-border bg-surface-card/50 flex items-center justify-between rounded-xl border p-4"
                             >
                                 <div class="flex items-center gap-4">
                                     <div
-                                        class="bg-accent-primary/10 text-accent-primary-deep flex h-10 w-10 items-center justify-center rounded-full font-bold"
+                                        class="bg-accent-primary/10 text-accent-primary-deep flex h-10 w-10 items-center justify-center rounded-full font-semibold"
                                     >
                                         {{ index + 1 }}
                                     </div>
                                     <div>
-                                        <p class="text-text-main font-bold">
+                                        <p class="text-text-main font-semibold">
                                             <span v-if="set.label">{{ set.label }}</span>
                                             <span v-else>{{ pourcentage(set.percent, 0) }} du max</span>
                                         </p>
@@ -62,11 +56,11 @@
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <p class="font-display text-text-main text-2xl font-black">
+                                    <p class="font-display text-text-main text-2xl font-semibold tabular-nums">
                                         {{ set.weight
                                         }}<span class="text-text-muted ml-1 text-base font-normal">kg</span>
                                     </p>
-                                    <p class="text-text-muted text-xs font-bold">{{ set.plateLoad }} / côté</p>
+                                    <p class="etiquette">{{ set.plateLoad }} / côté</p>
                                 </div>
                             </div>
                         </div>
@@ -79,10 +73,8 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="titre-carte">Configuration</h2>
-                            <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
-                                Personnaliser les paliers
-                            </p>
+                            <h2 class="titre-plat">Configuration</h2>
+                            <p class="etiquette mt-1">Personnaliser les paliers</p>
                         </div>
                         <GlassButton
                             variant="primary"
@@ -98,7 +90,7 @@
 
                     <p
                         v-if="saveError"
-                        class="text-accent-danger-deep text-sm font-bold"
+                        class="text-accent-danger-deep text-sm font-medium"
                         role="alert"
                         dusk="warmup-save-error"
                     >
@@ -109,10 +101,7 @@
                         <!-- Column headings, not labels: they sit above a repeated row,
                              so each field carries its own name including the step it
                              belongs to. -->
-                        <div
-                            class="text-text-muted grid grid-cols-12 gap-2 text-xs font-bold tracking-wider uppercase"
-                            aria-hidden="true"
-                        >
+                        <div class="etiquette grid grid-cols-12 gap-2" aria-hidden="true">
                             <div class="col-span-3">Pourcentage</div>
                             <div class="col-span-3">Répétitions</div>
                             <div class="col-span-5">Label (facultatif)</div>
@@ -131,7 +120,7 @@
                                         inputmode="numeric"
                                         v-model="step.percent"
                                         :aria-label="`Pourcentage, palier ${index + 1}`"
-                                        class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border py-2 pr-6 pl-2 text-center text-base font-bold tabular-nums transition outline-none focus:ring-1"
+                                        class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border py-2 pr-6 pl-2 text-center text-base font-semibold tabular-nums transition outline-none focus:ring-1"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -144,7 +133,7 @@
                                     inputmode="numeric"
                                     v-model="step.reps"
                                     :aria-label="`Répétitions, palier ${index + 1}`"
-                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-2 py-2 text-center text-base font-bold tabular-nums transition outline-none focus:ring-1"
+                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-2 py-2 text-center text-base font-semibold tabular-nums transition outline-none focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -161,7 +150,6 @@
                                     icon="delete"
                                     :label="`Supprimer le palier ${index + 1}`"
                                     ton="danger"
-                                    class="active:scale-95"
                                     :disabled="form.steps.length <= 1"
                                     @click="removeStep(index)"
                                 />
@@ -174,9 +162,7 @@
                     </div>
 
                     <div class="border-border border-t pt-4">
-                        <span id="warmup-rounding-label" class="font-display-label text-text-muted mb-2 block"
-                            >Arrondi (kg)</span
-                        >
+                        <span id="warmup-rounding-label" class="etiquette mb-2 block">Arrondi (kg)</span>
                         <GlassSegmented
                             :model-value="form.rounding_increment"
                             @update:model-value="(valeur) => (form.rounding_increment = valeur)"

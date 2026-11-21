@@ -182,19 +182,26 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
 </script>
 
 <template>
-    <Head title="Suivi de Jeûne" />
+    <Head title="Suivi de jeûne" />
 
-    <AuthenticatedLayout page-title="Suivi de Jeûne" show-back back-route="tools.index" largeur="etroite" retour-propre>
+    <AuthenticatedLayout
+        page-title="Suivi de jeûne"
+        show-back
+        back-route="tools.index"
+        largeur="etroite"
+        retour-propre
+        titre-plat
+    >
         <template #header>
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('tools.index')"
-                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border transition-colors"
                     aria-label="Retour aux outils"
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h1 class="titre-carte">Suivi de Jeûne</h1>
+                <h1 class="titre-ecran">Suivi de jeûne</h1>
             </div>
         </template>
 
@@ -216,22 +223,18 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                                 cy="50"
                                 r="45"
                                 fill="none"
-                                stroke="url(#gradient)"
+                                stroke="currentColor"
                                 stroke-width="8"
                                 :stroke-dasharray="2 * Math.PI * 45"
                                 :stroke-dashoffset="2 * Math.PI * 45 * (1 - progressPercentage / 100)"
                                 stroke-linecap="round"
-                                class="transition duration-1000 ease-linear"
+                                class="text-accent-primary transition duration-1000 ease-linear"
                             />
-                            <defs>
-                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" style="stop-color: var(--color-accent-primary)" />
-                                    <stop offset="100%" style="stop-color: var(--color-accent-danger)" />
-                                </linearGradient>
-                            </defs>
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="text-text-main font-mono text-4xl font-bold">{{ formattedElapsedTime }}</span>
+                            <span class="text-text-main font-mono text-4xl font-medium">{{
+                                formattedElapsedTime
+                            }}</span>
                             <span class="text-text-muted mt-2 text-sm">{{ remainingTime }}</span>
                         </div>
                     </div>
@@ -251,7 +254,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                     </GlassButton>
                     <p
                         v-if="refusDeLaFin"
-                        class="text-accent-danger-deep mt-3 text-sm font-bold"
+                        class="text-accent-danger-deep mt-3 text-sm font-medium"
                         role="alert"
                         dusk="fasting-end-error"
                     >
@@ -261,7 +264,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
             </div>
 
             <GlassCard v-else class="mx-auto max-w-md">
-                <h3 ref="titreDuDepart" tabindex="-1" class="titre-carte mb-6">Démarrer un jeûne</h3>
+                <h3 ref="titreDuDepart" tabindex="-1" class="titre-plat mb-6">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
@@ -281,7 +284,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                         />
                     </div>
 
-                    <p v-if="refus" class="text-accent-danger-deep text-sm font-bold" role="alert" dusk="fasting-error">
+                    <p v-if="refus" class="text-accent-danger-deep text-sm" role="alert" dusk="fasting-error">
                         {{ refus }}
                     </p>
 
@@ -291,11 +294,10 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                 </form>
             </GlassCard>
 
-            <!-- History Analytics Chart Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="titre-carte">Durée des jeûnes</h3>
-                    <p class="text-text-muted text-xs font-semibold">Historique récent (heures)</p>
+                    <h3 class="titre-plat">Durée des jeûnes</h3>
+                    <p class="etiquette">Historique récent (heures)</p>
                 </div>
 
                 <GlassEmptyState
@@ -310,9 +312,8 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                 </div>
             </GlassCard>
 
-            <!-- History Details Section -->
             <GlassCard>
-                <h3 class="titre-carte mb-4">Historique détaillé</h3>
+                <h3 class="titre-plat mb-4">Historique détaillé</h3>
                 <GlassEmptyState
                     v-if="history.data.length === 0"
                     taille="ligne"
@@ -347,7 +348,6 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                     </div>
                 </div>
 
-                <!-- Dix par page côté serveur : sans ceci, tout jeûne au-delà du dixième était inaccessible. -->
                 <nav
                     v-if="history.last_page > 1"
                     class="mt-6 flex items-center justify-center gap-4"
@@ -362,7 +362,7 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                         <GlassIcon name="chevron_left" />
                     </GlassButton>
 
-                    <span class="text-text-muted text-sm font-bold" aria-live="polite">
+                    <span class="text-text-muted text-sm font-medium" aria-live="polite">
                         Page {{ history.current_page }} sur {{ history.last_page }}
                     </span>
 

@@ -1,17 +1,11 @@
 <template>
-    <Head title="Calculateur de Plaques" />
+    <Head title="Calculateur de plaques" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1 class="titre-page">
-                    Calculateur<br />
-                    <span class="text-gradient">de Plaques</span>
-                </h1>
-                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                    Charge ta barre parfaitement
-                </p>
+                <h1 class="titre-ecran">Calculateur de plaques</h1>
             </header>
 
             <!-- Calculator Section -->
@@ -40,23 +34,21 @@
                         v-if="calculatedPlates.length > 0"
                         class="border-border bg-surface-sunken mt-8 overflow-x-auto rounded-3xl border p-6"
                     >
-                        <div class="relative flex h-[200px] min-w-[300px] items-center justify-center">
+                        <div class="relative flex h-50 min-w-75 items-center justify-center">
                             <!-- Bar -->
-                            <div
-                                class="from-border-strong via-text-muted to-border-strong absolute z-0 h-5 w-full rounded-full bg-linear-to-r shadow-inner"
-                            ></div>
+                            <div class="bg-border-strong absolute z-0 h-5 w-full rounded-full"></div>
 
                             <!-- Center Marker -->
                             <div class="bg-text-muted absolute z-10 h-24 w-2 rounded-full"></div>
 
                             <!-- Left Side Plates -->
                             <div
-                                class="absolute left-[50%] flex -translate-x-[calc(100%+14px)] flex-row-reverse items-center gap-1"
+                                class="absolute left-1/2 flex -translate-x-[calc(100%+14px)] flex-row-reverse items-center gap-1"
                             >
                                 <div
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`left-${index}`"
-                                    class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-black shadow-lg"
+                                    class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-semibold"
                                     :class="getPlateColor(plate.weight)"
                                     :style="{
                                         height: `${getPlateSize(plate.weight)}px`,
@@ -68,11 +60,11 @@
                             </div>
 
                             <!-- Right Side Plates -->
-                            <div class="absolute left-[50%] flex translate-x-[14px] items-center gap-1">
+                            <div class="absolute left-1/2 flex translate-x-3.5 items-center gap-1">
                                 <div
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`right-${index}`"
-                                    class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-black shadow-lg"
+                                    class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-semibold"
                                     :class="getPlateColor(plate.weight)"
                                     :style="{
                                         height: `${getPlateSize(plate.weight)}px`,
@@ -86,15 +78,16 @@
 
                         <!-- Weight Info -->
                         <div class="mt-6 text-center">
-                            <p class="text-text-main text-lg font-bold">
+                            <p class="text-text-main text-lg font-semibold">
                                 Poids total :
-                                <span class="font-display text-accent-primary-deep text-2xl font-black">{{
-                                    poids(actualWeight)
-                                }}</span>
+                                <span
+                                    class="font-display text-accent-primary-deep text-2xl font-semibold tabular-nums"
+                                    >{{ poids(actualWeight) }}</span
+                                >
                             </p>
                             <p class="text-text-muted mt-2 text-sm">
                                 Plaques par côté :
-                                <span class="font-bold">{{
+                                <span class="font-semibold">{{
                                     calculatedPlates.map((p) => poids(p.weight)).join(' + ')
                                 }}</span>
                             </p>
@@ -128,10 +121,8 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="titre-carte">Mon Inventaire</h2>
-                            <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
-                                Plaques disponibles
-                            </p>
+                            <h2 class="titre-plat">Mon inventaire</h2>
+                            <p class="etiquette mt-1">Plaques disponibles</p>
                         </div>
                         <GlassButton
                             variant="primary"
@@ -156,7 +147,7 @@
                     <div v-else class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                         <div v-for="plate in plates" :key="plate.id" class="group relative">
                             <div
-                                class="rounded-2xl border-2 p-4 text-center transition hover:shadow-md"
+                                class="rounded-2xl border-2 p-4 text-center"
                                 :class="[
                                     getPlateColor(parseFloat(plate.weight)),
                                     parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
@@ -176,12 +167,10 @@
                                     et manque ici : deux endroits decidaient de
                                     la meme chose, et un seul a ete repris.
                                 -->
-                                <div class="font-display text-3xl font-black">
+                                <div class="font-display text-3xl font-semibold tabular-nums">
                                     {{ nombre(plate.weight, 2) }}
                                 </div>
-                                <div class="mt-1 text-xs font-bold tracking-wider uppercase opacity-70">
-                                    × {{ plate.quantity }}
-                                </div>
+                                <div class="mt-1 text-xs font-medium opacity-70">× {{ plate.quantity }}</div>
                                 <!--
                                     `compact` : la vignette reste à 24 px pour ne
                                     pas manger le disque qu'elle surplombe, mais
@@ -208,7 +197,7 @@
         <!-- Add Plate Modal -->
         <Modal :show="addingPlate" @close="addingPlate = false" aria-labelledby="add-plate-title">
             <div class="space-y-6 p-6">
-                <h2 id="add-plate-title" class="titre-carte">Ajouter une plaque</h2>
+                <h2 id="add-plate-title" class="titre-plat">Ajouter une plaque</h2>
 
                 <div class="space-y-4">
                     <!-- GlassInput renders this exact label markup itself, and wires
