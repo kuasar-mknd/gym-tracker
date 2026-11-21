@@ -112,6 +112,15 @@ describe('GoalCard — completion', () => {
         expect(wrapper.text()).toContain('Complété')
     })
 
+    it('hangs the badge clear of the corner radius and drops the header below it', () => {
+        const wrapper = mountCard({ completed_at: '2026-07-01T10:00:00.000000Z', progress_pct: 100 })
+        const badge = wrapper.findAll('div').find((div) => div.text() === 'Complété')
+
+        expect(badge.classes()).toEqual(expect.arrayContaining(['right-7', 'rounded-b-xl']))
+        expect(wrapper.get('.mb-4.items-start').classes()).toContain('pt-3')
+        expect(mountCard({ progress_pct: 40 }).get('.mb-4.items-start').classes()).not.toContain('pt-3')
+    })
+
     it('does not mark a goal still in progress', () => {
         expect(mountCard({ progress_pct: 99.5 }).text()).not.toContain('Complété')
     })

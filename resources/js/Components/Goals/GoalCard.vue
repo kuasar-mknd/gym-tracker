@@ -77,12 +77,12 @@ const statusColor = computed(() => {
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
-            class="bg-accent-state text-text-on-accent text-2xs absolute top-0 right-0 z-10 rounded-bl-xl px-3 py-1 font-semibold"
+            class="bg-accent-state text-text-on-accent text-2xs absolute top-0 right-7 z-10 rounded-b-xl px-3 py-1 font-semibold"
         >
             {{ parSemaine ? 'Semaine faite' : 'Complété' }}
         </div>
 
-        <div class="relative z-10 mb-4 flex items-start justify-between gap-3">
+        <div class="relative z-10 mb-4 flex items-start justify-between gap-3" :class="{ 'pt-3': isCompleted }">
             <div class="flex min-w-0 flex-1 items-center gap-3">
                 <div
                     class="bg-surface-sunken text-text-muted rounded-icone flex h-12 w-12 shrink-0 items-center justify-center"
