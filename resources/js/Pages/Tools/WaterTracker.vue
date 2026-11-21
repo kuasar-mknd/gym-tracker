@@ -39,12 +39,11 @@
                                 cy="50"
                                 r="45"
                                 fill="transparent"
-                                stroke="currentColor"
                                 stroke-width="8"
                                 stroke-linecap="round"
                                 stroke-dasharray="283"
                                 :stroke-dashoffset="dashOffset"
-                                class="text-accent-primary transition duration-1000 ease-out"
+                                class="stroke-accent-primary transition duration-1000 ease-out"
                             />
                         </svg>
 

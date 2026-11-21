@@ -223,12 +223,11 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                                 cy="50"
                                 r="45"
                                 fill="none"
-                                stroke="currentColor"
                                 stroke-width="8"
                                 :stroke-dasharray="2 * Math.PI * 45"
                                 :stroke-dashoffset="2 * Math.PI * 45 * (1 - progressPercentage / 100)"
                                 stroke-linecap="round"
-                                class="text-accent-primary transition duration-1000 ease-linear"
+                                class="stroke-accent-primary transition duration-1000 ease-linear"
                             />
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
