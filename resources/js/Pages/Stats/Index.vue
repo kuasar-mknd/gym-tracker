@@ -36,10 +36,10 @@ watch(
 )
 
 const periods = [
-    { value: '7j', label: '7 JOURS' },
-    { value: '30j', label: '30 JOURS' },
-    { value: '90j', label: '3 MOIS' },
-    { value: '1a', label: '1 AN' },
+    { value: '7j', label: '7 jours' },
+    { value: '30j', label: '30 jours' },
+    { value: '90j', label: '3 mois' },
+    { value: '1a', label: '1 an' },
 ]
 
 /** Le numéro de la dernière période demandée : seul son échec ramène la sélection. */

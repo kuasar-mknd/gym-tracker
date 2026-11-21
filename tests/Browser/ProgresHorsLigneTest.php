@@ -117,7 +117,7 @@ class ProgresHorsLigneTest extends DuskTestCase
                 $this->assertSame([], $this->messagesSansReseau($browser));
 
                 // Aucun contrôle qui mènerait à « Hors ligne » : ni période (`/stats?period=…` n'est jamais gardée), ni courbe d'exercice.
-                $browser->assertScript("[...document.querySelectorAll('#main-content button')].some((b) => /JOURS|MOIS|AN/.test(b.textContent))", false)
+                $browser->assertScript("[...document.querySelectorAll('#main-content button')].some((b) => /^(\\d+ jours|\\d+ mois|1 an)$/.test(b.textContent.trim()))", false)
                     ->assertScript("document.querySelectorAll('#main-content [role=\"combobox\"], #main-content select').length", 0)
                     ->assertPathIs('/stats');
             });

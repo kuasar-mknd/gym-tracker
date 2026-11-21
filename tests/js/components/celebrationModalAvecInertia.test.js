@@ -52,7 +52,7 @@ const unBadge = (id, nom, description) => ({
     description,
     data: {
         type: 'achievement',
-        title: 'Badge débloqué ! 🏆',
+        title: 'Badge débloqué',
         message: `Félicitations ! Tu as débloqué le badge : ${nom}.`,
         achievement_id: 7,
         achieved_at: '2026-10-12T08:00:00.000000Z',

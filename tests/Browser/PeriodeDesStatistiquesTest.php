@@ -78,7 +78,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
             // Un pointeur JavaScript : ni défilement ni attente (`.ai/rules/tests.md`).
             $browser->script(<<<'JS'
                 [...document.querySelectorAll('[role="group"][aria-label="Période"] button')]
-                    .find((bouton) => bouton.textContent.trim() === '7 JOURS')
+                    .find((bouton) => bouton.textContent.trim() === '7 jours')
                     .click();
                 JS);
 
@@ -93,7 +93,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
             $this->assertStringNotContainsString($ancienne->format('d/m'), $resumeSurSeptJours);
             $this->assertSame(
                 'true',
-                $browser->script('return String(document.querySelector(\'[role="group"][aria-label="Période"] button[aria-pressed="true"]\')?.textContent.trim() === "7 JOURS");')[0],
+                $browser->script('return String(document.querySelector(\'[role="group"][aria-label="Période"] button[aria-pressed="true"]\')?.textContent.trim() === "7 jours");')[0],
             );
         });
     }
