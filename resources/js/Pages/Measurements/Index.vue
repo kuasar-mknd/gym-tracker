@@ -273,7 +273,7 @@ const latestBodyFat = computed(() => {
                 <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <!-- Weight Chart -->
                     <GlassCard>
-                        <h3 class="titre-plat mb-4">Évolution du poids</h3>
+                        <h3 class="etiquette mb-4">Évolution poids</h3>
                         <div class="h-64">
                             <WeightHistoryChart
                                 hauteur="h-full"
@@ -292,7 +292,7 @@ const latestBodyFat = computed(() => {
 
                     <!-- Body Fat Chart -->
                     <GlassCard>
-                        <h3 class="titre-plat mb-4">Évolution de la masse grasse</h3>
+                        <h3 class="etiquette mb-4">Évolution masse grasse</h3>
                         <div class="h-64">
                             <BodyFatLineChart
                                 hauteur="h-full"
@@ -307,7 +307,7 @@ const latestBodyFat = computed(() => {
 
             <!-- History -->
             <div class="stagger-4 animate-slide-up">
-                <h3 class="titre-plat mb-3">Historique</h3>
+                <h3 class="etiquette mb-3">Historique</h3>
 
                 <GlassEmptyState
                     v-if="measurements.length === 0"

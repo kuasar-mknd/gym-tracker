@@ -14,6 +14,17 @@ class ProfileEditTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
+    /**
+     * Le titre se lit dans un `h1` ou un `h2` : en casse de phrase, le même
+     * texte est aussi celui d'un libellé ou d'un bouton de la page.
+     */
+    private function assertTitreVisible(Browser $browser, string $titre): void
+    {
+        $titres = $browser->script('return [...document.querySelectorAll("h1, h2")].map((titre) => titre.textContent.trim());')[0];
+
+        $this->assertContains($titre, $titres, "Aucun titre « {$titre} » dans la page.");
+    }
+
     private function performProfileEditCheck(Browser $browser, string $sizeMacro, string $deviceFormat): void
     {
         $user = User::factory()->create([
@@ -30,14 +41,14 @@ class ProfileEditTest extends DuskTestCase
                 ->disableAnimations()
                 ->waitFor('#main-content', 30);
 
-            $browser->assertSee('Mon profil');
+            $this->assertTitreVisible($browser, 'Mon profil');
 
             // Verify Profile Info Section
             // Le champ d'adresse porte la nouvelle adresse (`email`) ;
             // l'identifiant du compte, pour les gestionnaires de mots de passe,
             // est à part, caché (#2076).
-            $browser->assertSee('Informations du profil')
-                ->waitFor('@profile-name-input', 15)
+            $this->assertTitreVisible($browser, 'Informations du profil');
+            $browser->waitFor('@profile-name-input', 15)
                 ->assertInputValue('@profile-name-input', 'Original Name')
                 ->assertInputValue('input[type="email"][autocomplete="email"]', $user->email)
                 ->assertAttribute('[data-testid="identifiant-du-changement-d-adresse"]', 'autocomplete', 'username')
@@ -74,8 +85,8 @@ class ProfileEditTest extends DuskTestCase
             // Le formulaire du mot de passe porte l'adresse du compte pour les
             // gestionnaires de mots de passe (#2076), dans un champ que personne
             // ne voit : présent, à la bonne valeur, et caché.
-            $browser->assertSee('Mot de passe')
-                ->assertAttribute('[data-testid="identifiant-du-compte"]', 'autocomplete', 'username')
+            $this->assertTitreVisible($browser, 'Mot de passe');
+            $browser->assertAttribute('[data-testid="identifiant-du-compte"]', 'autocomplete', 'username')
                 ->assertInputValue('[data-testid="identifiant-du-compte"]', $user->email)
                 ->assertMissing('[data-testid="identifiant-du-compte"]')
                 ->type('@current-password-input', 'password123')
@@ -104,8 +115,8 @@ class ProfileEditTest extends DuskTestCase
 
             // Verify Delete Account Section
             $browser->script("document.querySelector('[data-testid=\"delete-account-button\"]').scrollIntoView({block: 'center'});");
-            $browser->assertSee('Supprimer le compte')
-                ->script("document.querySelector('[data-testid=\"delete-account-button\"]').click();");
+            $this->assertTitreVisible($browser, 'Supprimer le compte');
+            $browser->script("document.querySelector('[data-testid=\"delete-account-button\"]').click();");
 
             $browser->waitForText('Confirmer la suppression', 15)
                 ->assertSee('Cette action est irréversible.');

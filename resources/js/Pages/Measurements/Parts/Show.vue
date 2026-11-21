@@ -122,7 +122,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
         <div class="space-y-6">
             <!-- Chart -->
             <GlassCard v-if="courbe.length > 0" class="animate-slide-up">
-                <h3 class="titre-plat mb-4">Historique</h3>
+                <h3 class="etiquette mb-4">Historique</h3>
                 <BodyPartHistoryChart :data="courbe" :label="nom" :unit="courbe[courbe.length - 1].unit" />
             </GlassCard>
 

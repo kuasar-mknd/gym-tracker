@@ -117,7 +117,7 @@ const statusColor = computed(() => {
                     aria-valuemax="100"
                 >
                     <div
-                        class="h-full transition-[width] duration-300 ease-out"
+                        class="h-full"
                         :class="
                             isCompleted
                                 ? // Le vert acide ne se detache d'aucune piste claire : 1,13:1

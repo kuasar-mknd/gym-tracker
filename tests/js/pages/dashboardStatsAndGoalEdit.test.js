@@ -693,6 +693,16 @@ describe('Goals/Edit', () => {
         expect(routerGet.mock.calls[0][0]).toBe('/goals.index')
     })
 
+    it('ne pose son lien de retour que sur bureau : le téléphone a la flèche de l’en-tête, et deux retours se doublent', () => {
+        const classes = mountEdit()
+            .findAll('a')
+            .find((lien) => lien.text().includes('Retour aux objectifs'))
+            .classes()
+
+        expect(classes).toContain('hidden')
+        expect(classes).toContain('bureau:inline-flex')
+    })
+
     it('rappelle de quel objectif il s’agit', () => {
         expect(mountEdit({ title: 'Tractions x 10' }).text()).toContain('Tractions x 10')
     })

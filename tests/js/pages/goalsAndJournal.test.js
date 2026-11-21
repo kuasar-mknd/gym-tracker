@@ -453,9 +453,9 @@ describe('Goals/Index', () => {
 
     /**
      * The percentage changes colour as the goal gets closer — it is the
-     * at-a-glance signal. The bands open *above* 25 and 75, so those two values
-     * are the ones asserted: anywhere in the middle of a band, tightening or
-     * loosening a comparison changes nothing and the test never notices.
+     * at-a-glance signal. The band opens *above* 25, and the cyan band above 75
+     * is gone (#2434): 25, 75 and 76 are asserted, so a comparison tightened or
+     * loosened at either end changes a class and the test notices.
      */
     it("colore l'avancement selon la distance qui reste à parcourir", async () => {
         const wrapper = await mountGoals([

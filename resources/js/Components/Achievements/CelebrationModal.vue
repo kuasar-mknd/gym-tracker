@@ -146,7 +146,7 @@ const fermer = () => {
                             dusk="celebration-dismiss"
                             @click="fermer"
                         >
-                            Continuer
+                            Génial
                         </GlassButton>
                     </div>
                 </div>

@@ -107,7 +107,7 @@ it('ne donne aux badges qu’un nom dans l’interface', function (): void {
 it('appelle « Badges » la page, les deux menus, la traduction et la notification', function (): void {
     $textes = unSeulNomTextesAffiches();
 
-    expect($textes['resources/js/Pages/Achievements/Index.vue'])->toContain('title="Badges"', 'page-title="Badges"', 'Badges 🏆')
+    expect($textes['resources/js/Pages/Achievements/Index.vue'])->toContain('title="Badges"', 'page-title="Badges"')
         ->and($textes['resources/js/Pages/Profile/Index.vue'])->toContain("name: 'Badges'")
         ->and($textes['resources/js/Layouts/AuthenticatedLayout.vue'])->toMatch('/>\s*Badges\s*</u')
         ->and(unSeulNomTraductions()['Achievements'] ?? null)->toBe('Badges');

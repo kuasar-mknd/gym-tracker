@@ -61,7 +61,7 @@ const mensurations = computed(() =>
             <BodyFatCard :body-fat="bodyFat" :body-fat-history="bodyStats?.bodyFatHistory" />
 
             <GlassCard class="bureau:col-span-2 bureau:self-start">
-                <h2 class="titre-plat mb-3">Mensurations</h2>
+                <h2 class="etiquette mb-3">Mensurations</h2>
 
                 <GlassEmptyState
                     v-if="mensurations.length === 0"
