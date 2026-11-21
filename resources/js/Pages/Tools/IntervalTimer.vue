@@ -145,7 +145,7 @@ const previewFromForm = () => {
 <template>
     <Head title="Minuteur" />
 
-    <AuthenticatedLayout page-title="Minuteur" show-back back-route="tools.index" largeur="etroite">
+    <AuthenticatedLayout page-title="Minuteur" show-back back-route="tools.index" largeur="etroite" titre-plat>
         <template #header-actions>
             <!-- Mobile actions -->
         </template>
@@ -168,25 +168,17 @@ const previewFromForm = () => {
                     class="flex flex-col items-center justify-center border-2 px-4 py-12 transition-colors duration-500"
                     :class="phaseBg"
                 >
-                    <div
-                        class="tracking-sur-titre mb-4 text-sm font-black uppercase"
-                        :class="phaseColor"
-                        aria-live="polite"
-                        aria-atomic="true"
-                    >
+                    <div class="mb-4 text-sm font-semibold" :class="phaseColor" aria-live="polite" aria-atomic="true">
                         {{ phaseLabel }}
                     </div>
 
-                    <div
-                        class="font-display text-8xl leading-none font-black tracking-tighter tabular-nums"
-                        :class="phaseColor"
-                    >
+                    <div class="font-display text-8xl leading-none font-semibold tabular-nums" :class="phaseColor">
                         {{ formattedTime }}
                     </div>
 
                     <div class="text-text-muted mt-8 flex items-center gap-2">
                         <GlassIcon name="repeat" size="xs" />
-                        <span class="font-bold">{{ currentRound }}</span>
+                        <span class="font-semibold">{{ currentRound }}</span>
                         <span class="text-xs">/ {{ timerConfig.rounds }}</span>
                     </div>
 
@@ -197,16 +189,18 @@ const previewFromForm = () => {
                     <!-- Controls -->
                     <div class="mt-12 flex gap-4">
                         <button
+                            v-press
                             @click="toggleTimer"
-                            class="text-text-main bg-surface-card focus-visible:ring-accent-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="text-text-main bg-surface-card focus-visible:ring-accent-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
                             :aria-label="status === 'running' ? 'Mettre en pause' : 'Démarrer'"
                         >
                             <GlassIcon :name="status === 'running' ? 'pause' : 'play_arrow'" size="lg" />
                         </button>
 
                         <button
+                            v-press
                             @click="resetRunner"
-                            class="border-border bg-surface-card/50 text-text-muted focus-visible:ring-accent-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-full border shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="border-border bg-surface-card/50 text-text-muted focus-visible:ring-accent-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-full border focus-visible:ring-2 focus-visible:outline-none"
                             aria-label="Réinitialiser"
                         >
                             <GlassIcon name="restart_alt" size="lg" />
@@ -217,16 +211,16 @@ const previewFromForm = () => {
                 <!-- Legend/Info -->
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div class="glass-panel p-3">
-                        <div class="text-text-muted text-xs tracking-wider uppercase">Travail</div>
-                        <div class="text-accent-primary-deep text-xl font-bold">{{ timerConfig.work }}s</div>
+                        <div class="etiquette">Travail</div>
+                        <div class="text-accent-primary-deep text-xl font-semibold">{{ timerConfig.work }}s</div>
                     </div>
                     <div class="glass-panel p-3">
-                        <div class="text-text-muted text-xs tracking-wider uppercase">Repos</div>
-                        <div class="text-accent-state-deep text-xl font-bold">{{ timerConfig.rest }}s</div>
+                        <div class="etiquette">Repos</div>
+                        <div class="text-accent-state-deep text-xl font-semibold">{{ timerConfig.rest }}s</div>
                     </div>
                     <div class="glass-panel p-3">
-                        <div class="text-text-muted text-xs tracking-wider uppercase">Échauff.</div>
-                        <div class="text-accent-info-deep text-xl font-bold">{{ timerConfig.warmup }}s</div>
+                        <div class="etiquette">Échauff.</div>
+                        <div class="text-accent-tertiary-deep text-xl font-semibold">{{ timerConfig.warmup }}s</div>
                     </div>
                 </div>
             </div>
@@ -235,7 +229,7 @@ const previewFromForm = () => {
             <div v-else class="space-y-6">
                 <!-- Form -->
                 <GlassCard class="p-6">
-                    <h3 class="titre-carte mb-4">
+                    <h3 class="titre-plat mb-4">
                         {{ isEditing ? 'Modifier le minuteur' : 'Nouveau minuteur' }}
                     </h3>
                     <form @submit.prevent="submitForm" class="space-y-4">
@@ -300,7 +294,7 @@ const previewFromForm = () => {
 
                 <!-- List of Timers -->
                 <div class="space-y-4">
-                    <h3 class="titre-carte px-2">Mes Minuteurs</h3>
+                    <h3 class="titre-plat px-2">Mes minuteurs</h3>
                     <GlassEmptyState
                         v-if="timers.length === 0"
                         taille="ligne"
@@ -320,7 +314,7 @@ const previewFromForm = () => {
                             @click="loadTimer(timer)"
                         >
                             <span
-                                class="text-text-main group-hover:text-accent-primary-deep block font-bold transition-colors"
+                                class="text-text-main group-hover:text-accent-primary-deep block font-semibold transition-colors"
                             >
                                 {{ timer.name }}
                             </span>
@@ -332,7 +326,7 @@ const previewFromForm = () => {
                             <button
                                 @click="loadTimer(timer)"
                                 class="text-text-muted hover:text-accent-primary-deep focus-visible:ring-accent-primary relative rounded-lg p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
-                                title="Charger & Lancer"
+                                title="Charger et lancer"
                                 aria-label="Charger et lancer"
                             >
                                 <GlassIcon name="play_circle" />
@@ -340,7 +334,6 @@ const previewFromForm = () => {
                             <GlassIconButton
                                 icon="edit"
                                 label="Modifier le minuteur"
-                                ton="info"
                                 :disabled="surUneCopie"
                                 :aria-describedby="raisonDUneEcriture"
                                 @click="editTimer(timer)"

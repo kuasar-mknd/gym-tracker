@@ -191,19 +191,17 @@ const typeLabel = (type) => {
         show-back
         back-route="stats.index"
         liquid-variant="subtle"
-        page-title="La Bibliothèque"
+        page-title="Bibliothèque"
         titre-dans-la-page
+        titre-plat
     >
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <div class="pb-main-safe space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="titre-page bureau:block hidden">
-                        La<br />
-                        <span class="text-gradient">Bibliothèque</span>
-                    </h1>
-                    <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
+                    <h1 class="titre-ecran bureau:block hidden">Bibliothèque</h1>
+                    <p class="etiquette mt-2">
                         {{ compte(exercises.length, 'exercice disponible', 'exercices disponibles') }}
                     </p>
                 </div>
@@ -217,7 +215,7 @@ const typeLabel = (type) => {
                     dusk="create-exercise-btn-desktop"
                 >
                     <GlassIcon name="add" class="mr-2" />
-                    Nouvel Exercice
+                    Nouvel exercice
                 </GlassButton>
             </div>
 
@@ -225,10 +223,10 @@ const typeLabel = (type) => {
             <div v-if="exercises.length > 0" class="stagger-1 animate-slide-up">
                 <GlassCard padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
-                        <h3 class="sur-titre">Répartition</h3>
+                        <h3 class="etiquette">Répartition</h3>
                     </div>
                     <div class="flex items-center gap-4">
-                        <div class="flex-1">
+                        <div class="min-w-0 flex-1">
                             <ExerciseCategoryChart :exercises="exercises" />
                         </div>
                     </div>
@@ -241,15 +239,15 @@ const typeLabel = (type) => {
 
             <!-- Error display -->
             <GlassCard v-if="$page.props.errors?.exercise" class="border-accent-danger bg-accent-danger/10">
-                <p class="text-accent-danger-deep text-center font-bold">{{ $page.props.errors.exercise }}</p>
+                <p class="text-accent-danger-deep text-center font-medium">{{ $page.props.errors.exercise }}</p>
             </GlassCard>
 
             <!-- Empty State -->
             <div v-if="libraryIsEmpty" class="animate-slide-up">
                 <GlassEmptyState
                     title="Aucun exercice pour l'instant"
-                    description="Ta bibliothèque est vide. Commence par créer ton premier exercice pour sculpter ton corps !"
-                    icon="🏋️"
+                    description="Crée ton premier exercice."
+                    icon="fitness_center"
                     action-label="Créer le premier exercice"
                     :action-desactivee="surUneCopie"
                     :raison-de-l-action="raisonDUneEcriture"
@@ -283,7 +281,7 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Skeleton Loading -->
-            <div v-if="!exercises" class="animate-pulse space-y-4">
+            <div v-if="!exercises" class="space-y-4">
                 <GlassCard padding="p-4">
                     <div class="flex gap-4">
                         <GlassSkeleton width="60px" height="60px" class="rounded-2xl" />
@@ -308,11 +306,11 @@ const typeLabel = (type) => {
             <div v-else class="stagger-4 animate-slide-up space-y-6">
                 <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
                     <div class="mb-3 flex items-center gap-2 px-1">
-                        <h3 class="text-text-muted sur-titre">
+                        <h3 class="etiquette">
                             {{ category }}
                         </h3>
                         <div class="bg-surface-sunken h-px flex-1"></div>
-                        <span class="text-text-muted text-2xs font-black">
+                        <span class="text-text-muted text-2xs font-medium tabular-nums">
                             {{ exercisesInCat.length }}
                         </span>
                     </div>

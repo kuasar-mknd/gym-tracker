@@ -7,8 +7,8 @@ import { filesMatching } from './sourceFiles'
  * #1803, #1808). Ce qui manque à la charte s'ajoute à la charte, pas au composant.
  */
 const interdits = [
-    [/\btext-\[/, 'une taille de texte arbitraire : ajouter un jeton --text-* ou utiliser sur-titre'],
-    [/\btracking-\[/, 'un espacement de lettres arbitraire : tracking-sur-titre'],
+    [/\btext-\[/, 'une taille de texte arbitraire : ajouter un jeton --text-*'],
+    [/\btracking-\[/, 'un espacement de lettres arbitraire : aucun jeton ne le porte'],
     [/\bz-\[/, 'un z-index arbitraire : z-collant, z-nav, z-flottant, z-modale, z-toast, z-alerte, z-evitement'],
     [/\b(?:drop-)?shadow-\[/, 'une ombre arbitraire : un jeton --shadow-* ou --drop-shadow-*'],
     [/\brounded-\[/, 'un arrondi arbitraire : md, lg, xl, 2xl, 3xl ou full, par rôle'],

@@ -1,15 +1,11 @@
 <template>
-    <Head title="Suivi Hydratation" />
+    <Head title="Suivi d'hydratation" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1 class="titre-page">
-                    Suivi<br />
-                    <span class="text-gradient from-accent-info to-accent-tertiary">Hydratation</span>
-                </h1>
-                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">Reste Hydraté</p>
+                <h1 class="titre-ecran">Suivi d'hydratation</h1>
             </header>
 
             <!-- Main Tracker Section -->
@@ -25,7 +21,7 @@
                         aria-label="Progrès d'hydratation"
                     >
                         <!-- Circular Progress SVG -->
-                        <svg class="h-full w-full rotate-[-90deg]" viewBox="0 0 100 100">
+                        <svg class="h-full w-full -rotate-90" viewBox="0 0 100 100">
                             <!-- Background Circle -->
                             <circle
                                 cx="50"
@@ -43,28 +39,21 @@
                                 cy="50"
                                 r="45"
                                 fill="transparent"
-                                stroke="url(#gradient)"
                                 stroke-width="8"
                                 stroke-linecap="round"
                                 stroke-dasharray="283"
                                 :stroke-dashoffset="dashOffset"
-                                class="transition duration-1000 ease-out"
+                                class="stroke-accent-primary transition duration-1000 ease-out"
                             />
-                            <defs>
-                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" style="stop-color: var(--color-accent-info-deep)" />
-                                    <stop offset="100%" style="stop-color: var(--color-accent-tertiary)" />
-                                </linearGradient>
-                            </defs>
                         </svg>
 
                         <!-- Center Text -->
                         <div class="absolute flex flex-col items-center text-center">
-                            <span class="font-display text-text-main text-5xl font-black tracking-tighter italic">
+                            <span class="font-display text-text-main text-5xl font-semibold tabular-nums">
                                 {{ entier(todayTotal) }}
                             </span>
-                            <span class="text-text-muted text-sm font-bold uppercase"> / {{ entier(goal) }} ml </span>
-                            <span class="text-accent-info-deep mt-2 text-sm font-bold">
+                            <span class="text-text-muted text-sm font-medium"> / {{ entier(goal) }} ml </span>
+                            <span class="text-accent-primary-deep mt-2 text-sm font-semibold">
                                 {{ pourcentage(percentage, 0) }}
                             </span>
                         </div>
@@ -76,7 +65,6 @@
                             v-press
                             icon="local_drink"
                             label="250 ml"
-                            ton="info"
                             aria-label="Ajouter 250 ml"
                             :disabled="form.processing"
                             @click="addWater(250)"
@@ -85,7 +73,6 @@
                             v-press
                             icon="water_drop"
                             label="500 ml"
-                            ton="info"
                             aria-label="Ajouter 500 ml"
                             :disabled="form.processing"
                             @click="addWater(500)"
@@ -94,7 +81,6 @@
                             v-press
                             icon="water_bottle"
                             label="1 L"
-                            ton="info"
                             aria-label="Ajouter 1 L"
                             :disabled="form.processing"
                             @click="addWater(1000)"
@@ -113,7 +99,7 @@
                             class="grow"
                         >
                             <template #suffix>
-                                <span class="text-text-muted text-xs font-bold uppercase">ML</span>
+                                <span class="text-text-muted text-xs font-medium">ml</span>
                             </template>
                         </GlassInput>
                         <GlassButton
@@ -134,7 +120,7 @@
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <!-- Today's Logs -->
                 <GlassCard class="stagger-2 animate-slide-up h-full">
-                    <h2 class="titre-carte mb-4">Journal du jour</h2>
+                    <h2 class="titre-plat mb-4">Journal du jour</h2>
 
                     <GlassEmptyState
                         v-if="logs.length === 0"
@@ -143,20 +129,20 @@
                         title="Aucune consommation aujourd'hui"
                     />
 
-                    <div v-else class="max-h-[300px] space-y-3 overflow-y-auto pr-2">
+                    <div v-else class="max-h-75 space-y-3 overflow-y-auto pr-2">
                         <div
                             v-for="log in logs"
                             :key="log.id"
-                            class="border-border bg-surface-card/50 hover:bg-surface-card/80 flex items-center justify-between rounded-2xl border p-3 transition"
+                            class="border-border bg-surface-card/50 hover:bg-surface-card/80 flex items-center justify-between rounded-2xl border p-3 transition-colors"
                         >
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="bg-accent-info/15 text-accent-info-deep flex h-10 w-10 items-center justify-center rounded-full"
+                                    class="bg-accent-primary/15 text-accent-primary-deep flex h-10 w-10 items-center justify-center rounded-full"
                                 >
                                     <GlassIcon name="water_drop" size="sm" />
                                 </div>
                                 <div>
-                                    <p class="text-text-main font-bold">{{ entier(log.amount) }} ml</p>
+                                    <p class="text-text-main font-semibold">{{ entier(log.amount) }} ml</p>
                                     <p class="text-text-muted text-xs">
                                         {{ heureCourte(new Date(log.consumed_at)) }}
                                     </p>
@@ -174,7 +160,7 @@
 
                 <!-- Weekly History -->
                 <GlassCard class="stagger-3 animate-slide-up h-full">
-                    <h2 class="titre-carte mb-4">7 derniers jours</h2>
+                    <h2 class="titre-plat mb-4">7 derniers jours</h2>
 
                     <WaterHistoryChart :data="history" :goal="goal" />
                 </GlassCard>
@@ -285,9 +271,3 @@ const {
     })
 })
 </script>
-
-<style scoped>
-.text-gradient {
-    @apply bg-gradient-to-r bg-clip-text text-transparent;
-}
-</style>

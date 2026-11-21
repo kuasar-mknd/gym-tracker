@@ -104,7 +104,7 @@ const monter = async (type, series, progress = []) => {
 
 const titres = (wrapper) => wrapper.findAll('h3').map((titre) => titre.text())
 
-const CINQ_CARTES = ['Progression 1RM', 'Volume', 'Endurance', 'Charge Max', 'Poids vs Reps']
+const CINQ_CARTES = ['Progression 1RM', 'Volume', 'Endurance', 'Charge max', 'Poids vs reps']
 
 describe('une fiche de force', () => {
     it('montre les cinq cartes, sans « Séries », dès que des séries portent une charge', async () => {

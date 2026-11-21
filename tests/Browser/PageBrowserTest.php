@@ -28,7 +28,7 @@ class PageBrowserTest extends DuskTestCase
                 '/dashboard' => 'Bon retour',
                 '/workouts' => 'Mes séances',
                 '/calendar' => 'Calendrier',
-                '/exercises' => 'BIBLIOTHÈQUE',
+                '/exercises' => 'Bibliothèque',
                 '/stats' => 'Mon évolution',
                 '/corps' => 'Corps',
                 '/records' => 'Records',

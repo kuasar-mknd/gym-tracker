@@ -147,17 +147,17 @@ const scatterData = computed(() => {
 <template>
     <Head :title="exercise.name" />
 
-    <AuthenticatedLayout :page-title="exercise.name" show-back back-route="exercises.index" retour-propre>
+    <AuthenticatedLayout :page-title="exercise.name" show-back back-route="exercises.index" retour-propre titre-plat>
         <template #header>
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('exercises.index')"
-                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border transition-colors"
                     aria-label="Retour aux exercices"
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h1 class="titre-section">
+                <h1 class="titre-ecran">
                     {{ exercise.name }}
                 </h1>
             </div>
@@ -169,7 +169,7 @@ const scatterData = computed(() => {
                 page n'existe qu'avec la barre de bureau, à partir de 1 024 px
                 (#2057), et l'en-tête mobile ne porte que le nom.
             -->
-            <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
+            <p class="etiquette">
                 {{ exercise.category }} •
                 {{ exercise.type === 'strength' ? 'Force' : exercise.type === 'cardio' ? 'Cardio' : 'Temps' }}
             </p>
@@ -177,8 +177,8 @@ const scatterData = computed(() => {
             <!-- Progress Chart -->
             <GlassCard v-if="afficheLaProgression" class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="titre-carte">Progression 1RM</h3>
-                    <p class="text-text-muted text-xs font-semibold">Estimation sur 1 an</p>
+                    <h3 class="titre-plat">Progression 1RM</h3>
+                    <p class="etiquette">Estimation sur 1 an</p>
                 </div>
                 <div v-if="progress.length > 0" class="h-64">
                     <OneRepMaxChart :data="progress" />
@@ -205,8 +205,8 @@ const scatterData = computed(() => {
                 >
                     <GlassCard v-if="afficheLesCharges">
                         <div class="mb-4">
-                            <h3 class="titre-carte">Volume</h3>
-                            <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
+                            <h3 class="titre-plat">Volume</h3>
+                            <p class="etiquette">Volume total par séance (kg)</p>
                         </div>
                         <div class="h-64">
                             <VolumeTrendChart :data="volumeData" hauteur="h-full" />
@@ -215,8 +215,8 @@ const scatterData = computed(() => {
 
                     <GlassCard v-if="estUneForce">
                         <div class="mb-4">
-                            <h3 class="titre-carte">Endurance</h3>
-                            <p class="text-text-muted text-xs font-semibold">Max Reps par série</p>
+                            <h3 class="titre-plat">Endurance</h3>
+                            <p class="etiquette">Répétitions max par série</p>
                         </div>
                         <div class="h-64">
                             <MaxRepsChart :data="maxRepsData" />
@@ -225,8 +225,8 @@ const scatterData = computed(() => {
 
                     <GlassCard v-if="afficheLesCharges">
                         <div class="mb-4">
-                            <h3 class="titre-carte">Charge Max</h3>
-                            <p class="text-text-muted text-xs font-semibold">Maximum soulevé par séance (kg)</p>
+                            <h3 class="titre-plat">Charge max</h3>
+                            <p class="etiquette">Maximum soulevé par séance (kg)</p>
                         </div>
                         <div class="h-64">
                             <MaxWeightChart :data="maxWeightData" />
@@ -235,8 +235,8 @@ const scatterData = computed(() => {
 
                     <GlassCard v-if="afficheLesCharges">
                         <div class="mb-4">
-                            <h3 class="titre-carte">Poids vs Reps</h3>
-                            <p class="text-text-muted text-xs font-semibold">Répartition des séries de travail</p>
+                            <h3 class="titre-plat">Poids vs reps</h3>
+                            <p class="etiquette">Répartition des séries de travail</p>
                         </div>
                         <div class="h-64">
                             <WeightRepsScatterChart :data="scatterData" />
@@ -245,8 +245,8 @@ const scatterData = computed(() => {
 
                     <GlassCard v-if="!estUneForce">
                         <div class="mb-4">
-                            <h3 class="titre-carte">Séries</h3>
-                            <p class="text-text-muted text-xs font-semibold">Nombre de séries par séance</p>
+                            <h3 class="titre-plat">Séries</h3>
+                            <p class="etiquette">Nombre de séries par séance</p>
                         </div>
                         <div class="h-64">
                             <SetsPerSessionChart :data="setsPerSessionData" />

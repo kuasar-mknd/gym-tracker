@@ -82,7 +82,7 @@ describe('le minuteur d’intervalles', () => {
         const { minuteur } = monter()
 
         expect(minuteur.formattedTime.value).toBe('00:10')
-        expect(minuteur.phaseLabel.value).toBe('PRÊT')
+        expect(minuteur.phaseLabel.value).toBe('Prêt')
 
         minuteur.charger({ ...sprint, warmup: 0, work: 90 })
 
@@ -95,28 +95,28 @@ describe('le minuteur d’intervalles', () => {
         minuteur.charger(sprint)
 
         minuteur.startTimer()
-        expect(minuteur.phaseLabel.value).toBe('ÉCHAUFFEMENT')
+        expect(minuteur.phaseLabel.value).toBe('Échauffement')
         expect(minuteur.status.value).toBe('running')
 
         vi.advanceTimersByTime(2000)
-        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.phaseLabel.value).toBe('Travail')
         expect(minuteur.timeLeft.value).toBe(3)
 
         vi.advanceTimersByTime(3000)
-        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.phaseLabel.value).toBe('Repos')
         expect(minuteur.currentRound.value).toBe(1)
 
         vi.advanceTimersByTime(2000)
-        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.phaseLabel.value).toBe('Travail')
         expect(minuteur.currentRound.value).toBe(2)
 
         vi.advanceTimersByTime(3000)
-        expect(minuteur.phaseLabel.value).toBe('TERMINÉ')
+        expect(minuteur.phaseLabel.value).toBe('Terminé')
         expect(minuteur.status.value).toBe('finished')
         expect(minuteur.formattedTime.value).toBe('00:00')
 
         vi.advanceTimersByTime(10000)
-        expect(minuteur.phaseLabel.value).toBe('TERMINÉ')
+        expect(minuteur.phaseLabel.value).toBe('Terminé')
     })
 
     it('se met en pause sans perdre sa place, et repart de là', () => {
@@ -146,7 +146,7 @@ describe('le minuteur d’intervalles', () => {
         vi.advanceTimersByTime(1000)
         minuteur.resetRunner()
         expect(minuteur.status.value).toBe('idle')
-        expect(minuteur.phaseLabel.value).toBe('PRÊT')
+        expect(minuteur.phaseLabel.value).toBe('Prêt')
         vi.advanceTimersByTime(5000)
         expect(minuteur.timeLeft.value).toBe(2)
 
@@ -156,7 +156,7 @@ describe('le minuteur d’intervalles', () => {
 
         minuteur.startTimer()
         expect(minuteur.status.value).toBe('running')
-        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.phaseLabel.value).toBe('Travail')
         expect(minuteur.timeLeft.value).toBe(2)
         expect(minuteur.currentRound.value).toBe(1)
     })
@@ -169,13 +169,13 @@ describe('le minuteur d’intervalles', () => {
         expect(minuteur.phaseBg.value).toBe('bg-surface-sunken border-surface-sunken')
 
         minuteur.startTimer()
-        expect(minuteur.phaseColor.value).toBe('text-accent-info-deep')
+        expect(minuteur.phaseColor.value).toBe('text-accent-tertiary-deep')
         vi.advanceTimersByTime(1000)
         expect(minuteur.phaseBg.value).toBe('bg-accent-primary/10 border-accent-primary/20')
         vi.advanceTimersByTime(1000)
         expect(minuteur.phaseColor.value).toBe('text-accent-state-deep')
         vi.advanceTimersByTime(2000)
-        expect(minuteur.phaseLabel.value).toBe('TERMINÉ')
+        expect(minuteur.phaseLabel.value).toBe('Terminé')
         expect(minuteur.phaseColor.value).toBe('text-text-main')
     })
 
@@ -213,7 +213,7 @@ describe('le minuteur d’intervalles', () => {
         minuteur.startTimer()
         vi.advanceTimersByTime(2000)
 
-        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.phaseLabel.value).toBe('Travail')
         expect(minuteur.currentRound.value).toBe(2)
         expect(minuteur.formattedTime.value).toBe('00:02')
 
@@ -291,7 +291,7 @@ describe('le minuteur d’intervalles lit l’horloge et garde l’écran allum�
         suspendre(60_000)
 
         // 66 s après le départ : échauffement 10, travail 20, repos 10, travail 20, puis 6 s du second repos.
-        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.phaseLabel.value).toBe('Repos')
         expect(minuteur.formattedTime.value).toBe('00:04')
         expect(minuteur.currentRound.value).toBe(2)
         expect(minuteur.status.value).toBe('running')
@@ -312,7 +312,7 @@ describe('le minuteur d’intervalles lit l’horloge et garde l’écran allum�
 
         vi.advanceTimersByTime(3000)
         expect(notes()).toEqual([440, 440, 440, 880])
-        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.phaseLabel.value).toBe('Travail')
         expect(minuteur.currentRound.value).toBe(3)
         expect(minuteur.formattedTime.value).toBe('00:20')
     })
@@ -327,7 +327,7 @@ describe('le minuteur d’intervalles lit l’horloge et garde l’écran allum�
         vi.setSystemTime(Date.now() + 30_000)
         vi.advanceTimersToNextTimer()
 
-        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.phaseLabel.value).toBe('Repos')
         expect(minuteur.formattedTime.value).toBe('00:04')
         expect(minuteur.currentRound.value).toBe(1)
         expect(notes()).toEqual([])
@@ -426,20 +426,20 @@ describe('le minuteur d’intervalles lit l’horloge et garde l’écran allum�
         minuteur.startTimer()
         vi.advanceTimersByTime(3000)
 
-        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.phaseLabel.value).toBe('Repos')
         expect(minuteur.currentRound.value).toBe(2)
 
         suspendre(10 * 24 * 3_600_000)
 
         // 864 003 s de marche, des tours de 2 s : le repos du tour 432 002 commence à l'instant même du retour.
         // Seul ce changement-là sonne, à l'heure ; les 864 000 d'avant ne se rejouent pas.
-        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.phaseLabel.value).toBe('Repos')
         expect(minuteur.currentRound.value).toBe(432_002)
         expect(minuteur.formattedTime.value).toBe('00:01')
         expect(notes()).toEqual([880, 880, 880, 880])
 
         vi.advanceTimersByTime(1000)
-        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.phaseLabel.value).toBe('Travail')
         expect(minuteur.currentRound.value).toBe(432_003)
         expect(notes()).toEqual([880, 880, 880, 880, 880])
     })
@@ -457,7 +457,7 @@ describe('le minuteur d’intervalles lit l’horloge et garde l’écran allum�
         await flushPromises()
 
         expect(minuteur.status.value).toBe('finished')
-        expect(minuteur.phaseLabel.value).toBe('TERMINÉ')
+        expect(minuteur.phaseLabel.value).toBe('Terminé')
         expect(minuteur.formattedTime.value).toBe('00:00')
         expect(minuteur.currentRound.value).toBe(2)
         expect(notes()).toEqual([440])

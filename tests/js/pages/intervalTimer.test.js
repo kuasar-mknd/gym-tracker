@@ -52,16 +52,15 @@ const mountTimer = (timers = []) =>
 /** The 6rem clock, which is the only place the remaining time is written. */
 const clock = (wrapper) => wrapper.text().match(/\d{2}:\d{2}/)?.[0]
 
-/** The phase banner above it: PRÊT / ÉCHAUFFEMENT / TRAVAIL / REPOS / TERMINÉ. */
-const phaseLabel = (wrapper) =>
-    ['ÉCHAUFFEMENT', 'TRAVAIL', 'REPOS', 'TERMINÉ', 'PRÊT'].find((label) => wrapper.text().includes(label))
+/** The phase banner above it: Prêt / Échauffement / Travail / Repos / Terminé. */
+const phaseLabel = (wrapper) => wrapper.get('[aria-live="polite"]').text()
 
 const playButton = (wrapper) => wrapper.findAll('button').find((b) => b.attributes('aria-label') === 'Démarrer')
 
 const pauseButton = (wrapper) => wrapper.findAll('button').find((b) => b.attributes('aria-label') === 'Mettre en pause')
 
 /** The round counter under the clock, "{{ currentRound }} / {{ rounds }}". */
-const currentRound = (wrapper) => wrapper.find('span.font-bold').text()
+const currentRound = (wrapper) => wrapper.find('span.font-semibold').text()
 
 /** Opens the "Préréglages" tab, where the saved timers are listed. */
 const openPresets = (wrapper) => wrapper.findAll('button')[1].trigger('click')
@@ -109,33 +108,33 @@ describe('IntervalTimer runner', () => {
         await loadPreset(wrapper)
 
         expect(clock(wrapper)).toBe('00:02')
-        expect(phaseLabel(wrapper)).toBe('PRÊT')
+        expect(phaseLabel(wrapper)).toBe('Prêt')
 
         await playButton(wrapper).trigger('click')
-        expect(phaseLabel(wrapper)).toBe('ÉCHAUFFEMENT')
+        expect(phaseLabel(wrapper)).toBe('Échauffement')
 
         // The warmup lasts exactly the 2s it was given, then work starts.
         vi.advanceTimersByTime(2000)
         await wrapper.vm.$nextTick()
-        expect(phaseLabel(wrapper)).toBe('TRAVAIL')
+        expect(phaseLabel(wrapper)).toBe('Travail')
         expect(clock(wrapper)).toBe('00:03')
 
         vi.advanceTimersByTime(3000)
         await wrapper.vm.$nextTick()
-        expect(phaseLabel(wrapper)).toBe('REPOS')
+        expect(phaseLabel(wrapper)).toBe('Repos')
         expect(clock(wrapper)).toBe('00:02')
         expect(currentRound(wrapper)).toBe('1')
 
         // Rest ends: the round counter moves on and work resumes.
         vi.advanceTimersByTime(2000)
         await wrapper.vm.$nextTick()
-        expect(phaseLabel(wrapper)).toBe('TRAVAIL')
+        expect(phaseLabel(wrapper)).toBe('Travail')
         expect(currentRound(wrapper)).toBe('2')
 
         // Second and last round of work: no third round, the session is over.
         vi.advanceTimersByTime(3000)
         await wrapper.vm.$nextTick()
-        expect(phaseLabel(wrapper)).toBe('TERMINÉ')
+        expect(phaseLabel(wrapper)).toBe('Terminé')
         expect(clock(wrapper)).toBe('00:00')
     })
 
@@ -148,12 +147,12 @@ describe('IntervalTimer runner', () => {
         vi.advanceTimersByTime(15000)
         await wrapper.vm.$nextTick()
 
-        expect(phaseLabel(wrapper)).toBe('TERMINÉ')
+        expect(phaseLabel(wrapper)).toBe('Terminé')
 
         // A fourth round would restart the clock; nothing runs after the end.
         vi.advanceTimersByTime(10000)
         await wrapper.vm.$nextTick()
-        expect(phaseLabel(wrapper)).toBe('TERMINÉ')
+        expect(phaseLabel(wrapper)).toBe('Terminé')
         expect(clock(wrapper)).toBe('00:00')
     })
 
@@ -177,7 +176,7 @@ describe('IntervalTimer runner', () => {
         expect(clock(wrapper)).toBe('00:03')
 
         await playButton(wrapper).trigger('click')
-        expect(phaseLabel(wrapper)).toBe('TRAVAIL')
+        expect(phaseLabel(wrapper)).toBe('Travail')
     })
 
     it('freezes the clock while paused', async () => {
@@ -194,7 +193,7 @@ describe('IntervalTimer runner', () => {
         await wrapper.vm.$nextTick()
 
         expect(clock(wrapper)).toBe('00:01')
-        expect(phaseLabel(wrapper)).toBe('ÉCHAUFFEMENT')
+        expect(phaseLabel(wrapper)).toBe('Échauffement')
     })
 
     it('resumes from where the pause left it', async () => {
@@ -224,7 +223,7 @@ describe('IntervalTimer runner', () => {
         await byLabel(wrapper, 'Réinitialiser').trigger('click')
 
         expect(clock(wrapper)).toBe('00:02')
-        expect(phaseLabel(wrapper)).toBe('PRÊT')
+        expect(phaseLabel(wrapper)).toBe('Prêt')
         expect(currentRound(wrapper)).toBe('1')
 
         // Reset also stops the clock, it does not merely rewind it.

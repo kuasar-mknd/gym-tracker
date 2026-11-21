@@ -118,7 +118,7 @@ describe('les bips du minuteur d’intervalles sur un iPhone (#2156)', () => {
 
         await avancer(wrapper, 10_000)
 
-        expect(wrapper.text()).toContain('TERMINÉ')
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Terminé')
         expect(sorties).toHaveLength(1)
         expect(sorties[0].sons.map((son) => son.frequence)).toEqual(NOTES)
         expect(sorties[0].sons.map((son) => son.fin)).toEqual(FINS)
@@ -145,7 +145,7 @@ describe('les bips du minuteur d’intervalles sur un iPhone (#2156)', () => {
 
         await avancer(wrapper, 8_000)
 
-        expect(wrapper.text()).toContain('TERMINÉ')
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Terminé')
         // Celui de l'interruption est abandonné ; les neuf qui le suivent s'entendent, aucun à contretemps.
         expect(notesAudibles()).toEqual([NOTES[0], ...NOTES.slice(2)])
         expect(tousLesSons().some((son) => son.aContretemps)).toBe(false)
@@ -183,7 +183,7 @@ describe('les bips du minuteur d’intervalles sur un iPhone (#2156)', () => {
         await demarrer(wrapper)
         await avancer(wrapper, 6_000)
 
-        expect(wrapper.text()).toContain('TERMINÉ')
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Terminé')
         expect(tousLesSons().some((son) => son.aContretemps)).toBe(false)
         expect(notesAudibles()).toEqual([NOTES[0], ...NOTES.slice(4)])
     })
@@ -220,12 +220,12 @@ describe('les bips du minuteur d’intervalles sur un iPhone (#2156)', () => {
         const wrapper = await ouvrirLePreset()
         await demarrer(wrapper)
 
-        expect(wrapper.text()).toContain('TRAVAIL')
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Travail')
         expect(bouton(wrapper, 'Mettre en pause')).toBeDefined()
 
         await avancer(wrapper, 10_000)
 
-        expect(wrapper.text()).toContain('TERMINÉ')
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Terminé')
         expect(avertissement).toHaveBeenCalledWith('La sortie audio n’a pas pu s’ouvrir.', expect.any(DOMException))
         expect(erreur).not.toHaveBeenCalled()
     })
