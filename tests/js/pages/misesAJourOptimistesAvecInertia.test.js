@@ -566,20 +566,20 @@ describe('Stats/Index : la période choisie', () => {
         async (_cas, echouer) => {
             await ouvrirLaPage('Stats/Index', '/stats', { errors: {}, exercises: [], selectedPeriod: '30j' })
 
-            await choisir('1 AN')
-            expect(periodeRetenue()).toEqual(['1 AN'])
+            await choisir('1 an')
+            expect(periodeRetenue()).toEqual(['1 an'])
 
             echouer(requetes[0])
             await attendreLesVisites()
 
-            expect(periodeRetenue()).toEqual(['30 JOURS'])
+            expect(periodeRetenue()).toEqual(['30 jours'])
         },
     )
 
     it('reste sur la nouvelle quand le serveur l’a rendue', async () => {
         await ouvrirLaPage('Stats/Index', '/stats', { errors: {}, exercises: [], selectedPeriod: '30j' })
 
-        await choisir('1 AN')
+        await choisir('1 an')
         requetes[0].repondre(
             reponseInertia({
                 component: 'Stats/Index',
@@ -590,7 +590,7 @@ describe('Stats/Index : la période choisie', () => {
         )
         await attendreLesVisites()
 
-        expect(periodeRetenue()).toEqual(['1 AN'])
+        expect(periodeRetenue()).toEqual(['1 an'])
     })
 })
 

@@ -47,9 +47,9 @@ const jour = (date) => dateSansJour(parseCalendarDate(date))
 <template>
     <Head title="Records" />
 
-    <AuthenticatedLayout show-back back-route="stats.index" page-title="Records">
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Records" titre-plat>
         <template #header>
-            <h1 class="titre-carte">Records</h1>
+            <h1 class="titre-ecran">Records</h1>
         </template>
 
         <GlassEmptyState
@@ -65,7 +65,7 @@ const jour = (date) => dateSansJour(parseCalendarDate(date))
                     <GlassCard padding="p-4">
                         <Link
                             :href="route('exercises.show', { exercise: exercice.exercice_id })"
-                            class="titre-carte flex min-h-11 items-center truncate"
+                            class="titre-plat flex min-h-11 items-center truncate"
                         >
                             <span class="truncate">{{ exercice.nom }}</span>
                         </Link>

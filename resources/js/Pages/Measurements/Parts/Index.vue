@@ -51,7 +51,7 @@ const selectCommonPart = (part) => {
 <template>
     <Head title="Mensurations" />
 
-    <AuthenticatedLayout show-back back-route="corps.index" page-title="Mensurations">
+    <AuthenticatedLayout show-back back-route="corps.index" page-title="Mensurations" titre-plat>
         <template #header-actions>
             <GlassButton
                 :variant="showAddForm ? 'secondary' : 'primary'"
@@ -65,7 +65,7 @@ const selectCommonPart = (part) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Mensurations</h1>
+                <h1 class="titre-ecran">Mensurations</h1>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}
@@ -76,7 +76,7 @@ const selectCommonPart = (part) => {
         <div class="space-y-6">
             <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
+                <h3 class="titre-plat mb-4">Nouvelle mesure</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
                         <!-- Les puces remplissent le champ ; le libellé nomme le champ (#1972). -->
@@ -145,7 +145,7 @@ const selectCommonPart = (part) => {
 
             <!-- Chart -->
             <GlassCard v-if="latestMeasurements.some((m) => m.diff !== 0)" class="animate-slide-up">
-                <h3 class="text-accent-state-deep sur-titre mb-4">Évolution Récente</h3>
+                <h3 class="etiquette mb-4">Évolution récente</h3>
                 <BodyPartDiffChart :data="latestMeasurements" />
             </GlassCard>
 
@@ -158,15 +158,11 @@ const selectCommonPart = (part) => {
                     :href="route('body-parts.show', { part: item.part })"
                     class="block"
                 >
-                    <GlassCard
-                        class="h-full overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
-                    >
+                    <GlassCard class="h-full overflow-hidden transition duration-300 hover:-translate-y-0.5">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="titre-carte">{{ item.label ?? item.part }}</h3>
-                                <div
-                                    class="from-accent-tertiary to-accent-secondary mt-1 bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent"
-                                >
+                                <h3 class="titre-plat">{{ item.label ?? item.part }}</h3>
+                                <div class="font-display text-text-main mt-1 text-2xl font-semibold tabular-nums">
                                     {{ nombre(item.current, 2) }}
                                     <span class="text-text-muted text-sm">{{ item.unit }}</span>
                                 </div>
@@ -191,7 +187,7 @@ const selectCommonPart = (part) => {
                 <GlassEmptyState
                     v-if="latestMeasurements.length === 0 && !showAddForm"
                     class="col-span-full"
-                    icon="📏"
+                    icon="straighten"
                     title="Aucune mesure enregistrée"
                     description="Enregistre un premier tour de bras, de cuisse ou de taille pour suivre son évolution."
                     action-label="Commencer"

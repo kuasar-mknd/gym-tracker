@@ -281,7 +281,7 @@ describe('la période des statistiques', () => {
         expect(exercicesProposes()).toEqual(['Exercice 30j'])
         expect(donneesDuGraphique('VolumeTrendChart')).toEqual([donneesDifferees('30j').performance.volumeTrend])
 
-        boutonDePeriode('7 JOURS').click()
+        boutonDePeriode('7 jours').click()
 
         const visite = await requeteSuivante()
 

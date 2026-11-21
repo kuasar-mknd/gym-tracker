@@ -698,8 +698,8 @@ describe('Notifications/Index — marking as read', () => {
         const lue = wrapper.get('[data-notification-id="n-2"]')
 
         expect(lue.classes().join(' ')).not.toMatch(/opacity/)
-        expect(wrapper.get('span.uppercase').classes()).not.toContain('text-text-muted/30')
-        expect(wrapper.get('span.uppercase').classes()).toContain('text-text-muted')
+        expect(wrapper.get('span.text-2xs.mt-2').classes()).not.toContain('text-text-muted/30')
+        expect(wrapper.get('span.text-2xs.mt-2').classes()).toContain('text-text-muted')
         expect(wrapper.get('[data-notification-id="n-1"]').text()).toContain('Non lue')
     })
 })
@@ -896,13 +896,13 @@ describe('Profile/Index — the identity block', () => {
 
         expect(wrapper.text()).toContain('samuel')
         expect(wrapper.text()).toContain('sam@example.com')
-        expect(wrapper.get('.bg-gradient-main').text()).toBe('S')
+        expect(wrapper.get('.h-20.w-20').text()).toBe('S')
     })
 
     it('survives an account with no name rather than blanking the page', () => {
         const wrapper = mountProfile({ name: null, email: 'sam@example.com' })
 
-        expect(wrapper.get('.bg-gradient-main').text()).toBe('')
+        expect(wrapper.get('.h-20.w-20').text()).toBe('')
         expect(wrapper.text()).toContain('sam@example.com')
     })
 })

@@ -105,7 +105,7 @@ const submit = () => {
 <template>
     <GlassCard as="section">
         <header>
-            <h2 class="titre-carte">Informations du profil</h2>
+            <h2 class="titre-plat">Informations du profil</h2>
             <p class="text-text-muted mt-1 text-sm">Modifie tes informations de compte et ton adresse email.</p>
         </header>
 

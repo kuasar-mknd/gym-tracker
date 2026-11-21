@@ -36,10 +36,10 @@ watch(
 )
 
 const periods = [
-    { value: '7j', label: '7 JOURS' },
-    { value: '30j', label: '30 JOURS' },
-    { value: '90j', label: '3 MOIS' },
-    { value: '1a', label: '1 AN' },
+    { value: '7j', label: '7 jours' },
+    { value: '30j', label: '30 jours' },
+    { value: '90j', label: '3 mois' },
+    { value: '1a', label: '1 an' },
 ]
 
 /** Le numéro de la dernière période demandée : seul son échec ramène la sélection. */
@@ -76,7 +76,7 @@ const handlePeriodChange = (period) => {
 <template>
     <Head title="Statistiques" />
 
-    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon Évolution" titre-dans-la-page>
+    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon évolution" titre-plat titre-dans-la-page>
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -87,10 +87,7 @@ const handlePeriodChange = (period) => {
                     même page.
                 -->
                 <div class="bureau:block hidden">
-                    <h1 class="titre-page">
-                        Mon<br />
-                        <span class="text-gradient-cyan-magenta">Évolution</span>
-                    </h1>
+                    <h1 class="titre-ecran">Mon évolution</h1>
                 </div>
 
                 <GlassSegmented
@@ -116,7 +113,7 @@ const handlePeriodChange = (period) => {
 
                 <Link
                     :href="route('exercises.index')"
-                    class="text-accent-primary-deep inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase"
+                    class="text-accent-primary-deep inline-flex items-center gap-2 text-xs font-bold hover:underline"
                 >
                     Bibliothèque d'exercices
                     <GlassIcon name="arrow_forward" size="xs" />
@@ -126,14 +123,11 @@ const handlePeriodChange = (period) => {
             <template v-else>
                 <div class="bureau:grid bureau:grid-cols-2 bureau:gap-3 bureau:space-y-0 space-y-3">
                     <Link v-press :href="route('records.index')" class="block">
-                        <GlassCard
-                            padding="p-4"
-                            class="transition duration-300 hover:-translate-y-0.5 active:scale-[0.99]"
-                        >
+                        <GlassCard padding="p-4" class="transition duration-300 hover:-translate-y-0.5">
                             <div class="flex items-center gap-3">
                                 <GlassIcon name="emoji_events" class="text-accent-warning-deep" />
                                 <div class="min-w-0 flex-1">
-                                    <h2 class="titre-carte">Records</h2>
+                                    <h2 class="titre-plat">Records</h2>
                                     <p class="text-text-muted text-xs">Charge max, 1RM estimé, meilleur volume</p>
                                 </div>
                                 <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />
@@ -142,14 +136,11 @@ const handlePeriodChange = (period) => {
                     </Link>
 
                     <Link v-press :href="route('corps.index')" class="block">
-                        <GlassCard
-                            padding="p-4"
-                            class="transition duration-300 hover:-translate-y-0.5 active:scale-[0.99]"
-                        >
+                        <GlassCard padding="p-4" class="transition duration-300 hover:-translate-y-0.5">
                             <div class="flex items-center gap-3">
                                 <GlassIcon name="accessibility_new" class="text-accent-secondary-deep" />
                                 <div class="min-w-0 flex-1">
-                                    <h2 class="titre-carte">Corps</h2>
+                                    <h2 class="titre-plat">Corps</h2>
                                     <p class="text-text-muted text-xs">Poids, masse grasse, mensurations</p>
                                 </div>
                                 <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />

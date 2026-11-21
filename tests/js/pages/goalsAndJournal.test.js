@@ -260,7 +260,7 @@ describe('Goals/Index', () => {
         const mobile = wrapper.find('[dusk="create-goal-btn"]')
 
         expect(wrapper.find('[dusk="goal-create-form"]').exists()).toBe(false)
-        expect(toggle(wrapper).text()).toBe('Nouvel Objectif')
+        expect(toggle(wrapper).text()).toBe('Nouvel objectif')
         expect(mobile.attributes('aria-label')).toBe('Nouvel objectif')
 
         await toggle(wrapper).trigger('click')
@@ -437,15 +437,15 @@ describe('Goals/Index', () => {
             goal({ id: 5, type: 'sorcellerie' }),
         ])
 
-        expect(cardFor(wrapper, 1).text()).toContain('🏋️‍♂️')
+        expect(cardFor(wrapper, 1).html()).toContain('name="fitness_center"')
         expect(cardFor(wrapper, 1).text()).toContain('Poids (Max)')
-        expect(cardFor(wrapper, 2).text()).toContain('📅')
+        expect(cardFor(wrapper, 2).html()).toContain('name="calendar_month"')
         expect(cardFor(wrapper, 2).text()).toContain('Fréquence')
-        expect(cardFor(wrapper, 3).text()).toContain('📊')
+        expect(cardFor(wrapper, 3).html()).toContain('name="bar_chart"')
         expect(cardFor(wrapper, 3).text()).toContain('Volume')
-        expect(cardFor(wrapper, 4).text()).toContain('📏')
+        expect(cardFor(wrapper, 4).html()).toContain('name="straighten"')
         expect(cardFor(wrapper, 4).text()).toContain('Mesure')
-        expect(cardFor(wrapper, 5).text()).toContain('🎯')
+        expect(cardFor(wrapper, 5).html()).toContain('name="flag"')
         expect(cardFor(wrapper, 5).text()).toContain('Objectif')
 
         wrapper.unmount()
@@ -453,25 +453,25 @@ describe('Goals/Index', () => {
 
     /**
      * The percentage changes colour as the goal gets closer — it is the
-     * at-a-glance signal. The bands open *above* 25 and 75, so those two values
-     * are the ones asserted: anywhere in the middle of a band, tightening or
-     * loosening a comparison changes nothing and the test never notices.
+     * at-a-glance signal. The band opens *above* 25 (the cyan band above 75 is
+     * gone, #2434): 25 and 26 are asserted, one on each side of the threshold,
+     * so a comparison tightened or loosened changes a class and the test notices.
      */
     it("colore l'avancement selon la distance qui reste à parcourir", async () => {
         const wrapper = await mountGoals([
             goal({ id: 1, progress_pct: 25 }),
-            goal({ id: 2, progress_pct: 75 }),
+            goal({ id: 2, progress_pct: 26 }),
             goal({ id: 3, progress_pct: 76 }),
             goal({ id: 4, progress_pct: 100, completed_at: '2026-03-01T10:00:00.000000Z' }),
         ])
 
         /** The classes on the percentage readout itself, not just somewhere on the card. */
-        const readout = (id) => cardFor(wrapper, id).get('.drop-shadow-sm').classes()
+        const readout = (id) => cardFor(wrapper, id).get('.text-right div').classes()
 
         expect(readout(1)).toContain('text-text-muted')
         expect(readout(2)).toContain('text-accent-primary-deep')
-        expect(readout(3)).toContain('text-accent-info-deep')
-        // Completed wins over the percentage, which would otherwise read blue.
+        expect(readout(3)).toContain('text-accent-primary-deep')
+        // Completed wins over the percentage, which would otherwise read orange.
         expect(readout(4)).toContain('text-accent-state-deep')
 
         wrapper.unmount()
@@ -516,8 +516,8 @@ describe('Goals/Index', () => {
             goal({ id: 2, completed_at: '2026-03-01T10:00:00.000000Z' }),
         ])
 
-        expect(cardFor(wrapper, 1).text()).not.toContain('COMPLÉTÉ')
-        expect(cardFor(wrapper, 2).text()).toContain('COMPLÉTÉ')
+        expect(cardFor(wrapper, 1).text()).not.toContain('Complété')
+        expect(cardFor(wrapper, 2).text()).toContain('Complété')
 
         wrapper.unmount()
     })

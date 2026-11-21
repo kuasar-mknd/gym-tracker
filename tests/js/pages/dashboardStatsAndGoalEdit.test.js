@@ -424,19 +424,19 @@ describe('Stats/Index', () => {
             .map((button) => button.text())
 
     it('retient la période choisie sur le serveur', () => {
-        expect(pressedPeriod(mountStats({ selectedPeriod: '90j' }))).toEqual(['3 MOIS'])
+        expect(pressedPeriod(mountStats({ selectedPeriod: '90j' }))).toEqual(['3 mois'])
     })
 
     it('retombe sur trente jours quand le serveur n’a rien choisi', () => {
         // Not just "something is selected": with no default the whole strip
         // renders unpressed and the page silently shows an unlabelled period.
-        expect(pressedPeriod(mountStats())).toEqual(['30 JOURS'])
+        expect(pressedPeriod(mountStats())).toEqual(['30 jours'])
     })
 
     it('recharge la page sur la période demandée sans la faire sauter', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '1 AN').trigger('click')
+        await periodButton(wrapper, '1 an').trigger('click')
 
         expect(routerVisit.mock.calls[0][0]).toBe('/stats.index')
         expect(routerVisit.mock.calls[0][1]).toMatchObject({
@@ -449,12 +449,12 @@ describe('Stats/Index', () => {
     it('déplace la sélection tout de suite, sans attendre le serveur', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '7 JOURS').trigger('click')
+        await periodButton(wrapper, '7 jours').trigger('click')
 
         // preserveState keeps the component alive across the visit, so a page
         // that only read the prop would leave the old button pressed until the
         // response came back.
-        expect(pressedPeriod(wrapper)).toEqual(['7 JOURS'])
+        expect(pressedPeriod(wrapper)).toEqual(['7 jours'])
         expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).props('currentPeriod')).toBe('7j')
     })
 
@@ -467,25 +467,25 @@ describe('Stats/Index', () => {
     it('revient à la période de la page quand la visite finit sans succès', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '7 JOURS').trigger('click')
+        await periodButton(wrapper, '7 jours').trigger('click')
         routerVisit.mock.calls[0][1].onFinish()
         await nextTick()
 
-        expect(pressedPeriod(wrapper)).toEqual(['30 JOURS'])
+        expect(pressedPeriod(wrapper)).toEqual(['30 jours'])
     })
 
     it('garde la période demandée quand la visite réussit, même après une demande interrompue', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '7 JOURS').trigger('click')
-        await periodButton(wrapper, '1 AN').trigger('click')
+        await periodButton(wrapper, '7 jours').trigger('click')
+        await periodButton(wrapper, '1 an').trigger('click')
         // La première, interrompue par la seconde, finit sans succès.
         routerVisit.mock.calls[0][1].onFinish()
         routerVisit.mock.calls[1][1].onSuccess()
         routerVisit.mock.calls[1][1].onFinish()
         await nextTick()
 
-        expect(pressedPeriod(wrapper)).toEqual(['1 AN'])
+        expect(pressedPeriod(wrapper)).toEqual(['1 an'])
     })
 
     /*
@@ -545,7 +545,7 @@ describe('Stats/Index', () => {
 
             expect(wrapper.findAll('[data-indisponible-hors-ligne]')).toHaveLength(0)
             expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(true)
-            expect(pressedPeriod(wrapper)).toEqual(['30 JOURS'])
+            expect(pressedPeriod(wrapper)).toEqual(['30 jours'])
         })
     })
 
@@ -691,6 +691,16 @@ describe('Goals/Edit', () => {
         wrapper.findComponent({ name: 'GoalForm' }).vm.$emit('cancel')
 
         expect(routerGet.mock.calls[0][0]).toBe('/goals.index')
+    })
+
+    it('ne pose son lien de retour que sur bureau : le téléphone a la flèche de l’en-tête, et deux retours se doublent', () => {
+        const classes = mountEdit()
+            .findAll('a')
+            .find((lien) => lien.text().includes('Retour aux objectifs'))
+            .classes()
+
+        expect(classes).toContain('hidden')
+        expect(classes).toContain('bureau:inline-flex')
     })
 
     it('rappelle de quel objectif il s’agit', () => {

@@ -93,7 +93,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
 <template>
     <Head :title="nom" />
 
-    <AuthenticatedLayout :page-title="nom">
+    <AuthenticatedLayout :page-title="nom" titre-plat>
         <!-- Une navigation : un seul lien, par `href` (#2117). -->
         <template #header-actions>
             <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary" aria-label="Retour">
@@ -111,7 +111,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">{{ nom }}</h1>
+                <h1 class="titre-ecran">{{ nom }}</h1>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}
@@ -122,13 +122,13 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
         <div class="space-y-6">
             <!-- Chart -->
             <GlassCard v-if="courbe.length > 0" class="animate-slide-up">
-                <h3 class="text-accent-tertiary-deep sur-titre mb-4">Historique</h3>
+                <h3 class="etiquette mb-4">Historique</h3>
                 <BodyPartHistoryChart :data="courbe" :label="nom" :unit="courbe[courbe.length - 1].unit" />
             </GlassCard>
 
             <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
+                <h3 class="titre-plat mb-4">Nouvelle mesure</h3>
                 <form ref="formulaire" @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput
@@ -180,7 +180,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                             <div class="text-text-muted text-sm font-medium">
                                 {{ formatMeasuredAt(item.measured_at) }}
                             </div>
-                            <div v-if="item.notes" class="text-text-muted mt-1 text-xs italic">
+                            <div v-if="item.notes" class="text-text-muted mt-1 text-xs">
                                 {{ item.notes }}
                             </div>
                         </div>

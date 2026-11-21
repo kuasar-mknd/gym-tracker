@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 const dialog = ref(null)
 
@@ -115,37 +116,26 @@ const fermer = () => {
                 <!-- Modal. No role or aria-modal here: the <dialog> above is the
                      dialog, and nesting a second one would announce two. -->
                 <div
-                    class="animate-bounce-in border-border bg-surface-card hauteur-sure-6 relative w-full max-w-sm overflow-y-auto rounded-3xl border p-6 text-center shadow-2xl transition duration-300"
+                    class="animate-scale-in border-border bg-surface-card hauteur-sure-6 relative w-full max-w-sm overflow-y-auto rounded-3xl border p-6 text-center shadow-2xl"
                 >
-                    <!-- Glow Effect -->
-                    <div
-                        class="to-accent-secondary/20 from-accent-primary/20 pointer-events-none absolute inset-0 rounded-3xl bg-linear-to-br via-transparent opacity-50"
-                    ></div>
-
                     <div class="relative z-10 flex flex-col items-center">
-                        <!-- Confetti/Burst Animation Background (CSS only) -->
-                        <div class="pointer-events-none absolute top-0 left-0 h-full w-full overflow-hidden">
-                            <div
-                                class="bg-accent-primary/20 absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full blur-[60px]"
-                            ></div>
-                        </div>
-
                         <!-- Icon -->
                         <div class="relative mb-4" aria-hidden="true">
                             <div
-                                class="animate-wobble border-border bg-surface-sunken flex h-24 w-24 items-center justify-center rounded-3xl border text-6xl shadow-lg backdrop-blur-md"
+                                class="border-border bg-surface-sunken flex h-24 w-24 items-center justify-center rounded-3xl border text-6xl"
                             >
-                                {{ badge.icon || '🏆' }}
+                                <template v-if="badge.icon">{{ badge.icon }}</template>
+                                <GlassIcon v-else name="military_tech" size="xl" />
                             </div>
                         </div>
 
                         <!-- Text -->
-                        <h2 class="titre-carte mb-1" id="achievement-title">Badge débloqué !</h2>
-                        <h3 v-if="badge.name" class="text-accent-primary-deep titre-carte mb-3" id="achievement-name">
+                        <h2 class="titre-plat mb-1" id="achievement-title">Badge débloqué</h2>
+                        <h3 v-if="badge.name" class="text-accent-primary-deep titre-plat mb-3" id="achievement-name">
                             {{ badge.name }}
                         </h3>
                         <p class="text-text-muted mb-6 text-sm" id="achievement-description">
-                            {{ badge.description || badge.data.message || 'Félicitations pour cet exploit !' }}
+                            {{ badge.description || badge.data.message || 'Félicitations pour cet exploit' }}
                         </p>
 
                         <!-- Action -->
@@ -156,7 +146,7 @@ const fermer = () => {
                             dusk="celebration-dismiss"
                             @click="fermer"
                         >
-                            Génial ! 🤩
+                            Génial
                         </GlassButton>
                     </div>
                 </div>
@@ -166,52 +156,6 @@ const fermer = () => {
 </template>
 
 <style scoped>
-@keyframes bounce-in {
-    0% {
-        transform: scale(0.3);
-        opacity: 0;
-    }
-    50% {
-        transform: scale(1.05);
-    }
-    70% {
-        transform: scale(0.9);
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-.animate-bounce-in {
-    animation: bounce-in 0.6s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
-}
-
-@keyframes wobble {
-    0%,
-    100% {
-        transform: rotate(0deg);
-    }
-    15% {
-        transform: rotate(-5deg);
-    }
-    30% {
-        transform: rotate(3deg);
-    }
-    45% {
-        transform: rotate(-3deg);
-    }
-    60% {
-        transform: rotate(2deg);
-    }
-    75% {
-        transform: rotate(-1deg);
-    }
-}
-.animate-wobble {
-    animation: wobble 1s ease-in-out infinite;
-    animation-delay: 0.5s;
-}
-
 @keyframes fade-in {
     from {
         opacity: 0;

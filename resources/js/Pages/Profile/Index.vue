@@ -29,14 +29,14 @@ const menuGroups = [
                 name: 'Outils',
                 icon: 'handyman',
                 route: 'tools.index',
-                description: 'Calculatrices & utilitaires',
+                description: 'Calculatrices et utilitaires',
                 color: 'text-accent-tertiary-deep',
                 bgColor: 'bg-accent-tertiary/50',
             },
         ],
     },
     {
-        title: 'Ma Progression',
+        title: 'Ma progression',
         items: [
             {
                 name: 'Badges',
@@ -95,7 +95,7 @@ const menuGroups = [
                 name: 'Modifier le profil',
                 icon: 'person_edit',
                 route: 'profile.edit',
-                description: 'Infos & Préférences',
+                description: 'Infos et préférences',
                 color: 'text-text-main',
                 bgColor: 'bg-surface-sunken/50',
             },
@@ -120,19 +120,15 @@ const menuGroups = [
             <!-- User Profile Quick View -->
             <div class="animate-fade-in flex items-center gap-4 py-2">
                 <div
-                    class="bg-gradient-main shadow-accent-primary/20 flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg"
+                    class="bg-surface-sunken font-display text-text-main flex h-20 w-20 items-center justify-center rounded-3xl text-3xl font-semibold"
                 >
-                    <div
-                        class="bg-surface-card flex h-full w-full items-center justify-center rounded-xl text-3xl font-black"
-                    >
-                        {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
-                    </div>
+                    {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                 </div>
                 <div>
-                    <h2 class="titre-section">
+                    <h2 class="titre-ecran">
                         {{ $page.props.auth.user.name }}
                     </h2>
-                    <p class="text-text-muted text-sm font-bold">{{ $page.props.auth.user.email }}</p>
+                    <p class="text-text-muted text-sm font-medium">{{ $page.props.auth.user.email }}</p>
                     <div class="mt-2 flex gap-2">
                         <!--
                             Le bouton que rendait `<Link as="button">`, à l'identique : la
@@ -143,7 +139,7 @@ const menuGroups = [
                         -->
                         <button
                             type="button"
-                            class="text-accent-danger-deep hover:text-accent-danger-deep min-h-touch inline-flex items-center text-xs font-black tracking-widest uppercase"
+                            class="text-accent-danger-deep hover:text-accent-danger-deep min-h-touch inline-flex items-center text-sm font-semibold"
                             data-testid="logout-button"
                             @click="seDeconnecter"
                         >
@@ -160,7 +156,7 @@ const menuGroups = [
                 class="animate-slide-up"
                 :style="{ animationDelay: `${0.1 + gIdx * 0.1}s` }"
             >
-                <h3 class="text-text-muted sur-titre mb-4 ml-1">
+                <h3 class="etiquette mb-4 ml-1">
                     {{ group.title }}
                 </h3>
 

@@ -34,7 +34,7 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
      * « Badges ») ; l'interface n'en garde qu'un, « Badges », le plus employé
      * (#1980).
      */
-    private const string TITRE = 'Badge débloqué ! 🏆';
+    private const string TITRE = 'Badge débloqué';
 
     public function __construct(public Achievement $achievement)
     {
