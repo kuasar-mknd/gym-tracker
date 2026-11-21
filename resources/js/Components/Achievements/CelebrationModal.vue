@@ -44,7 +44,7 @@ const badge = computed(() => {
 /**
  * This one deliberately does not route through Components/UI/Modal: its
  * overlay and card are a different design on purpose — a near-black backdrop,
- * a dark glass panel, a bounce-in — and Modal's own chrome would stack a
+ * a dark glass panel — and Modal's own chrome would stack a
  * second background and border on top of them.
  *
  * What it does need is the part Modal gets for free. It had the ARIA

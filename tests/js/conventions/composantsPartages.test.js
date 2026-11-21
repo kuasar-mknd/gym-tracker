@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs'
 
 import { collectSourceFiles, jsRoot } from './sourceFiles'
 
+/** Un interlettrage positif : `normal`, zéro et les valeurs négatives (titres serrés) passent. */
+const INTERLETTRAGE_POSITIF = /letter-spacing:\s*\+?(?:0?\.\d+|[1-9]\d*(?:\.\d+)?)(?:px|em|rem)?(?![\w.])/
+
 /**
  * Ce qui datait d'avant la refonte du verre (#2434) ne revient pas dans
  * Components/UI : capitales étirées, graisses 800 et 900, lueurs et ombres
@@ -17,7 +20,8 @@ const INTERDITS = [
     [/\buppercase\b/, 'capitales : la casse de phrase se garde'],
     [/\btracking-(?:wide|wider|widest)\b|tracking-\[/, 'interlettrage étiré'],
     [/\bfont-(?:extrabold|black)\b|font-\[(?:8|9)00\]|font-weight:\s*(?:8|9)00\b/, 'graisse 800 ou 900'],
-    [/text-transform:\s*uppercase|letter-spacing:\s*0?\.[1-9]/, 'capitales ou interlettrage étiré en style'],
+    [/text-transform:\s*uppercase/, 'capitales en style'],
+    [INTERLETTRAGE_POSITIF, 'interlettrage étiré en style'],
     [/\bitalic\b(?<!not-italic)/, 'italique'],
     [/\bshadow-(?:glow|neon)/, 'ombre colorée'],
     [/\bdrop-shadow/, 'ombre portée sur un glyphe'],
@@ -45,18 +49,26 @@ it('ne garde dans Components/UI rien de ce qui datait d’avant le verre', () =>
 })
 
 /**
- * `glass-badge` reste en capitales 800 : seuls RecentActivity et CarteDeSeance
- * l'emploient, hors Components/UI, et le lot P1 n'y touche pas.
+ * Un utilitaire `glass-*` de app.css ne porte ce qui datait d'avant le verre ni
+ * en déclaration (`text-transform`, `font-style`, `font-weight`,
+ * `letter-spacing`), ni par `@apply` de la classe Tailwind qui le fait.
  */
-const GARDES_POUR_UN_AUTRE_LOT = ['glass-badge']
-
-it('ne garde dans les utilitaires glass-* de app.css ni capitales, ni italique, ni graisse 800 ou 900', () => {
+it('ne garde dans les utilitaires glass-* de app.css ni capitales, ni italique, ni graisse 800 ou 900, ni interlettrage étiré', () => {
     const css = readFileSync(`${jsRoot}/../css/app.css`, 'utf8')
     const blocs = [...css.matchAll(/^@utility (glass-[\w-]+) \{[\s\S]*?^\}/gm)]
+    const declarations = [
+        /text-transform:\s*uppercase/,
+        /font-style:\s*italic/,
+        /font-weight:\s*(?:8|9)00\b/,
+        INTERLETTRAGE_POSITIF,
+    ]
 
     const fautifs = blocs
-        .filter(([, nom]) => !GARDES_POUR_UN_AUTRE_LOT.includes(nom))
-        .filter(([bloc]) => /text-transform:\s*uppercase|font-style:\s*italic|font-weight:\s*(?:8|9)00\b/.test(bloc))
+        .filter(([bloc]) => {
+            const appliques = [...bloc.matchAll(/@apply[^;]*;/g)].map(([ligne]) => ligne).join('\n')
+
+            return declarations.some((motif) => motif.test(bloc)) || INTERDITS.some(([motif]) => motif.test(appliques))
+        })
         .map(([, nom]) => nom)
 
     expect(blocs.length).toBeGreaterThan(5)

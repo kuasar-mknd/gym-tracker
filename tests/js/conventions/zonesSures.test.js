@@ -925,7 +925,7 @@ describe('la garde des zones sûres', () => {
         'z-modale px-sure-4 py-sure-6 sm:px-sure-0 fixed inset-0',
         'sticky top-0 pt-sure-4 pb-4',
         'z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80',
-        'titre-carte top-sous-entete sticky z-10',
+        'titre-plat top-sous-entete sticky z-10',
         'fixed bottom-sure-36 left-sure-4 right-sure-4 inset-ring-2',
         'fixed left-1/2 top-sure-4 -translate-x-1/2',
         'fixed',

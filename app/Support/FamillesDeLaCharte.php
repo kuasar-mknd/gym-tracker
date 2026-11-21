@@ -28,7 +28,7 @@ final class FamillesDeLaCharte
 
     private const string TEXTE = "Ce qu'on écrit, et sur quoi.";
 
-    private const string ACCENTS = "L'identité. Fonds, icônes, anneaux, lueurs — jamais les mots.";
+    private const string ACCENTS = "L'identité. Fonds, icônes, anneaux — jamais les mots.";
 
     private const string DEEP = "Les mêmes, calculées contre le pire fond qu'elles rencontrent : un lavis "
         ."de leur propre accent à 20 %. Elles n'existent que pour porter du texte.";

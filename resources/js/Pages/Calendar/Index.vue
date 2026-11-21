@@ -359,7 +359,7 @@ const formatDateFull = (dateStr) => {
                                         v-if="selectedDayDetails.journal.mood_score"
                                         class="text-text-main bg-surface-sunken text-2xs rounded px-1.5 py-0.5 font-bold"
                                     >
-                                        Humeur: {{ selectedDayDetails.journal.mood_score }}/10
+                                        Humeur: {{ selectedDayDetails.journal.mood_score }}/5
                                     </span>
                                 </div>
                                 <div v-if="selectedDayDetails.journal.has_note" class="text-text-muted mt-1 text-sm">

@@ -58,6 +58,8 @@ Trois règles tenues à la main, parce qu'une factorisation « sans changement d
 
 Deux pièges payés pendant la migration des 48 cartes : `BaseChart` ne pose `beginAtZero` que sur des barres, donc une courbe qui l'attendait doit le redemander par `:axe-y` ; et le composant s'importe en chemin relatif depuis le dossier des cartes, jamais par l'alias, que la garde imposant `defineAsyncComponent` refuse sur tout fichier de graphique.
 
+**Une courbe n'a qu'un accent : pas de dégradé de teinte, pas de lueur.** Décidé par la passe de design de #2434. Une série se trace d'un seul jeton, plein ou à son opacité, jamais d'un dégradé qui change de teinte ni d'une ombre colorée sous le tracé ; `BaseChart` n'a plus de prop `lueur`. Hors des graphiques, `shadow-glow-*`, `drop-shadow` et `text-gradient` ne reviennent pas dans `Components/UI` (`tests/js/conventions/composantsPartages.test.js`).
+
 ## Un graphique, un champ ou une case se nomment pour qui ne les voit pas
 Depuis #1970, #1971 et #1972 (2026-10-05).
 
