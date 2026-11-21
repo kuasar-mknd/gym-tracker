@@ -77,7 +77,7 @@ onMounted(() => {
 
         <!-- Glass Card -->
         <main id="main-content" class="animate-slide-up relative z-10 w-full max-w-md">
-            <div class="verre-regulier rounded-3xl p-8">
+            <div class="border-surface-card/20 bg-surface-card/10 rounded-3xl border p-8 backdrop-blur-md">
                 <p
                     v-if="ecrituresEffacees > 0"
                     role="status"

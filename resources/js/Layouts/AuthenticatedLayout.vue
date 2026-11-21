@@ -99,7 +99,7 @@ const props = defineProps({
  * racine de leur famille, pas à la page d'où l'on vient.
  */
 const CLASSES_DU_RETOUR_DE_BUREAU =
-    'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none'
+    'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none'
 
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
@@ -196,7 +196,7 @@ onUnmounted(() => {
     <div class="bg-surface-page relative min-h-dvh w-full">
         <a
             href="#main-content"
-            class="accent-fill z-evitement pl-sure-4 pt-sure-2 absolute top-0 left-0 -translate-y-full rounded-br-xl pr-4 pb-2 font-semibold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
+            class="accent-fill z-evitement pl-sure-4 pt-sure-2 absolute top-0 left-0 -translate-y-full rounded-br-xl pr-4 pb-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
         >
             Aller au contenu principal
         </a>
@@ -212,7 +212,7 @@ onUnmounted(() => {
         -->
         <div
             v-if="$page.props.pending_migrations > 0"
-            class="bg-accent-warning text-text-main z-alerte px-sure-4 pt-sure-2 sticky top-0 pb-2 text-center text-sm font-semibold"
+            class="bg-accent-warning text-text-main z-alerte px-sure-4 pt-sure-2 sticky top-0 pb-2 text-center text-sm font-bold"
             role="alert"
             data-testid="pending-migrations-banner"
         >
@@ -291,7 +291,7 @@ onUnmounted(() => {
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex max-w-full items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex max-w-full items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
                                             class="bg-surface-glass-strong text-text-main flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
