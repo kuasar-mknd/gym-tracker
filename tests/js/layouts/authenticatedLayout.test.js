@@ -592,6 +592,20 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
         expect(mobile.classes()).not.toContain('sr-only')
     })
 
+    /**
+     * Le titre plat de l'en-tête mobile perd un cran au-delà de douze
+     * caractères, et sous 21 rem pour les autres : à vingt-huit pixels, « Mes
+     * objectifs » dépassait sa boîte à 375 px (#2434).
+     */
+    it('réduit le titre plat de l’en-tête mobile au-delà de douze caractères et sous 21 rem', () => {
+        const [court] = mountLayout({ props: { pageTitle: 'Corps', titrePlat: true } }).findAll('h1')
+        const [long] = mountLayout({ props: { pageTitle: 'Mes objectifs', titrePlat: true } }).findAll('h1')
+
+        expect(court.classes()).toEqual(expect.arrayContaining(['titre-ecran', 'max-[21rem]:titre-plat']))
+        expect(long.classes()).toContain('titre-plat')
+        expect(long.classes()).not.toContain('titre-ecran')
+    })
+
     it('ne pose aucun titre sans page-title, la page portant le sien', () => {
         expect(titresExposes(mountLayout({ props: { showBack: true } }).element)).toEqual({ telephone: [], bureau: [] })
     })

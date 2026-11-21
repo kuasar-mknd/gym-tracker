@@ -346,7 +346,9 @@ onUnmounted(() => {
                         titreMasque
                             ? 'sr-only'
                             : titrePlat
-                              ? 'titre-ecran'
+                              ? pageTitle.length > 12
+                                  ? 'titre-plat'
+                                  : 'titre-ecran max-[21rem]:titre-plat'
                               : ['titre-carte', pageTitle.length > 12 ? 'text-xl' : 'text-2xl max-[21rem]:text-xl']
                     "
                 >
