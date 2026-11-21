@@ -22,7 +22,7 @@ defineProps({
 <template>
     <Head title="Nouveau modèle" />
 
-    <AuthenticatedLayout page-title="Nouveau modèle" show-back back-route="templates.index" titre-plat>
+    <AuthenticatedLayout page-title="Nouveau modèle" show-back back-route="templates.index">
         <TemplateForm :exercises="exercises" :bornes-du-modele="bornesDuModele" :bornes-d-une-serie="bornesDUneSerie" />
     </AuthenticatedLayout>
 </template>

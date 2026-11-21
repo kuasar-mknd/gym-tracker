@@ -47,7 +47,7 @@ const jour = (date) => dateSansJour(parseCalendarDate(date))
 <template>
     <Head title="Records" />
 
-    <AuthenticatedLayout show-back back-route="stats.index" page-title="Records" titre-plat>
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Records">
         <template #header>
             <h1 class="titre-ecran">Records</h1>
         </template>

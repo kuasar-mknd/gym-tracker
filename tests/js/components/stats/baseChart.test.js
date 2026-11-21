@@ -169,10 +169,8 @@ describe('BaseChart', () => {
         expect(trace(wrapper).exists()).toBe(false)
     })
 
-    it('ne pose plus d’ombre, quelle que soit la densité qu’une carte demanderait', () => {
-        // La lueur a quitté la charte : ses anciennes props ne laissent ni style
-        // ni classe sur le cadre.
-        const cadre = monter({ lueur: 'accent-danger', lueurOpacite: 0.25 }).find('.relative')
+    it('ne pose ni style ni classe de lueur sur le cadre', () => {
+        const cadre = monter().find('.relative')
 
         expect(cadre.attributes('style')).toBeUndefined()
         expect(cadre.classes()).not.toContain('avec-lueur')

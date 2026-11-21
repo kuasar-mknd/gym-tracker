@@ -76,7 +76,7 @@ const handlePeriodChange = (period) => {
 <template>
     <Head title="Statistiques" />
 
-    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon évolution" titre-plat titre-dans-la-page>
+    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon évolution" titre-dans-la-page>
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

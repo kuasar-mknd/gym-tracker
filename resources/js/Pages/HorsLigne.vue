@@ -90,7 +90,7 @@ const attendre = () => {
 <template>
     <Head title="Hors ligne" />
 
-    <AuthenticatedLayout page-title="Hors ligne" largeur="etroite" titre-plat>
+    <AuthenticatedLayout page-title="Hors ligne" largeur="etroite">
         <div class="space-y-6" dusk="page-hors-ligne-sans-copie">
             <GlassCard class="space-y-3 text-center">
                 <GlassIcon name="cloud_off" size="lg" class="text-text-muted" />

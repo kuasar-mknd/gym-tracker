@@ -26,7 +26,7 @@ defineProps({
 <template>
     <Head title="Modifier le modèle" />
 
-    <AuthenticatedLayout page-title="Modèle" show-back back-route="templates.index" titre-plat>
+    <AuthenticatedLayout page-title="Modèle" show-back back-route="templates.index">
         <TemplateForm
             :template="template"
             :exercises="exercises"

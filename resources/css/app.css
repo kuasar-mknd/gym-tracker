@@ -450,46 +450,6 @@
      * commentaire dit quoi verifier.
      */
 
-    /*
-     * Les ombres DERIVENT de leur accent, elles ne le recopient pas.
-     *
-     * `rgb(from <couleur> r g b / alpha)` reprend les canaux du jeton et n'en
-     * change que l'opacite : une seule couleur sous un seul nom.
-     */
-    --shadow-glow-orange:
-        0 0 20px rgb(from var(--color-accent-primary) r g b / 0.25),
-        0 10px 40px rgb(from var(--color-accent-primary) r g b / 0.15);
-    --shadow-glass-inset: inset 0 0 20px rgb(from var(--color-surface-card) r g b / 0.8);
-    --shadow-glass-out: 0 8px 32px rgb(from var(--color-accent-tertiary) r g b / 0.1);
-    --shadow-glass-card: 0 8px 32px 0 rgb(from var(--color-shadow-ambient) r g b / 0.07);
-    --shadow-plate-shadow: 2px 0 4px rgb(from var(--color-shadow-cast) r g b / 0.2);
-    --shadow-glow-primary-soft: 0 0 15px rgb(from var(--color-accent-primary) r g b / 0.3);
-    --shadow-glow-primary-sharp: 0 0 8px rgb(from var(--color-accent-primary) r g b / 0.5);
-    --shadow-glow-secondary-soft: 0 0 15px rgb(from var(--color-accent-secondary) r g b / 0.3);
-    --shadow-glow-tertiary-sharp: 0 0 4px rgb(from var(--color-accent-tertiary) r g b / 0.8);
-    --shadow-glow-state-sharp: 0 0 4px rgb(from var(--color-accent-state) r g b / 0.8);
-    --shadow-glow-card: 0 0 15px rgb(from var(--color-surface-card) r g b / 0.1);
-
-    /*
-     * Les degrades ne portent plus d'hexadecimal : ils citent les jetons.
-     *
-     * Ils restent des surfaces DECORATIVES. Aucun texte ne s'ecrit dessus, et
-     * c'est demontre plutot que promis : sur `gradient-main`, du blanc echoue de
-     * 0 a 50 % et de l'encre echoue de 75 a 100 %. Aucune des deux ne traverse.
-     * C'est ce qui a fait retirer le degrade des boutons.
-     */
-    --background-image-gradient-main: linear-gradient(
-        135deg,
-        var(--color-accent-primary) 0%,
-        var(--color-accent-secondary) 50%,
-        var(--color-accent-tertiary) 100%
-    );
-    --background-image-gradient-orange-violet: linear-gradient(
-        135deg,
-        var(--color-accent-primary) 0%,
-        var(--color-accent-tertiary) 100%
-    );
-
     @keyframes fade-in {
         from {
             opacity: 0;
@@ -596,28 +556,9 @@
 }
 
 /*
- * Les tailles de titre des pages qui n'ont pas pris le verre.
- *
- * Les `h1`–`h3` du dépôt portaient 28 combinaisons de classes : le titre d'une
- * carte était tantôt en capitales italiques, tantôt en casse de phrase, selon
- * l'écran (#1783). Un rôle par taille, la couleur reste à l'appelant quand elle
- * dit quelque chose.
- */
-@utility titre-carte {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-    color: var(--color-text-main);
-}
-
-/*
- * Les rôles du verre : le titre d'un écran et celui d'une carte, en casse de
- * phrase et graisse 600, et la petite étiquette en gris qui le précède. Le rôle `titre-carte`
- * ci-dessus reste celui des pages restantes ; ceux-ci sont ceux d'un écran qui a
- * quitté le gras italique en capitales.
+ * Les rôles typographiques : le titre d'un écran et celui d'une carte, en casse
+ * de phrase et graisse 600, et la petite étiquette en gris qui le précède. Un
+ * titre en choisit un, et n'écrit plus sa typographie (#1783).
  */
 @utility titre-plat {
     font-family: var(--font-display);
@@ -1276,9 +1217,7 @@
     align-items: center;
     padding: 0.25rem 0.75rem;
     font-size: 0.625rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-weight: 600;
     border-radius: 0.5rem;
 }
 

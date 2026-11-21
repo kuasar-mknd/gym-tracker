@@ -93,7 +93,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
 <template>
     <Head :title="nom" />
 
-    <AuthenticatedLayout :page-title="nom" titre-plat>
+    <AuthenticatedLayout :page-title="nom">
         <!-- Une navigation : un seul lien, par `href` (#2117). -->
         <template #header-actions>
             <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary" aria-label="Retour">

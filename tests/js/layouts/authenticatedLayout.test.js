@@ -582,7 +582,6 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
 
         expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Accueil'], bureau: ['Accueil'] })
         expect(mobile.classes()).toContain('sr-only')
-        expect(mobile.classes()).not.toContain('titre-carte')
         expect(wrapper.get('header').findAll('a[href="/resolved/notifications.index"]')).toHaveLength(1)
     })
 
@@ -598,8 +597,8 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
      * objectifs » dépassait sa boîte à 375 px (#2434).
      */
     it('réduit le titre plat de l’en-tête mobile au-delà de douze caractères et sous 21 rem', () => {
-        const [court] = mountLayout({ props: { pageTitle: 'Corps', titrePlat: true } }).findAll('h1')
-        const [long] = mountLayout({ props: { pageTitle: 'Mes objectifs', titrePlat: true } }).findAll('h1')
+        const [court] = mountLayout({ props: { pageTitle: 'Corps' } }).findAll('h1')
+        const [long] = mountLayout({ props: { pageTitle: 'Mes objectifs' } }).findAll('h1')
 
         expect(court.classes()).toEqual(expect.arrayContaining(['titre-ecran', 'max-[21rem]:titre-plat']))
         expect(long.classes()).toContain('titre-plat')

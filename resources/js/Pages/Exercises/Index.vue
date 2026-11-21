@@ -193,7 +193,6 @@ const typeLabel = (type) => {
         liquid-variant="subtle"
         page-title="Bibliothèque"
         titre-dans-la-page
-        titre-plat
     >
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <div class="pb-main-safe space-y-6">

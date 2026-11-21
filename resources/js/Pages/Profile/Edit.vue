@@ -27,7 +27,7 @@ const props = defineProps({
 <template>
     <Head title="Mon profil" />
 
-    <AuthenticatedLayout page-title="Mon profil" titre-plat show-back back-route="profile.index">
+    <AuthenticatedLayout page-title="Mon profil" show-back back-route="profile.index">
         <template #header>
             <h1 class="titre-ecran">Mon profil</h1>
         </template>
