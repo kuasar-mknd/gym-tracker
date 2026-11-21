@@ -490,24 +490,6 @@
         var(--color-accent-primary) 0%,
         var(--color-accent-tertiary) 100%
     );
-    /*
-     * Il porte « magenta » dans son nom, alors il doit en contenir.
-     *
-     * Il a un temps pointe vers `category-core`, qui valait un magenta au moment
-     * de la conversion — et qui est devenu BLEU dans le meme lot, parce que ce
-     * jeton-la se confondait avec le rose des epaules. Le degrade est alors
-     * passe de cyan-magenta a cyan-bleu, soit presque plus de degrade du tout,
-     * sous un nom devenu faux.
-     *
-     * La lecon : un degrade DECORATIF ne doit pas emprunter un jeton dont le
-     * role est ailleurs. Une couleur de categorie change quand les categories
-     * doivent se distinguer, ce qui n'a rien a voir avec ce titre.
-     */
-    --background-image-gradient-cyan-magenta: linear-gradient(
-        135deg,
-        var(--color-accent-info) 0%,
-        var(--color-accent-secondary) 100%
-    );
 
     @keyframes fade-in {
         from {
@@ -1379,13 +1361,6 @@
 @utility text-gradient {
     /* Text gradient utility */
     background: var(--background-image-gradient-main);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-@utility text-gradient-cyan-magenta {
-    background: var(--background-image-gradient-cyan-magenta);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
