@@ -93,13 +93,13 @@ describe('the mood scale', () => {
         const { wrapper } = mountForm()
 
         // The button shows only its score, which says nothing about the scale to
-        // a screen reader; the whole label has to be the accessible name.
+        // a screen reader; the accessible name carries the visible score and the label.
         expect(moodRadios(wrapper).map((radio) => radio.attributes('aria-label'))).toEqual([
-            'Excellent',
-            'Bon',
-            'Moyen',
-            'Mauvais',
-            'Terrible',
+            '5, Excellent',
+            '4, Bon',
+            '3, Moyen',
+            '2, Mauvais',
+            '1, Terrible',
         ])
         expect(moodRadios(wrapper).map((radio) => radio.text())).toEqual(['5', '4', '3', '2', '1'])
     })

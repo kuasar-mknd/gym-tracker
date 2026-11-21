@@ -56,7 +56,7 @@ const emit = defineEmits(['close', 'submit'])
                         @click="form.mood_score = mood.value"
                         role="radio"
                         :aria-checked="form.mood_score === mood.value"
-                        :aria-label="mood.label"
+                        :aria-label="`${mood.value}, ${mood.label}`"
                         :title="mood.label"
                         :class="[
                             'focus-visible:ring-accent-primary border-surface-card/20 min-h-touch flex-1 rounded-2xl border p-2 text-center text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
