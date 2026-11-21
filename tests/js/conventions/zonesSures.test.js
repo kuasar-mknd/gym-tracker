@@ -715,18 +715,6 @@ const basculesDeLaSource = (source, vue = true) =>
  */
 const BASCULES_DE_MISE_EN_PAGE = [
     {
-        fichier: 'resources/js/Components/Journal/JournalList.vue',
-        bascule: 'sm:hidden',
-        nombre: 1,
-        raison: 'l’humeur d’une entrée, dans la colonne de la date tant que celle-ci est une ligne',
-    },
-    {
-        fichier: 'resources/js/Components/Journal/JournalList.vue',
-        bascule: 'hidden sm:block',
-        nombre: 1,
-        raison: 'la même humeur, à côté des étiquettes quand la colonne de la date passe à gauche',
-    },
-    {
         fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
         bascule: 'sm:hidden',
         nombre: 1,

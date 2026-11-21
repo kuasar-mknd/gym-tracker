@@ -59,11 +59,11 @@ const form = useForm({
 
 /** Available mood options with values and labels. */
 const moods = [
-    { value: 5, label: '🤩 Excellent' },
-    { value: 4, label: '🙂 Bon' },
-    { value: 3, label: '😐 Moyen' },
-    { value: 2, label: '🙁 Mauvais' },
-    { value: 1, label: '😫 Terrible' },
+    { value: 5, label: 'Excellent' },
+    { value: 4, label: 'Bon' },
+    { value: 3, label: 'Moyen' },
+    { value: 2, label: 'Mauvais' },
+    { value: 1, label: 'Terrible' },
 ]
 
 /**
@@ -155,7 +155,7 @@ const journalsByMonth = computed(() => {
 <template>
     <Head title="Journal" />
 
-    <AuthenticatedLayout show-back back-route="profile.index" page-title="Journal">
+    <AuthenticatedLayout show-back back-route="profile.index" page-title="Journal" titre-plat>
         <template #header-actions>
             <GlassButton variant="primary" size="sm" aria-label="Nouvelle entrée" @click="openAddForm">
                 <GlassIcon name="add" size="xs" />
@@ -164,7 +164,7 @@ const journalsByMonth = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Journal</h1>
+                <h1 class="titre-ecran">Journal</h1>
                 <GlassButton variant="primary" @click="openAddForm" aria-label="Nouvelle entrée">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -176,8 +176,8 @@ const journalsByMonth = computed(() => {
             <!-- Stats Chart -->
             <GlassCard v-if="journals.length > 1" class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="titre-carte">Tendances</h3>
-                    <p class="text-text-muted text-xs font-semibold">Évolution de tes métriques</p>
+                    <h3 class="titre-plat">Tendances</h3>
+                    <p class="etiquette">Évolution de tes métriques</p>
                 </div>
                 <JournalChart :data="journals" />
             </GlassCard>
@@ -193,7 +193,7 @@ const journalsByMonth = computed(() => {
 
             <GlassEmptyState
                 v-if="journals.length === 0 && !showAddForm"
-                icon="📓"
+                icon="menu_book"
                 title="Ton journal est vide"
                 description="Commence par ajouter une note pour aujourd'hui."
                 action-label="Commencer"
@@ -204,7 +204,6 @@ const journalsByMonth = computed(() => {
             <JournalList
                 v-else
                 :journals-by-month="journalsByMonth"
-                :moods="moods"
                 @edit="editJournal"
                 @delete="demanderSuppression"
             />

@@ -69,9 +69,9 @@ const {
 </script>
 
 <template>
-    <Head title="Mes Modèles" />
+    <Head title="Mes modèles" />
 
-    <AuthenticatedLayout page-title="Mes Modèles" show-back back-route="workouts.index">
+    <AuthenticatedLayout page-title="Mes modèles" show-back back-route="workouts.index" titre-plat>
         <!--
             « Nouveau modèle » est une navigation : `GlassButton` la rend en un
             seul lien par `href`, jamais un bouton posé dans un `Link` (#2117).
@@ -84,7 +84,7 @@ const {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Mes Modèles</h1>
+                <h1 class="titre-ecran">Mes modèles</h1>
                 <GlassButton :href="route('templates.create')" variant="primary">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Nouveau modèle
@@ -96,7 +96,7 @@ const {
             <GlassEmptyState
                 v-if="templates.length === 0"
                 class="animate-slide-up"
-                icon="📋"
+                icon="inventory_2"
                 color="violet"
                 title="Aucun modèle"
                 description="Crée tes routines pour gagner du temps."
@@ -112,12 +112,12 @@ const {
                 <GlassCard
                     v-for="template in templates"
                     :key="template.id"
-                    class="group flex flex-col transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
+                    class="group flex flex-col active:scale-[0.99]"
                 >
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="titre-carte">
+                                <h3 class="titre-plat">
                                     {{ template.name }}
                                 </h3>
                                 <p v-if="template.description" class="text-text-muted mt-1 text-sm font-medium">
@@ -131,7 +131,7 @@ const {
                                     :href="route('templates.edit', { template: template.id })"
                                     :dusk="`edit-template-${template.id}`"
                                     :aria-label="`Modifier ${template.name}`"
-                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken flex size-11 shrink-0 items-center justify-center rounded-xl transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken flex size-11 shrink-0 items-center justify-center rounded-xl transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
                                     <GlassIcon name="edit" size="sm" class="block" />
                                 </Link>
@@ -153,7 +153,7 @@ const {
                             <div
                                 v-for="line in template.workout_template_lines"
                                 :key="line.id"
-                                class="text-text-muted border-border bg-surface-card/50 flex items-center gap-2 rounded-xl border px-2 py-1 text-xs transition duration-300 hover:-translate-y-0.5 active:scale-95"
+                                class="text-text-muted border-border bg-surface-card/50 flex items-center gap-2 rounded-xl border px-2 py-1 text-xs transition active:scale-95"
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
                                 <span class="text-text-muted"
@@ -162,7 +162,7 @@ const {
                             </div>
                             <div
                                 v-if="template.workout_template_lines_count > 3"
-                                class="text-text-muted mt-2 ml-1 text-xs font-bold italic"
+                                class="text-text-muted mt-2 ml-1 text-xs font-medium"
                             >
                                 + {{ compte(template.workout_template_lines_count - 3, 'exercice', 'exercices') }}
                             </div>

@@ -37,36 +37,36 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->waitFor('#main-content', 30);
 
             // 1. Check listing
-            $browser->assertSee('BENCH PRESS')
-                ->assertSee('SQUAT')
-                ->assertSee('DEADLIFT');
+            $browser->assertSee('Bench Press')
+                ->assertSee('Squat')
+                ->assertSee('Deadlift');
 
             // 2. Test Search
             $browser->type('@search-exercises', 'Bench')
-                ->waitUntilMissingText('SQUAT', 10)
-                ->assertSee('BENCH PRESS')
-                ->assertDontSee('SQUAT')
-                ->assertDontSee('DEADLIFT');
+                ->waitUntilMissingText('Squat', 10)
+                ->assertSee('Bench Press')
+                ->assertDontSee('Squat')
+                ->assertDontSee('Deadlift');
 
             $browser->clear('@search-exercises')
                 ->type('@search-exercises', ' ') // Clear properly
                 ->keys('@search-exercises', ['{backspace}'])
-                ->waitForText('SQUAT', 10);
+                ->waitForText('Squat', 10);
 
             // 3. Test Filter by Category
             // Le filtrage est un re-rendu Vue : attendre son résultat, pas une durée.
             // Avec un simple pause(), l'assertion pouvait porter sur le DOM d'avant
             // le filtrage et passer au vert sans que le filtre ait rien fait.
             $browser->click('@category-pill-Jambes')
-                ->waitForText('SQUAT', 10)
-                ->waitUntilMissingText('BENCH PRESS', 10)
-                ->assertSee('SQUAT')
-                ->assertDontSee('BENCH PRESS')
-                ->assertDontSee('DEADLIFT');
+                ->waitForText('Squat', 10)
+                ->waitUntilMissingText('Bench Press', 10)
+                ->assertSee('Squat')
+                ->assertDontSee('Bench Press')
+                ->assertDontSee('Deadlift');
 
             $browser->click('@category-pill-all')
-                ->waitForText('BENCH PRESS', 10)
-                ->assertSee('BENCH PRESS');
+                ->waitForText('Bench Press', 10)
+                ->assertSee('Bench Press');
 
             // 4. Create Exercise
             $newExerciseName = 'Pull Up '.time().random_int(0, 999);
@@ -77,7 +77,7 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->select('form select:last-of-type', 'Dos') // Category select
                 ->click('@submit-exercise-btn')
                 ->waitUntilMissing('@exercise-modal-title', 15)
-                ->waitForText(strtoupper($newExerciseName), 15);
+                ->waitForText($newExerciseName, 15);
 
             // Le nom affiché ne prouve pas l'écriture : Inertia rend la réponse du
             // serveur, mais rien ici ne distinguait un rendu optimiste d'une vraie
@@ -98,7 +98,7 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->type('@edit-exercise-name', $updatedName)
                 ->click('@save-exercise-btn')
                 ->waitUntilMissing('@edit-exercise-name', 10)
-                ->assertSee(strtoupper($updatedName));
+                ->assertSee($updatedName);
 
             $this->waitForDatabase(
                 fn (): bool => $exercise->fresh()?->name === $updatedName,
@@ -113,8 +113,8 @@ class ExerciseLibraryTest extends DuskTestCase
             // native : Dusk clique un bouton au lieu de repondre au navigateur.
             $browser->waitFor('@confirm-dialog-confirm', 10)
                 ->click('@confirm-dialog-confirm')
-                ->waitUntilMissingText(strtoupper($updatedName), 10)
-                ->assertDontSee(strtoupper($updatedName));
+                ->waitUntilMissingText($updatedName, 10)
+                ->assertDontSee($updatedName);
 
             // Disparaître de l'écran n'est pas être supprimé : sans cette
             // vérification, un retrait purement côté client passait au vert.

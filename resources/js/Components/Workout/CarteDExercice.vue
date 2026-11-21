@@ -99,10 +99,10 @@ const derniereFois = computed(() => {
               the exercise you are working on was effectively
               invisible.
             -->
-                <h3 class="titre-carte">
+                <h3 class="titre-plat">
                     {{ line.exercise.name }}
                 </h3>
-                <p class="text-text-muted text-xs font-bold uppercase">
+                <p class="etiquette">
                     {{ line.exercise.category }}
                 </p>
                 <p v-if="derniereFois" class="text-text-muted text-xs tabular-nums" data-derniere-fois>
@@ -188,7 +188,7 @@ const derniereFois = computed(() => {
             v-press
             @click="$emit('ajouter-serie')"
             :dusk="`add-set-${lineIndex}`"
-            class="text-text-muted hover:border-accent-state border-border focus-visible:ring-accent-primary mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition focus-visible:ring-2 focus-visible:outline-none"
+            class="text-text-muted hover:border-accent-state border-border focus-visible:ring-accent-primary mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-medium transition focus-visible:ring-2 focus-visible:outline-none"
         >
             Ajouter une série
         </button>

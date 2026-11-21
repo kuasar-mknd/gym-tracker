@@ -32,7 +32,7 @@ defineProps({
     recentPRs: { type: Array, default: () => [] },
     activeGoals: { type: Array, default: () => [] },
 
-    // ⚡ Bolt: Consolidated deferred props
+    // Consolidated deferred props
     analyticalStats: {
         type: Object,
         default: () => ({

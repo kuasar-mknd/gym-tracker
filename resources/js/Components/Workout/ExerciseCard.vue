@@ -76,7 +76,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
             >
                 <div class="flex flex-col items-center">
                     <GlassIcon name="edit" />
-                    <span class="text-2xs font-bold tracking-wider uppercase">Modifier</span>
+                    <span class="text-2xs font-semibold">Modifier</span>
                 </div>
             </button>
         </template>
@@ -89,7 +89,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
             >
                 <div class="flex flex-col items-center">
                     <GlassIcon name="delete" />
-                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-semibold">Supprimer</span>
                 </div>
             </button>
         </template>
@@ -99,7 +99,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
             :dusk="`exercise-card-${exercise.id}`"
             :class="[
                 'group relative overflow-hidden transition duration-300',
-                'border-l-[6px]',
+                'border-l-6',
                 categoryBorderColors[category] || 'border-l-border-strong',
             ]"
             data-testid="exercise-card"
@@ -128,10 +128,10 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                         <GlassIcon :name="typeIcons[exercise.type] || 'fitness_center'" size="lg" />
                     </div>
                     <div>
-                        <div class="font-display text-text-main text-lg leading-tight font-bold uppercase italic">
+                        <div class="font-display text-text-main text-lg leading-tight font-semibold">
                             {{ exercise.name }}
                         </div>
-                        <div class="text-text-muted mt-1 text-xs font-semibold tracking-wider uppercase">
+                        <div class="etiquette mt-1">
                             {{ typeLabel(exercise.type) }}
                         </div>
                     </div>

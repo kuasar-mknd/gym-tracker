@@ -41,7 +41,7 @@ const envoyer = () => {
 <template>
     <Modal :show="show" @close="emit('close')" max-width="lg" aria-labelledby="workout-settings-title">
         <div class="p-6">
-            <h2 id="workout-settings-title" class="titre-section mb-6">Paramètres</h2>
+            <h2 id="workout-settings-title" class="titre-plat mb-6">Paramètres</h2>
             <form @submit.prevent="envoyer" class="space-y-5">
                 <GlassInput v-model="form.name" label="Nom" :error="form.errors.name" dusk="workout-name-input" />
                 <GlassInput

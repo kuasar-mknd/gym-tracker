@@ -197,7 +197,7 @@ export const useLignesDeLaSeance = ({
             return queueId === null ? renoncerALaLigne(tempLine) : suivreUneLigneEnFile(tempLine, queueId)
         })
 
-    // ⚡ Perf: addExercise via API call + optimistic UI instead of Inertia redirect
+    // addExercise via API call + optimistic UI instead of Inertia redirect
     const addExercise = (exerciseId) => {
         const exercise = localExercises.value.find((e) => e.id === exerciseId)
         if (!exercise) return

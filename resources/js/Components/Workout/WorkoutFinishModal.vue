@@ -137,7 +137,7 @@ const avisDAttente = computed(() =>
 <template>
     <Modal :show="show" @close="emit('close')" max-width="sm" aria-labelledby="finish-workout-modal-title">
         <div class="p-6 text-center">
-            <h3 id="finish-workout-modal-title" class="titre-carte mb-6" dusk="finish-workout-modal-title">
+            <h3 id="finish-workout-modal-title" class="titre-plat mb-6" dusk="finish-workout-modal-title">
                 Terminer la séance ?
             </h3>
             <p

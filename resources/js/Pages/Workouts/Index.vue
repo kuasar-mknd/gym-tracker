@@ -28,8 +28,6 @@ const WorkoutHistoryTimelineChart = graphiqueAsynchrone(
 const props = defineProps({
     workouts: Object, // Laravel paginator: { data: [...], total, current_page, last_page, prev_page_url, next_page_url }
     totalExercises: Number,
-    // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-    // Consolidated deferred data (charts + exercises) to reduce XHR requests.
     deferredData: {
         type: Object,
         default: () => ({
@@ -118,13 +116,13 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 </script>
 
 <template>
-    <Head title="Mes Séances" />
+    <Head title="Mes séances" />
 
-    <AuthenticatedLayout page-title="Mes Séances">
+    <AuthenticatedLayout page-title="Mes séances" titre-plat>
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Mes Séances</h1>
+                <h1 class="titre-ecran">Mes séances</h1>
                 <div class="flex gap-2">
                     <!-- Des navigations : un seul lien chacune, par `href` (#2117). -->
                     <GlassButton :href="route('calendar.index')">
@@ -142,7 +140,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         aria-label="Nouvelle séance"
                     >
                         <GlassIcon name="add" size="sm" class="mr-2" />
-                        Nouvelle Séance
+                        Nouvelle séance
                     </GlassButton>
                 </div>
             </div>
@@ -183,15 +181,10 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <!-- Stats Row -->
             <div v-if="workoutList.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <GlassStat
-                        :valeur="entier(workouts.total ?? workoutList.length)"
-                        libelle="Séances"
-                        ton="text-gradient"
-                    />
+                    <GlassStat :valeur="entier(workouts.total ?? workoutList.length)" libelle="Séances" />
                     <GlassStat :valeur="entier(totalExercises || 0)" libelle="Exercices" ton="text-accent-state-deep" />
                 </div>
 
-                <!-- ⚡ Bolt: Consolidated Deferred Loading -->
                 <Deferred data="deferredData">
                     <template #rescue>
                         <IndisponibleHorsLigne />
@@ -217,8 +210,8 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <div class="stagger-2 animate-slide-up">
                 <GlassCard v-if="workoutList.length > 0">
                     <div class="mb-4">
-                        <h3 class="titre-carte">Aperçu Historique</h3>
-                        <p class="text-text-muted text-xs font-semibold">Volume et Durée des dernières séances</p>
+                        <h3 class="titre-plat">Aperçu historique</h3>
+                        <p class="etiquette">Volume et durée des dernières séances</p>
                     </div>
                     <WorkoutHistoryTimelineChart :data="workoutList" />
                 </GlassCard>
@@ -226,7 +219,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Available Exercises -->
             <div class="stagger-2 animate-slide-up">
-                <h3 class="titre-carte mb-3">Exercices disponibles</h3>
+                <h3 class="titre-plat mb-3">Exercices disponibles</h3>
 
                 <Deferred data="deferredData">
                     <template #rescue>
@@ -258,7 +251,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Workouts List -->
             <div class="stagger-4 animate-slide-up">
-                <h3 class="titre-carte mb-3">Historique</h3>
+                <h3 class="titre-plat mb-3">Historique</h3>
 
                 <!-- Skeleton Loading -->
                 <div v-if="!workouts" class="space-y-3">
@@ -282,8 +275,8 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 <div v-else-if="workoutList.length === 0">
                     <GlassEmptyState
                         title="Aucune séance"
-                        description="C'est le moment de commencer ton aventure ! Clique sur le bouton pour créer ta première séance."
-                        icon="💪"
+                        description="Démarre ta première séance."
+                        icon="fitness_center"
                         action-label="Commencer maintenant"
                         action-id="empty-state-start-workout"
                         @action="createWorkout"

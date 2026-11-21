@@ -101,8 +101,8 @@ class ReorganiserLesExercicesTest extends DuskTestCase
                 'la page rechargee n’a pas recu du serveur l’ordre ecrit',
             );
 
-            $browser->assertSeeIn('[dusk="exercise-card-0"]', 'BRAVO')
-                ->assertSeeIn('[dusk="exercise-card-1"]', 'ALPHA')
+            $browser->assertSeeIn('[dusk="exercise-card-0"]', 'Bravo')
+                ->assertSeeIn('[dusk="exercise-card-1"]', 'Alpha')
                 ->assertNoConsoleExceptions();
         });
     }
