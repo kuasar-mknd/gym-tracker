@@ -1258,7 +1258,7 @@
     display: inline-flex;
     align-items: center;
     padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: 0.625rem;
     font-weight: 600;
     border-radius: 0.5rem;
 }

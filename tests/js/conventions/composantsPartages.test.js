@@ -3,8 +3,9 @@ import { readFileSync } from 'node:fs'
 
 import { collectSourceFiles, jsRoot } from './sourceFiles'
 
-/** Un interlettrage positif : `normal`, zéro et les valeurs négatives (titres serrés) passent. */
-const INTERLETTRAGE_POSITIF = /letter-spacing:\s*\+?(?:0?\.\d+|[1-9]\d*(?:\.\d+)?)(?:px|em|rem)?(?![\w.])/
+/** Un interlettrage étiré, en valeur ou par jeton `--tracking-*` : `normal`, zéro et les valeurs négatives (titres serrés) passent. */
+const INTERLETTRAGE_POSITIF =
+    /letter-spacing:\s*(?:\+?(?:0?\.\d+|[1-9]\d*(?:\.\d+)?)(?:px|em|rem)?(?![\w.])|var\(--tracking-)/
 
 /**
  * Ce qui datait d'avant la refonte du verre (#2434) ne revient pas dans
