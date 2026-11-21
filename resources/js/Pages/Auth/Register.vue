@@ -29,8 +29,7 @@ const submit = () => {
         <Head title="Inscription" />
 
         <div class="mb-6 text-center">
-            <h2 class="titre-section">Bienvenue ! 💪</h2>
-            <p class="text-text-muted mt-2">Crée ton compte pour commencer</p>
+            <h2 class="titre-ecran">Inscription</h2>
             <p class="text-text-muted mt-2 text-sm" data-testid="register-link-notice">
                 Un lien partira à ton adresse : ton compte s’ouvre une fois ce lien suivi.
             </p>
@@ -99,9 +98,7 @@ const submit = () => {
         <template #footer>
             <p class="text-text-muted">
                 Déjà inscrit ?
-                <Link
-                    :href="route('login')"
-                    class="text-accent-primary-deep hover:text-accent-tertiary-deep font-bold transition-colors"
+                <Link :href="route('login')" class="text-accent-primary-deep font-medium hover:underline"
                     >Se connecter</Link
                 >
             </p>

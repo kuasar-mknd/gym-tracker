@@ -183,13 +183,13 @@ const submit = () => {
             </GlassCard>
 
             <div class="stagger-2 animate-slide-up">
-                <h3 class="titre-carte mb-3">Exercices</h3>
+                <h3 class="titre-plat mb-3">Exercices</h3>
 
                 <div class="space-y-4">
                     <div v-for="(exercise, exIndex) in form.exercises" :key="exercise.uid">
                         <GlassCard>
                             <div class="mb-4 flex items-start justify-between gap-2">
-                                <h4 class="text-text-main min-w-0 text-lg font-bold">{{ exercise.name }}</h4>
+                                <h4 class="text-text-main min-w-0 text-lg font-semibold">{{ exercise.name }}</h4>
 
                                 <div class="flex shrink-0 items-center gap-1">
                                     <GlassIconButton
@@ -220,7 +220,7 @@ const submit = () => {
                                 <div v-for="(set, setIndex) in exercise.sets" :key="setIndex">
                                     <div class="flex items-center gap-2">
                                         <div
-                                            class="text-text-muted bg-surface-sunken flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold"
+                                            class="text-text-muted bg-surface-sunken flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium"
                                         >
                                             {{ setIndex + 1 }}
                                         </div>
@@ -257,7 +257,7 @@ const submit = () => {
                                             v-press="{ haptic: 'selection' }"
                                             @click="set.is_warmup = !set.is_warmup"
                                             type="button"
-                                            class="focus-visible:ring-accent-primary text-2xs relative h-10 min-w-10 rounded-lg px-2 py-1 font-bold transition before:absolute before:-inset-0.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
+                                            class="focus-visible:ring-accent-primary text-2xs relative h-10 min-w-10 rounded-lg px-2 py-1 font-semibold transition before:absolute before:-inset-0.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                                             :class="
                                                 set.is_warmup
                                                     ? 'bg-accent-primary/20 text-accent-primary-deep'

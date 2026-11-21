@@ -192,6 +192,13 @@ const ressourcesDAutresOrigines = (wrapper) =>
     )
 
 describe('Login', () => {
+    it('se titre par son contexte, en casse de phrase, sans emoji ni point d’exclamation', () => {
+        const titre = mountPage(Login).get('h2')
+
+        expect(titre.text()).toBe('Connexion')
+        expect(titre.classes()).toContain('titre-ecran')
+    })
+
     it('poste vers la route de connexion', async () => {
         const wrapper = mountPage(Login)
 
@@ -342,6 +349,13 @@ describe('Login', () => {
 })
 
 describe('Register', () => {
+    it('se titre par son contexte, en casse de phrase, sans emoji ni point d’exclamation', () => {
+        const titre = mountPage(Register).get('h2')
+
+        expect(titre.text()).toBe('Inscription')
+        expect(titre.classes()).toContain('titre-ecran')
+    })
+
     it('poste vers la route d’inscription', async () => {
         const wrapper = mountPage(Register)
 

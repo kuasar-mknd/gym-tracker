@@ -40,14 +40,14 @@ const groupes = [
 <template>
     <Head title="Raccourcis clavier" />
 
-    <AuthenticatedLayout page-title="Raccourcis" show-back back-route="profile.index" largeur="etroite">
+    <AuthenticatedLayout page-title="Raccourcis" show-back back-route="profile.index" largeur="etroite" titre-plat>
         <div class="space-y-6">
             <p class="text-text-muted text-sm font-medium">
                 Les raccourcis n'agissent jamais pendant que tu écris dans un champ.
             </p>
 
             <GlassCard v-for="groupe in groupes" :key="groupe.titre" class="space-y-4">
-                <h2 class="titre-carte">{{ groupe.titre }}</h2>
+                <h2 class="titre-plat">{{ groupe.titre }}</h2>
 
                 <ul class="space-y-3">
                     <li
@@ -60,7 +60,7 @@ const groupes = [
                             <kbd
                                 v-for="touche in raccourci.touches"
                                 :key="touche"
-                                class="border-border bg-surface-sunken text-text-main rounded-lg border px-2 py-1 text-xs font-black"
+                                class="border-border bg-surface-sunken text-text-main rounded-lg border px-2 py-1 text-xs font-medium"
                             >
                                 {{ touche === 'CMD' ? commande : touche }}
                             </kbd>

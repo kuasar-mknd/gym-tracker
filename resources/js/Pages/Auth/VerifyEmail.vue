@@ -31,11 +31,8 @@ const adresseQueLaMessagerieNEcritPas = computed(() => props.status === 'adresse
         <Head title="Vérifier l'email" />
 
         <div class="mb-6 text-center">
-            <div class="mb-4 text-5xl">📧</div>
-            <h2 class="titre-section">Vérifie ton email</h2>
-            <p class="text-text-muted mt-2 text-sm">
-                Merci de ton inscription ! Clique sur le lien dans l'email que nous t'avons envoyé.
-            </p>
+            <h2 class="titre-ecran">Vérifie ton email</h2>
+            <p class="text-text-muted mt-2 text-sm">Clique sur le lien dans l'email que nous t'avons envoyé.</p>
         </div>
 
         <div v-if="verificationLinkSent" class="bg-accent-state/20 text-accent-state-deep mb-4 rounded-xl p-3 text-sm">

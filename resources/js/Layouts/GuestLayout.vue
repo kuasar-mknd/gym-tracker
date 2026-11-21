@@ -69,7 +69,7 @@ onMounted(() => {
         <QuestionDeDeconnexion />
 
         <!-- Logo -->
-        <div class="animate-fade-in relative z-10 mb-8">
+        <div class="relative z-10 mb-8">
             <Link href="/" class="flex">
                 <MarqueDeLApplication disposition="page" />
             </Link>
@@ -77,9 +77,7 @@ onMounted(() => {
 
         <!-- Glass Card -->
         <main id="main-content" class="animate-slide-up relative z-10 w-full max-w-md">
-            <div
-                class="border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 rounded-3xl border p-8 shadow-2xl backdrop-blur-md transition duration-300"
-            >
+            <div class="verre-regulier rounded-3xl p-8">
                 <p
                     v-if="ecrituresEffacees > 0"
                     role="status"
@@ -101,7 +99,7 @@ onMounted(() => {
         </main>
 
         <!-- Footer links -->
-        <div class="animate-fade-in text-text-muted relative z-10 mt-8 text-center text-sm">
+        <div class="text-text-muted relative z-10 mt-8 text-center text-sm">
             <slot name="footer" />
         </div>
     </div>

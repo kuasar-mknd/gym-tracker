@@ -84,7 +84,7 @@ ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille
         </div>
         <section class="verre-regulier w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
             <span class="material-symbols-outlined text-text-muted text-5xl" aria-hidden="true" dusk="icone-hors-ligne">cloud_off</span>
-            <h1 class="titre-carte text-2xl">Pas de réseau</h1>
+            <h1 class="titre-ecran">Pas de réseau</h1>
             <p class="text-text-muted text-base font-medium" ${ATTRIBUT_DU_MOTIF}>Cette page n'a pas pu s'ouvrir : l'appareil n'est pas connecté.</p>
             <p class="text-text-muted text-sm font-medium">${AVANT_LA_SALLE}</p>
             <p class="text-text-muted text-sm font-medium">

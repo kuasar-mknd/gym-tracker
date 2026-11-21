@@ -90,11 +90,11 @@ const attendre = () => {
 <template>
     <Head title="Hors ligne" />
 
-    <AuthenticatedLayout page-title="Hors ligne" largeur="etroite">
+    <AuthenticatedLayout page-title="Hors ligne" largeur="etroite" titre-plat>
         <div class="space-y-6" dusk="page-hors-ligne-sans-copie">
             <GlassCard class="space-y-3 text-center">
                 <GlassIcon name="cloud_off" size="lg" class="text-text-muted" />
-                <h2 class="titre-section">Cette page n'est pas disponible sans réseau</h2>
+                <h2 class="titre-plat">Cette page n'est pas disponible sans réseau</h2>
                 <p class="text-text-muted text-sm font-medium">
                     {{
                         auDelai
@@ -115,7 +115,7 @@ const attendre = () => {
             </GlassCard>
 
             <GlassCard class="space-y-4">
-                <h2 class="titre-carte">Ce qui s'ouvre sans réseau</h2>
+                <h2 class="titre-plat">Ce qui s'ouvre sans réseau</h2>
 
                 <GlassEmptyState
                     v-if="pages.length === 0"
@@ -132,7 +132,7 @@ const attendre = () => {
                             class="hover:bg-surface-sunken focus-visible:ring-accent-primary min-h-touch flex items-center justify-between gap-4 rounded-xl px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                             dusk="page-sans-reseau"
                         >
-                            <span class="text-text-main text-sm font-bold">{{ page.nom }}</span>
+                            <span class="text-text-main text-sm font-medium">{{ page.nom }}</span>
                             <span class="text-text-muted text-xs font-medium">{{ page.date }}</span>
                         </Link>
                     </li>

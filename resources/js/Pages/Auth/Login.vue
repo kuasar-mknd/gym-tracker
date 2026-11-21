@@ -34,8 +34,7 @@ const submit = () => {
         <Head title="Connexion" />
 
         <div class="mb-6 text-center">
-            <h2 class="titre-section">Bon retour ! 👋</h2>
-            <p class="text-text-muted mt-2">Connecte-toi pour continuer</p>
+            <h2 class="titre-ecran">Connexion</h2>
         </div>
 
         <div v-if="status" class="state-fill border-accent-state mb-4 rounded-xl border p-3 text-sm font-medium">
@@ -77,7 +76,7 @@ const submit = () => {
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="text-accent-primary-deep hover:text-accent-tertiary-deep text-sm font-semibold transition-colors"
+                    class="text-accent-primary-deep text-sm font-medium hover:underline"
                 >
                     Mot de passe oublié ?
                 </Link>
@@ -100,9 +99,7 @@ const submit = () => {
         <template #footer>
             <p class="text-text-muted">
                 Pas encore de compte ?
-                <Link
-                    :href="route('register')"
-                    class="text-accent-primary-deep hover:text-accent-tertiary-deep font-bold transition-colors"
+                <Link :href="route('register')" class="text-accent-primary-deep font-medium hover:underline"
                     >Créer un compte</Link
                 >
             </p>
@@ -114,7 +111,7 @@ const submit = () => {
               vaut false dans le build que le serveur local sert lui aussi.
             -->
             <p v-if="$page.props.is_local" class="mt-4 text-center">
-                <a href="/__dev-login" class="text-text-muted text-xs font-bold underline">Connexion dev</a>
+                <a href="/__dev-login" class="text-text-muted text-xs underline">Connexion dev</a>
             </p>
         </template>
     </GuestLayout>
