@@ -453,14 +453,14 @@ describe('Goals/Index', () => {
 
     /**
      * The percentage changes colour as the goal gets closer — it is the
-     * at-a-glance signal. The band opens *above* 25, and the cyan band above 75
-     * is gone (#2434): 25, 75 and 76 are asserted, so a comparison tightened or
-     * loosened at either end changes a class and the test notices.
+     * at-a-glance signal. The band opens *above* 25 (the cyan band above 75 is
+     * gone, #2434): 25 and 26 are asserted, one on each side of the threshold,
+     * so a comparison tightened or loosened changes a class and the test notices.
      */
     it("colore l'avancement selon la distance qui reste à parcourir", async () => {
         const wrapper = await mountGoals([
             goal({ id: 1, progress_pct: 25 }),
-            goal({ id: 2, progress_pct: 75 }),
+            goal({ id: 2, progress_pct: 26 }),
             goal({ id: 3, progress_pct: 76 }),
             goal({ id: 4, progress_pct: 100, completed_at: '2026-03-01T10:00:00.000000Z' }),
         ])

@@ -835,7 +835,7 @@ describe('Measurements/Parts/Index recent change', () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: unmoved, commonParts: COMMON_PARTS })
 
         expect(wrapper.findComponent(BodyPartDiffChart).exists()).toBe(false)
-        expect(wrapper.text()).not.toContain('Évolution Récente')
+        expect(wrapper.text()).not.toContain('Évolution récente')
     })
 
     it('leaves the chart out on a first visit, when there is nothing to plot at all', async () => {
