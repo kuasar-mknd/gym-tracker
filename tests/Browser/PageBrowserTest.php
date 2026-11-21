@@ -29,9 +29,9 @@ class PageBrowserTest extends DuskTestCase
                 '/workouts' => 'Mes séances',
                 '/calendar' => 'Calendrier',
                 '/exercises' => 'BIBLIOTHÈQUE',
-                '/stats' => 'ÉVOLUTION',
-                '/corps' => 'CORPS',
-                '/records' => 'RECORDS',
+                '/stats' => 'Mon évolution',
+                '/corps' => 'Corps',
+                '/records' => 'Records',
                 '/profile' => $user->email,
             ];
 
