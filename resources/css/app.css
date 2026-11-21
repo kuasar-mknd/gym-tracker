@@ -422,10 +422,9 @@
     --radius-icone: 0.875rem;
     --radius-capsule: 9999px;
 
-    /* Le sur-titre : la plus petite taille de la charte, en capitales espacées. */
+    /* La plus petite taille de la charte. */
     --text-2xs: 0.625rem;
     --text-2xs--line-height: 0.875rem;
-    --tracking-sur-titre: 0.2em;
 
     --spacing-touch: 44px;
     --spacing-nav: 70px;
@@ -597,29 +596,13 @@
 }
 
 /*
- * Les trois tailles de titre, et rien d'autre.
+ * Les tailles de titre des pages qui n'ont pas pris le verre.
  *
  * Les `h1`–`h3` du dépôt portaient 28 combinaisons de classes : le titre d'une
  * carte était tantôt en capitales italiques, tantôt en casse de phrase, selon
  * l'écran (#1783). Un rôle par taille, la couleur reste à l'appelant quand elle
  * dit quelque chose.
  */
-@utility titre-page {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    /* Les tailles sont écrites : seules les valeurs déclarées dans @theme static sortent en variables. */
-    font-size: 1.875rem;
-    line-height: 1;
-    letter-spacing: -0.05em;
-    color: var(--color-text-main);
-
-    @variant sm {
-        font-size: 2.25rem;
-    }
-}
-
 @utility titre-section {
     font-family: var(--font-display);
     font-weight: 900;
@@ -641,17 +624,9 @@
     color: var(--color-text-main);
 }
 
-@utility sur-titre {
-    font-size: var(--text-2xs);
-    line-height: var(--text-2xs--line-height);
-    font-weight: 900;
-    letter-spacing: var(--tracking-sur-titre);
-    text-transform: uppercase;
-}
-
 /*
  * Les rôles du verre : le titre d'un écran et celui d'une carte, en casse de
- * phrase et graisse 600, et la petite étiquette en gris qui le précède. Les rôles `titre-*` et `sur-titre`
+ * phrase et graisse 600, et la petite étiquette en gris qui le précède. Les rôles `titre-section` et `titre-carte`
  * ci-dessus restent ceux des autres pages ; ceux-ci sont ceux d'un écran qui a
  * quitté le gras italique en capitales.
  */
@@ -1356,14 +1331,6 @@
      * une carte.
      */
     color: var(--color-accent-primary-deep);
-}
-
-@utility text-gradient {
-    /* Text gradient utility */
-    background: var(--background-image-gradient-main);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
 }
 
 @utility pt-main-safe {

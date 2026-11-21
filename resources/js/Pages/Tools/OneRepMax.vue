@@ -70,13 +70,18 @@
                                 <OneRepMaxPercentagesChart :data="percentages" />
                             </div>
 
-                            <div class="border-border bg-surface-card/50 overflow-hidden rounded-3xl border">
+                            <div
+                                class="border-border bg-surface-card/50 overflow-x-auto rounded-3xl border"
+                                tabindex="0"
+                                role="region"
+                                aria-label="Pourcentages et poids"
+                            >
                                 <table class="text-text-muted w-full text-left text-sm">
                                     <thead class="text-text-main border-border bg-surface-sunken/80 border-b text-xs">
                                         <tr>
-                                            <th class="px-6 py-3 font-medium">Pourcentage</th>
-                                            <th class="px-6 py-3 font-medium">Poids</th>
-                                            <th class="px-6 py-3 font-medium">Reps est.</th>
+                                            <th class="px-3 py-3 font-medium sm:px-6">Pourcentage</th>
+                                            <th class="px-3 py-3 font-medium sm:px-6">Poids</th>
+                                            <th class="px-3 py-3 font-medium sm:px-6">Reps est.</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-border divide-y bg-transparent">
@@ -85,11 +90,11 @@
                                             :key="p.percent"
                                             class="hover:bg-surface-sunken transition-colors duration-200"
                                         >
-                                            <td class="text-text-main px-6 py-4 font-medium">
+                                            <td class="text-text-main px-3 py-4 font-medium sm:px-6">
                                                 {{ pourcentage(p.percent, 0) }}
                                             </td>
-                                            <td class="text-text-main px-6 py-4">{{ poids(p.value) }}</td>
-                                            <td class="px-6 py-4">{{ p.reps }}</td>
+                                            <td class="text-text-main px-3 py-4 sm:px-6">{{ poids(p.value) }}</td>
+                                            <td class="px-3 py-4 sm:px-6">{{ p.reps }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
