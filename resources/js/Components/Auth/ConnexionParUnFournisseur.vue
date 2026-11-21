@@ -70,9 +70,7 @@ const separation = computed(() => `Ou ${props.verbe.charAt(0).toLowerCase()}${pr
     <div v-if="fournisseursOfferts($page.props.social_login_enabled).length > 0">
         <div class="my-6 flex items-center justify-center gap-4 text-sm">
             <div class="bg-border h-px flex-1"></div>
-            <span
-                class="text-text-muted border-surface-card/50 bg-surface-card/60 rounded-full border px-4 py-1 font-medium backdrop-blur-md"
-            >
+            <span class="text-text-muted px-4 py-1">
                 {{ separation }}
             </span>
             <div class="bg-border h-px flex-1"></div>
@@ -84,7 +82,7 @@ const separation = computed(() => `Ou ${props.verbe.charAt(0).toLowerCase()}${pr
                 :key="fournisseur.cle"
                 :href="route('social.redirect', fournisseur.cle)"
                 :class="fournisseur.bouton"
-                class="flex h-12 w-12 items-center justify-center rounded-xl shadow-sm transition hover:scale-105 hover:shadow-md active:scale-95"
+                class="flex h-12 w-12 items-center justify-center rounded-xl shadow-sm transition-transform active:scale-95"
                 :aria-label="`${verbe} ${fournisseur.nom}`"
             >
                 <component :is="fournisseur.logo" :class="fournisseur.tailleDuLogo" />

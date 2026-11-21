@@ -277,7 +277,7 @@ onUnmounted(() => {
                             <GlassIcon name="notifications" />
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
-                                class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
+                                class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-semibold"
                             >
                                 {{ $page.props.auth.user.unread_notifications_count }}
                             </span>
@@ -370,7 +370,7 @@ onUnmounted(() => {
                     <GlassIcon name="notifications" />
                     <span
                         v-if="$page.props.auth.user.unread_notifications_count > 0"
-                        class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
+                        class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-semibold"
                     >
                         {{ $page.props.auth.user.unread_notifications_count }}
                     </span>

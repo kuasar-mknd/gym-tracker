@@ -603,17 +603,6 @@
  * l'écran (#1783). Un rôle par taille, la couleur reste à l'appelant quand elle
  * dit quelque chose.
  */
-@utility titre-section {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    font-size: 1.5rem;
-    line-height: 2rem;
-    letter-spacing: -0.025em;
-    color: var(--color-text-main);
-}
-
 @utility titre-carte {
     font-family: var(--font-display);
     font-weight: 900;
@@ -626,8 +615,8 @@
 
 /*
  * Les rôles du verre : le titre d'un écran et celui d'une carte, en casse de
- * phrase et graisse 600, et la petite étiquette en gris qui le précède. Les rôles `titre-section` et `titre-carte`
- * ci-dessus restent ceux des autres pages ; ceux-ci sont ceux d'un écran qui a
+ * phrase et graisse 600, et la petite étiquette en gris qui le précède. Le rôle `titre-carte`
+ * ci-dessus reste celui des pages restantes ; ceux-ci sont ceux d'un écran qui a
  * quitté le gras italique en capitales.
  */
 @utility titre-plat {

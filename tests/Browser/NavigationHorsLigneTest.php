@@ -288,7 +288,8 @@ class NavigationHorsLigneTest extends DuskTestCase
     /**
      * Attend la copie d'une page de salle, ouverte depuis la page précédente :
      * son adresse, son bandeau daté et le titre de son en-tête, lus dans le
-     * DOM (`titre-carte` passe le texte en majuscules, que WebDriver rend), et
+     * DOM (WebDriver rend le texte transformé, et un rôle en capitales peut
+     * revenir), et
      * son entrée d'historique, chiffrée (`encryptHistory`, écrit en dur dans
      * la page servie).
      */

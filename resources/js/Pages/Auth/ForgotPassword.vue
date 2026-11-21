@@ -23,7 +23,7 @@ const submit = () => {
         <Head title="Mot de passe oublié" />
 
         <div class="mb-6 text-center">
-            <h2 class="titre-section">Mot de passe oublié ?</h2>
+            <h2 class="titre-ecran">Mot de passe oublié ?</h2>
             <p class="text-text-muted mt-2 text-sm">Entre ton email et nous t'enverrons un lien de réinitialisation.</p>
         </div>
 

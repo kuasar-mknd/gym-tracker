@@ -78,4 +78,11 @@ describe('GuestLayout', () => {
         expect(accueil.text()).toBe('GymTracker')
         expect(accueil.get('[data-testid="logo-de-l-application"] + span').classes()).toContain('sr-only')
     })
+
+    it('pose le formulaire sur une carte de verre, comme les cartes du reste de l’application', () => {
+        const carte = monter({ user: null }).get('[data-testid="formulaire"]').element.parentElement
+
+        expect(carte.classList.contains('verre-regulier')).toBe(true)
+        expect(carte.className).not.toMatch(/shadow-2xl|bg-surface-card\/10/)
+    })
 })

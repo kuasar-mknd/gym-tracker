@@ -24,7 +24,7 @@ const submit = () => {
 
         <GlassCard class="sm:p-8">
             <div class="mb-6 text-center">
-                <h2 class="titre-section">Confirmation requise</h2>
+                <h2 class="titre-ecran">Confirmation requise</h2>
                 <p class="text-text-muted mt-2 text-sm">
                     Cette zone est sécurisée. Confirme ton mot de passe pour continuer.
                 </p>
