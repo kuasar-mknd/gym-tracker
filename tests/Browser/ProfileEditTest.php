@@ -20,6 +20,7 @@ class ProfileEditTest extends DuskTestCase
      */
     private function assertTitreVisible(Browser $browser, string $titre): void
     {
+        /** @var list<string> $titres */
         $titres = $browser->script('return [...document.querySelectorAll("h1, h2")].map((titre) => titre.textContent.trim());')[0];
 
         $this->assertContains($titre, $titres, "Aucun titre « {$titre} » dans la page.");
