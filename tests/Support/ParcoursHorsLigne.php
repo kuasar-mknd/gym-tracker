@@ -43,8 +43,9 @@ use PHPUnit\Framework\Assert;
  * le vérifie : sans elle, le serveur local répondrait avant le délai du
  * worker). Le worker, lui, sert ses caches sans latence.
  *
- * Les textes se lisent dans le DOM (`texteDe()`) : `titre-carte` passe en
- * majuscules, et WebDriver rend le texte transformé.
+ * Les textes se lisent dans le DOM (`texteDe()`) : les pages hors ligne
+ * n'ont plus de capitales, mais WebDriver rend le texte transformé si un rôle
+ * qui en met y revient.
  */
 trait ParcoursHorsLigne
 {
