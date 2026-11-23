@@ -1131,6 +1131,21 @@ describe('ExerciseCard', () => {
         }
     })
 
+    it('hides the desktop buttons below sm with a variant that beats the button’s own inline-flex (#2453)', () => {
+        const wrapper = mountCard()
+
+        for (const selector of ['[data-testid="edit-exercise-button"]', '[data-testid="delete-exercise-button"]']) {
+            const classes = wrapper.get(selector).classes()
+
+            expect(classes).toContain('max-sm:hidden')
+            expect(classes).not.toContain('hidden')
+        }
+
+        expect(wrapper.get('[dusk="edit-exercise-btn-12"]').classes()).toContain('sm:hidden')
+
+        wrapper.unmount()
+    })
+
     it('hands only the id to the delete handler', async () => {
         const wrapper = mountCard()
 
