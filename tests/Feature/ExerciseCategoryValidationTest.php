@@ -20,6 +20,25 @@ class ExerciseCategoryValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Le tiroir « Ajouter un exercice » crée sans catégorie quand aucune puce
+     * n'est choisie et envoie une chaîne vide : elle doit passer, en null.
+     */
+    public function test_une_categorie_vide_cree_un_exercice_sans_categorie(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson(route('exercises.store'), [
+            'name' => 'Sans catégorie',
+            'type' => 'strength',
+            'category' => '',
+        ]);
+
+        $response->assertSuccessful();
+
+        $this->assertDatabaseHas('exercises', ['name' => 'Sans catégorie', 'category' => null]);
+    }
+
     public function test_can_create_exercise_with_all_valid_categories(): void
     {
         $user = User::factory()->create();

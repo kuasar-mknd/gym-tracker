@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
@@ -36,6 +36,20 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'confirm'])
 
+/** Le focus arrive sur Annuler : une touche Entrée distraite ne termine pas la séance. */
+const annuler = ref(null)
+
+watch(
+    () => props.show,
+    async (ouvert) => {
+        if (ouvert) {
+            await nextTick()
+            annuler.value?.$el?.focus()
+        }
+    },
+    { immediate: true },
+)
+
 /** Le début de la séance (instant ISO) : la fin choisie ne le précède pas. */
 const debut = ref(null)
 
@@ -61,12 +75,23 @@ const heureChoisie = ref('')
 /** Maintenant, à l'ouverture : la borne haute du champ. */
 const maintenant = ref(new Date())
 
+/** L'horloge de la comparaison au futur : une heure future devient passée sans que le champ change. */
+const horloge = ref(Date.now())
+let tic = null
+const arreterLHorloge = () => clearInterval(tic)
+onUnmounted(arreterLHorloge)
+
 watch(
     () => props.show,
     (ouverte) => {
+        arreterLHorloge()
+
         if (!ouverte) {
             return
         }
+
+        horloge.value = Date.now()
+        tic = setInterval(() => (horloge.value = Date.now()), 5_000)
 
         choix.value = 'derniere'
         maintenant.value = new Date()
@@ -101,8 +126,8 @@ const erreurDeLHeure = computed(() => {
         return 'La fin ne peut pas précéder le début de la séance.'
     }
 
-    // Comparée à l'instant où l'on confirme, pas à celui de l'ouverture.
-    return heure > new Date() ? 'La fin ne peut pas être dans le futur.' : ''
+    // Comparée à l'horloge, pas à l'instant de l'ouverture.
+    return heure.getTime() > horloge.value ? 'La fin ne peut pas être dans le futur.' : ''
 })
 
 const confirmer = () => {
@@ -135,8 +160,14 @@ const avisDAttente = computed(() =>
 </script>
 
 <template>
-    <Modal :show="show" @close="emit('close')" max-width="sm" aria-labelledby="finish-workout-modal-title">
-        <div class="p-6 text-center">
+    <Modal
+        :show="show"
+        position="feuille"
+        max-width="sm"
+        aria-labelledby="finish-workout-modal-title"
+        @close="emit('close')"
+    >
+        <div class="pb-feuille-6 px-6 pt-1">
             <h3 id="finish-workout-modal-title" class="titre-plat mb-6" dusk="finish-workout-modal-title">
                 Terminer la séance ?
             </h3>
@@ -166,8 +197,7 @@ const avisDAttente = computed(() =>
                     class="text-text-main text-sm font-medium"
                     dusk="finish-workout-proposed"
                 >
-                    Terminer à l'heure {{ depuisUneSerie ? 'de la dernière série saisie' : 'de démarrage' }} :
-                    {{ jourEtHeure(finProposee) }}.
+                    {{ depuisUneSerie ? 'Dernière série' : 'Démarrage' }} : {{ jourEtHeure(finProposee) }}
                 </p>
                 <GlassInput
                     v-else
@@ -180,10 +210,7 @@ const avisDAttente = computed(() =>
                     dusk="finish-workout-end-input"
                 />
             </div>
-            <div class="flex flex-col-reverse gap-3 min-[24rem]:flex-row">
-                <GlassButton variant="secondary" @click="emit('close')" class="bouton-de-bilan min-w-0 flex-1">
-                    Annuler
-                </GlassButton>
+            <div class="flex flex-col gap-3">
                 <GlassButton
                     variant="accent"
                     id="confirm-finish-button"
@@ -191,9 +218,12 @@ const avisDAttente = computed(() =>
                     :loading="enCours"
                     :disabled="erreurDeLHeure !== ''"
                     @click="confirmer"
-                    class="bouton-de-bilan min-w-0 flex-1"
+                    class="bouton-de-bilan w-full"
                 >
-                    Confirmer
+                    Terminer
+                </GlassButton>
+                <GlassButton ref="annuler" variant="secondary" @click="emit('close')" class="bouton-de-bilan w-full">
+                    Annuler
                 </GlassButton>
             </div>
         </div>

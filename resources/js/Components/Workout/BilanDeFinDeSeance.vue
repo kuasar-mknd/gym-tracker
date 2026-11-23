@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
 import { entier, poids } from '@/Utils/nombre'
 
@@ -69,43 +70,57 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
 <template>
     <Modal
         :show="bilan !== null"
-        position="bottom"
+        position="feuille"
         max-width="sm"
         aria-labelledby="bilan-de-fin-titre"
         @close="emit('fermer')"
     >
-        <div class="p-6 text-center" dusk="bilan-de-fin">
+        <div class="pb-feuille-6 px-6 pt-1" dusk="bilan-de-fin">
             <h3 id="bilan-de-fin-titre" class="titre-plat mb-4" dusk="bilan-de-fin-titre">Séance terminée</h3>
-            <p
-                v-if="bilan?.enAttente"
-                role="status"
-                class="text-text-muted mb-4 text-sm"
-                dusk="bilan-de-fin-sur-l-appareil"
-            >
-                Enregistrée sur cet appareil
-            </p>
-            <dl class="bg-surface-sunken/60 mb-4 rounded-2xl p-1 text-left" dusk="finish-workout-bilan">
-                <div class="flex items-baseline justify-between gap-3 px-3 py-2">
-                    <dt class="text-text-muted text-sm">Durée</dt>
-                    <dd class="text-text-main font-medium tabular-nums" dusk="finish-workout-duree">
+            <dl class="mb-4 grid grid-cols-3 gap-2" dusk="finish-workout-bilan">
+                <div>
+                    <dt class="text-text-muted text-xs">Durée</dt>
+                    <dd
+                        class="text-text-main text-xl font-medium whitespace-nowrap tabular-nums"
+                        dusk="finish-workout-duree"
+                    >
                         {{ resume.duree }}
                     </dd>
                 </div>
-                <div class="flex items-baseline justify-between gap-3 px-3 py-2">
-                    <dt class="text-text-muted text-sm">Volume</dt>
-                    <dd class="text-text-main font-medium tabular-nums" dusk="finish-workout-volume">
+                <div>
+                    <dt class="text-text-muted text-xs">Volume</dt>
+                    <dd
+                        class="text-text-main text-xl font-medium whitespace-nowrap tabular-nums"
+                        dusk="finish-workout-volume"
+                    >
                         {{ resume.volume }}
                     </dd>
                 </div>
-                <div class="flex items-baseline justify-between gap-3 px-3 py-2">
-                    <dt class="text-text-muted text-sm">Séries</dt>
-                    <dd class="text-text-main font-medium tabular-nums" dusk="finish-workout-series">
+                <div>
+                    <dt class="text-text-muted text-xs">Séries</dt>
+                    <dd
+                        class="text-text-main text-xl font-medium whitespace-nowrap tabular-nums"
+                        dusk="finish-workout-series"
+                    >
                         {{ resume.series }}
                     </dd>
                 </div>
             </dl>
-            <div v-if="records.length > 0" class="mb-4 text-left" dusk="bilan-de-fin-records">
-                <p class="text-text-muted mb-1 px-3 text-sm">Records</p>
+            <div
+                v-if="bilan?.enAttente"
+                class="bg-surface-sunken/60 mb-4 flex items-center gap-3 rounded-2xl px-4 py-3"
+                role="status"
+            >
+                <GlassIcon name="check_circle" class="text-accent-primary shrink-0" />
+                <span class="text-text-main text-sm font-medium">
+                    <span class="block" dusk="bilan-de-fin-sur-l-appareil">Enregistrée sur cet appareil</span>
+                    <span class="text-text-muted block text-xs font-normal">
+                        Elle part au retour du réseau. Les records arrivent avec la réponse du serveur.
+                    </span>
+                </span>
+            </div>
+            <div v-if="records.length > 0" class="mb-4" dusk="bilan-de-fin-records">
+                <p class="text-text-muted mb-1 px-1 text-sm">Records</p>
                 <ul class="bg-surface-sunken/60 rounded-2xl p-1">
                     <li
                         v-for="(record, index) in records"
@@ -119,12 +134,12 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
             </div>
             <p
                 role="status"
-                :class="{ 'text-text-muted mt-4 text-sm': bilan?.reprisePerimee }"
+                :class="{ 'text-text-muted mb-4 text-sm': bilan?.reprisePerimee }"
                 dusk="bilan-de-fin-reprise-perimee"
             >
                 {{ bilan?.reprisePerimee ? 'Le délai pour reprendre est passé.' : '' }}
             </p>
-            <div class="mt-6 flex flex-col gap-3">
+            <div class="mt-2 flex flex-col gap-3">
                 <GlassButton
                     ref="fermer"
                     variant="accent"

@@ -1,3 +1,4 @@
+import ChampsDUnExercice from '@/Components/Exercises/ChampsDUnExercice.vue'
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
@@ -255,6 +256,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
                 SwipeableRow: SwipeStub,
                 Modal: ModalStub,
                 AjoutDExerciceModal,
+                ChampsDUnExercice,
                 RangeeDeSerie,
                 CarteDExercice,
                 ConfirmDialog,
@@ -716,10 +718,10 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         wrapper.vm.showAddExercise = true
         await wrapper.vm.$nextTick()
 
-        // A search that matches narrows the list rather than offering a creation.
+        // La ligne de création est toujours là ; une recherche qui trouve réduit la liste.
         await search(wrapper, 'développé')
         expect(wrapper.findAll('[dusk^="select-exercise-"]')).toHaveLength(1)
-        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(true)
 
         await search(wrapper, 'Rowing')
         expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(true)
@@ -749,7 +751,7 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
 
         expect(url).toBe('/exercises')
         expect(request.headers['X-CSRF-TOKEN']).toBe('tok-42')
-        expect(JSON.parse(request.body)).toEqual({ name: 'Rowing', type: 'strength', category: 'Pectoraux' })
+        expect(JSON.parse(request.body)).toEqual({ name: 'Rowing', type: 'strength', category: '' })
 
         expect(modale(wrapper).showCreateForm).toBe(false)
         expect(modale(wrapper).createExerciseForm.processing).toBe(false)
@@ -846,7 +848,7 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         const wrapper = await mountPage()
 
         await openCreateForm(wrapper)
-        await wrapper.find('button[aria-label="Retour"]').trigger('click')
+        await wrapper.find('button[aria-label="Retour à la liste"]').trigger('click')
 
         expect(modale(wrapper).showCreateForm).toBe(false)
         expect(wrapper.find('#search-workout-exercise').exists()).toBe(true)

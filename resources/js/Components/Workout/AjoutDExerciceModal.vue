@@ -2,21 +2,29 @@
 /**
  * Choisir un exercice de la bibliothèque, ou en créer un sur le champ.
  *
+ * Un tiroir qui monte du bas, comme le bilan de séance : la recherche et les
+ * pastilles de catégorie en haut, la liste groupée par catégorie dessous.
+ * « Créer » est la première ligne de la liste, toujours là : sans recherche
+ * elle ouvre le formulaire, avec une recherche elle reprend le texte tapé
+ * comme nom, qu'il y ait des résultats ou non. La création parle au serveur
+ * elle-même et rend l'exercice au parent, qui l'ajoute à sa liste puis à la
+ * séance.
+ *
  * La recherche est gardée dans le stockage local : on revient souvent chercher
  * le même exercice d'une séance à l'autre. La déconnexion l'efface
- * (`Utils/rechercheDExercice`, #2050). Un nom sans résultat propose de le
- * créer ; la création parle au serveur elle-même et rend l'exercice au parent,
- * qui l'ajoute à sa liste puis à la séance.
+ * (`Utils/rechercheDExercice`, #2050).
  */
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassChip from '@/Components/UI/GlassChip.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
-import { EXERCISE_CATEGORIES, EXERCISE_TYPES } from '@/Utils/constants'
+import ChampsDUnExercice from '@/Components/Exercises/ChampsDUnExercice.vue'
+import { CATEGORY_COLORS, EXERCISE_CATEGORIES } from '@/Utils/constants'
 import { sansAccents } from '@/Utils/sansAccents'
 import { garderLaRecherche, lireLaRecherche } from '@/Utils/rechercheDExercice'
 import { triggerHaptic } from '@/composables/useHaptics'
@@ -32,34 +40,105 @@ const searchQuery = ref(lireLaRecherche())
 watch(searchQuery, garderLaRecherche)
 
 const showCreateForm = ref(false)
-const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
+const createExerciseForm = useForm({ name: '', type: 'strength', category: '' })
+
+const TOUTES = 'all'
+const SANS_CATEGORIE = 'Autres'
+
+/** La catégorie retenue par les pastilles : `all`, ou le nom d'une catégorie. */
+const categorie = ref(TOUTES)
 
 /** Ce qui a été tapé, sans les espaces autour : une recherche d'espaces ne cherche rien. */
 const requete = computed(() => searchQuery.value.trim())
 
+const categorieDe = (exercise) => exercise.category || SANS_CATEGORIE
+
+/** Les catégories que porte la bibliothèque, dans l'ordre de la charte, les autres ensuite. */
+const categories = computed(() => {
+    const presentes = new Set(props.exercises.map(categorieDe))
+    const connues = EXERCISE_CATEGORIES.filter((nom) => presentes.has(nom))
+    const autres = [...presentes]
+        .filter((nom) => !EXERCISE_CATEGORIES.includes(nom))
+        .sort((a, b) => a.localeCompare(b, 'fr'))
+
+    return [...connues, ...autres]
+})
+
 const filteredExercises = computed(() => {
     const q = sansAccents(requete.value)
 
-    return q ? props.exercises.filter((e) => sansAccents(e.name).includes(q)) : props.exercises
+    return props.exercises.filter(
+        (e) =>
+            (categorie.value === TOUTES || categorieDe(e) === categorie.value) &&
+            (!q || sansAccents(e.name).includes(q)),
+    )
 })
+
+/** Les résultats, groupés par catégorie, chaque groupe par ordre alphabétique. */
+const groupes = computed(() =>
+    categories.value
+        .map((nom) => ({
+            nom,
+            exercises: filteredExercises.value
+                .filter((e) => categorieDe(e) === nom)
+                .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+        }))
+        .filter((groupe) => groupe.exercises.length > 0),
+)
+
+/** Sans exercice et sans recherche, c'est l'état vide qui propose de créer, pas la première ligne. */
+const ligneDeCreation = computed(() => props.exercises.length > 0 || requete.value !== '')
 
 const choisir = (exerciseId) => {
     emit('add', exerciseId)
     searchQuery.value = ''
+    categorie.value = TOUTES
 }
 
 const quickCreate = () => {
     createExerciseForm.name = requete.value
+    createExerciseForm.category =
+        categorie.value === TOUTES || categorie.value === SANS_CATEGORIE ? '' : categorie.value
+    createExerciseForm.clearErrors()
     showCreateForm.value = true
+
+    nextTick(() => document.querySelector('[dusk="new-exercise-name"]')?.focus())
+}
+
+/** Une création sans réponse rend le bouton après ce délai, plutôt que de le laisser inerte. */
+const DELAI_DE_LA_CREATION_MS = 15_000
+
+/** Chaque fermeture ou retour invalide la création en vol : sa réponse n'ajoutera plus rien à la séance. */
+let generationDeCreation = 0
+
+const retourALaListe = () => {
+    generationDeCreation++
+    showCreateForm.value = false
+}
+
+/** Échap, d'où qu'il parte dans le dialogue, revient à la liste depuis le formulaire : la demande native est refusée. */
+const surAnnulation = (event) => {
+    if (showCreateForm.value) {
+        event.preventDefault()
+        retourALaListe()
+    }
 }
 
 const fermer = () => {
+    generationDeCreation++
     showCreateForm.value = false
     searchQuery.value = ''
+    categorie.value = TOUTES
     emit('close')
 }
 
 const createAndAddExercise = async () => {
+    if (createExerciseForm.processing) {
+        return
+    }
+
+    const generation = generationDeCreation
+
     createExerciseForm.processing = true
     createExerciseForm.clearErrors()
     try {
@@ -75,19 +154,27 @@ const createAndAddExercise = async () => {
                 type: createExerciseForm.type,
                 category: createExerciseForm.category,
             }),
+            signal: AbortSignal.timeout(DELAI_DE_LA_CREATION_MS),
         })
         if (response.ok) {
             const { exercise } = await response.json()
 
             emit('created', exercise)
-            choisir(exercise.id)
-            showCreateForm.value = false
+
+            if (generation === generationDeCreation) {
+                choisir(exercise.id)
+                showCreateForm.value = false
+            }
 
             return
         }
 
         // Autre chose qu'un 2xx laissait la modale ouverte sans un mot, et
         // l'utilisateur tapait encore. Les erreurs de validation remontent.
+        if (generation !== generationDeCreation) {
+            return
+        }
+
         if (response.status === 422) {
             const { errors = {} } = await response.json()
 
@@ -101,6 +188,11 @@ const createAndAddExercise = async () => {
         triggerHaptic('error')
     } catch (e) {
         console.error(e)
+
+        if (generation !== generationDeCreation) {
+            return
+        }
+
         createExerciseForm.setError('name', 'Connexion impossible. Vérifie ta connexion réseau.')
         triggerHaptic('error')
     } finally {
@@ -108,22 +200,45 @@ const createAndAddExercise = async () => {
     }
 }
 
-defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, createAndAddExercise, fermer })
+defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quickCreate, createAndAddExercise, fermer })
 </script>
 
 <template>
-    <Modal :show="show" @close="fermer" max-width="lg" aria-labelledby="add-exercise-title">
-        <!--
-            Une colonne qui se plie à la hauteur de la fenêtre : la liste prend ce
-            que laissent le titre et la recherche, et défile en elle-même. Bornée
-            à 60vh, elle laissait un grand vide sous la fenêtre (#2043). Le
-            formulaire de création, lui, ne se plie pas : la fenêtre défile, et
-            son bouton garde la marge du bas au lieu d'être rogné par l'arrondi.
-        -->
-        <div class="flex flex-col p-6" :class="{ 'min-h-0': !showCreateForm }">
-            <h2 id="add-exercise-title" class="titre-plat mb-6">Ajouter un exercice</h2>
-            <div v-if="!showCreateForm" class="flex min-h-0 flex-col">
-                <div class="pb-4">
+    <Modal
+        :show="show"
+        position="tiroir"
+        max-width="lg"
+        aria-labelledby="add-exercise-title"
+        @close="fermer"
+        @annuler="surAnnulation"
+    >
+        <div class="flex min-h-0 flex-1 flex-col">
+            <div class="flex shrink-0 items-center gap-3 px-6 pb-4">
+                <GlassIconButton
+                    v-if="showCreateForm"
+                    icon="arrow_back"
+                    label="Retour à la liste"
+                    @click="retourALaListe"
+                />
+                <h2 id="add-exercise-title" class="titre-plat min-w-0 flex-1">
+                    {{ showCreateForm ? 'Nouvel exercice' : 'Ajouter un exercice' }}
+                </h2>
+                <GlassButton
+                    v-if="showCreateForm"
+                    type="submit"
+                    form="nouvel-exercice"
+                    variant="primary"
+                    size="sm"
+                    :loading="createExerciseForm.processing"
+                    dusk="submit-new-exercise"
+                >
+                    Créer
+                </GlassButton>
+                <GlassIconButton v-else icon="close" label="Fermer" dusk="fermer-ajout-exercice" @click="fermer" />
+            </div>
+
+            <template v-if="!showCreateForm">
+                <div class="shrink-0 space-y-3 px-6 pb-3">
                     <GlassInput
                         id="search-workout-exercise"
                         v-model="searchQuery"
@@ -133,8 +248,29 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         hide-label
                         placeholder="Rechercher..."
                     />
+                    <div v-if="categories.length > 1" class="hide-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 pb-1">
+                        <GlassChip
+                            dusk="categorie-tous"
+                            icon="apps"
+                            :active="categorie === TOUTES"
+                            @click="categorie = TOUTES"
+                        >
+                            Tous
+                        </GlassChip>
+                        <GlassChip
+                            v-for="nom in categories"
+                            :key="nom"
+                            :dusk="`categorie-${nom}`"
+                            :active="categorie === nom"
+                            :classe-active="CATEGORY_COLORS[nom] ?? 'category-fill-other'"
+                            @click="categorie = nom"
+                        >
+                            {{ nom }}
+                        </GlassChip>
+                    </div>
                 </div>
-                <div class="min-h-0 space-y-3 overflow-y-auto" dusk="liste-des-exercices">
+
+                <div class="pb-feuille-4 min-h-0 flex-1 overflow-y-auto px-4" dusk="liste-des-exercices">
                     <GlassEmptyState
                         v-if="exercises.length === 0 && !requete"
                         taille="ligne"
@@ -143,78 +279,70 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         action-id="empty-create-exercise"
                         @action="quickCreate"
                     />
+
                     <button
-                        v-if="filteredExercises.length === 0 && requete"
+                        v-if="ligneDeCreation"
                         type="button"
-                        @click="quickCreate"
+                        class="focus-visible:ring-accent-primary hover:bg-surface-card/50 flex min-h-14 w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition focus-visible:ring-2 focus-visible:outline-none"
                         dusk="quick-create-exercise"
-                        class="border-border hover:border-accent-state focus-visible:ring-accent-state flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition focus-visible:ring-2 focus-visible:outline-none"
+                        @click="quickCreate"
                     >
-                        <span class="text-text-muted mb-2 block text-sm">Aucun résultat pour "{{ requete }}"</span>
-                        <span class="text-accent-state-deep font-medium">Créer "{{ requete }}"</span>
+                        <span
+                            class="bg-accent-primary/10 text-accent-primary flex size-9 shrink-0 items-center justify-center rounded-xl"
+                        >
+                            <GlassIcon name="add" size="sm" />
+                        </span>
+                        <span class="text-text-main min-w-0 flex-1 truncate font-medium">
+                            {{ requete ? `Créer « ${requete} »` : 'Créer un exercice' }}
+                        </span>
                     </button>
 
-                    <!-- Un bouton, pas un div : ajouter un exercice est l'action première de
-                         cet écran, et elle était hors de portée du clavier. Des spans plutôt
-                         que h4/p : du contenu de flux est invalide dans un bouton. -->
-                    <button
-                        v-for="exercise in filteredExercises"
-                        :key="exercise.id"
-                        type="button"
-                        @click="choisir(exercise.id)"
-                        :dusk="`select-exercise-${exercise.id}`"
-                        class="verre-regulier hover:border-accent-primary/50 focus-visible:ring-accent-primary block w-full cursor-pointer rounded-2xl p-4 text-left transition focus-visible:ring-2 focus-visible:outline-none"
+                    <p
+                        v-if="ligneDeCreation && filteredExercises.length === 0"
+                        class="text-text-muted px-4 py-6 text-center text-sm"
                     >
-                        <span class="text-text-main block font-semibold">{{ exercise.name }}</span>
-                        <span class="etiquette block">{{ exercise.category }}</span>
-                    </button>
+                        {{ requete ? `Aucun résultat pour « ${requete} »` : 'Aucun résultat pour ce filtre' }}
+                    </p>
+
+                    <!-- Un bouton par exercice : ajouter est l'action première de cet écran, et
+                         elle doit rester à portée du clavier. Des spans plutôt que h4/p : du
+                         contenu de flux est invalide dans un bouton. -->
+                    <section v-for="groupe in groupes" :key="groupe.nom" :aria-label="groupe.nom" class="mt-3">
+                        <h3 class="etiquette flex items-baseline justify-between px-4 pb-1">
+                            {{ groupe.nom }}
+                            <span class="tabular-nums">{{ groupe.exercises.length }}</span>
+                        </h3>
+                        <button
+                            v-for="exercise in groupe.exercises"
+                            :key="exercise.id"
+                            type="button"
+                            :dusk="`select-exercise-${exercise.id}`"
+                            class="hover:bg-surface-sunken focus-visible:ring-accent-primary min-h-touch flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl px-4 py-2 text-left transition focus-visible:ring-2 focus-visible:outline-none"
+                            @click="choisir(exercise.id)"
+                        >
+                            <span class="text-text-main font-medium">{{ exercise.name }}</span>
+                            <GlassIcon name="add" size="sm" class="text-text-muted" />
+                        </button>
+                    </section>
                 </div>
-            </div>
+            </template>
 
-            <div v-else class="space-y-6">
-                <div class="flex items-center gap-4">
-                    <GlassIconButton icon="arrow_back" label="Retour" @click="showCreateForm = false" />
-                    <h3 class="titre-plat">Nouvel exercice</h3>
-                </div>
-
-                <form @submit.prevent="createAndAddExercise" class="space-y-4">
-                    <GlassInput
-                        v-model="createExerciseForm.name"
-                        label="Nom"
-                        dusk="new-exercise-name"
-                        :error="createExerciseForm.errors.name"
-                        required
-                    />
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <GlassSelect
-                            v-model="createExerciseForm.type"
-                            label="Type"
-                            :options="EXERCISE_TYPES"
-                            :error="createExerciseForm.errors.type"
-                            dusk="new-exercise-type"
-                        />
-                        <GlassSelect
-                            v-model="createExerciseForm.category"
-                            label="Catégorie"
-                            :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
-                            empty-label="— Aucune —"
-                            :error="createExerciseForm.errors.category"
-                            dusk="new-exercise-category"
-                        />
-                    </div>
-
-                    <GlassButton
-                        type="submit"
-                        variant="primary"
-                        class="w-full"
-                        :loading="createExerciseForm.processing"
-                        dusk="submit-new-exercise"
-                    >
-                        Créer et Ajouter
-                    </GlassButton>
-                </form>
-            </div>
+            <form
+                id="nouvel-exercice"
+                v-else
+                class="pb-feuille-6 min-h-0 flex-1 space-y-6 overflow-y-auto px-6"
+                @submit.prevent="createAndAddExercise"
+            >
+                <ChampsDUnExercice
+                    v-model:name="createExerciseForm.name"
+                    v-model:type="createExerciseForm.type"
+                    v-model:category="createExerciseForm.category"
+                    :errors="createExerciseForm.errors"
+                    dusk-nom="new-exercise-name"
+                    dusk-type="new-exercise-type"
+                    dusk-categorie="new-exercise-category"
+                />
+            </form>
         </div>
     </Modal>
 </template>
