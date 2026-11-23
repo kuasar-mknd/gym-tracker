@@ -17,14 +17,15 @@ class WorkoutIndexPerformanceTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $reponse = $this->actingAs($user)->get('/workouts');
-
-        $reponse->assertOk()->assertInertia(
-            fn (Assert $page): Assert => $page
-                ->component('Workouts/Index')
-                ->has('workouts')
-                ->missing('deferredData')
-        );
-        expect($reponse->viewData('page')['deferredProps'] ?? [])->toBe([]);
+        $this->actingAs($user)
+            ->get('/workouts')
+            ->assertOk()
+            ->assertViewMissing('page.deferredProps')
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('Workouts/Index')
+                    ->has('workouts')
+                    ->missing('deferredData')
+            );
     }
 }
