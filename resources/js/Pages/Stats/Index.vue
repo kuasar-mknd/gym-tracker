@@ -80,7 +80,7 @@ const handlePeriodChange = (period) => {
     <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon évolution" titre-dans-la-page titre-masque>
         <div class="space-y-6">
             <!-- Header -->
-            <header class="animate-fade-in flex items-center gap-3 sm:items-start sm:justify-between">
+            <header class="animate-fade-in flex flex-wrap items-center gap-3 sm:items-start sm:justify-between">
                 <!--
                     Le titre du bureau. Sur téléphone, c'est la barre collante de
                     la mise en page qui le porte, et l'afficher ici aussi le
