@@ -3,8 +3,8 @@
 
   Le repos de la séance, dans la barre d'outils (#2434) : le bouton « Repos »
   devient un anneau et le décompte pendant qu'il court. Un toucher ouvre une
-  petite feuille : Pause, Passer, Fermer, et la série qui suit. Le démarrage
-  automatique se règle dans les paramètres de la séance.
+  petite feuille : Pause, Passer, Fermer, la série qui suit et le démarrage
+  automatique du repos, réglé aussi dans les paramètres de la séance.
 -->
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'

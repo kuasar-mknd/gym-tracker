@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { reactive } from 'vue'
+import RestTimer from '@/Components/Workout/RestTimer.vue'
 
 /*
  * Sur une copie hors ligne, rien ne part vers le serveur, sauf la déconnexion
@@ -251,5 +252,20 @@ describe('les briques', () => {
 
         attendreDesactive(wrapper.get('[role="switch"]'), 'pourquoi')
         expect(wrapper.attributes('aria-describedby')).toBeUndefined()
+    })
+
+    it('ne change pas non plus depuis la feuille du repos, sur une copie', async () => {
+        servirUneCopie()
+        const wrapper = mount(RestTimer, {
+            props: { duration: 90, autoStart: false },
+            global: { ...global, stubs: { Modal: { template: '<div><slot /></div>' } } },
+        })
+        const interrupteurDeLaFeuille = wrapper.get('[dusk="auto-rest-timer-feuille"] [role="switch"]')
+
+        attendreDesactive(interrupteurDeLaFeuille)
+        await interrupteurDeLaFeuille.trigger('click')
+
+        expect(wrapper.emitted('update:reposAutomatique')).toBeUndefined()
+        wrapper.unmount()
     })
 })

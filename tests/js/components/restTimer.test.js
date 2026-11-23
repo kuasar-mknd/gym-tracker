@@ -493,7 +493,7 @@ describe('le bip de fin, minuteur monté seul (#2112)', () => {
     })
 })
 
-describe('la carte du repos', () => {
+describe('la feuille du repos', () => {
     it('dit la série qui suit quand la page la donne', () => {
         const wrapper = mountTimer({ ensuite: 'Ensuite, série 3 sur 4' })
 
@@ -504,7 +504,7 @@ describe('la carte du repos', () => {
         expect(mountTimer().find('[dusk="rest-timer-ensuite"]').exists()).toBe(false)
     })
 
-    it('met en pause d’un appui sur le décompte, et le dit', async () => {
+    it('met en pause depuis la feuille, et le dit', async () => {
         const wrapper = mountTimer({ duration: 90, autoStart: true })
 
         await toggleButton(wrapper).trigger('click')
@@ -516,13 +516,6 @@ describe('la carte du repos', () => {
 
         expect(wrapper.get('[role="status"]').text()).toBe('')
         expect(toggleButton(wrapper).attributes('aria-label')).toBe('Mettre le repos en pause')
-    })
-
-    it('n’a ni bouton de pause rond, ni interrupteur : le réglage vit dans les paramètres de la séance', () => {
-        const wrapper = mountTimer()
-
-        expect(wrapper.find('[dusk="auto-rest-timer"]').exists()).toBe(false)
-        expect(wrapper.find('svg').exists()).toBe(false)
     })
 
     it('règle le démarrage automatique depuis la feuille', async () => {
