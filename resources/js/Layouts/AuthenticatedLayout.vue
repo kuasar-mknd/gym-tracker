@@ -363,7 +363,7 @@ onUnmounted(() => {
                 </h1>
             </div>
 
-            <div :class="clocheFlottante ? 'top-sure-12 right-sure-5 z-collant fixed' : 'flex items-center gap-2'">
+            <div :class="clocheFlottante ? 'top-sure-12 right-sure-9 z-collant fixed' : 'flex items-center gap-2'">
                 <Link
                     v-press
                     :href="route('notifications.index')"
