@@ -151,11 +151,24 @@ onMounted(() => {
  * La barre d'état d'une application installée est peinte par le système d'après
  * `theme-color`, hors de la page : le voile d'un tiroir ne l'assombrit pas, et
  * elle reste claire au-dessus d'un écran voilé. À l'ouverture, la couleur est
- * assombrie du voile (30 %), et rendue à la fermeture.
+ * assombrie du voile (30 %), et rendue à la fermeture. La couleur d'origine est
+ * gardée dans la balise : une feuille qui en relaie une autre (« Terminer » puis
+ * le bilan) ne prend pas la couleur déjà assombrie pour celle d'origine.
  */
-let couleurDeLaBarre = null
+const COULEUR_D_ORIGINE = 'couleurDOrigine'
+
+/** Les feuilles qui voilent la barre en ce moment, toutes instances confondues. */
+let feuillesVoilantLaBarre = 0
+let voileDeCetteInstance = false
 
 const assombrirLaBarreDEtat = (assombrir) => {
+    if (assombrir === voileDeCetteInstance) {
+        return
+    }
+
+    voileDeCetteInstance = assombrir
+    feuillesVoilantLaBarre += assombrir ? 1 : -1
+
     const balise = document.querySelector('meta[name="theme-color"]')
 
     if (!balise) {
@@ -163,21 +176,21 @@ const assombrirLaBarreDEtat = (assombrir) => {
     }
 
     if (!assombrir) {
-        if (couleurDeLaBarre !== null) {
-            balise.setAttribute('content', couleurDeLaBarre)
-            couleurDeLaBarre = null
+        if (feuillesVoilantLaBarre === 0 && COULEUR_D_ORIGINE in balise.dataset) {
+            balise.setAttribute('content', balise.dataset[COULEUR_D_ORIGINE])
+            delete balise.dataset[COULEUR_D_ORIGINE]
         }
 
         return
     }
 
-    const hex = /^#([0-9a-f]{6})$/i.exec(couleurDeLaBarre ?? balise.getAttribute('content') ?? '')
+    const hex = /^#([0-9a-f]{6})$/i.exec(balise.getAttribute('content') ?? '')
 
-    if (!hex) {
+    if (!hex || COULEUR_D_ORIGINE in balise.dataset) {
         return
     }
 
-    couleurDeLaBarre ??= balise.getAttribute('content')
+    balise.dataset[COULEUR_D_ORIGINE] = balise.getAttribute('content')
     const [r, g, b] = [0, 2, 4].map((i) => Math.round(parseInt(hex[1].slice(i, i + 2), 16) * 0.7))
     balise.setAttribute('content', `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`)
 }

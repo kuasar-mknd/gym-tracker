@@ -133,16 +133,21 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             /*
              * Le tiroir flotte à 8 px du bord de l'écran, son verre passant derrière
              * l'indicateur d'accueil (maquette de navigation) : c'est son contenu, la
-             * liste, qui reste au-dessus de l'indicateur, et la marge du haut est de 24 px.
+             * liste (jusqu'à son dernier exercice), qui reste au-dessus de l'indicateur, et la marge du haut est de 24 px.
              */
             $basDeLaZoneSure = $fenetre['hauteur'] - $marges['bas'];
 
-            $listeBas = $browser->script('return document.querySelector(\'[dusk="liste-des-exercices"]\').getBoundingClientRect().bottom;')[0];
+            $dernierBas = $browser->script(<<<'JS'
+                const liste = document.querySelector('[dusk="liste-des-exercices"]');
+                liste.scrollTop = liste.scrollHeight;
+                const lignes = liste.querySelectorAll('[dusk^="select-exercise-"]');
+                return lignes[lignes.length - 1].getBoundingClientRect().bottom;
+                JS)[0];
 
             $this->assertLessThanOrEqual(
                 $basDeLaZoneSure,
-                $listeBas,
-                'Le bas de la liste reste au-dessus de l’indicateur d’accueil.'
+                $dernierBas,
+                'Au bout de la liste, le dernier exercice reste au-dessus de l’indicateur d’accueil.'
             );
 
             $margeAuDessus = $fenetre['panneauHaut'] - $marges['haut'];
