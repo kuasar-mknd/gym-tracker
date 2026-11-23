@@ -132,4 +132,14 @@ describe('la barre d’outils de la séance', () => {
         expect(wrapper.find('[dusk="open-rest-timer"]').exists()).toBe(false)
         expect(wrapper.get('[dusk="barre-d-outils-de-la-seance"] [dusk="rest-timer"]').text()).toBe('1:12')
     })
+
+    it('garde le repos en cours sur une séance vidée', () => {
+        const wrapper = mount(ActionsDeLaSeance, {
+            props: { vide: true },
+            slots: { repos: '<button dusk="rest-timer">1:12</button>' },
+            global: { directives: { press: {} } },
+        })
+
+        expect(wrapper.find('[dusk="rest-timer"]').exists()).toBe(true)
+    })
 })

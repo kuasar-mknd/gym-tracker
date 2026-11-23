@@ -98,7 +98,7 @@ const raisonDuModele = computed(() => {
                 <span class="bureau:hidden">Exercice</span>
                 <span class="bureau:inline hidden">Ajouter un exercice</span>
             </GlassButton>
-            <slot v-if="!vide && $slots.repos" name="repos" />
+            <slot v-if="$slots.repos" name="repos" />
             <GlassButton
                 v-else-if="!vide"
                 variant="secondary"

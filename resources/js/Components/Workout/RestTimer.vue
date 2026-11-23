@@ -128,12 +128,21 @@ const boutonFermer = ref(null)
 /** La page démonte la carte sur `close` : le focus qu'elle portait, ou perdu, passe au contenu principal. */
 const fermerLaCarte = () => {
     const actif = document.activeElement
-    const perdu = actif === null || actif === document.body || racine.value?.contains(actif) === true
+    // La feuille est téléportée dans <body> : le focus qu'elle porte est hors de la carte, et perdu avec elle.
+    const perdu =
+        actif === null ||
+        actif === document.body ||
+        racine.value?.contains(actif) === true ||
+        actif.closest?.('dialog') != null
 
     emit('close')
 
     if (perdu) {
-        document.getElementById('main-content')?.focus({ preventScroll: true })
+        const rendreLeFocus = () => document.getElementById('main-content')?.focus({ preventScroll: true })
+
+        rendreLeFocus()
+        // Le dialogue encore ouvert rend la page inerte : le focus se rend aussi une fois démonté.
+        nextTick(rendreLeFocus)
     }
 }
 
