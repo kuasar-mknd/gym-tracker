@@ -29,7 +29,14 @@ const monter = (props = {}, Modale = AjoutDExerciceModal) =>
     mount(Modale, {
         props: { show: true, exercises: bibliotheque, ...props },
         global: {
-            stubs: { Modal: { name: 'Modal', template: '<div><slot /></div>', props: ['show'], emits: ['close'] } },
+            stubs: {
+                Modal: {
+                    name: 'Modal',
+                    template: '<div><slot /></div>',
+                    props: ['show', 'closeable'],
+                    emits: ['close'],
+                },
+            },
         },
         attachTo: document.body,
     })
@@ -421,10 +428,13 @@ describe('créer un exercice sur le champ', () => {
         await wrapper.vm.$nextTick()
         expect(wrapper.get('[dusk="new-exercise-name"]').attributes('required')).toBeDefined()
 
-        wrapper.findComponent({ name: 'Modal' }).vm.$emit('close')
-        await wrapper.vm.$nextTick()
+        // Le dialogue natif ne se ferme pas de lui-même dans le formulaire.
+        expect(wrapper.findComponent({ name: 'Modal' }).props('closeable')).toBe(false)
+
+        await wrapper.get('[dusk="new-exercise-name"]').trigger('keydown', { key: 'Escape' })
 
         expect(wrapper.vm.showCreateForm).toBe(false)
+        expect(wrapper.findComponent({ name: 'Modal' }).props('closeable')).toBe(true)
         expect(wrapper.emitted('close')).toBeUndefined()
         wrapper.unmount()
     })

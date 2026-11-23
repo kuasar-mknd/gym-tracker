@@ -110,9 +110,6 @@ const retourALaListe = () => {
     showCreateForm.value = false
 }
 
-/** Échap et le fond ferment le tiroir, sauf dans le formulaire, d'où l'on revient à la liste. */
-const surDemandeDeFermeture = () => (showCreateForm.value ? retourALaListe() : fermer())
-
 const fermer = () => {
     generationDeCreation++
     showCreateForm.value = false
@@ -186,11 +183,12 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
     <Modal
         :show="show"
         position="tiroir"
+        :closeable="!showCreateForm"
         max-width="lg"
         aria-labelledby="add-exercise-title"
-        @close="surDemandeDeFermeture"
+        @close="fermer"
     >
-        <div class="flex min-h-0 flex-1 flex-col">
+        <div class="flex min-h-0 flex-1 flex-col" @keydown.esc="showCreateForm && retourALaListe()">
             <div class="flex shrink-0 items-center gap-3 px-6 pb-4">
                 <GlassIconButton
                     v-if="showCreateForm"
