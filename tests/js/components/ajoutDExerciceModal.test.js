@@ -28,7 +28,9 @@ const bibliotheque = [
 const monter = (props = {}, Modale = AjoutDExerciceModal) =>
     mount(Modale, {
         props: { show: true, exercises: bibliotheque, ...props },
-        global: { stubs: { Modal: { template: '<div><slot /></div>', props: ['show'] } } },
+        global: {
+            stubs: { Modal: { name: 'Modal', template: '<div><slot /></div>', props: ['show'], emits: ['close'] } },
+        },
         attachTo: document.body,
     })
 
@@ -377,6 +379,53 @@ describe('créer un exercice sur le champ', () => {
         await wrapper.vm.createAndAddExercise()
         expect(wrapper.vm.createExerciseForm.errors.name).toBe('Connexion impossible. Vérifie ta connexion réseau.')
         expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+        wrapper.unmount()
+    })
+
+    it('n’envoie qu’une création à la fois', async () => {
+        const spy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
+        const wrapper = monter()
+
+        wrapper.vm.createAndAddExercise()
+        await wrapper.vm.createAndAddExercise()
+
+        expect(spy).toHaveBeenCalledTimes(1)
+        wrapper.unmount()
+    })
+
+    it('n’ajoute pas à la séance un exercice créé après le retour à la liste', async () => {
+        let repondre
+        vi.spyOn(globalThis, 'fetch').mockReturnValue(
+            new Promise((resolu) => {
+                repondre = () => resolu({ ok: true, json: async () => ({ exercise: { id: 9, name: 'Rowing' } }) })
+            }),
+        )
+        const wrapper = monter()
+
+        wrapper.vm.showCreateForm = true
+        await wrapper.vm.$nextTick()
+        wrapper.vm.createAndAddExercise()
+        await wrapper.get('button[aria-label="Retour à la liste"]').trigger('click')
+        repondre()
+        await flushPromises()
+
+        expect(wrapper.emitted('created')).toHaveLength(1)
+        expect(wrapper.emitted('add')).toBeUndefined()
+        wrapper.unmount()
+    })
+
+    it('demande le nom, et Échap dans le formulaire revient à la liste sans fermer', async () => {
+        const wrapper = monter()
+
+        wrapper.vm.showCreateForm = true
+        await wrapper.vm.$nextTick()
+        expect(wrapper.get('[dusk="new-exercise-name"]').attributes('required')).toBeDefined()
+
+        wrapper.findComponent({ name: 'Modal' }).vm.$emit('close')
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.vm.showCreateForm).toBe(false)
+        expect(wrapper.emitted('close')).toBeUndefined()
         wrapper.unmount()
     })
 })

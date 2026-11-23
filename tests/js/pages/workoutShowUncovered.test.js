@@ -861,6 +861,13 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         wrapper.findComponent(AjoutDExerciceModal).findComponent(ModalStub).vm.$emit('close')
         await flushPromises()
 
+        // Échap dans le formulaire revient à la liste ; le tiroir reste ouvert.
+        expect(wrapper.vm.showAddExercise).toBe(true)
+        expect(modale(wrapper).showCreateForm).toBe(false)
+
+        wrapper.findComponent(AjoutDExerciceModal).findComponent(ModalStub).vm.$emit('close')
+        await flushPromises()
+
         expect(wrapper.vm.showAddExercise).toBe(false)
         expect(modale(wrapper).showCreateForm).toBe(false)
         expect(modale(wrapper).searchQuery).toBe('')

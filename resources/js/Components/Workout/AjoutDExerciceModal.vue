@@ -102,7 +102,19 @@ const quickCreate = () => {
     showCreateForm.value = true
 }
 
+/** Chaque fermeture ou retour invalide la création en vol : sa réponse n'ajoutera plus rien à la séance. */
+let generationDeCreation = 0
+
+const retourALaListe = () => {
+    generationDeCreation++
+    showCreateForm.value = false
+}
+
+/** Échap et le fond ferment le tiroir, sauf dans le formulaire, d'où l'on revient à la liste. */
+const surDemandeDeFermeture = () => (showCreateForm.value ? retourALaListe() : fermer())
+
 const fermer = () => {
+    generationDeCreation++
     showCreateForm.value = false
     searchQuery.value = ''
     categorie.value = TOUTES
@@ -110,6 +122,12 @@ const fermer = () => {
 }
 
 const createAndAddExercise = async () => {
+    if (createExerciseForm.processing) {
+        return
+    }
+
+    const generation = generationDeCreation
+
     createExerciseForm.processing = true
     createExerciseForm.clearErrors()
     try {
@@ -130,8 +148,11 @@ const createAndAddExercise = async () => {
             const { exercise } = await response.json()
 
             emit('created', exercise)
-            choisir(exercise.id)
-            showCreateForm.value = false
+
+            if (generation === generationDeCreation) {
+                choisir(exercise.id)
+                showCreateForm.value = false
+            }
 
             return
         }
@@ -162,14 +183,20 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
 </script>
 
 <template>
-    <Modal :show="show" position="tiroir" max-width="lg" aria-labelledby="add-exercise-title" @close="fermer">
+    <Modal
+        :show="show"
+        position="tiroir"
+        max-width="lg"
+        aria-labelledby="add-exercise-title"
+        @close="surDemandeDeFermeture"
+    >
         <div class="flex min-h-0 flex-1 flex-col">
             <div class="flex shrink-0 items-center gap-3 px-6 pb-4">
                 <GlassIconButton
                     v-if="showCreateForm"
                     icon="arrow_back"
                     label="Retour à la liste"
-                    @click="showCreateForm = false"
+                    @click="retourALaListe"
                 />
                 <h2 id="add-exercise-title" class="titre-plat min-w-0 flex-1">
                     {{ showCreateForm ? 'Nouvel exercice' : 'Ajouter un exercice' }}

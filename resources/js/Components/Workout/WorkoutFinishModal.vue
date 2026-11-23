@@ -198,7 +198,7 @@ const avisDAttente = computed(() =>
                 >
                     Confirmer
                 </GlassButton>
-                <GlassButton variant="secondary" @click="emit('close')" class="bouton-de-bilan w-full">
+                <GlassButton variant="secondary" autofocus @click="emit('close')" class="bouton-de-bilan w-full">
                     Annuler
                 </GlassButton>
             </div>
