@@ -228,7 +228,22 @@ describe('RestTimer countdown', () => {
         expect(wrapper.emitted('close')).toHaveLength(1)
     })
 
-    it('retire la bascule et Passer à la fin naturelle du repos, ', async () => {
+    it('suit l’échéance d’un repos repris, et non les secondes arrondies, au retour au premier plan', async () => {
+        const wrapper = mountTimer({
+            duration: 90,
+            autoStart: true,
+            secondesRestantes: 5,
+            echeance: Date.now() + 4_200,
+        })
+
+        vi.setSystemTime(Date.now() + 4_500)
+        document.dispatchEvent(new Event('visibilitychange'))
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
+    })
+
+    it('retire la bascule et Passer à la fin naturelle du repos', async () => {
         const wrapper = mountTimer({ duration: 3, autoStart: true })
         expect(toggleButton(wrapper).exists()).toBe(true)
         expect(button(wrapper, 'skip-rest-timer').exists()).toBe(true)

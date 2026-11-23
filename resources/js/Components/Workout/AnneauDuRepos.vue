@@ -3,7 +3,7 @@
  * L'anneau du repos (#2434) : un tour rempli de ce qu'il reste sur la durée.
  * Le même dans la barre d'outils de la séance et dans la capsule des autres
  * onglets ; la taille et le placement viennent de l'appelant (`class`). Le
- * trait glisse d'une seconde à l'autre, comme la barre de la feuille.
+ * trait, au bout plat, glisse d'une seconde à l'autre, comme la barre de la feuille.
  */
 defineProps({
     /** Ce qu'il reste du repos, de 0 à 1. */
@@ -21,7 +21,6 @@ defineProps({
             r="15"
             stroke="var(--color-accent-primary)"
             stroke-width="5"
-            stroke-linecap="round"
             pathLength="100"
             stroke-dasharray="100"
             class="transition-[stroke-dashoffset] duration-1000 ease-linear"

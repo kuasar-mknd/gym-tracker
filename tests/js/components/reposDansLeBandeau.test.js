@@ -93,6 +93,12 @@ describe('le repos dans le bandeau de la séance', () => {
         expect(wrapper.find('[data-testid="trait-de-l-anneau"]').exists()).toBe(false)
     })
 
+    it('dessine le trait au bout plat, qui ne laisse pas de pastille à la dernière seconde', () => {
+        const wrapper = monter(depot({ echeance: MAINTENANT.getTime() + 1_000 }))
+
+        expect(wrapper.get('[data-testid="trait-de-l-anneau"]').attributes('stroke-linecap')).toBeUndefined()
+    })
+
     it('dit un repos en pause, au reste figé', async () => {
         const wrapper = monter(depot({ echeance: null, restantEnPause: 45 }))
 

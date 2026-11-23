@@ -75,6 +75,12 @@ const props = defineProps({
         default: null,
     },
 
+    /** L'échéance du repos repris (ms) : le décompte la suit, sans repartir des secondes arrondies. */
+    echeance: {
+        type: Number,
+        default: null,
+    },
+
     /** Le repos repris était en pause : le minuteur attend le geste de reprise. */
     enPause: {
         type: Boolean,
@@ -97,6 +103,9 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 /** Remaining time in seconds. */
 const timeLeft = ref(props.secondesRestantes ?? props.duration)
+
+/** L'échéance d'un repos repris, prise une fois au premier départ ; une reprise après pause repart de ce qu'il reste. */
+let echeanceAReprendre = props.echeance
 
 /** Whether the timer is currently running. */
 const isActive = ref(false)
@@ -190,7 +199,8 @@ const formatTime = (seconds) => {
 const startTimer = () => {
     if (timer.value) return
     isActive.value = true
-    endTime.value = Date.now() + timeLeft.value * 1000
+    endTime.value = echeanceAReprendre ?? Date.now() + timeLeft.value * 1000
+    echeanceAReprendre = null
 
     timer.value = setInterval(() => {
         updateTimer()

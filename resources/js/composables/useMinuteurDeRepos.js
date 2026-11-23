@@ -132,6 +132,7 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
         timerDuration.value = duree
         timerRun.value += 1
         restantInitial.value = restant
+        echeanceDeReprise.value = enPause ? null : echeanceDuDepot
         demarrageEnPause.value = enPause
         echeance = enPause ? null : (echeanceDuDepot ?? Date.now() + restant * 1000)
         restantEnPause = enPause ? restant : null
@@ -219,6 +220,9 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
 
     /** Un repos repris en route : ce qu'il reste au minuteur remonté, et s'il attend en pause. */
     const restantInitial = ref(null)
+
+    /** L'échéance déposée d'un repos repris : le minuteur remonté la garde, sans la refaire des secondes arrondies. */
+    const echeanceDeReprise = ref(null)
     const demarrageEnPause = ref(false)
 
     /**
@@ -240,6 +244,7 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
         key: timerRun.value,
         duration: timerDuration.value,
         secondesRestantes: restantInitial.value,
+        echeance: echeanceDeReprise.value,
         enPause: demarrageEnPause.value,
         onPause: noterLaPause,
         onReprise: noterLaReprise,
