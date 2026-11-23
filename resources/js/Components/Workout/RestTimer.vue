@@ -319,7 +319,7 @@ watch(
 </script>
 
 <template>
-    <div ref="carte" class="carte-portable animate-slide-up flex flex-col gap-3 p-4">
+    <div ref="carte" class="carte-portable verre-regulier animate-slide-up flex flex-col gap-3 rounded-carte bg-surface-card/90 p-4">
         <div class="flex items-center justify-between gap-4">
             <button
                 ref="boutonBascule"
