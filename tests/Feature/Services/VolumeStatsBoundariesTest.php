@@ -78,7 +78,6 @@ it('garde chaque statistique en cache la durée annoncée', function (string $me
     // celle du 15 juin (#2033 pour la courbe).
     'volume hebdomadaire' => ['getWeeklyVolumeTrend', 'weekly_volume.2026-25', 10],
     'comparaison hebdomadaire' => ['getWeeklyVolumeComparison', 'weekly_volume_to_date.2026-25', 10],
-    'historique de volume' => ['getVolumeHistory', 'volume_history.20', 30],
     // La clef porte le mois courant (#1955) : celui de l'horloge arrêtée.
     'historique mensuel' => ['getMonthlyVolumeHistory', 'monthly_volume_history.6.2026-06', 30],
 ]);

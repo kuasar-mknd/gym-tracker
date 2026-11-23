@@ -14,6 +14,11 @@ vi.mock('@inertiajs/vue3', () => ({
     },
 }))
 
+vi.mock('@/Components/Stats/MonthlyVolumeChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'MonthlyVolumeChart', props: ['data'], template: '<div class="volume-chart" />' },
+}))
+
 const MonthlyVolumeCard = (await import('@/Components/Stats/MonthlyVolumeCard.vue')).default
 
 const mountCard = async (props = {}) => {
@@ -99,5 +104,27 @@ describe('MonthlyVolumeCard', () => {
         const keys = (await mountCard({})).findAllComponents({ name: 'Deferred' }).map((d) => d.props('data'))
 
         expect(keys).toEqual(['deferredData'])
+    })
+
+    it('trace le volume des six derniers mois sous le chiffre du mois, dans la même carte', async () => {
+        const mois = [
+            { month: 'Juin', volume: 9000 },
+            { month: 'Juil.', volume: 12000 },
+        ]
+        const wrapper = await mountCard({
+            monthlyComparison: { current_volume: 12000, percentage: 8 },
+            monthlyVolume: mois,
+        })
+
+        expect(wrapper.findComponent({ name: 'MonthlyVolumeChart' }).props('data')).toEqual(mois)
+        expect(wrapper.text()).toContain('Volume mensuel')
+    })
+
+    it('ne dessine aucun axe vide quand la série mensuelle manque ou est vide', async () => {
+        const absente = await mountCard({})
+        const vide = await mountCard({ monthlyVolume: [] })
+
+        expect(absente.findComponent({ name: 'MonthlyVolumeChart' }).exists()).toBe(false)
+        expect(vide.findComponent({ name: 'MonthlyVolumeChart' }).exists()).toBe(false)
     })
 })

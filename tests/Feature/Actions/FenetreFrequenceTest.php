@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Tests\Support\DonneesDeProgres;
 
 function seanceLeJour(User $user, string $jour): void
 {
@@ -37,8 +37,7 @@ it('ne compte que les six derniers mois par jour de semaine', function (): void 
     seanceLeJour($user, '2024-01-01');
 
     Cache::flush();
-    $action = app(FetchWorkoutsIndexAction::class);
-    $parJour = $action->getDeferredData($user)['charts']['day_of_week_frequency'];
+    $parJour = DonneesDeProgres::graphiques($user)['day_of_week_frequency'];
 
     $lundi = $parJour->firstWhere('day', 'Lun');
 
@@ -56,8 +55,7 @@ it('borne les deux cartes de fréquence à la même fenêtre', function (): void
     seanceLeJour($user, '2026-02-28');
 
     Cache::flush();
-    $action = app(FetchWorkoutsIndexAction::class);
-    $graphiques = $action->getDeferredData($user)['charts'];
+    $graphiques = DonneesDeProgres::graphiques($user);
 
     $totalParJour = $graphiques['day_of_week_frequency']->sum(fn (array $jour): int => $jour['count']);
     $totalParMois = $graphiques['monthly_frequency']->sum(fn (array $mois): int => $mois['count']);

@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Actions\Stats\GetStatsDashboardAction;
-use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\DTOs\Stats\MonthlyVolumePoint;
 use App\DTOs\Stats\VolumeComparison;
 use App\Models\Set;
@@ -12,6 +11,7 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\Stats\VolumeStatsService;
 use Illuminate\Support\Carbon;
+use Tests\Support\DonneesDeProgres;
 
 /*
  * Les graphiques mensuels et la comparaison mensuelle reculent de mois en mois
@@ -61,7 +61,7 @@ function lesSixMoisDesGraphiquesLe(string $maintenant, array $seances, array $mo
         seanceDuMoisAvecVolume($user, $quand, $poids, 10);
     }
 
-    $graphiques = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
+    $graphiques = DonneesDeProgres::graphiques($user);
 
     expect($graphiques['monthly_frequency']->all())->toBe(array_map(
         fn (array $mois): array => ['month' => $mois[0], 'count' => $mois[1]],
@@ -156,15 +156,14 @@ it('recalcule les statistiques mensuelles au premier jour du mois, sans attendre
     seanceDuMoisAvecVolume($user, '2026-05-12 10:00:00', 100, 10);  // un mardi de mai : sort de la fenêtre en novembre
     seanceDuMoisAvecVolume($user, '2026-10-05 10:00:00', 50, 10);
 
-    $index = app(FetchWorkoutsIndexAction::class);
     $tableauDeBord = app(GetStatsDashboardAction::class);
 
-    $index->getDeferredData($user);
+    DonneesDeProgres::graphiques($user);
     $tableauDeBord->performanceOverview($user, 30);
 
     Carbon::setTestNow(Carbon::parse('2026-11-01 00:05:00'));
 
-    $graphiques = $index->getDeferredData($user)['charts'];
+    $graphiques = DonneesDeProgres::graphiques($user);
     $comparaison = $tableauDeBord->performanceOverview($user, 30)['monthlyComparison'];
 
     expect($graphiques['monthly_frequency']->pluck('month')->all())

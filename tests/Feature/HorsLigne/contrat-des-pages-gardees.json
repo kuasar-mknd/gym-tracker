@@ -1,5 +1,5 @@
 {
-    "version": 5,
+    "version": 6,
     "pages": {
         "Dashboard": {
             "props": {
@@ -552,40 +552,6 @@
                 "auth.user.longest_streak": "nombre",
                 "auth.user.name": "texte",
                 "auth.user.unread_notifications_count": "nombre",
-                "deferredData": "objet",
-                "deferredData.charts": "objet",
-                "deferredData.charts.day_of_week_frequency": "liste",
-                "deferredData.charts.day_of_week_frequency[]": "objet",
-                "deferredData.charts.day_of_week_frequency[].count": "nombre",
-                "deferredData.charts.day_of_week_frequency[].day": "texte",
-                "deferredData.charts.duration_history": "liste",
-                "deferredData.charts.duration_history[]": "objet",
-                "deferredData.charts.duration_history[].date": "texte",
-                "deferredData.charts.duration_history[].duration": "nombre",
-                "deferredData.charts.duration_history[].name": "texte",
-                "deferredData.charts.monthly_frequency": "liste",
-                "deferredData.charts.monthly_frequency[]": "objet",
-                "deferredData.charts.monthly_frequency[].count": "nombre",
-                "deferredData.charts.monthly_frequency[].month": "texte",
-                "deferredData.charts.monthly_volume": "liste",
-                "deferredData.charts.monthly_volume[]": "objet",
-                "deferredData.charts.monthly_volume[].month": "texte",
-                "deferredData.charts.monthly_volume[].volume": "nombre",
-                "deferredData.charts.volume_history": "liste",
-                "deferredData.charts.volume_history[]": "objet",
-                "deferredData.charts.volume_history[].date": "texte",
-                "deferredData.charts.volume_history[].name": "texte",
-                "deferredData.charts.volume_history[].volume": "nombre",
-                "deferredData.exercises": "liste",
-                "deferredData.exercises[]": "objet",
-                "deferredData.exercises[].category": "texte",
-                "deferredData.exercises[].created_at": "texte",
-                "deferredData.exercises[].default_rest_time": "nombre|null",
-                "deferredData.exercises[].id": "nombre",
-                "deferredData.exercises[].name": "texte",
-                "deferredData.exercises[].type": "texte",
-                "deferredData.exercises[].updated_at": "texte",
-                "deferredData.exercises[].user_id": "nombre",
                 "errors": "objet vide",
                 "flash": "objet",
                 "flash.error": "null",
@@ -597,7 +563,6 @@
                 "social_login_enabled.apple": "booléen",
                 "social_login_enabled.github": "booléen",
                 "social_login_enabled.google": "booléen",
-                "totalExercises": "nombre",
                 "vapidPublicKey": "texte",
                 "workouts": "objet",
                 "workouts.current_page": "nombre",
@@ -640,11 +605,7 @@
                 "workouts.to": "nombre",
                 "workouts.total": "nombre"
             },
-            "differees": {
-                "default": [
-                    "deferredData"
-                ]
-            }
+            "differees": []
         },
         "Workouts/Show (séance close)": {
             "props": {

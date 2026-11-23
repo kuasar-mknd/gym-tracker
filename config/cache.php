@@ -182,7 +182,6 @@ return [
         App\DTOs\Stats\MonthlyVolumePoint::class,
         App\DTOs\Stats\MuscleDistributionStat::class,
         App\DTOs\Stats\VolumeComparison::class,
-        App\DTOs\Stats\VolumeHistoryPoint::class,
         App\DTOs\Stats\VolumeTrendPoint::class,
         App\DTOs\Stats\WeeklyVolumeTrendPoint::class,
         App\DTOs\Stats\WeightHistoryPoint::class,

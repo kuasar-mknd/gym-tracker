@@ -9,6 +9,7 @@ import VolumeTrendCard from '@/Components/Stats/VolumeTrendCard.vue'
 import DurationHistoryCard from '@/Components/Stats/DurationHistoryCard.vue'
 import MuscleDistributionCard from '@/Components/Stats/MuscleDistributionCard.vue'
 import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
+import RegulariteCard from '@/Components/Stats/RegulariteCard.vue'
 import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -152,7 +153,12 @@ const handlePeriodChange = (period) => {
                     </Link>
                 </div>
 
-                <MonthlyVolumeCard :monthly-comparison="deferredData?.performance?.monthlyComparison" />
+                <MonthlyVolumeCard
+                    :monthly-comparison="deferredData?.performance?.monthlyComparison"
+                    :monthly-volume="deferredData?.volumeMensuel"
+                />
+
+                <RegulariteCard :regularite="deferredData?.regularite" />
 
                 <VolumeTrendCard
                     :volume-trend="deferredData?.performance?.volumeTrend"

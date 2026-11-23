@@ -60,18 +60,15 @@ test('la dernière mesure de chaque partie est départagée par la clef primaire
     }
 });
 
-test('la tendance et l’historique de volume sont départagés par la clef primaire', function (): void {
+test('la tendance de volume est départagée par la clef primaire', function (): void {
     $user = User::factory()->create();
     Workout::factory()->create(['user_id' => $user->id, 'started_at' => now(), 'ended_at' => now()]);
     $service = resolve(VolumeStatsService::class);
 
     $tendance = requetesSur(sqlEmisPar(fn () => $service->getVolumeTrend($user)), 'workouts');
-    $historique = requetesSur(sqlEmisPar(fn () => $service->getVolumeHistory($user)), 'workouts');
 
     expect($tendance)->not->toBeEmpty()
-        ->and($tendance[0])->toContain('order by `started_at` asc, `id` asc')
-        ->and($historique)->not->toBeEmpty()
-        ->and($historique[0])->toContain('order by `started_at` desc, `id` desc');
+        ->and($tendance[0])->toContain('order by `started_at` asc, `id` asc');
 });
 
 test('les habitudes et les compléments ont un ordre explicite', function (): void {

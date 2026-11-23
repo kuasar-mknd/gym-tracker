@@ -65,11 +65,8 @@ export const GRAPHIQUES_INDISPONIBLES_HORS_LIGNE = Object.freeze([
     'resources/js/Components/Stats/MuscleDistributionChart.vue',
     'resources/js/Components/Stats/OneRepMaxChart.vue',
     'resources/js/Components/Stats/OneRepMaxPercentagesChart.vue',
-    'resources/js/Components/Stats/VolumePerWorkoutChart.vue',
     'resources/js/Components/Stats/VolumeTrendChart.vue',
-    'resources/js/Components/Stats/WorkoutDurationChart.vue',
     'resources/js/Components/Stats/WorkoutFrequencyChart.vue',
-    'resources/js/Components/Stats/WorkoutHistoryTimelineChart.vue',
     'resources/js/Components/Stats/WorkoutsPerMonthChart.vue',
 ])
 

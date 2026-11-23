@@ -15,6 +15,8 @@ import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     seance: { type: Object, required: true },
+    /** La séance ouverte de l'appareil : une pastille la signale dans la liste. */
+    enCours: { type: Boolean, default: false },
 })
 
 defineEmits(['supprimer'])
@@ -50,13 +52,16 @@ const formatDate = (dateStr) =>
             <GlassCard class="hover:bg-surface-glass-strong transition active:scale-[0.99]">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <h4 class="text-text-main font-semibold">
                                 {{ seance.name || 'Séance' }}
                             </h4>
-                            <span class="glass-badge glass-badge-primary text-xs">
+                            <span class="glass-badge glass-badge-primary text-xs whitespace-nowrap">
                                 {{ compte(seance.workout_lines.length, 'exo', 'exos') }}
                             </span>
+                            <span v-if="enCours" class="glass-badge glass-badge-warning text-xs whitespace-nowrap"
+                                >En cours</span
+                            >
                         </div>
                         <div class="text-text-muted mt-1 text-sm">
                             {{ formatDate(seance.started_at) }}

@@ -20,24 +20,13 @@ use Inertia\Inertia;
 class WorkoutController extends Controller
 {
     /**
-     * La page des séances : la pagination et le compte des exercices arrivent
-     * en fermetures, que la requête de la prop différée, qui rejoue ce
-     * contrôleur, ne calcule plus (#2148, étape 3a).
+     * La page des séances : l'historique, en fermeture (#2148, étape 3a).
      */
     public function index(Request $request, FetchWorkoutsIndexAction $fetchWorkouts): \Inertia\Response
     {
         $this->authorize('viewAny', Workout::class);
 
-        $user = $this->user();
-
-        return Inertia::render('Workouts/Index', [
-            ...$fetchWorkouts->execute($user),
-            // ⚡ Bolt : les données lourdes du graphique et la liste des
-            // exercices tiennent en une seule prop différée — une requête XHR au
-            // lieu de deux, et un seul état de chargement à l'écran plutôt que
-            // deux qui se terminent à des moments différents.
-            'deferredData' => Inertia::defer(fn (): array => $fetchWorkouts->getDeferredData($user)),
-        ]);
+        return Inertia::render('Workouts/Index', $fetchWorkouts->execute($this->user()));
     }
 
     /**
