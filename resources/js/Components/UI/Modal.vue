@@ -331,13 +331,13 @@ watch(
                     -->
                     <div
                         v-show="show"
-                        class="glass-modal verre-epais text-text-main relative flex transform flex-col overflow-y-auto backdrop-blur-xl transition sm:mx-auto sm:w-full"
+                        class="glass-modal verre-epais text-text-main relative flex transform flex-col overflow-y-auto transition sm:mx-auto sm:w-full"
                         :class="[panelClass, maxWidthClass]"
                         :style="styleDuPanneau"
                     >
                         <div
-                            v-if="isTiroir"
-                            class="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center sm:hidden"
+                            v-if="isTiroir && closeable"
+                            class="flex h-11 shrink-0 cursor-grab touch-none items-center justify-center sm:hidden"
                             data-testid="poignee-du-tiroir"
                             aria-hidden="true"
                             @pointerdown="debutDuGlissement"

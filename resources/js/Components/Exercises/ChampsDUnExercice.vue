@@ -29,6 +29,7 @@ const categories = EXERCISE_CATEGORIES.map((categorie) => ({ value: categorie, l
         <GlassInput
             v-model="name"
             name="name"
+            required
             label="Nom de l'exercice"
             placeholder="Ex. : Développé couché"
             :dusk="duskNom"

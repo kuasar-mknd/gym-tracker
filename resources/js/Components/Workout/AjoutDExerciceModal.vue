@@ -102,7 +102,16 @@ const quickCreate = () => {
     showCreateForm.value = true
 }
 
+/** Chaque fermeture ou retour invalide la création en vol : sa réponse n'ajoutera plus rien à la séance. */
+let generationDeCreation = 0
+
+const retourALaListe = () => {
+    generationDeCreation++
+    showCreateForm.value = false
+}
+
 const fermer = () => {
+    generationDeCreation++
     showCreateForm.value = false
     searchQuery.value = ''
     categorie.value = TOUTES
@@ -110,6 +119,12 @@ const fermer = () => {
 }
 
 const createAndAddExercise = async () => {
+    if (createExerciseForm.processing) {
+        return
+    }
+
+    const generation = generationDeCreation
+
     createExerciseForm.processing = true
     createExerciseForm.clearErrors()
     try {
@@ -130,8 +145,11 @@ const createAndAddExercise = async () => {
             const { exercise } = await response.json()
 
             emit('created', exercise)
-            choisir(exercise.id)
-            showCreateForm.value = false
+
+            if (generation === generationDeCreation) {
+                choisir(exercise.id)
+                showCreateForm.value = false
+            }
 
             return
         }
@@ -162,14 +180,21 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
 </script>
 
 <template>
-    <Modal :show="show" position="tiroir" max-width="lg" aria-labelledby="add-exercise-title" @close="fermer">
-        <div class="flex min-h-0 flex-1 flex-col">
+    <Modal
+        :show="show"
+        position="tiroir"
+        :closeable="!showCreateForm"
+        max-width="lg"
+        aria-labelledby="add-exercise-title"
+        @close="fermer"
+    >
+        <div class="flex min-h-0 flex-1 flex-col" @keydown.esc="showCreateForm && retourALaListe()">
             <div class="flex shrink-0 items-center gap-3 px-6 pb-4">
                 <GlassIconButton
                     v-if="showCreateForm"
                     icon="arrow_back"
                     label="Retour à la liste"
-                    @click="showCreateForm = false"
+                    @click="retourALaListe"
                 />
                 <h2 id="add-exercise-title" class="titre-plat min-w-0 flex-1">
                     {{ showCreateForm ? 'Nouvel exercice' : 'Ajouter un exercice' }}
@@ -267,30 +292,30 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
                 </div>
             </template>
 
-            <form
-                v-else
-                class="pb-feuille-6 min-h-0 flex-1 space-y-6 overflow-y-auto px-6"
-                @submit.prevent="createAndAddExercise"
-            >
-                <ChampsDUnExercice
-                    v-model:name="createExerciseForm.name"
-                    v-model:type="createExerciseForm.type"
-                    v-model:category="createExerciseForm.category"
-                    :errors="createExerciseForm.errors"
-                    dusk-nom="new-exercise-name"
-                    dusk-type="new-exercise-type"
-                    dusk-categorie="new-exercise-category"
-                />
+            <form class="flex min-h-0 flex-1 flex-col" v-else @submit.prevent="createAndAddExercise">
+                <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-4">
+                    <ChampsDUnExercice
+                        v-model:name="createExerciseForm.name"
+                        v-model:type="createExerciseForm.type"
+                        v-model:category="createExerciseForm.category"
+                        :errors="createExerciseForm.errors"
+                        dusk-nom="new-exercise-name"
+                        dusk-type="new-exercise-type"
+                        dusk-categorie="new-exercise-category"
+                    />
+                </div>
 
-                <GlassButton
-                    type="submit"
-                    variant="primary"
-                    class="w-full"
-                    :loading="createExerciseForm.processing"
-                    dusk="submit-new-exercise"
-                >
-                    Créer et ajouter
-                </GlassButton>
+                <div class="pb-feuille-6 shrink-0 px-6 pt-2">
+                    <GlassButton
+                        type="submit"
+                        variant="primary"
+                        class="w-full"
+                        :loading="createExerciseForm.processing"
+                        dusk="submit-new-exercise"
+                    >
+                        Créer et ajouter
+                    </GlassButton>
+                </div>
             </form>
         </div>
     </Modal>
