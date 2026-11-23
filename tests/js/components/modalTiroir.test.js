@@ -116,11 +116,15 @@ describe('Modal, tiroir et feuille', () => {
         expect(panneau().style.transform).toBe('')
     })
 
-    it('garde la place de la poignée, invisible, quand la fenêtre n’est pas fermable', async () => {
-        monter({ position: 'tiroir', closeable: false })
+    it('ne glisse pas quand la fenêtre n’est pas fermable', async () => {
+        const wrapper = monter({ position: 'tiroir', closeable: false })
         await nextTick()
 
-        expect(poignee().classList.contains('invisible')).toBe(true)
+        geste(poignee(), 'pointerdown', 100, 0)
+        geste(poignee(), 'pointermove', 400, 100)
+        geste(poignee(), 'pointerup', 400, 100)
+
+        expect(wrapper.emitted('close')).toBeUndefined()
     })
 
     it('repart de zéro à la réouverture, après un glissement', async () => {
