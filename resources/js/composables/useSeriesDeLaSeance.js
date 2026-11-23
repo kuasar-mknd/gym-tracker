@@ -29,7 +29,7 @@ import { useAjoutEtRetraitDeSerie } from '@/composables/useAjoutEtRetraitDeSerie
  *   clearUnsynced: (setId: unknown, realId?: unknown) => void,
  *   reportSyncFailure: (message: string) => void,
  *   reportEditFailure: (message: string) => void,
- *   apresValidation: (exerciseRestTime: number|undefined) => void,
+ *   apresValidation: (exerciseRestTime: number|undefined, set: object) => void,
  *   bornesDUneSerie?: Record<string, number>|null,
  *   noterUneEcritureNonConfirmee?: (cle: string, serie: object, champ: string, valeurDeRepli: unknown) => void,
  *   oublierLEcritureNonConfirmee?: (cle: string) => void,

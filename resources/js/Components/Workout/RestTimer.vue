@@ -1,22 +1,16 @@
 <!--
   Components/Workout/RestTimer.vue
 
-  A floating countdown timer component used during workouts to track rest periods between sets.
-
-  Features:
-  - Visual progress bar indicating remaining time.
-  - Controls to pause/resume and skip.
-  - Audio and Haptic feedback upon completion.
-  - Minimizable/Closeable interface.
-  - Draggable or fixed positioning (currently fixed).
-  - "Liquid Glass" aesthetics (Apple Human Interface Guidelines).
+  La carte « Repos » de la séance (maquette de navigation v3) : dans le flux de
+  la page, sous l'en-tête, pas par-dessus les exercices. À gauche le décompte,
+  qu'un appui met en pause et reprend ; à droite la série qui suit et la jauge ;
+  dessous « Passer » et « Fermer ». Le démarrage automatique se règle dans les
+  paramètres de la séance.
 -->
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { useSortieAudio } from '@/composables/useSortieAudio'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import GlassToggle from '@/Components/UI/GlassToggle.vue'
 
 /** Combien de temps « Repos terminé » reste affiché avant que la carte se ferme. */
 const DELAI_DE_FERMETURE_MS = 4000
@@ -41,29 +35,10 @@ const props = defineProps({
         default: true,
     },
 
-    /**
-     * Le reglage de l'utilisateur, rendu ici pour qu'il se change sans quitter
-     * la seance. Le composant ne l'ecrit pas lui-meme : il l'annonce, et la
-     * page decide quoi en faire — c'est ce qui le garde ignorant d'Inertia, et
-     * donc montable seul.
-     */
-    autoRestTimer: {
-        type: Boolean,
-        default: true,
-    },
-
-    /**
-     * Le réglage ne peut pas partir, et l'identifiant du texte qui dit
-     * pourquoi : sur une copie hors ligne, rien ne part vers le serveur
-     * (#2048). La page le décide, comme le réglage lui-même.
-     */
-    reglageDesactive: {
-        type: Boolean,
-        default: false,
-    },
-    raisonDuReglage: {
+    /** La série qui suit, dite sous le décompte (« Ensuite, série 3 sur 4 ») : vide, rien n'est dit. */
+    ensuite: {
         type: String,
-        default: undefined,
+        default: '',
     },
 
     /**
@@ -104,7 +79,7 @@ const props = defineProps({
  *   after the end of the rest, que la carte annonce entre-temps
  *   (« Repos terminé », `role="status"`). Un parent ferme la carte sur `close`.
  */
-const emit = defineEmits(['close', 'update:autoRestTimer', 'pause', 'reprise'])
+const emit = defineEmits(['close', 'pause', 'reprise'])
 
 // --- State ---
 
@@ -113,6 +88,9 @@ const timeLeft = ref(props.secondesRestantes ?? props.duration)
 
 /** Whether the timer is currently running. */
 const isActive = ref(false)
+
+/** Le repos attend la reprise : mis en pause d'un appui, ou repris en pause. */
+const enPauseDemandee = ref(props.enPause)
 
 /** Interval ID for the timer loop. */
 const timer = ref(null)
@@ -126,9 +104,9 @@ const termine = ref(false)
 /** Le minuteur qui ferme la carte une fois la fin annoncée. */
 const fermeture = ref(null)
 
-/** Pause et Passer disparaissent à la fin du repos : le focus qu'ils portaient passe à « Fermer ». */
-const boutonPause = ref(null)
+/** Passer disparaît à la fin du repos : le focus qu'il portait passe à « Fermer ». */
 const boutonPasser = ref(null)
+const boutonBascule = ref(null)
 const boutonFermer = ref(null)
 const carte = ref(null)
 
@@ -224,10 +202,12 @@ const toggleTimer = () => {
     triggerHaptic('toggle')
     if (isActive.value) {
         pauseTimer()
+        enPauseDemandee.value = true
         emit('pause', timeLeft.value)
     } else {
         sortieAudio.preparer()
         startTimer()
+        enPauseDemandee.value = false
         emit('reprise', timeLeft.value)
     }
 }
@@ -272,7 +252,7 @@ const jouerLeBipDeFin = (contexte) => {
  * son seul qui prévient.
  */
 const finishTimer = (rendreLeFocus = true) => {
-    const focusSurUnBoutonRetire = [boutonPause.value, boutonPasser.value].includes(document.activeElement)
+    const focusSurUnBoutonRetire = [boutonBascule.value, boutonPasser.value].includes(document.activeElement)
 
     pauseTimer()
     timeLeft.value = 0
@@ -339,104 +319,74 @@ watch(
 </script>
 
 <template>
-    <div
-        ref="carte"
-        class="animate-slide-up z-flottant right-sure-4 bottom-sure-36 left-sure-4 sm:right-sure-4 fixed sm:left-auto sm:w-80"
-    >
-        <!-- Liquid Glass Card -->
-        <div
-            class="border-surface-card/20 bg-surface-card/10 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition duration-300"
-        >
-            <!-- Progress bar -->
-            <div
-                class="bg-surface-sunken/50 h-1 w-full"
-                role="progressbar"
-                :aria-valuenow="progress"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                :aria-valuetext="formatTime(timeLeft)"
+    <div ref="carte" class="carte-portable animate-slide-up flex flex-col gap-3 p-4">
+        <div class="flex items-center justify-between gap-4">
+            <button
+                ref="boutonBascule"
+                type="button"
+                class="focus-visible:ring-accent-primary -m-1 min-w-0 rounded-xl p-1 text-left focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                :aria-label="enPauseDemandee ? 'Reprendre le repos' : 'Mettre le repos en pause'"
+                :disabled="termine"
+                dusk="toggle-rest-timer"
+                @click="toggleTimer"
             >
+                <span
+                    role="status"
+                    class="text-text-muted block text-sm"
+                    :class="termine ? 'text-text-main font-medium' : ''"
+                    dusk="rest-timer-status"
+                >
+                    {{ termine ? 'Repos terminé' : enPauseDemandee ? 'Repos en pause' : 'Repos' }}
+                </span>
+                <span class="text-text-main block text-3xl font-medium tabular-nums" role="timer" aria-atomic="true">
+                    {{ formatTime(timeLeft) }}
+                </span>
+            </button>
+
+            <div class="flex min-w-0 flex-col items-end gap-2">
+                <span v-if="ensuite" class="text-text-muted text-right text-sm" dusk="rest-timer-ensuite">
+                    {{ ensuite }}
+                </span>
                 <div
-                    class="bg-accent-primary h-full transition duration-1000 ease-linear"
-                    :style="{ width: `${progress}%` }"
-                ></div>
-            </div>
-
-            <div class="p-4">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <div
-                            role="status"
-                            class="text-xs font-medium"
-                            :class="termine ? 'text-text-main' : 'text-text-main/60'"
-                            dusk="rest-timer-status"
-                        >
-                            {{ termine ? 'Repos terminé' : 'Repos en cours' }}
-                        </div>
-                        <div class="text-text-main text-3xl font-semibold tabular-nums" role="timer" aria-atomic="true">
-                            {{ formatTime(timeLeft) }}
-                        </div>
-                    </div>
-
-                    <div class="flex shrink-0 items-center gap-2">
-                        <button
-                            v-if="!termine"
-                            ref="boutonPause"
-                            @click="toggleTimer"
-                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                            :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
-                            :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
-                        >
-                            <!-- Les ligatures de la police d'icônes, pas un dessin à la main (#2122). -->
-                            <GlassIcon :name="isActive ? 'pause' : 'play_arrow'" size="sm" />
-                        </button>
-
-                        <button
-                            ref="boutonFermer"
-                            @click="close"
-                            dusk="close-timer-x"
-                            class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                            aria-label="Fermer le minuteur"
-                            title="Fermer le minuteur"
-                        >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div v-if="!termine" class="mt-4 flex gap-2">
-                    <!-- Custom "Glass" button for skip to ensure style consistency -->
-                    <button
-                        ref="boutonPasser"
-                        @click="skipTimer"
-                        dusk="skip-rest-timer"
-                        class="focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/20 text-text-main hover:bg-surface-card/30 min-h-touch flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                        title="Passer le repos"
-                        aria-label="Passer le repos"
-                    >
-                        Passer
-                    </button>
-                </div>
-
-                <div class="border-surface-card/20 mt-3 border-t pt-3">
-                    <GlassToggle
-                        :model-value="autoRestTimer"
-                        label="Démarrage automatique"
-                        size="sm"
-                        dusk="auto-rest-timer"
-                        :disabled="reglageDesactive"
-                        :aria-describedby="reglageDesactive ? raisonDuReglage : undefined"
-                        @update:model-value="emit('update:autoRestTimer', $event)"
-                    />
+                    class="bg-surface-sunken h-1 w-24 overflow-hidden rounded-full"
+                    role="progressbar"
+                    :aria-valuenow="progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    :aria-valuetext="formatTime(timeLeft)"
+                >
+                    <div
+                        class="bg-accent-primary h-full rounded-full transition duration-1000 ease-linear"
+                        :style="{ width: `${progress}%` }"
+                    ></div>
                 </div>
             </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button
+                v-if="!termine"
+                ref="boutonPasser"
+                type="button"
+                dusk="skip-rest-timer"
+                class="focus-visible:ring-accent-primary border-border text-text-main hover:bg-surface-sunken min-h-touch flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                title="Passer le repos"
+                aria-label="Passer le repos"
+                @click="skipTimer"
+            >
+                Passer
+            </button>
+            <button
+                ref="boutonFermer"
+                type="button"
+                dusk="close-timer-x"
+                class="focus-visible:ring-accent-primary text-text-muted hover:bg-surface-sunken min-h-touch flex flex-1 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                aria-label="Fermer le minuteur"
+                title="Fermer le minuteur"
+                @click="close"
+            >
+                Fermer
+            </button>
         </div>
     </div>
 </template>

@@ -72,6 +72,17 @@ describe('le repos dans le bandeau de la séance', () => {
         expect(duree(wrapper)).toContain('Repos 1:00')
     })
 
+    it('dessine l’anneau du repos, rempli de ce qu’il reste sur sa durée, et pas sans repos', async () => {
+        const wrapper = monter(depot())
+
+        expect(wrapper.get('[dusk="anneau-du-repos"]').attributes('style')).toContain('288deg')
+
+        await vi.advanceTimersByTimeAsync(12_000)
+
+        expect(wrapper.get('[dusk="anneau-du-repos"]').attributes('style')).toContain('240deg')
+        expect(monter(null).find('[dusk="anneau-du-repos"]').exists()).toBe(false)
+    })
+
     it('dit un repos en pause, au reste figé', async () => {
         const wrapper = monter(depot({ echeance: null, restantEnPause: 45 }))
 
@@ -222,13 +233,13 @@ describe('le minuteur d’un repos repris', () => {
         await vi.advanceTimersByTimeAsync(5_000)
         expect(wrapper.get('[role="timer"]').text()).toBe('0:40')
 
-        await wrapper.get('button[aria-label="Démarrer le minuteur"]').trigger('click')
+        await wrapper.get('button[aria-label="Reprendre le repos"]').trigger('click')
         expect(wrapper.emitted('reprise')).toEqual([[40]])
 
         await vi.advanceTimersByTimeAsync(3_000)
         expect(wrapper.get('[role="timer"]').text()).toBe('0:37')
 
-        await wrapper.get('button[aria-label="Pause"]').trigger('click')
+        await wrapper.get('button[aria-label="Mettre le repos en pause"]').trigger('click')
         expect(wrapper.emitted('pause')).toEqual([[37]])
     })
 })

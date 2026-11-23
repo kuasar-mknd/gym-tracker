@@ -141,7 +141,6 @@ import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 /** Les fins de séance parties par l'API (#2049) : la charge et les options de chaque envoi. */
 const finsEnvoyees = () =>
     patch.mock.calls.filter(([url]) => url === '/api.v1.workouts.finish').map(([, ...reste]) => reste)
-import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
 const modale = (wrapper) => wrapper.findComponent(AjoutDExerciceModal).vm
@@ -228,11 +227,16 @@ const IconButtonStub = {
     emits: ['click'],
     template: '<button type="button" :aria-label="label" :disabled="disabled" @click="$emit(\'click\')" />',
 }
-const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
+const SettingsModalStub = {
+    name: 'SettingsModalStub',
+    props: ['reposAutomatique'],
+    emits: ['update:reposAutomatique'],
+    template: '<div />',
+}
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
 const RestTimerStub = {
     name: 'RestTimerStub',
-    props: ['duration', 'autoRestTimer', 'reglageDesactive', 'raisonDuReglage'],
+    props: ['duration', 'ensuite'],
     template: '<div />',
 }
 
@@ -451,9 +455,8 @@ describe('Workouts/Show — a background write the server refuses says so', () =
     })
 
     /**
-     * Sans ce bouton, couper le démarrage automatique était irréversible depuis
-     * l'interface : plus rien n'ouvrait le minuteur, et l'interrupteur qui le
-     * rallume vit DANS le minuteur.
+     * Le démarrage automatique se règle dans les paramètres, mais « Repos »
+     * ouvre le minuteur à la demande, réglage coupé ou non.
      */
     it('opens the timer on demand even when auto-start is off', async () => {
         pageStub.props.auth.user.auto_rest_timer = false
@@ -472,37 +475,17 @@ describe('Workouts/Show — a background write the server refuses says so', () =
             // Le temps de repos du COMPTE, pas celui de l'exercice : le geste
             // n'est attaché à aucune série.
             expect(timer.props('duration')).toBe(120)
-            expect(timer.props('autoRestTimer')).toBe(false)
         } finally {
             pageStub.props.auth.user.auto_rest_timer = true
         }
     })
 
-    it("garde « Terminer » au-dessus de la carte du repos tant qu'elle est affichée (#2312)", async () => {
-        const wrapper = await mountPage()
-        const contenu = () => wrapper.get('[dusk="exercise-list"]').element.parentElement
-
-        expect(contenu().classList.contains('pb-main-safe')).toBe(true)
-        expect(contenu().classList.contains('pb-main-safe-repos')).toBe(false)
-
-        await click(wrapper, 'open-rest-timer')
-
-        expect(contenu().classList.contains('pb-main-safe-repos')).toBe(true)
-        expect(contenu().classList.contains('pb-main-safe')).toBe(false)
-
-        wrapper.findComponent(RestTimerStub).vm.$emit('close')
-        await flushPromises()
-
-        expect(contenu().classList.contains('pb-main-safe')).toBe(true)
-    })
-
     /*
-     * Sur une copie hors ligne, le réglage du repos ne partirait pas (#2048,
-     * partie E) : la page le dit au minuteur, qui désactive son interrupteur ;
-     * le minuteur, lui, tourne, et « Terminer » reste : la fin passe par la
-     * file hors ligne (#2049).
+     * Sur une copie hors ligne, le minuteur tourne et « Terminer » reste : la
+     * fin passe par la file hors ligne (#2049). Le réglage, lui, se désactive
+     * dans les paramètres de la séance.
      */
-    it('sur une copie hors ligne, ouvre le minuteur sans laisser changer son réglage', async () => {
+    it('sur une copie hors ligne, ouvre le minuteur et garde « Terminer »', async () => {
         pageStub.props.horsLigne = { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }
 
         try {
@@ -510,22 +493,11 @@ describe('Workouts/Show — a background write the server refuses says so', () =
 
             await click(wrapper, 'open-rest-timer')
 
-            const timer = wrapper.findComponent(RestTimerStub)
-
-            expect(timer.exists()).toBe(true)
-            expect(timer.props('reglageDesactive')).toBe(true)
-            expect(timer.props('raisonDuReglage')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+            expect(wrapper.findComponent(RestTimerStub).exists()).toBe(true)
             expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
         } finally {
             delete pageStub.props.horsLigne
         }
-
-        const servie = await mountPage()
-
-        await click(servie, 'open-rest-timer')
-
-        expect(servie.findComponent(RestTimerStub).props('reglageDesactive')).toBe(false)
-        expect(servie.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
     })
 
     /**
@@ -551,7 +523,7 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         const wrapper = await mountPage()
 
         await click(wrapper, 'complete-set-0-0')
-        await emitOn(wrapper, RestTimerStub, 'update:autoRestTimer', false)
+        await emitOn(wrapper, SettingsModalStub, 'update:reposAutomatique', false)
 
         expect(routerPatch).toHaveBeenCalledWith(
             expect.stringContaining('profile.rest-timer.update'),

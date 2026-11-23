@@ -116,7 +116,9 @@ class RestTimerTest extends DuskTestCase
                 };
 
                 return {
-                    pause: rect('[aria-label="Pause"], [aria-label="Démarrer le minuteur"]'),
+                    pause: rect('[dusk="toggle-rest-timer"]'),
+                    carte: rect('[dusk="rest-timer"]'),
+                    premierExercice: rect('[dusk="exercise-card-0"]'),
                     fermer: rect('[aria-label="Fermer le minuteur"]'),
                     passer: rect('[dusk="skip-rest-timer"]'),
                 };
@@ -181,14 +183,12 @@ class RestTimerTest extends DuskTestCase
             // 1. Trigger timer by completing set
             $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
             $browser->waitFor('[dusk="skip-rest-timer"]', 15)
-                ->assertSee('Repos en cours');
+                ->assertSee('Repos');
             $this->waitForCompletionInDatabase($browser, $workout, true);
 
             /*
-             * La croix etait posee en `absolute` PAR-DESSUS le bouton de pause :
-             * 28 x 20 px de recouvrement visible, 34 x 26 px de zone tactile.
-             * Un appui sur le coin de la pause fermait le minuteur, et la croix
-             * se lisait mal sur l'orange.
+             * Le decompte (qui met en pause) et « Fermer » ne se recouvrent pas :
+             * un appui sur l'un ne declenche pas l'autre.
              */
             $rectangles = $this->rectanglesDesCommandes($browser);
 
@@ -196,6 +196,16 @@ class RestTimerTest extends DuskTestCase
                 $this->assertNotNull($rectangles[$nom] ?? null, "la commande « {$nom} » est absente");
                 $this->assertGreaterThanOrEqual(44, $rectangles[$nom]['h'], "« {$nom} » est sous 44 px de haut");
             }
+
+            /*
+             * La carte vit dans le flux, sous l'en-tete : elle pousse les
+             * exercices au lieu de les recouvrir.
+             */
+            $this->assertLessThanOrEqual(
+                $rectangles['premierExercice']['y'] + 0.5,
+                $rectangles['carte']['y'] + $rectangles['carte']['h'],
+                'la carte du repos recouvre le premier exercice'
+            );
 
             $pause = $rectangles['pause'];
             $fermer = $rectangles['fermer'];
@@ -205,8 +215,7 @@ class RestTimerTest extends DuskTestCase
 
             $this->assertSame(0.0, (float) $recouvrement, 'la croix et la pause se recouvrent');
 
-            // 2. Close via "X" button — desormais la seule affordance de
-            // fermeture, le bouton « Fermer » qui la doublait ayant ete retire.
+            // 2. Fermer.
             $browser->click('@close-timer-x')
                 ->waitUntilMissing('[dusk="rest-timer"]', 10);
 

@@ -234,14 +234,11 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
 
     /**
      * Tout ce que la page lie au minuteur (`v-bind` sur `RestTimer`) : sa clé,
-     * sa durée, le réglage et ce qu'elle en écoute, et, d'un repos repris en
-     * route, ce qu'il reste et la pause.
+     * sa durée et, d'un repos repris en route, ce qu'il reste et la pause.
      */
     const liaisonDuMinuteur = computed(() => ({
         key: timerRun.value,
         duration: timerDuration.value,
-        autoRestTimer: autoRestTimer.value,
-        'onUpdate:autoRestTimer': setAutoRestTimer,
         secondesRestantes: restantInitial.value,
         enPause: demarrageEnPause.value,
         onPause: noterLaPause,

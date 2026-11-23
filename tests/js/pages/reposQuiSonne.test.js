@@ -321,10 +321,10 @@ describe('la fin du repos sur la page de séance (#2112)', () => {
 
         await toucher(page, 'complete-set-0-0')
         await attendre(30)
-        await dansUnGeste(() => boutonDuMinuteur(page, 'Pause').trigger('click'))
+        await dansUnGeste(() => boutonDuMinuteur(page, 'Mettre le repos en pause').trigger('click'))
         sorties[0].interrompre()
 
-        await dansUnGeste(() => boutonDuMinuteur(page, 'Démarrer le minuteur').trigger('click'))
+        await dansUnGeste(() => boutonDuMinuteur(page, 'Reprendre le repos').trigger('click'))
 
         expect(sorties[0].reprises.at(-1)).toEqual({ dansUnGeste: true, etat: 'interrupted' })
         expect(sorties[0].state).toBe('running')
