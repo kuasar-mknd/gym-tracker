@@ -1328,6 +1328,9 @@
 @utility top-sure-* {
     top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
 }
+@utility bottom-sure-* {
+    bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
+}
 /* Posé sur le menu du bas, à 6 px : la barre d'outils de la séance et l'accessoire. */
 @utility au-dessus-du-menu {
     bottom: calc(var(--safe-area-bottom) + 1rem + var(--hauteur-du-menu) + 0.375rem);
