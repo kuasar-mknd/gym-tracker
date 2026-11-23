@@ -136,6 +136,21 @@ describe('une séance oubliée', () => {
         expect(wrapper.emitted('confirm')).toBeUndefined()
     })
 
+    it('lève le refus d’une heure à venir quand l’horloge la dépasse, sans toucher au champ', async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(MAINTENANT)
+        const wrapper = oubliee()
+        await choisirUneAutreHeure(wrapper)
+
+        await wrapper.get('[dusk="finish-workout-end-input"]').setValue('2026-10-19T15:00')
+        expect(wrapper.text()).toContain('La fin ne peut pas être dans le futur.')
+
+        await vi.advanceTimersByTimeAsync(4 * 3_600_000)
+
+        expect(wrapper.text()).not.toContain('La fin ne peut pas être dans le futur.')
+        expect(wrapper.get('[dusk="confirm-finish-button"]').attributes('disabled')).toBeUndefined()
+    })
+
     it('refuse un champ vidé', async () => {
         const wrapper = oubliee()
         await choisirUneAutreHeure(wrapper)

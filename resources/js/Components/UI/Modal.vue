@@ -52,7 +52,7 @@ const props = defineProps({
  *
  * @event close - Emitted when the modal requests to close (background click or Escape key).
  */
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'annuler'])
 const dialog = ref()
 const showSlot = ref(props.show)
 
@@ -136,6 +136,9 @@ const onDialogClose = () => {
  * to describe something that is no longer there.
  */
 const onDialogCancel = (event) => {
+    // Le parent peut refuser la demande lui-même : un retour intérieur (Échap dans un formulaire) n'est pas une fermeture.
+    emit('annuler', event)
+
     if (!props.closeable) {
         event.preventDefault()
     }

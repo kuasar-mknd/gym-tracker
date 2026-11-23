@@ -428,12 +428,12 @@ describe('créer un exercice sur le champ', () => {
         await wrapper.vm.$nextTick()
         expect(wrapper.get('[dusk="new-exercise-name"]').attributes('required')).toBeDefined()
 
-        const echap = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+        // La demande native d'annulation, d'où que parte Échap : la refuser garde le dialogue ouvert.
+        const echap = new Event('cancel', { cancelable: true })
 
-        wrapper.get('[dusk="new-exercise-name"]').element.dispatchEvent(echap)
+        wrapper.findComponent({ name: 'Modal' }).vm.$emit('annuler', echap)
         await wrapper.vm.$nextTick()
 
-        // Sans preventDefault, le navigateur fermerait le dialogue natif après le rendu.
         expect(echap.defaultPrevented).toBe(true)
 
         expect(wrapper.vm.showCreateForm).toBe(false)
@@ -447,7 +447,7 @@ describe('créer un exercice sur le champ', () => {
         wrapper.unmount()
     })
 
-    it('ne montre pas l’échec tardif d’une création quittée, et libère le bouton', async () => {
+    it('ne montre pas l’échec tardif d’une création quittée, et rend le bouton à la réponse', async () => {
         let echouer
         vi.spyOn(globalThis, 'fetch').mockReturnValue(
             new Promise((_, rejet) => {
@@ -462,12 +462,14 @@ describe('créer un exercice sur le champ', () => {
         wrapper.vm.createAndAddExercise()
         await wrapper.get('button[aria-label="Retour à la liste"]').trigger('click')
 
-        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+        // Un seul envoi à la fois : le bouton attend la réponse en vol, qu'on soit revenu à la liste ou non.
+        expect(wrapper.vm.createExerciseForm.processing).toBe(true)
 
         echouer()
         await flushPromises()
 
         expect(wrapper.vm.createExerciseForm.errors.name).toBeUndefined()
+        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
         wrapper.unmount()
     })
 })
