@@ -167,7 +167,7 @@ it('ne met dans les copies aucune prop de santé, de mesure ou d’objectif d’
 
 it('lit, dans le module, les props qu’aucune copie ne garde', function (): void {
     expect(PagesGardees::propsJamaisGardees())->toBe([
-        'Dashboard' => ['latestWeight', 'activeGoals'],
+        'Dashboard' => ['activeGoals'],
         'Stats/Index' => ['latestWeight', 'weightChange', 'bodyFat', 'deferredData'],
     ]);
 });

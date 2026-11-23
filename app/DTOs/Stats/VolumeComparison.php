@@ -11,7 +11,9 @@ final readonly class VolumeComparison
         public float $previous_volume,
         public float $difference,
         /** Null quand la periode precedente est vide : il n'y a pas de comparaison a faire. */
-        public ?float $percentage
+        public ?float $percentage,
+        /** Le nombre de séances de la période courante ; null pour une comparaison qui ne le compte pas. */
+        public ?int $sessions_count = null
     ) {
     }
 }

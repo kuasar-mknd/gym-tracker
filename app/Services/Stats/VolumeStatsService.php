@@ -229,7 +229,14 @@ final class VolumeStatsService
     }
 
     /**
-     * Le volume de la semaine en cours contre celui de la semaine précédente.
+     * Le volume de la semaine en cours contre celui de la semaine précédente
+     * sur la même durée écoulée : du lundi 00:00 jusqu'à maintenant, face au
+     * lundi précédent à 00:00 jusqu'au même jour et à la même heure.
+     *
+     * La semaine précédente entière, face à une semaine à moitié écoulée,
+     * annonçait « −100 % » le lundi matin. La variation reste nulle sans
+     * séance cette semaine : il n'y a rien à comparer. Le total s'arrête aux
+     * mêmes bornes que les sept barres de la carte (#2033).
      *
      * Les deux semaines et la clef se tirent d'une seule lecture de l'horloge,
      * comme le mois dans `getMonthlyVolumeComparison` : avec une lecture par
@@ -249,13 +256,14 @@ final class VolumeStatsService
         $weekKey = $debutDeSemaine->format('Y-W');
 
         $comparison = Cache::remember(
-            ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}"),
+            ClesDeStats::seances($user, "weekly_volume_to_date.{$weekKey}"),
             $maintenant->copy()->addMinutes(10),
             fn (): array => $this->calculateComparison(
                 $user,
                 $debutDeSemaine,
                 $semainePrecedente,
-                $semainePrecedente->copy()->endOfWeek()
+                $maintenant->copy()->subWeek(),
+                $debutDeSemaine->copy()->endOfWeek()
             )
         );
 
@@ -263,7 +271,8 @@ final class VolumeStatsService
             $comparison['current_volume'],
             $comparison['previous_volume'],
             $comparison['difference'],
-            $comparison['percentage'],
+            $comparison['sessions_count'] > 0 ? $comparison['percentage'] : null,
+            $comparison['sessions_count'],
         );
     }
 
@@ -336,10 +345,14 @@ final class VolumeStatsService
      * @param  Carbon  $currentStart  Le début de la période courante.
      * @param  Carbon  $prevStart  Le début de la période précédente.
      * @param  Carbon  $prevEnd  La fin de la période précédente.
-     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null} Le pourcentage est nul quand il n'y a rien à comparer.
+     * @param  Carbon|null  $currentEnd  La fin de la période courante ; à défaut, elle n'a pas de borne.
+     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null, sessions_count: int} Le pourcentage est nul quand il n'y a rien à comparer.
      */
-    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd): array
+    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd, ?Carbon $currentEnd = null): array
     {
+        $dansLaPeriodeCourante = $currentEnd === null ? 'started_at >= ?' : 'started_at >= ? AND started_at <= ?';
+        $bornesCourantes = $currentEnd === null ? [$currentStart] : [$currentStart, $currentEnd];
+
         // Les deux sommes tiennent dans une seule requête, par agrégation
         // conditionnelle : les deux périodes se suivent, donc une seule plage
         // les couvre.
@@ -353,14 +366,16 @@ final class VolumeStatsService
         // appelants passent $prevEnd, et l'ont toujours passe : la branche etait
         // inatteignable, et le commentaire qui la disait « conserver exactement le
         // comportement d'origine » protegeait du code que personne n'executait.
-        $query->selectRaw('
-            SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
+        $query->selectRaw("
+            SUM(CASE WHEN {$dansLaPeriodeCourante} THEN workout_volume ELSE 0 END) as current_volume,
+            SUM(CASE WHEN {$dansLaPeriodeCourante} THEN 1 ELSE 0 END) as sessions_count,
             SUM(CASE WHEN started_at <= ? THEN workout_volume ELSE 0 END) as previous_volume
-        ', [$currentStart, $prevEnd]);
+        ", [...$bornesCourantes, ...$bornesCourantes, $prevEnd]);
 
         /** @var \stdClass|null $stats */
         $stats = $query->first();
 
+        $sessionsCount = is_numeric($stats?->sessions_count) ? (int) $stats->sessions_count : 0;
         $currentVolume = is_numeric($stats?->current_volume) ? (float) $stats->current_volume : 0.0;
         $previousVolume = is_numeric($stats?->previous_volume) ? (float) $stats->previous_volume : 0.0;
 
@@ -386,6 +401,7 @@ final class VolumeStatsService
             'previous_volume' => $previousVolume,
             'difference' => $diff,
             'percentage' => $percentage,
+            'sessions_count' => $sessionsCount,
         ];
     }
 }

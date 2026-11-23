@@ -13,8 +13,7 @@ declare(strict_types=1);
  * les statistiques analytiques ou le volume hebdomadaire, retirer une de leurs
  * cles, afficher un record ou un objectif de plus (ou de moins) que les deux
  * annonces, retirer l'unite attachee aux objectifs, garder le cache neuf ou
- * onze minutes au lieu de dix, et regarder 89 ou 91 jours de seances au lieu
- * de 90.
+ * onze minutes au lieu de dix.
  *
  * Toutes les valeurs comparees sont POSEES et jamais tirees : les fabriques de
  * `Goal`, de `PersonalRecord` et de `Workout` tirent valeurs et dates au sort,
@@ -36,9 +35,7 @@ use Illuminate\Support\Facades\Queue;
  *
  * Le 18 juin 2026 est un jeudi : la semaine courante va du lundi 15 au dimanche
  * 21, la precedente du 8 au 14, et juin se tient loin des deux changements
- * d'heure. `subDays(90)` en retombe sur le 20 mars, avant la bascule de
- * printemps : les seances posees de part et d'autre de cette borne le sont a
- * plusieurs heures d'ecart, de quoi absorber l'heure que la bascule deplacerait.
+ * d'heure.
  */
 function scenePourTableauDeBord(): User
 {
@@ -47,7 +44,7 @@ function scenePourTableauDeBord(): User
     return User::factory()->create();
 }
 
-it('rend les cinq entrees du tableau de bord, ni plus ni moins', function (): void {
+it('rend les quatre entrees du tableau de bord, ni plus ni moins', function (): void {
     $user = scenePourTableauDeBord();
 
     $stats = app(FetchDashboardDataAction::class)->chiffresImmediats($user);
@@ -55,7 +52,6 @@ it('rend les cinq entrees du tableau de bord, ni plus ni moins', function (): vo
     // Comparer les cles exactes, et non un echantillon : la page lit les
     // quatre, et retirer « recentPRs » du tableau ne se voyait nulle part.
     expect(array_keys($stats))->toBe([
-        'latestWeight',
         'recentWorkouts',
         'recentPRs',
         'activeGoals',
@@ -144,10 +140,10 @@ it('rend exactement les deux objectifs actifs les plus recents, unite comprise',
         ->toBe(['kg', 'kg']);
 });
 
-it('rend le volume de la semaine sous ses deux cles, avec les trois valeurs qui les remplissent', function (): void {
+it('rend le volume de la semaine sous ses deux cles, avec les valeurs qui les remplissent', function (): void {
     $user = scenePourTableauDeBord();
 
-    // Semaine precedente (8 au 14 juin) : 100.
+    // Semaine precedente (8 au 14 juin), avant jeudi 12h00 de sa semaine : 100.
     Workout::factory()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::parse('2026-06-10 10:00:00'),
@@ -155,49 +151,51 @@ it('rend le volume de la semaine sous ses deux cles, avec les trois valeurs qui 
         'workout_volume' => 100,
     ]);
 
-    // Semaine courante (15 au 21 juin) : 250.
-    Workout::factory()->create([
-        'user_id' => $user->id,
-        'started_at' => Carbon::parse('2026-06-16 10:00:00'),
-        'ended_at' => Carbon::parse('2026-06-16 11:00:00'),
-        'workout_volume' => 250,
-    ]);
+    // Semaine courante (15 au 21 juin), avant jeudi 12h00 : 250 en deux seances.
+    foreach ([['2026-06-16 10:00:00', 150], ['2026-06-17 10:00:00', 100]] as [$debut, $volume]) {
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => Carbon::parse($debut),
+            'ended_at' => Carbon::parse($debut)->addHour(),
+            'workout_volume' => $volume,
+        ]);
+    }
 
     $volume = app(FetchDashboardDataAction::class)->getWeeklyVolumeData($user);
 
     expect(array_keys($volume))->toBe(['stats', 'trend'])
-        ->and(array_keys($volume['stats']))->toBe(['current_week_volume', 'percentage']);
+        ->and(array_keys($volume['stats']))->toBe(['current_week_volume', 'percentage', 'sessions_count']);
 
     // 250.0 et non 250 : `SUM()` revient de MySQL en chaine, et `toBe` compare
     // a l'identique — la valeur et le type d'un coup.
     expect($volume['stats']['current_week_volume'])->toBe(250.0)
         ->and($volume['stats']['current_week_volume'])->toBeFloat()
-        // +150 % : 250 contre 100 la semaine d'avant. Une valeur posee des deux
-        // cotes, pas celle que la fabrique aurait tiree.
-        ->and($volume['stats']['percentage'])->toBe(150.0);
+        // +150 % : 250 contre 100 la semaine d'avant a la meme date. Une valeur
+        // posee des deux cotes, pas celle que la fabrique aurait tiree.
+        ->and($volume['stats']['percentage'])->toBe(150.0)
+        ->and($volume['stats']['sessions_count'])->toBe(2);
 
     // Sept points, un par jour de la semaine : la cle « trend » disparaissait
     // sans que rien ne la reclame.
     expect($volume['trend'])->toHaveCount(7);
 });
 
-it('assemble les statistiques analytiques sous leurs deux cles', function (): void {
+it('assemble les statistiques analytiques sous leur seule cle, la carte de la semaine', function (): void {
     $user = scenePourTableauDeBord();
 
     $analytiques = app(FetchDashboardDataAction::class)->getAnalyticalStats($user);
 
-    // Le tableau rendu n'est ni vide ni ampute : les deux props differees de la
-    // page lisent ces cles nommement.
-    expect(array_keys($analytiques))->toBe(['weeklyVolume', 'workoutDistributions'])
-        ->and(array_keys($analytiques['weeklyVolume']))->toBe(['stats', 'trend'])
-        ->and(array_keys($analytiques['workoutDistributions']))->toBe(['duration', 'time_of_day']);
+    // Le tableau rendu n'est ni vide ni ampute : la page lit ces cles
+    // nommement, et les repartitions de duree et d'heure n'y sont plus.
+    expect(array_keys($analytiques))->toBe(['weeklyVolume'])
+        ->and(array_keys($analytiques['weeklyVolume']))->toBe(['stats', 'trend']);
 });
 
 it('garde les statistiques analytiques dix minutes, ni neuf ni onze', function (): void {
     $user = scenePourTableauDeBord();
     // La clef porte la semaine de la carte qu'elle garde (#2033) : la 25e de
     // 2026, celle du jeudi 18 juin.
-    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'dashboard_analytical.2026-25');
+    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'dashboard_weekly_card.2026-25');
 
     app(FetchDashboardDataAction::class)->getAnalyticalStats($user);
 
@@ -212,45 +210,4 @@ it('garde les statistiques analytiques dix minutes, ni neuf ni onze', function (
     // garderaient encore, et le tableau de bord servirait des chiffres perimes.
     Carbon::setTestNow(Carbon::parse('2026-06-18 12:10:30'));
     expect(Cache::get($cle))->toBeNull();
-});
-
-it('regarde exactement quatre-vingt-dix jours de seances', function (): void {
-    $user = scenePourTableauDeBord();
-
-    /*
-     * La borne des 90 jours tombe le 20 mars a 12h00. Les deux seances sont
-     * posees de part et d'autre, a plusieurs heures de distance de la borne
-     * comme de ses voisines a 89 et 91 jours :
-     *
-     *   89 jours -> depuis le 21 mars 12h00 : aucune des deux.
-     *   90 jours -> depuis le 20 mars 12h00 : la seance du 21 mars seulement.
-     *   91 jours -> depuis le 19 mars 12h00 : les deux.
-     */
-    Workout::factory()->faite()->create([
-        'user_id' => $user->id,
-        'started_at' => Carbon::parse('2026-03-21 08:00:00'),
-        'ended_at' => Carbon::parse('2026-03-21 08:45:00'),
-    ]);
-
-    Workout::factory()->faite()->create([
-        'user_id' => $user->id,
-        'started_at' => Carbon::parse('2026-03-19 20:00:00'),
-        'ended_at' => Carbon::parse('2026-03-19 21:40:00'),
-    ]);
-
-    $distributions = app(FetchDashboardDataAction::class)->repartitionsDesSeances($user);
-
-    // `array_column` plutot qu'un `array_map` a fermeture typee : il lit la
-    // propriete publique du DTO, et l'analyse statique n'a pas a deduire le
-    // type des elements d'un `array` nu.
-    $compte = fn (array $stats): array => array_column($stats, 'count');
-
-    /*
-     * Les durees et les heures des deux seances sont volontairement
-     * differentes : 45 minutes le matin contre 100 minutes le soir. Un compte
-     * identique partout laisserait vivre les deux decalages de borne, alors
-     * qu'ici l'un vide les deux tableaux et l'autre remplit une seconde case.
-     */
-    expect($compte($distributions['duration']))->toBe([0, 1, 0, 0])
-        ->and($compte($distributions['time_of_day']))->toBe([1, 0, 0, 0]);
 });
