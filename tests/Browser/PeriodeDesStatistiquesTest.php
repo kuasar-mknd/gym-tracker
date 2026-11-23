@@ -20,22 +20,13 @@ use Tests\DuskTestCase;
  * suivrait pas garderait l'ancienne période. Les graphiques des statistiques
  * vivent sous `<Deferred>`, qui revient à son squelette quand la réponse
  * annonce de nouveau ses props différées, puis les monte avec celles de la
- * nouvelle période : ce parcours le vérifie dans Chrome, sur le compte des
- * séances de la période et sur le résumé que `BaseChart` écrit des valeurs
- * tracées par la courbe du volume.
+ * nouvelle période : ce parcours le vérifie dans Chrome, sur
+ * le résumé que `BaseChart` écrit des valeurs
+ * tracées par la courbe du volume. Le choix de période est sous « Sur la
+ * période », juste au-dessus des deux seules cartes qu'il pilote.
  */
 class PeriodeDesStatistiquesTest extends DuskTestCase
 {
-    /**
-     * Le nombre que montre la carte « Séances », ou `null` tant que ses props
-     * différées ne sont pas là.
-     */
-    private const string SEANCES_AFFICHEES = <<<'JS'
-        const etiquette = [...document.querySelectorAll('div.text-2xs')].find((noeud) => noeud.textContent.trim() === 'Séances');
-        const valeur = etiquette?.nextElementSibling;
-        return valeur && valeur.classList.contains('font-display') ? valeur.textContent.trim() : null;
-        JS;
-
     /**
      * Le résumé que `BaseChart` écrit des valeurs que trace la courbe du volume.
      */
@@ -45,7 +36,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
         return resume ? resume.textContent.trim() : null;
         JS;
 
-    public function test_choisir_une_autre_periode_montre_ses_seances_et_ses_graphiques(): void
+    public function test_choisir_une_autre_periode_montre_ses_graphiques(): void
     {
         $this->browse(function (Browser $browser): void {
             $compte = User::factory()->create();
@@ -54,7 +45,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
             $ancienne = Carbon::now($fuseau)->subDays(20)->setTime(12, 0);
 
             foreach ([$recente, $ancienne] as $debut) {
-                Workout::factory()->create([
+                Workout::factory()->faite()->create([
                     'user_id' => $compte->id,
                     'started_at' => $debut,
                     'ended_at' => $debut->copy()->addHour(),
@@ -66,7 +57,6 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
                 ->visit(route('stats.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitUntil(sprintf('(() => { %s })() === "2"', self::SEANCES_AFFICHEES), 15)
                 ->waitUntil(sprintf('(() => { %s })() !== null', self::RESUME_DU_VOLUME), 15);
 
             $resumeSurTrenteJours = $browser->script(sprintf('return (() => { %s })();', self::RESUME_DU_VOLUME))[0];
@@ -83,8 +73,7 @@ class PeriodeDesStatistiquesTest extends DuskTestCase
                 JS);
 
             $browser->waitUntil('location.search === "?period=7j"', 15)
-                ->waitUntil(sprintf('(() => { %s })() === "1"', self::SEANCES_AFFICHEES), 15)
-                ->waitUntil(sprintf('(() => { %s })() !== null', self::RESUME_DU_VOLUME), 15);
+                ->waitUntil(sprintf('(() => { const resume = (() => { %s })(); return resume !== null && !resume.includes(%s); })()', self::RESUME_DU_VOLUME, json_encode($ancienne->format('d/m'), JSON_THROW_ON_ERROR)), 15, 'la courbe du volume garde la période précédente');
 
             $resumeSurSeptJours = $browser->script(sprintf('return (() => { %s })();', self::RESUME_DU_VOLUME))[0];
 

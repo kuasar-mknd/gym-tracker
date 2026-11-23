@@ -1,21 +1,21 @@
 <script setup>
 import Cloche from '@/Components/Navigation/Cloche.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head, Link, router } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
+import { computed, ref, watch } from 'vue'
 
 import MonthlyVolumeCard from '@/Components/Stats/MonthlyVolumeCard.vue'
 import VolumeTrendCard from '@/Components/Stats/VolumeTrendCard.vue'
 import DurationHistoryCard from '@/Components/Stats/DurationHistoryCard.vue'
 import MuscleDistributionCard from '@/Components/Stats/MuscleDistributionCard.vue'
-import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import RegulariteCard from '@/Components/Stats/RegulariteCard.vue'
-import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
-import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import TuileDAcces from '@/Components/Stats/TuileDAcces.vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
 const props = defineProps({
@@ -27,6 +27,12 @@ const props = defineProps({
 })
 
 const { surUneCopie } = useCopieHorsLigne()
+
+/** Démarrer, avec ou sans réseau : par la file hors ligne (#2049). */
+const { demarrer, enCours: demarrageEnCours } = useDemarrageDUneSeance()
+
+/** Un vrai booléen du serveur : aucune séance faite, quelle que soit son ancienneté. */
+const aucuneSeanceFaite = computed(() => props.deferredData?.aucuneSeanceFaite === true)
 
 const currentPeriod = ref(props.selectedPeriod || '30j')
 
@@ -76,12 +82,11 @@ const handlePeriodChange = (period) => {
 </script>
 
 <template>
-    <Head title="Statistiques" />
+    <Head title="Progrès" />
 
-    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon évolution" titre-dans-la-page titre-masque>
+    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Progrès" titre-dans-la-page titre-masque>
         <div class="space-y-6">
-            <!-- Header -->
-            <header class="animate-fade-in flex flex-wrap items-center gap-3 sm:items-start sm:justify-between">
+            <header class="animate-fade-in flex items-center gap-3 sm:items-start sm:justify-between">
                 <!--
                     Le titre du bureau. Sur téléphone, c'est la barre collante de
                     la mise en page qui le porte, et l'afficher ici aussi le
@@ -89,104 +94,99 @@ const handlePeriodChange = (period) => {
                     même page.
                 -->
                 <div class="bureau:block hidden">
-                    <h1 class="titre-ecran">Mon évolution</h1>
+                    <h1 class="titre-ecran">Progrès</h1>
                 </div>
-
-                <GlassSegmented
-                    v-if="!surUneCopie"
-                    :model-value="currentPeriod"
-                    :options="periods"
-                    label="Période"
-                    size="sm"
-                    class="shrink-0"
-                    @update:model-value="handlePeriodChange"
-                />
 
                 <Cloche class="bureau:hidden ms-auto" />
             </header>
 
             <!--
                 Sur une copie hors ligne, aucune carte n'a de quoi se remplir : ni
-                mesure ni série n'est gardée, et les contrôles de la page
-                demandent le réseau (une période, une courbe d'exercice : des
-                visites que rien ne garde). Une seule phrase le dit, puis la
-                page offre ce qui s'ouvre sans réseau, la bibliothèque.
+                mesure ni série n'est gardée, et le choix d'une période demande
+                le réseau (une visite que rien ne garde). Une seule phrase le
+                dit, puis la page offre la seule tuile qui s'ouvre sans réseau,
+                la bibliothèque.
             -->
             <template v-if="surUneCopie">
-                <IndisponibleHorsLigne texte="Les mesures reviennent avec le réseau." />
+                <IndisponibleHorsLigne texte="Tes chiffres reviennent avec le réseau." />
 
-                <Link
-                    :href="route('exercises.index')"
-                    class="text-accent-primary-deep inline-flex items-center gap-2 text-xs font-bold hover:underline"
-                >
-                    Bibliothèque d'exercices
-                    <GlassIcon name="arrow_forward" size="xs" />
-                </Link>
+                <div class="grid grid-cols-2 gap-3" dusk="tuiles-d-acces">
+                    <TuileDAcces
+                        :href="route('exercises.index')"
+                        icon="fitness_center"
+                        libelle="Exercices"
+                        pleine-largeur
+                    />
+                </div>
             </template>
 
             <template v-else>
-                <div class="bureau:grid bureau:grid-cols-2 bureau:gap-3 bureau:space-y-0 space-y-3">
-                    <Link v-press :href="route('records.index')" class="block">
-                        <GlassCard padding="p-4" class="transition duration-300 hover:-translate-y-0.5">
-                            <div class="flex items-center gap-3">
-                                <GlassIcon name="emoji_events" class="text-accent-warning-deep" />
-                                <div class="min-w-0 flex-1">
-                                    <h2 class="titre-plat">Records</h2>
-                                    <p class="text-text-muted text-xs">Charge max, 1RM estimé, meilleur volume</p>
-                                </div>
-                                <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />
-                            </div>
-                        </GlassCard>
-                    </Link>
-
-                    <Link v-press :href="route('corps.index')" class="block">
-                        <GlassCard padding="p-4" class="transition duration-300 hover:-translate-y-0.5">
-                            <div class="flex items-center gap-3">
-                                <GlassIcon name="accessibility_new" class="text-accent-secondary-deep" />
-                                <div class="min-w-0 flex-1">
-                                    <h2 class="titre-plat">Corps</h2>
-                                    <p class="text-text-muted text-xs">Poids, masse grasse, mensurations</p>
-                                </div>
-                                <GlassIcon name="arrow_forward" size="xs" class="text-text-muted" />
-                            </div>
-                        </GlassCard>
-                    </Link>
-                </div>
+                <GlassEmptyState
+                    v-if="aucuneSeanceFaite"
+                    icon="fitness_center"
+                    title="Pas encore de séance"
+                    description="Tes chiffres apparaissent après la première."
+                >
+                    <template #action>
+                        <GlassButton
+                            variant="primary"
+                            dusk="start-workout-button"
+                            :loading="demarrageEnCours"
+                            @click="demarrer()"
+                        >
+                            Démarrer une séance
+                        </GlassButton>
+                    </template>
+                </GlassEmptyState>
 
                 <MonthlyVolumeCard
+                    v-else
                     :monthly-comparison="deferredData?.performance?.monthlyComparison"
                     :monthly-volume="deferredData?.volumeMensuel"
                 />
 
-                <RegulariteCard :regularite="deferredData?.regularite" />
+                <nav class="grid grid-cols-2 gap-3" aria-label="Accès" dusk="tuiles-d-acces">
+                    <TuileDAcces :href="route('records.index')" icon="emoji_events" libelle="Records" pleine-largeur />
+                    <TuileDAcces :href="route('exercises.index')" icon="fitness_center" libelle="Exercices" />
+                    <TuileDAcces :href="route('corps.index')" icon="accessibility_new" libelle="Corps" />
+                    <TuileDAcces :href="route('goals.index')" icon="flag" libelle="Objectifs" />
+                    <TuileDAcces :href="route('achievements.index')" icon="military_tech" libelle="Badges" />
+                </nav>
 
-                <VolumeTrendCard
-                    :volume-trend="deferredData?.performance?.volumeTrend"
-                    :current-period="currentPeriod"
-                    :deferred-data="deferredData"
-                />
+                <template v-if="!aucuneSeanceFaite">
+                    <RegulariteCard :regularite="deferredData?.regularite" />
 
-                <DurationHistoryCard
-                    :duration-history="deferredData?.performance?.durationHistory"
-                    :deferred-data="deferredData"
-                />
+                    <section class="space-y-3" aria-labelledby="titre-sur-la-periode">
+                        <h2 id="titre-sur-la-periode" class="titre-plat">Sur la période</h2>
 
-                <div class="stagger-4 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <MuscleDistributionCard
-                        :muscle-distribution="deferredData?.performance?.muscleDistribution"
+                        <GlassSegmented
+                            :model-value="currentPeriod"
+                            :options="periods"
+                            label="Période"
+                            size="sm"
+                            class="w-full"
+                            @update:model-value="handlePeriodChange"
+                        />
+
+                        <div class="bureau:grid bureau:grid-cols-2 bureau:gap-3 bureau:space-y-0 space-y-3">
+                            <VolumeTrendCard
+                                :volume-trend="deferredData?.performance?.volumeTrend"
+                                :current-period="currentPeriod"
+                                :deferred-data="deferredData"
+                            />
+
+                            <MuscleDistributionCard
+                                :muscle-distribution="deferredData?.performance?.muscleDistribution"
+                                :deferred-data="deferredData"
+                            />
+                        </div>
+                    </section>
+
+                    <DurationHistoryCard
+                        :duration-history="deferredData?.performance?.durationHistory"
                         :deferred-data="deferredData"
                     />
-
-                    <ExerciseProgressCard :exercises="exercises" />
-                </div>
-
-                <SummaryStatsGrid
-                    :volume-trend="deferredData?.performance?.volumeTrend"
-                    :muscle-distribution="deferredData?.performance?.muscleDistribution"
-                    :exercises="exercises"
-                    :monthly-comparison="deferredData?.performance?.monthlyComparison"
-                    :deferred-data="deferredData"
-                />
+                </template>
             </template>
         </div>
     </AuthenticatedLayout>

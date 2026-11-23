@@ -41,6 +41,7 @@ class GetStatsDashboardAction
      *     exercises: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>,
      *     selectedPeriod: string,
      *     deferredData: \Closure(): array{
+     *         aucuneSeanceFaite: bool,
      *         performance: array<string, mixed>,
      *         volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
      *         regularite: array{
@@ -62,12 +63,15 @@ class GetStatsDashboardAction
     }
 
     /**
-     * Le groupe différé de la page : la vue « performance », le volume des six
+     * Le groupe différé de la page : si le compte n'a fait aucune séance
+     * (`User::seancesFaites()`, de n'importe quelle ancienneté : la page montre
+     * alors un seul état vide), la vue « performance », le volume des six
      * derniers mois et la régularité (séances par mois et par jour). Les deux
      * dernières suivent le mois calendaire, pas la période choisie, et
      * reçoivent le même instant, lu une fois (#2033).
      *
      * @return array{
+     *     aucuneSeanceFaite: bool,
      *     performance: array<string, mixed>,
      *     volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
      *     regularite: array{
@@ -81,6 +85,7 @@ class GetStatsDashboardAction
         $maintenant = now();
 
         return [
+            'aucuneSeanceFaite' => ! $user->seancesFaites()->exists(),
             'performance' => $this->performanceOverview($user, $jours, $maintenant),
             'volumeMensuel' => $this->volumeStats->getMonthlyVolumeHistory($user, 6, $maintenant),
             'regularite' => $this->fetchRegularite->execute($user, $maintenant),

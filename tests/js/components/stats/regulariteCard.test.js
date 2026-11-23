@@ -38,7 +38,7 @@ describe('RegulariteCard', () => {
         expect(carte.findComponent({ name: 'WorkoutsPerMonthChart' }).props('data')).toEqual(parMois)
         expect(carte.findComponent({ name: 'WorkoutFrequencyChart' }).props('data')).toEqual(parJour)
         expect(carte.text()).toContain('Régularité')
-        expect(carte.text()).toContain('6 derniers mois')
+        expect(carte.text()).not.toContain('Séances par mois et par jour')
     })
 
     it('attend la clé groupée de la page et ne dessine rien tant que la série manque', async () => {

@@ -29,8 +29,9 @@ use Tests\Support\ParcoursHorsLigne;
  * Progrès n'en montre plus aucun et mène à Corps, et la copie rangée de
  * Progrès, déchiffrée, n'en porte aucun chiffre ; puis, la coupure
  * faite, la flèche de la bibliothèque et l'onglet Progrès ouvrent la racine
- * légère, où une seule phrase dit que les mesures reviennent avec le réseau
- * (ni carte, ni choix de période, ni courbe d'exercice, ni accès à Corps), et rien d'autre n'est dit. Le réseau rendu, la page se
+ * légère, où une seule phrase dit que les chiffres reviennent avec le réseau
+ * (ni carte, ni choix de période, ni accès à Corps, Records, Objectifs ou Badges, seule la tuile Exercices),
+ * et rien d'autre n'est dit. Le réseau rendu, la page se
  * recharge, l'accès à Corps revient et la page des mesures s'ouvre.
  *
  * Comme les autres parcours hors ligne, il exige un contexte sûr, et rend
@@ -116,7 +117,7 @@ class ProgresHorsLigneTest extends DuskTestCase
                 // Rien n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
                 $this->assertSame([], $this->messagesSansReseau($browser));
 
-                // Aucun contrôle qui mènerait à « Hors ligne » : ni période (`/stats?period=…` n'est jamais gardée), ni courbe d'exercice.
+                // Aucun contrôle qui mènerait à « Hors ligne » : pas de période (`/stats?period=…` n'est jamais gardée).
                 $browser->assertScript("[...document.querySelectorAll('#main-content button')].some((b) => /^(\\d+ jours|\\d+ mois|1 an)$/.test(b.textContent.trim()))", false)
                     ->assertScript("document.querySelectorAll('#main-content [role=\"combobox\"], #main-content select').length", 0)
                     ->assertPathIs('/stats');
@@ -167,10 +168,13 @@ class ProgresHorsLigneTest extends DuskTestCase
 
         $browser->waitFor('#main-content [data-indisponible-hors-ligne]', 15)
             ->assertScript("document.querySelectorAll('#main-content [data-indisponible-hors-ligne]').length", 1)
-            ->assertScript("document.querySelector('#main-content [data-indisponible-hors-ligne]').textContent.includes('Les mesures reviennent avec le réseau.')", true)
+            ->assertScript("document.querySelector('#main-content [data-indisponible-hors-ligne]').textContent.includes('Tes chiffres reviennent avec le réseau.')", true)
             ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 15, 'une carte de Progrès pulse sans fin hors ligne')
             ->assertMissing('#main-content a[href$="/corps"]')
             ->assertMissing('#main-content a[href$="/records"]')
+            ->assertMissing('#main-content a[href$="/goals"]')
+            ->assertMissing('#main-content a[href$="/achievements"]')
+            ->assertScript("[...document.querySelectorAll('#main-content [dusk=\"tuiles-d-acces\"] a')].map((a) => new URL(a.href).pathname)", ['/exercises'])
             ->assertMissing('[dusk="page-hors-ligne"]')
             ->assertScript('(() => /\\b83[.,]7\\b|\\b19[.,]3\\b/.test(document.querySelector("#main-content")?.textContent ?? ""))()', false);
     }

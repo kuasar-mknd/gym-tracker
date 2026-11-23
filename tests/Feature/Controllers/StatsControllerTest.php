@@ -45,6 +45,31 @@ test('stats dashboard loads deferred performance props and no body stats', funct
         );
 });
 
+test('stats dashboard sert le signal du compte neuf dans la prop différée, jamais en prop racine', function (): void {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertInertia(
+            fn (Assert $page): Assert => $page
+                ->component('Stats/Index')
+                ->missing('aucuneSeanceFaite')
+                ->loadDeferredProps(
+                    fn (Assert $differees): Assert => $differees->where('deferredData.aucuneSeanceFaite', true)
+                )
+        );
+
+    \App\Models\Workout::withoutEvents(fn () => \App\Models\Workout::factory()->faite()->create(['user_id' => $user->id]));
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertInertia(
+            fn (Assert $page): Assert => $page->loadDeferredProps(
+                fn (Assert $differees): Assert => $differees->where('deferredData.aucuneSeanceFaite', false)
+            )
+        );
+});
+
 test('unauthenticated user cannot view stats dashboard', function (): void {
     get(route('stats.index'))
         ->assertRedirect(route('login'));

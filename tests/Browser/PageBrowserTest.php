@@ -29,14 +29,14 @@ class PageBrowserTest extends DuskTestCase
                 '/workouts' => 'Démarrer une séance',
                 '/calendar' => 'Calendrier',
                 '/exercises' => 'Bibliothèque',
-                '/stats' => '30 jours',
+                '/stats' => 'Pas encore de séance',
                 '/corps' => 'Corps',
                 '/records' => 'Records',
                 '/profile' => $user->email,
             ];
 
             // L'Accueil, Séances, Progrès et le Profil ne montrent pas leur titre : le h1 reste dans le DOM, masqué aux yeux.
-            $titresMasques = ['/dashboard' => 'Accueil', '/workouts' => 'Mes séances', '/stats' => 'Mon évolution', '/profile' => 'Profil'];
+            $titresMasques = ['/dashboard' => 'Accueil', '/workouts' => 'Mes séances', '/stats' => 'Progrès', '/profile' => 'Profil'];
 
             foreach ($pages as $url => $text) {
                 $browser->visit($url)

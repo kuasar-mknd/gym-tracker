@@ -15,10 +15,7 @@ defineProps({
 
 <template>
     <GlassCard>
-        <div class="mb-4">
-            <h3 class="titre-plat">Régularité</h3>
-            <p class="text-text-muted text-xs">Séances par mois et par jour de la semaine, 6 derniers mois</p>
-        </div>
+        <h3 class="titre-plat mb-4">Régularité</h3>
         <Deferred data="deferredData">
             <template #rescue>
                 <IndisponibleHorsLigne />

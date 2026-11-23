@@ -10,12 +10,13 @@ use App\Models\BodyPartMeasurement;
 use App\Models\Exercise;
 use App\Models\PersonalRecord;
 use App\Models\User;
+use App\Models\Workout;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 /**
- * Corps, Records, la racine Progrès et Profil passent sur deux colonnes à partir
+ * Corps, Records, Progrès (les deux cartes de la période) et Profil passent sur deux colonnes à partir
  * de `bureau:` (lot 8, #2434), et seulement là : sous le breakpoint, la mise en
  * page reste celle du téléphone (pas de grille, donc pas de carte étirée). Un
  * état vide ne sort pas de sa carte : sous une grille, son `h-full` prenait la
@@ -60,6 +61,8 @@ class DeuxColonnesDeBureauTest extends DuskTestCase
 
     private function avecDesDonnees(User $compte): void
     {
+        // Une séance faite : sans elle, Progrès est un compte neuf et n'a que son état vide, sans les deux cartes de la période.
+        Workout::factory()->faite()->create(['user_id' => $compte->id, 'started_at' => now()->subDays(3), 'ended_at' => now()->subDays(3)->addHour()]);
         BodyMeasurement::factory()->create(['user_id' => $compte->id, 'weight' => '83.70', 'body_fat' => '19.30', 'measured_at' => now()->subDay()->toDateString(), 'notes' => null]);
         BodyPartMeasurement::factory()->create(['user_id' => $compte->id, 'part' => 'Waist', 'value' => 81, 'unit' => 'cm', 'measured_at' => now()->subDay()->toDateString(), 'notes' => null]);
 
