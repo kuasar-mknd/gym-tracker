@@ -153,7 +153,7 @@ class ProgresHorsLigneTest extends DuskTestCase
 
         $noms = array_map(strval(...), array_keys($props));
         sort($noms);
-        $this->assertSame(['auth', 'errors', 'exercises', 'selectedPeriod'], array_values(array_diff($noms, ['flash', 'is_local', 'is_testing', 'pending_migrations', 'social_login_enabled', 'vapidPublicKey'])));
+        $this->assertSame(['auth', 'errors', 'selectedPeriod'], array_values(array_diff($noms, ['flash', 'is_local', 'is_testing', 'pending_migrations', 'social_login_enabled', 'vapidPublicKey'])));
         $this->assertDoesNotMatchRegularExpression('/83\.70|19\.30|latestWeight|weightChange|bodyFat|weightHistory|deferredData/', json_encode($props, JSON_THROW_ON_ERROR));
     }
 

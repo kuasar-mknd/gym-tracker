@@ -22,7 +22,6 @@ const props = defineProps({
     // ⚡ Bolt: Consolidated deferred data
     deferredData: Object,
 
-    exercises: Array,
     selectedPeriod: String,
 })
 

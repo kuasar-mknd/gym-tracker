@@ -1,5 +1,5 @@
 {
-    "version": 6,
+    "version": 7,
     "pages": {
         "Dashboard": {
             "props": {
@@ -231,16 +231,6 @@
                 "auth.user.name": "texte",
                 "auth.user.unread_notifications_count": "nombre",
                 "errors": "objet vide",
-                "exercises": "liste",
-                "exercises[]": "objet",
-                "exercises[].category": "texte",
-                "exercises[].created_at": "texte",
-                "exercises[].default_rest_time": "nombre|null",
-                "exercises[].id": "nombre",
-                "exercises[].name": "texte",
-                "exercises[].type": "texte",
-                "exercises[].updated_at": "texte",
-                "exercises[].user_id": "nombre",
                 "flash": "objet",
                 "flash.error": "null",
                 "flash.success": "null",

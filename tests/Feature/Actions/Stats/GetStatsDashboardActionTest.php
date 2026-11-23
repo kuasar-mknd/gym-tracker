@@ -64,10 +64,9 @@ it('ne rend aucune prop de pesée et ne lit pas le cache des mesures', function 
 
     $props = app(GetStatsDashboardAction::class)->execute($user, Request::create('/stats', 'GET', ['period' => '7j']));
 
-    expect(array_keys($props))->toBe(['exercises', 'selectedPeriod', 'deferredData'])
+    expect(array_keys($props))->toBe(['selectedPeriod', 'deferredData'])
         ->and($props['selectedPeriod'])->toBe('7j');
 
-    $props['exercises']();
     $differees = $props['deferredData']();
 
     expect(array_keys($differees))->toBe(['aucuneSeanceFaite', 'performance', 'volumeMensuel', 'regularite'])

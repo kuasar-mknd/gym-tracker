@@ -127,12 +127,6 @@ const PROPS_IMMEDIATES_BIBLIOTHEQUE = 'from `exercises` where (`user_id` is null
  * fragments des instructions que lisent ses props immédiates.
  */
 dataset('pages aux props immédiates', [
-    'Statistiques : la bibliothèque' => [
-        fn (User $compte, Workout $seance): string => route('stats.index'),
-        'Stats/Index',
-        'deferredData',
-        [PROPS_IMMEDIATES_BIBLIOTHEQUE],
-    ],
     'Corps : la pesée et les mensurations' => [
         fn (User $compte, Workout $seance): string => route('corps.index'),
         'Corps/Index',

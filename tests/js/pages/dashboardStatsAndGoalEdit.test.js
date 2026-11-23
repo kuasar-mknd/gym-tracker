@@ -686,7 +686,6 @@ describe('Stats/Index', () => {
         const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: false, performance: {} } })
 
         expect(wrapper.findComponent({ name: 'SummaryStatsGrid' }).exists()).toBe(false)
-        expect(wrapper.findComponent({ name: 'ExerciseProgressCard' }).exists()).toBe(false)
         expect(wrapper.text()).not.toContain('vs mois')
     })
 

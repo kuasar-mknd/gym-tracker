@@ -27,10 +27,9 @@ test('users can only see system exercises and their own custom exercises in stat
         ->assertOk()
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->has('exercises', 2) // Should only have System + User A
-            ->where('exercises.0.name', 'System Exercise') // Assuming order by name
-            ->where('exercises.1.name', 'User A Exercise')
-        );
+            ->missing('exercises') // La page n'expose plus la bibliothèque : aucun exercice d'un autre compte n'y passe
+        )
+        ->assertDontSee('User B Exercise');
 });
 
 test('users can only see system exercises and their own custom exercises in workout show', function (): void {
