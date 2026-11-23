@@ -15,6 +15,7 @@ defineProps({
     <svg class="shrink-0 -rotate-90" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <circle cx="18" cy="18" r="15" stroke="var(--color-border)" stroke-width="5" />
         <circle
+            v-if="fraction > 0"
             cx="18"
             cy="18"
             r="15"

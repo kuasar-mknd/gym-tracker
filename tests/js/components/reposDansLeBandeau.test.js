@@ -85,6 +85,14 @@ describe('le repos dans le bandeau de la séance', () => {
         expect(monter(null).find('[dusk="anneau-du-repos"]').exists()).toBe(false)
     })
 
+    it('ne dessine aucun trait à zéro, pour ne laisser aucun point au bout de l’anneau', async () => {
+        const wrapper = monter(depot({ echeance: MAINTENANT.getTime() + 1_000 }))
+
+        await vi.advanceTimersByTimeAsync(1_000)
+
+        expect(wrapper.find('[data-testid="trait-de-l-anneau"]').exists()).toBe(false)
+    })
+
     it('dit un repos en pause, au reste figé', async () => {
         const wrapper = monter(depot({ echeance: null, restantEnPause: 45 }))
 
