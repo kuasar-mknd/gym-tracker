@@ -176,7 +176,6 @@ return [
         ),
 
         App\DTOs\Stats\BodyFatHistoryPoint::class,
-        App\DTOs\Stats\DistributionStat::class,
         App\DTOs\Stats\DurationHistoryPoint::class,
         App\DTOs\Stats\Exercise1RMProgressPoint::class,
         App\DTOs\Stats\LatestBodyMetrics::class,

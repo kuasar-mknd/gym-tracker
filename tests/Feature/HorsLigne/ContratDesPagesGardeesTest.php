@@ -147,6 +147,18 @@ function contratDesPagesCompte(): array
         Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 70, 'reps' => 10]);
     }
 
+    // Une séance au lundi de la semaine et une à celui d'avant, volumes posés : la carte « Cette
+    // semaine » chiffre l'écart à la même date, nul sans séance cette semaine ni volume à comparer,
+    // et la forme relevée ne doit pas dépendre du jour où l'on lance le test.
+    foreach ([0, 1] as $semainesAvant) {
+        Workout::factory()->for($compte)->create([
+            'name' => 'Séance du lundi',
+            'started_at' => now()->startOfWeek()->subWeeks($semainesAvant),
+            'ended_at' => now()->startOfWeek()->subWeeks($semainesAvant)->addHour(),
+            'workout_volume' => 1000,
+        ]);
+    }
+
     $enCours = Workout::factory()->for($compte)->create([
         'name' => 'Séance du jour',
         'started_at' => now()->subMinutes(30),

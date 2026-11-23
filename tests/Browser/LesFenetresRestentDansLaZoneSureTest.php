@@ -76,7 +76,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
      */
     private const string LIRE_LES_EN_TETES = <<<'JS'
         const affiche = (element) => element !== null && getComputedStyle(element).display !== 'none';
-        const barres = [...document.querySelectorAll('nav.z-nav, header.z-collant, nav.glass-nav')].filter(affiche);
+        const barres = [...document.querySelectorAll('nav.z-nav, [dusk="entete-mobile"], nav.glass-nav')].filter(affiche);
         const commandes = barres
             .flatMap((barre) => [...barre.querySelectorAll('a, button')])
             .map((commande) => ({ commande, cadre: commande.getBoundingClientRect() }))
@@ -94,7 +94,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
         const contenu = document.querySelector('#main-content > div:last-child').getBoundingClientRect();
         return {
             barreDeBureau: affiche(document.querySelector('nav.z-nav')),
-            enteteMobile: affiche(document.querySelector('header.z-collant')),
+            enteteMobile: affiche(document.querySelector('[dusk="entete-mobile"]')),
             barreDuBas: affiche(document.querySelector('nav.glass-nav')),
             titres: [...document.querySelectorAll('h1')].filter((titre) => titre.getClientRects().length > 0).length,
             largeur: innerWidth,

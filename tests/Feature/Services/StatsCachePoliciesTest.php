@@ -87,22 +87,6 @@ it('vide l’historique de durée avec les statistiques de séance', function ()
 });
 
 /**
- * La vue d'ensemble delegue, et ce qu'elle delegue doit arriver.
- *
- * Le mutant qui faisait rendre un tableau vide a la repartition survivait :
- * rien ne verifiait que le service transmet la repartition telle quelle.
- */
-it('transmet la répartition des séances au lieu d’un tableau vide', function (): void {
-    $user = utilisateurAvecSeance();
-
-    $repartitions = app(WorkoutStatsService::class)->repartitionsDesSeances($user);
-
-    expect($repartitions)->toHaveKeys(['duration', 'time_of_day'])
-        ->and($repartitions['duration'])->not->toBeEmpty()
-        ->and($repartitions['time_of_day'])->not->toBeEmpty();
-});
-
-/**
  * Les mesures corporelles datent chaque point de leur propre jour.
  *
  * Le repli sur un horodatage illisible ne pouvait pas se declencher —

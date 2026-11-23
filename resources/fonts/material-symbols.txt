@@ -41,7 +41,6 @@ edit
 emoji_events
 error
 event_busy
-exercise
 expand_more
 fitness_center
 flag
@@ -85,7 +84,6 @@ self_improvement
 settings
 show_chart
 spa
-star
 stars
 straighten
 task_alt

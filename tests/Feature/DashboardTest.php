@@ -37,7 +37,8 @@ test('dashboard displays correct workout stats', function (): void {
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Dashboard')
-                ->where('latestWeight', '75.50')
+                // Le dernier poids a quitté l'accueil (#2434) : ni lu, ni envoyé.
+                ->missing('latestWeight')
                 ->has('recentWorkouts', 3)
                 // Deferred props should be missing from initial response
                 ->missing('weeklyVolume')

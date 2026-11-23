@@ -14,7 +14,8 @@ import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
 import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
-import { computed, watch } from 'vue'
+import { computed, provide, watch } from 'vue'
+import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
@@ -122,6 +123,8 @@ const hrefDuRetour = computed(() => (props.backRoute ? route(props.backRoute) : 
  * que `route().current('workouts.show')` ne nomme pas.
  */
 const { seanceEnCours: activeWorkout, ouvrir: ouvrirLaSeanceEnCours } = useSeanceEnCoursDeLAppareil({ page })
+// L'accueil masque « Démarrer » d'après la même séance que celle qu'« Reprendre » rouvre.
+provide(CLE_DE_LA_SEANCE_EN_COURS, activeWorkout)
 // L'onglet de bureau allumé : les mêmes quatre que la barre du bas, par la même table (`ongletsDeLaBarre.js`).
 const ongletAllume = () => ongletDeLaRoute(route().current())?.cle ?? null
 const isWorkoutShow = computed(() => page.component === 'Workouts/Show')
@@ -327,6 +330,7 @@ onUnmounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
+            dusk="entete-mobile"
             class="bureau:hidden"
             :class="
                 clocheDansLaPage
@@ -458,7 +462,7 @@ onUnmounted(() => {
                 réponse, son animation d'entrée et le focus du bouton compris.
             -->
             <div class="mx-auto" :class="LARGEURS[largeur]">
-                <slot />
+                <slot :seance-en-cours="activeWorkout" />
             </div>
         </main>
 

@@ -1,16 +1,19 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { ref } from 'vue'
 
 import QuickActions from '@/Components/Dashboard/QuickActions.vue'
+import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 
 beforeAll(() => {
     globalThis.route = (name) => `/${name}`
 })
 
-const monter = (props = {}) =>
+const monter = (props = {}, seanceEnCours = null) =>
     mount(QuickActions, {
         props,
         global: {
+            provide: { [CLE_DE_LA_SEANCE_EN_COURS]: ref(seanceEnCours) },
             directives: { press: {} },
             mocks: { route: globalThis.route },
             stubs: { Link: { props: ['href'], template: '<a :href="href"><slot /></a>' } },
@@ -50,10 +53,37 @@ describe('QuickActions', () => {
         expect(libre.emitted('startWorkout')).toHaveLength(1)
     })
 
+    it('sans démarrage, ne garde que Mes modèles en rangée compacte', () => {
+        const wrapper = monter({ sansDemarrage: true })
+
+        expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
+        expect(wrapper.find('#start-workout-button').exists()).toBe(false)
+        expect(wrapper.get('a').text()).toContain('Mes modèles')
+        expect(wrapper.get('section').classes()).toContain('grid-cols-1')
+    })
+
     it('garde un seul aplat orange, sans dégradé ni halo', () => {
         const html = monter().html()
 
         expect(html.match(/accent-fill/g)).toHaveLength(1)
         expect(html).not.toMatch(/glow|bg-linear|bg-gradient|tertiary/)
+    })
+
+    it('masque « Démarrer une séance » quand une séance est en cours, et garde « Mes modèles »', () => {
+        const wrapper = monter({}, { id: 12, name: 'Push' })
+
+        expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('Démarrer une séance')
+        expect(wrapper.text()).toContain('Mes modèles')
+        expect(wrapper.get('section').classes()).toContain('grid-cols-1')
+        expect(wrapper.get('a').classes()).toContain('items-center')
+        expect(wrapper.get('a').classes()).not.toContain('flex-col')
+    })
+
+    it('remontre « Démarrer une séance » dès que plus aucune séance n’est en cours', () => {
+        const sansSeance = monter({}, null)
+
+        expect(sansSeance.get('[dusk="start-workout-button"]').exists()).toBe(true)
+        expect(sansSeance.get('section').classes()).toContain('grid-cols-2')
     })
 })

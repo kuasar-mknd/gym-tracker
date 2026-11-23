@@ -134,6 +134,7 @@ class StatsServicesTest extends TestCase
         $workoutCurrent = Workout::factory()->create([
             'user_id' => $user->id,
             'started_at' => now()->startOfWeek(),
+            'ended_at' => now()->startOfWeek()->addHour(),
         ]);
         $lineCurrent = WorkoutLine::factory()->create(['workout_id' => $workoutCurrent->id]);
         Set::factory()->create(['workout_line_id' => $lineCurrent->id, 'weight' => 50, 'reps' => 10]); // 500
@@ -172,6 +173,7 @@ class StatsServicesTest extends TestCase
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
             'started_at' => now()->startOfWeek()->addHour(),
+            'ended_at' => now()->startOfWeek()->addHours(2),
         ]);
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 50, 'reps' => 10]);
@@ -192,7 +194,7 @@ class StatsServicesTest extends TestCase
         $user = User::factory()->create();
 
         foreach ([now()->startOfWeek()->addHour(), now()->subWeek()->startOfWeek()->addHour()] as $startedAt) {
-            $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => $startedAt]);
+            $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => $startedAt, 'ended_at' => $startedAt->copy()->addHour()]);
             $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
             Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 50, 'reps' => 10]);
         }

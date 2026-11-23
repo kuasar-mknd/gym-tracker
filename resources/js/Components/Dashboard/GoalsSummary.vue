@@ -35,7 +35,7 @@ defineProps({
 
         <div class="space-y-3">
             <Link
-                v-for="goal in activeGoals"
+                v-for="goal in activeGoals.slice(0, 2)"
                 :key="goal.id"
                 :href="route('goals.index')"
                 class="focus-visible:ring-accent-primary rounded-carte block focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"

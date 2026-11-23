@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 
 import { mount as monterVraiment, flushPromises } from '@vue/test-utils'
+import { inject, ref } from 'vue'
+import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 
 /*
  * Chaque page montée ici est démontée à la fin du test qui l'a montée.
@@ -124,7 +126,12 @@ import { installerLInvitationDInstallation } from '@/composables/useInvitationDI
 import GoalsEdit from '@/Pages/Goals/Edit.vue'
 import StatsIndex from '@/Pages/Stats/Index.vue'
 import { layoutStub, passesSlot } from './pageStubs'
-import { ref } from 'vue'
+
+/** Le layout donne à la page la séance en cours de l'appareil, que le test fournit par injection. */
+const layoutAvecSeance = {
+    setup: () => ({ seanceEnCours: inject(CLE_DE_LA_SEANCE_EN_COURS, ref(null)) }),
+    template: '<div><slot :seance-en-cours="seanceEnCours" /></div>',
+}
 
 beforeAll(() => {
     globalThis.route = (name, params) => (params === undefined ? `/${name}` : `/${name}/${JSON.stringify(params)}`)
@@ -150,18 +157,22 @@ beforeEach(() => {
 const recording = (name, props) => ({ name, props, template: '<div />' })
 
 describe('Dashboard', () => {
-    const quickActions = recording('QuickActions', ['processing'])
-    const recentActivity = recording('RecentActivity', ['recentWorkouts', 'processing'])
+    const quickActions = recording('QuickActions', ['processing', 'sansDemarrage'])
+    const recentActivity = recording('RecentActivity', ['recentWorkouts'])
     const goalsSummary = recording('GoalsSummary', ['activeGoals', 'indisponible'])
 
-    const mountDashboard = (props = {}) =>
+    const uneSeance = { id: 3, started_at: '2026-02-10T14:30:00Z', ended_at: '2026-02-10T15:15:00Z' }
+
+    /** Un compte qui a déjà de quoi remplir les cartes : au moins une séance. */
+    const mountDashboard = (props = {}, provide = {}) =>
         mount(Dashboard, {
-            props,
+            props: { recentWorkouts: [uneSeance], ...props },
             global: {
+                provide,
                 directives: { press: {} },
                 mocks: { route: globalThis.route, $page: { props: { auth: { user: { name: 'Sam' } } } } },
                 stubs: {
-                    AuthenticatedLayout: layoutStub,
+                    AuthenticatedLayout: layoutAvecSeance,
                     GlassCard: passesSlot,
                     QuickActions: quickActions,
                     RecentActivity: recentActivity,
@@ -193,97 +204,80 @@ describe('Dashboard', () => {
         expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
     })
 
-    it('accepte la demande de démarrage des deux endroits qui la proposent', () => {
+    it('signale à la tuile que la séance est en train de démarrer', async () => {
         const wrapper = mountDashboard()
+        const processing = () => wrapper.findComponent({ name: 'QuickActions' }).props('processing')
 
-        wrapper.findComponent({ name: 'RecentActivity' }).vm.$emit('startWorkout')
-
-        // The empty state inside RecentActivity offers the same button; wired to
-        // nothing it is a button that visibly does not work.
-        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
-    })
-
-    it('signale aux deux boutons que la séance est en train de démarrer', async () => {
-        const wrapper = mountDashboard()
-        const processingOf = (name) => wrapper.findComponent({ name }).props('processing')
-
-        expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([false, false])
+        expect(processing()).toBe(false)
 
         wrapper.findComponent({ name: 'QuickActions' }).vm.$emit('startWorkout')
         await nextTick()
 
         // Read while the start is still open: checked afterwards, a button
         // that was never told anything reads exactly like one that was.
-        expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([true, true])
+        expect(processing()).toBe(true)
 
         demarrage.enCours.value = false
         await nextTick()
 
-        expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([false, false])
+        expect(processing()).toBe(false)
     })
 
-    it('montre des squelettes tant que les statistiques n’ont pas atterri', () => {
+    it('montre un seul squelette, celui de « Cette semaine », tant que les statistiques n’ont pas atterri', () => {
         const wrapper = mountDashboard()
 
-        // Three placeholders, not one: the fallback stands in for two side-by-side
-        // cards and the strip underneath them, so a single skeleton leaves the
-        // page jumping when the real content arrives.
-        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(3)
+        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(1)
+        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).exists()).toBe(false)
     })
 
-    it('remplace les squelettes par les sections une fois les statistiques arrivées', () => {
+    it('remplace le squelette par « Cette semaine » une fois les statistiques arrivées', () => {
+        deferredHasLanded = true
+
+        const stats = { current_week_volume: 1200, percentage: 12, sessions_count: 2 }
+        const trend = [{ date: '2026-02-09', day_label: 'Lun', volume: 1200 }]
+        const wrapper = mountDashboard({ analyticalStats: { weeklyVolume: { stats, trend } } })
+
+        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
+        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).props('weeklyVolumeStats')).toEqual(stats)
+        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).props('weeklyVolumeTrend')).toEqual(trend)
+    })
+
+    it('ne monte plus les répartitions de durée et d’heure, ni les graphiques des séances récentes', () => {
         deferredHasLanded = true
 
         const wrapper = mountDashboard({
-            analyticalStats: {
-                weeklyVolume: { stats: { current_week_volume: 1200, percentage: 12 }, trend: [{ week: 'S1' }] },
-                workoutDistributions: { duration: [{ range: '60-90', count: 3 }], time_of_day: [{ hour: 18 }] },
-            },
+            analyticalStats: { weeklyVolume: { stats: { current_week_volume: 0 }, trend: [] } },
         })
 
-        // Each section fed from its own branch: reading them all out of the same
-        // one leaves three populated cards showing the same thing.
-        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
-        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).props('weeklyVolumeTrend')).toEqual([
-            { week: 'S1' },
-        ])
-        expect(wrapper.findComponent({ name: 'DurationSection' }).props('durationDistribution')).toEqual([
-            { range: '60-90', count: 3 },
-        ])
-        expect(wrapper.findComponent({ name: 'TimeOfDaySection' }).props('timeOfDayDistribution')).toEqual([
-            { hour: 18 },
-        ])
+        for (const nom of ['DurationSection', 'TimeOfDaySection', 'RecentVolumeSection', 'RecentExercisesSection']) {
+            expect(wrapper.findComponent({ name: nom }).exists()).toBe(false)
+        }
+
+        expect(wrapper.find('canvas').exists()).toBe(false)
     })
 
     /*
-     * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
-     * objectifs (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent,
-     * plutôt que de disparaître comme pour un compte qui n'a rien noté.
+     * Une copie hors ligne de l'accueil ne garde pas les objectifs (#2048,
+     * `PROPS_JAMAIS_GARDEES`) : leur carte le dit, plutôt que de disparaître
+     * comme pour un compte qui n'en a pas. Le dernier poids a quitté l'accueil.
      */
-    it('sur une copie hors ligne, dit le dernier poids et les objectifs indisponibles', () => {
+    it('sur une copie hors ligne, dit les objectifs indisponibles, et ne parle plus du dernier poids', () => {
         pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }
         const wrapper = mountDashboard()
 
-        expect(wrapper.get('[dusk="dashboard-latest-weight-indisponible"]').text()).toContain(
-            'Dernier poids indisponible hors ligne',
-        )
         expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('indisponible')).toBe(true)
+        expect(wrapper.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('Dernier poids')
     })
 
     // Sans la marque d'une copie, une prop absente ne dit rien d'un réseau absent.
-    it('sur une page que le serveur a rendue, un compte qui n’a rien noté ne voit rien d’indisponible', () => {
+    it('sur une page que le serveur a rendue, un compte sans objectif ne voit rien d’indisponible', () => {
         pageDInertia.props = { errors: {} }
-        const wrapper = mountDashboard({ latestWeight: null, activeGoals: [] })
+        const wrapper = mountDashboard({ activeGoals: [] })
 
-        expect(wrapper.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
         expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('indisponible')).toBe(false)
     })
 
-    /*
-     * L'accueil n'a plus de graphique des objectifs (la progression se lit dans
-     * le récapitulatif) ni de seconde courbe de durée : « Activité récente »
-     * trace déjà la durée des mêmes séances (`RecentWorkoutsTimelineChart`).
-     */
     it('ne dessine plus de graphique des objectifs ni de durée récente', () => {
         const wrapper = mountDashboard({ activeGoals: [{ id: 1, title: 'Squat 100', progress_pct: 40 }] })
 
@@ -299,12 +293,82 @@ describe('Dashboard', () => {
         expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('activeGoals')).toEqual(goals)
     })
 
-    it('passe les séances récentes à la liste d’activité', () => {
+    it('passe les séances récentes à la liste des dernières séances', () => {
         const workouts = [{ id: 3, started_at: '2026-02-10T14:30:00Z' }]
 
         const wrapper = mountDashboard({ recentWorkouts: workouts })
 
         expect(wrapper.findComponent({ name: 'RecentActivity' }).props('recentWorkouts')).toEqual(workouts)
+    })
+
+    describe('sur un compte neuf, sans aucune séance', () => {
+        const monterUnCompteNeuf = () => mountDashboard({ recentWorkouts: [], recentPRs: [], activeGoals: [] })
+
+        it('dit « Pas encore de séance » dans un seul état vide, à la place des cartes', () => {
+            const wrapper = monterUnCompteNeuf()
+            const vides = wrapper.findAllComponents({ name: 'GlassEmptyState' })
+
+            expect(vides).toHaveLength(1)
+            expect(vides[0].text()).toContain('Pas encore de séance')
+            expect(vides[0].text()).toContain("Tes chiffres s'affichent ici après la première.")
+            expect(vides[0].text()).toContain('Démarrer une séance')
+
+            for (const nom of ['WeeklyVolumeSection', 'RecentActivity', 'GoalsSummary', 'RecentPRs']) {
+                expect(wrapper.findComponent({ name: nom }).exists()).toBe(false)
+            }
+
+            expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
+        })
+
+        it('garde l’en-tête « Bon retour » et les actions rapides sans la tuile Démarrer, donc un seul bouton Démarrer', () => {
+            const wrapper = monterUnCompteNeuf()
+            const actions = wrapper.findComponent({ name: 'QuickActions' })
+
+            expect(wrapper.get('[dusk="dashboard-welcome"]').text()).toBe('Bon retour')
+            expect(actions.exists()).toBe(true)
+            expect(actions.props('sansDemarrage')).toBe(true)
+            expect(wrapper.findAll('[dusk="start-workout-button"]')).toHaveLength(1)
+            expect(wrapper.findAll('#start-workout-button')).toHaveLength(0)
+        })
+
+        it('sur une copie hors ligne, garde le bouton de l’état vide actif et démarre la séance', async () => {
+            pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }
+            const wrapper = monterUnCompteNeuf()
+            const bouton = wrapper.getComponent({ name: 'GlassEmptyState' }).getComponent({ name: 'GlassButton' })
+
+            expect(bouton.attributes('disabled')).toBeUndefined()
+
+            await bouton.trigger('click')
+
+            expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+        })
+
+        it('démarre la séance par le bouton de l’état vide, et le dit occupé pendant le démarrage', async () => {
+            const wrapper = monterUnCompteNeuf()
+            const bouton = wrapper.getComponent({ name: 'GlassEmptyState' }).getComponent({ name: 'GlassButton' })
+
+            expect(bouton.props('loading')).toBe(false)
+
+            await bouton.trigger('click')
+
+            expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+            expect(bouton.props('loading')).toBe(true)
+        })
+
+        it('ne montre pas non plus l’état vide quand une séance démarrée hors ligne attend dans la file', () => {
+            const wrapper = mountDashboard(
+                { recentWorkouts: [], recentPRs: [], activeGoals: [] },
+                { [CLE_DE_LA_SEANCE_EN_COURS]: ref({ id: null, cle: 'abc' }) },
+            )
+
+            expect(wrapper.findComponent({ name: 'GlassEmptyState' }).exists()).toBe(false)
+        })
+
+        it('ne montre plus l’état vide dès la première séance', () => {
+            const wrapper = mountDashboard({ recentWorkouts: [uneSeance] })
+
+            expect(wrapper.findComponent({ name: 'GlassEmptyState' }).exists()).toBe(false)
+        })
     })
 
     describe('les invitations de l’accueil', () => {
@@ -333,7 +397,7 @@ describe('Dashboard', () => {
                         $page: { props: { auth: { user: { name: 'Sam' } } }, flash },
                     },
                     stubs: {
-                        AuthenticatedLayout: layoutStub,
+                        AuthenticatedLayout: layoutAvecSeance,
                         GlassCard: passesSlot,
                         QuickActions: quickActions,
                         RecentActivity: recentActivity,

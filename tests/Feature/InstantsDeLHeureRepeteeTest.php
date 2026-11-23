@@ -299,16 +299,6 @@ describe('ce que les pages servent d’une séance', function (): void {
             ->and($historique[0]->duration)->toBe(40);
     });
 
-    it('range la séance entre trente et soixante minutes dans la répartition des durées', function (): void {
-        $compte = User::factory()->create();
-        heureRepeteeSeanceFaite($compte);
-        heureRepeteeHorlogeA('2026-10-25T09:00:00Z');
-
-        $durees = app(WorkoutStatsService::class)->repartitionsDesSeances($compte)['duration'];
-
-        expect(array_map(fn (\App\DTOs\Stats\DistributionStat $tranche): int => $tranche->count, $durees))->toBe([0, 1, 0, 0]);
-    });
-
     /*
      * Commencée hors de l'heure répétée (01:50 à Paris, `+02:00`) et finie
      * dans sa première occurrence (02:50, `+02:00`) : seul le décalage de la
@@ -323,17 +313,6 @@ describe('ce que les pages servent d’une séance', function (): void {
 
         expect($historique)->toHaveCount(1)
             ->and($historique[0]->duration)->toBe(60);
-    });
-
-    it('range entre soixante et quatre-vingt-dix minutes une séance finie dans la première occurrence', function (): void {
-        $compte = User::factory()->create();
-        heureRepeteeSeanceFaite($compte, '2026-10-24T23:50:00Z', '2026-10-25T00:50:00Z');
-        heureRepeteeHorlogeA('2026-10-25T09:00:00Z');
-
-        $durees = app(WorkoutStatsService::class)->repartitionsDesSeances($compte)['duration'];
-
-        expect(array_map(fn (\App\DTOs\Stats\DistributionStat $tranche): string => $tranche->label, $durees))->toBe(['< 30 min', '30-60 min', '60-90 min', '90+ min'])
-            ->and(array_map(fn (\App\DTOs\Stats\DistributionStat $tranche): int => $tranche->count, $durees))->toBe([0, 0, 1, 0]);
     });
 
     it('place la séance du calendrier à l’heure de son début', function (): void {

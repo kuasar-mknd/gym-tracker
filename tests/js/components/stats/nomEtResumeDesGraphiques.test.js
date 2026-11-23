@@ -55,7 +55,7 @@ const JOURNAL = [
  * `ExerciseCategoryChart` ne trace pas une prop `data`. `JournalChart` et
  * `BodyPartDiffChart` montrent leur état vide, sans canevas, tant qu'ils n'ont
  * rien à tracer : sans point, la garde ci-dessous n'aurait rien lu chez eux.
- * Avec ces props, chacune des trente-huit cartes rend son canevas.
+ * Avec ces props, chacune des trente et une cartes rend son canevas.
  */
 const PROPS_PROPRES = {
     'ExerciseCategoryChart.vue': { exercises: [] },
@@ -68,8 +68,8 @@ const carte = (nom) => cartes[`/resources/js/Components/Stats/${nom}.vue`]
 const boutonNomme = (wrapper, nom) => wrapper.findAll('button').find((bouton) => bouton.text() === nom)
 
 describe('un graphique se lit sans le voir', () => {
-    it('trouve les trente-huit cartes de graphique', () => {
-        expect(Object.keys(cartes)).toHaveLength(38)
+    it('trouve les trente et une cartes de graphique', () => {
+        expect(Object.keys(cartes)).toHaveLength(31)
     })
 
     it('nomme le canevas des habitudes et écrit les valeurs tracées', () => {
@@ -117,17 +117,17 @@ describe('un graphique se lit sans le voir', () => {
     })
 
     it('écrit chaque part d’un anneau avec son compte', () => {
-        const wrapper = monter(carte('TimeOfDayChart'), {
+        const wrapper = monter(carte('MuscleDistributionChart'), {
             data: [
-                { label: 'Matin', count: 3 },
-                { label: 'Soir', count: 5 },
+                { category: 'Pectoraux', volume: 3 },
+                { category: 'Dos', volume: 5 },
             ],
         })
 
         expect(lectureDuCanevas(wrapper)).toEqual({
             role: 'img',
-            nom: 'Répartition des séances selon le moment de la journée',
-            description: 'Matin : 3 ; Soir : 5.',
+            nom: 'Répartition du volume par groupe musculaire',
+            description: 'Pectoraux : 3 ; Dos : 5.',
         })
     })
 

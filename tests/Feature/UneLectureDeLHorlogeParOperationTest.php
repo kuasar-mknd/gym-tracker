@@ -254,14 +254,16 @@ it('montre le même jour au compteur et au graphique de la page Hydratation quan
  * Deux semaines de séances pour la carte hebdomadaire du tableau de bord.
  *
  * 1 000 la semaine du 28 septembre, 500 celle du 5 octobre, rien encore celle
- * du 12 : la semaine du 5 se lit « 500, -50 % », celle du 12 « 0, -100 % ».
- * Le volume est posé, les écouteurs sont coupés.
+ * du 12 : la semaine du 5 se lit « 500, -50 % », celle du 12 « 0 », sans écart : aucune
+ * séance cette semaine-là.
+ * Le volume est posé, les écouteurs sont coupés ; les séances sont faites, seules
+ * comptées par la variation.
  */
 function carteHebdomadaireSurDeuxSemaines(User $user): void
 {
     Workout::withoutEvents(function () use ($user): void {
-        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-09-30 10:00:00'), 'workout_volume' => 1000]);
-        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-10-07 10:00:00'), 'workout_volume' => 500]);
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-09-30 10:00:00'), 'workout_volume' => 1000]);
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-10-07 10:00:00'), 'workout_volume' => 500]);
     });
 }
 
@@ -291,13 +293,13 @@ it('montre une seule semaine sur la carte hebdomadaire du tableau de bord quand 
     // 500 : le total est la somme de la courbe.
     expect([$courbe[0]->date, $carte['stats']['current_week_volume'], $carte['stats']['percentage']])->toBeIn([
         ['2026-10-05', 500.0, -50.0],
-        ['2026-10-12', 0.0, -100.0],
+        ['2026-10-12', 0.0, null],
     ])
         ->and(array_sum(array_map(static fn (WeeklyVolumeTrendPoint $point): float => $point->volume, $courbe)))
         ->toBe($carte['stats']['current_week_volume'])
         ->and(Cache::has(ClesDeStats::seances($user, 'weekly_volume.'.$semaine)))
         ->toBeTrue()
-        ->and(Cache::has(ClesDeStats::seances($user, 'weekly_volume_comparison.'.$semaine)))
+        ->and(Cache::has(ClesDeStats::seances($user, 'weekly_volume_to_date.'.$semaine)))
         ->toBeTrue();
 })->with(range(1, 5));
 
@@ -319,7 +321,7 @@ it('range les analyses du tableau de bord sous la semaine de leur carte quand lu
 
     $semaine = Carbon::parse($carte['trend'][0]->date)->format('Y-W');
     expect([$carte['trend'][0]->date, $carte['stats']['current_week_volume']])->toBeIn([['2026-10-05', 500.0], ['2026-10-12', 0.0]])
-        ->and(Cache::has(ClesDeStats::seances($user, 'dashboard_analytical.'.$semaine)))
+        ->and(Cache::has(ClesDeStats::seances($user, 'dashboard_weekly_card.'.$semaine)))
         ->toBeTrue();
 })->with(range(1, 6));
 
@@ -344,5 +346,5 @@ it('ne sert pas le lundi la carte hebdomadaire mise en cache le dimanche soir', 
     $carte = $tableauDeBord->getAnalyticalStats($user)['weeklyVolume'];
 
     expect($carte['trend'][0]->date)->toBe('2026-10-12')
-        ->and($carte['stats'])->toBe(['current_week_volume' => 0.0, 'percentage' => -100.0]);
+        ->and($carte['stats'])->toBe(['current_week_volume' => 0.0, 'percentage' => null, 'sessions_count' => 0]);
 });
