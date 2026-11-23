@@ -204,14 +204,7 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
 </script>
 
 <template>
-    <Modal
-        :show="show"
-        position="tiroir"
-        :closeable="!showCreateForm"
-        max-width="lg"
-        aria-labelledby="add-exercise-title"
-        @close="fermer"
-    >
+    <Modal :show="show" position="tiroir" max-width="lg" aria-labelledby="add-exercise-title" @close="fermer">
         <div class="flex min-h-0 flex-1 flex-col" @keydown.esc="surEchap">
             <div class="flex shrink-0 items-center gap-3 px-6 pb-4">
                 <GlassIconButton

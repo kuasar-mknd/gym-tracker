@@ -421,15 +421,12 @@ describe('créer un exercice sur le champ', () => {
         wrapper.unmount()
     })
 
-    it('demande le nom, et Échap dans le formulaire revient à la liste sans fermer', async () => {
+    it('demande le nom, et Échap dans le formulaire revient à la liste, et le fond ferme le tiroir', async () => {
         const wrapper = monter()
 
         wrapper.vm.showCreateForm = true
         await wrapper.vm.$nextTick()
         expect(wrapper.get('[dusk="new-exercise-name"]').attributes('required')).toBeDefined()
-
-        // Le dialogue natif ne se ferme pas de lui-même dans le formulaire.
-        expect(wrapper.findComponent({ name: 'Modal' }).props('closeable')).toBe(false)
 
         const echap = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
 
@@ -440,8 +437,13 @@ describe('créer un exercice sur le champ', () => {
         expect(echap.defaultPrevented).toBe(true)
 
         expect(wrapper.vm.showCreateForm).toBe(false)
-        expect(wrapper.findComponent({ name: 'Modal' }).props('closeable')).toBe(true)
-        expect(wrapper.emitted('close')).toBeUndefined()
+        // Le fond et la poignée, eux, ferment le tiroir depuis le formulaire.
+        wrapper.vm.showCreateForm = true
+        wrapper.findComponent({ name: 'Modal' }).vm.$emit('close')
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.emitted('close')).toHaveLength(1)
+        expect(wrapper.vm.showCreateForm).toBe(false)
         wrapper.unmount()
     })
 

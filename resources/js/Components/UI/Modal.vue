@@ -337,7 +337,6 @@ watch(
                     >
                         <div
                             v-if="isTiroir"
-                            :class="{ invisible: !closeable }"
                             class="flex h-11 shrink-0 cursor-grab touch-none items-center justify-center sm:hidden"
                             data-testid="poignee-du-tiroir"
                             aria-hidden="true"
