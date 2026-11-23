@@ -201,7 +201,18 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
                 <h2 id="add-exercise-title" class="titre-plat min-w-0 flex-1">
                     {{ showCreateForm ? 'Nouvel exercice' : 'Ajouter un exercice' }}
                 </h2>
-                <GlassIconButton icon="close" label="Fermer" dusk="fermer-ajout-exercice" @click="fermer" />
+                <GlassButton
+                    v-if="showCreateForm"
+                    type="submit"
+                    form="nouvel-exercice"
+                    variant="primary"
+                    size="sm"
+                    :loading="createExerciseForm.processing"
+                    dusk="submit-new-exercise"
+                >
+                    Créer
+                </GlassButton>
+                <GlassIconButton v-else icon="close" label="Fermer" dusk="fermer-ajout-exercice" @click="fermer" />
             </div>
 
             <template v-if="!showCreateForm">
@@ -294,30 +305,21 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
                 </div>
             </template>
 
-            <form class="flex min-h-0 flex-1 flex-col" v-else @submit.prevent="createAndAddExercise">
-                <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-4">
-                    <ChampsDUnExercice
-                        v-model:name="createExerciseForm.name"
-                        v-model:type="createExerciseForm.type"
-                        v-model:category="createExerciseForm.category"
-                        :errors="createExerciseForm.errors"
-                        dusk-nom="new-exercise-name"
-                        dusk-type="new-exercise-type"
-                        dusk-categorie="new-exercise-category"
-                    />
-                </div>
-
-                <div class="pb-feuille-6 shrink-0 px-6 pt-2">
-                    <GlassButton
-                        type="submit"
-                        variant="primary"
-                        class="w-full"
-                        :loading="createExerciseForm.processing"
-                        dusk="submit-new-exercise"
-                    >
-                        Créer et ajouter
-                    </GlassButton>
-                </div>
+            <form
+                id="nouvel-exercice"
+                v-else
+                class="pb-feuille-6 min-h-0 flex-1 space-y-6 overflow-y-auto px-6"
+                @submit.prevent="createAndAddExercise"
+            >
+                <ChampsDUnExercice
+                    v-model:name="createExerciseForm.name"
+                    v-model:type="createExerciseForm.type"
+                    v-model:category="createExerciseForm.category"
+                    :errors="createExerciseForm.errors"
+                    dusk-nom="new-exercise-name"
+                    dusk-type="new-exercise-type"
+                    dusk-categorie="new-exercise-category"
+                />
             </form>
         </div>
     </Modal>
