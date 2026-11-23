@@ -45,7 +45,7 @@
         "tailwindcss": "^4.3.5",
         "vite": "^8.3.8",
         "vite-plugin-pwa": "^2.0.0",
-        "vitest": "^5.1.0",
+        "vitest": "^5.1.1",
         "vue": "^3.5.46",
         "workbox-core": "^7.4.1",
         "workbox-precaching": "^7.4.1"
