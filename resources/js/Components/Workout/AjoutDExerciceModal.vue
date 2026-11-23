@@ -288,7 +288,7 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
                         @click="quickCreate"
                     >
                         <span
-                            class="bg-accent-primary/10 text-accent-primary flex size-9 shrink-0 items-center justify-center rounded-xl"
+                            class="bg-accent-primary/10 text-accent-primary-deep flex size-9 shrink-0 items-center justify-center rounded-xl"
                         >
                             <GlassIcon name="add" size="sm" />
                         </span>

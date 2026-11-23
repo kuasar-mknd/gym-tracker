@@ -65,7 +65,7 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
                 class="bg-surface-sunken/60 mb-4 flex items-center gap-3 rounded-2xl px-4 py-3"
                 role="status"
             >
-                <GlassIcon name="check_circle" class="text-accent-primary shrink-0" />
+                <GlassIcon name="check_circle" class="text-accent-primary-deep shrink-0" />
                 <span class="text-text-main text-sm font-medium">
                     <span class="block" dusk="bilan-de-fin-sur-l-appareil">Enregistrée sur cet appareil</span>
                     <span class="text-text-muted block text-xs font-normal">
