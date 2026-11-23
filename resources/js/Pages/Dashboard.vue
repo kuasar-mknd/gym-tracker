@@ -84,7 +84,12 @@ const installationProposee = ref(false)
                 description="Tes chiffres s'affichent ici après la première."
             >
                 <template #action>
-                    <GlassButton variant="primary" :loading="demarrageEnCours" @click="startWorkout()">
+                    <GlassButton
+                        variant="primary"
+                        dusk="start-workout-button"
+                        :loading="demarrageEnCours"
+                        @click="startWorkout()"
+                    >
                         Démarrer une séance
                     </GlassButton>
                 </template>
