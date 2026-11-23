@@ -125,7 +125,6 @@ describe('la barre d’outils de la séance', () => {
 
     it('cède la place du bouton « Repos » à l’anneau pendant un repos', () => {
         const wrapper = mount(ActionsDeLaSeance, {
-            props: { reposEnCours: true },
             slots: { repos: '<button dusk="rest-timer">1:12</button>' },
             global: { directives: { press: {} } },
         })

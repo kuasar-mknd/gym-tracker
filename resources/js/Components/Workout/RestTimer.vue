@@ -10,6 +10,8 @@
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { useSortieAudio } from '@/composables/useSortieAudio'
+import GlassToggle from '@/Components/UI/GlassToggle.vue'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import Modal from '@/Components/UI/Modal.vue'
 import AnneauDuRepos from '@/Components/Workout/AnneauDuRepos.vue'
@@ -56,6 +58,12 @@ const props = defineProps({
         default: null,
     },
 
+    /** Le démarrage automatique du repos, réglé aussi dans la feuille. */
+    reposAutomatique: {
+        type: Boolean,
+        default: true,
+    },
+
     /**
      * Un repos repris en route (#2434) : la page l'avait laissé en partant, et
      * le minuteur remonté part de ce qu'il reste, sur la durée d'origine
@@ -81,7 +89,9 @@ const props = defineProps({
  *   after the end of the rest, que la carte annonce entre-temps
  *   (« Repos terminé », `role="status"`). Un parent ferme la carte sur `close`.
  */
-const emit = defineEmits(['close', 'pause', 'reprise'])
+const emit = defineEmits(['close', 'pause', 'reprise', 'update:reposAutomatique'])
+
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 // --- State ---
 
@@ -371,6 +381,15 @@ watch(
                         :style="{ width: `${progress}%` }"
                     ></div>
                 </div>
+                <GlassToggle
+                    :model-value="reposAutomatique"
+                    label="Démarrage automatique du repos"
+                    class="mb-4"
+                    dusk="auto-rest-timer-feuille"
+                    :disabled="surUneCopie"
+                    :aria-describedby="surUneCopie ? raisonDUneEcriture : undefined"
+                    @update:model-value="emit('update:reposAutomatique', $event)"
+                />
                 <div class="flex flex-col gap-2">
                     <GlassButton
                         v-if="!termine"

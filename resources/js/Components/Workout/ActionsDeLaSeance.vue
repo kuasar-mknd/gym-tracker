@@ -42,8 +42,6 @@ const props = defineProps({
      * avec le premier exercice.
      */
     vide: { type: Boolean, default: false },
-    /** Un repos court : le bouton « Repos » cède sa place à l'emplacement `repos` (l'anneau et le décompte). */
-    reposEnCours: { type: Boolean, default: false },
     /** La séance que « Abandonner » supprime. */
     idDeLaSeance: { type: [Number, String], default: null },
 })
@@ -100,7 +98,7 @@ const raisonDuModele = computed(() => {
                 <span class="bureau:hidden">Exercice</span>
                 <span class="bureau:inline hidden">Ajouter un exercice</span>
             </GlassButton>
-            <slot v-if="!vide && reposEnCours" name="repos" />
+            <slot v-if="!vide && $slots.repos" name="repos" />
             <GlassButton
                 v-else-if="!vide"
                 variant="secondary"

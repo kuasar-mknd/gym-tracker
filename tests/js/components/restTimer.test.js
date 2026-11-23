@@ -524,4 +524,12 @@ describe('la carte du repos', () => {
         expect(wrapper.find('[dusk="auto-rest-timer"]').exists()).toBe(false)
         expect(wrapper.find('svg').exists()).toBe(false)
     })
+
+    it('règle le démarrage automatique depuis la feuille', async () => {
+        const wrapper = mountTimer({ reposAutomatique: true })
+
+        await wrapper.get('[dusk="auto-rest-timer-feuille"] [role="switch"]').trigger('click')
+
+        expect(wrapper.emitted('update:reposAutomatique')).toEqual([[false]])
+    })
 })

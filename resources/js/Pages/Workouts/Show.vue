@@ -347,13 +347,14 @@ onUnmounted(() => {
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"
                 @terminer="finishWorkout"
-                :repos-en-cours="showTimer"
             >
-                <template #repos>
+                <template v-if="showTimer" #repos>
                     <RestTimer
                         v-bind="liaisonDuMinuteur"
                         :ensuite="ensuiteDuRepos"
+                        :repos-automatique="autoRestTimer"
                         :sortie-audio="sortieAudio"
+                        @update:repos-automatique="setAutoRestTimer"
                         @close="showTimer = false"
                     />
                 </template>
