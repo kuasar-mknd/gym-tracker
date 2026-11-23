@@ -99,6 +99,7 @@ const quickCreate = () => {
     createExerciseForm.name = requete.value
     createExerciseForm.category =
         categorie.value === TOUTES || categorie.value === SANS_CATEGORIE ? '' : categorie.value
+    createExerciseForm.clearErrors()
     showCreateForm.value = true
 
     nextTick(() => document.querySelector('[dusk="new-exercise-name"]')?.focus())
@@ -109,11 +110,21 @@ let generationDeCreation = 0
 
 const retourALaListe = () => {
     generationDeCreation++
+    createExerciseForm.processing = false
     showCreateForm.value = false
+}
+
+/** Échap dans le formulaire revient à la liste : le navigateur ne doit pas fermer le dialogue en plus. */
+const surEchap = (event) => {
+    if (showCreateForm.value) {
+        event.preventDefault()
+        retourALaListe()
+    }
 }
 
 const fermer = () => {
     generationDeCreation++
+    createExerciseForm.processing = false
     showCreateForm.value = false
     searchQuery.value = ''
     categorie.value = TOUTES
@@ -158,6 +169,10 @@ const createAndAddExercise = async () => {
 
         // Autre chose qu'un 2xx laissait la modale ouverte sans un mot, et
         // l'utilisateur tapait encore. Les erreurs de validation remontent.
+        if (generation !== generationDeCreation) {
+            return
+        }
+
         if (response.status === 422) {
             const { errors = {} } = await response.json()
 
@@ -171,10 +186,17 @@ const createAndAddExercise = async () => {
         triggerHaptic('error')
     } catch (e) {
         console.error(e)
+
+        if (generation !== generationDeCreation) {
+            return
+        }
+
         createExerciseForm.setError('name', 'Connexion impossible. Vérifie ta connexion réseau.')
         triggerHaptic('error')
     } finally {
-        createExerciseForm.processing = false
+        if (generation === generationDeCreation) {
+            createExerciseForm.processing = false
+        }
     }
 }
 
@@ -190,7 +212,7 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
         aria-labelledby="add-exercise-title"
         @close="fermer"
     >
-        <div class="flex min-h-0 flex-1 flex-col" @keydown.esc="showCreateForm && retourALaListe()">
+        <div class="flex min-h-0 flex-1 flex-col" @keydown.esc="surEchap">
             <div class="flex shrink-0 items-center gap-3 px-6 pb-4">
                 <GlassIconButton
                     v-if="showCreateForm"

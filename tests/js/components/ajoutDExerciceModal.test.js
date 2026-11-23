@@ -431,11 +431,41 @@ describe('créer un exercice sur le champ', () => {
         // Le dialogue natif ne se ferme pas de lui-même dans le formulaire.
         expect(wrapper.findComponent({ name: 'Modal' }).props('closeable')).toBe(false)
 
-        await wrapper.get('[dusk="new-exercise-name"]').trigger('keydown', { key: 'Escape' })
+        const echap = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+
+        wrapper.get('[dusk="new-exercise-name"]').element.dispatchEvent(echap)
+        await wrapper.vm.$nextTick()
+
+        // Sans preventDefault, le navigateur fermerait le dialogue natif après le rendu.
+        expect(echap.defaultPrevented).toBe(true)
 
         expect(wrapper.vm.showCreateForm).toBe(false)
         expect(wrapper.findComponent({ name: 'Modal' }).props('closeable')).toBe(true)
         expect(wrapper.emitted('close')).toBeUndefined()
+        wrapper.unmount()
+    })
+
+    it('ne montre pas l’échec tardif d’une création quittée, et libère le bouton', async () => {
+        let echouer
+        vi.spyOn(globalThis, 'fetch').mockReturnValue(
+            new Promise((_, rejet) => {
+                echouer = () => rejet(new Error('réseau'))
+            }),
+        )
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        const wrapper = monter()
+
+        wrapper.vm.showCreateForm = true
+        await wrapper.vm.$nextTick()
+        wrapper.vm.createAndAddExercise()
+        await wrapper.get('button[aria-label="Retour à la liste"]').trigger('click')
+
+        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+
+        echouer()
+        await flushPromises()
+
+        expect(wrapper.vm.createExerciseForm.errors.name).toBeUndefined()
         wrapper.unmount()
     })
 })
