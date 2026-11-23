@@ -6,6 +6,7 @@ import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import BandeauHorsLigne from '@/Components/UI/BandeauHorsLigne.vue'
@@ -93,12 +94,12 @@ const CLASSES_DU_RETOUR_DE_BUREAU =
     'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none'
 
 /*
- * Accueil et Profil n'ont pas de titre visible : la cloche y flotte, sans barre
- * qui lui réserve une rangée de la page. Une bande de la hauteur de la barre
- * d'état garde l'horloge lisible quand le contenu défile dessous ; la première
- * carte de la page garde de quoi loger la cloche à sa droite.
+ * Accueil et Profil n'ont pas de titre visible : la cloche y est dans la page,
+ * dans la première carte (`Cloche`), sans barre qui lui réserve une rangée. Une
+ * bande de la hauteur de la barre d'état garde l'horloge lisible quand le
+ * contenu défile dessous.
  */
-const clocheFlottante = computed(() => props.titreMasque && !props.showBack)
+const clocheDansLaPage = computed(() => props.titreMasque && !props.showBack)
 
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
@@ -328,13 +329,13 @@ onUnmounted(() => {
             v-if="pageTitle || showBack"
             class="bureau:hidden"
             :class="
-                clocheFlottante
+                clocheDansLaPage
                     ? 'contents'
                     : 'bg-surface-page/40 z-collant px-sure-5 pt-sure-4 sticky top-0 flex items-center justify-between pb-4 backdrop-blur-xl'
             "
         >
             <div
-                v-if="clocheFlottante"
+                v-if="clocheDansLaPage"
                 class="bg-surface-page/40 z-collant bureau:hidden left-sure-0 right-sure-0 pt-sure-0 pointer-events-none fixed top-0 h-(--safe-area-top) backdrop-blur-xl"
                 aria-hidden="true"
             ></div>
@@ -363,25 +364,8 @@ onUnmounted(() => {
                 </h1>
             </div>
 
-            <div :class="clocheFlottante ? 'top-sure-12 right-sure-9 z-collant fixed' : 'flex items-center gap-2'">
-                <Link
-                    v-press
-                    :href="route('notifications.index')"
-                    class="verre-regulier text-text-muted rounded-capsule relative flex size-11 shrink-0 items-center justify-center transition"
-                    :aria-label="
-                        $page.props.auth.user.unread_notifications_count > 0
-                            ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
-                            : 'Notifications'
-                    "
-                >
-                    <GlassIcon name="notifications" />
-                    <span
-                        v-if="$page.props.auth.user.unread_notifications_count > 0"
-                        class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-semibold"
-                    >
-                        {{ $page.props.auth.user.unread_notifications_count }}
-                    </span>
-                </Link>
+            <div v-if="!clocheDansLaPage" class="flex items-center gap-2">
+                <Cloche />
                 <slot name="header-actions" />
             </div>
         </header>
@@ -411,7 +395,7 @@ onUnmounted(() => {
             tabindex="-1"
             class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6 focus:outline-none"
             :class="[
-                { 'pt-main-safe sm:pt-main-safe': (!pageTitle && !showBack) || clocheFlottante },
+                { 'pt-main-safe sm:pt-main-safe': (!pageTitle && !showBack) || clocheDansLaPage },
                 accessoireDeSeance ? 'pb-main-safe-accessoire bureau:pb-main-safe' : 'pb-main-safe',
             ]"
         >

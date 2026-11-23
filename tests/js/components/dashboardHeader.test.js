@@ -17,7 +17,8 @@ const mountHeader = (latestWeight) =>
         global: {
             // The template calls route() directly, so it has to resolve through
             // the component instance, not just on globalThis.
-            mocks: { route: globalThis.route },
+            mocks: { route: globalThis.route, $page: { props: { auth: { user: { unread_notifications_count: 0 } } } } },
+            directives: { press: {} },
             stubs: {
                 Link: { template: '<a :href="href"><slot /></a>', props: ['href'] },
             },
@@ -72,7 +73,11 @@ describe('DashboardHeader streak badge', () => {
         mount(DashboardHeader, {
             props: { user: { name: 'Samuel', current_streak: days }, latestWeight: null },
             global: {
-                mocks: { route: globalThis.route },
+                mocks: {
+                    route: globalThis.route,
+                    $page: { props: { auth: { user: { unread_notifications_count: 0 } } } },
+                },
+                directives: { press: {} },
                 stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
             },
         }).find('[dusk="dashboard-streak"]')
@@ -105,7 +110,11 @@ describe('DashboardHeader sur une copie hors ligne', () => {
         mount(DashboardHeader, {
             props: { user: { name: 'Samuel Dulex', current_streak: 4 }, ...props },
             global: {
-                mocks: { route: globalThis.route },
+                mocks: {
+                    route: globalThis.route,
+                    $page: { props: { auth: { user: { unread_notifications_count: 0 } } } },
+                },
+                directives: { press: {} },
                 stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
             },
         })

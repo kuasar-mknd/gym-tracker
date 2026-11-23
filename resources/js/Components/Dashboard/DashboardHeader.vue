@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import { Link } from '@inertiajs/vue3'
 import { nombre } from '@/Utils/nombre'
 
@@ -47,7 +48,7 @@ const streakLabel = computed(() => {
 <template>
     <header
         id="dashboard-header"
-        class="animate-fade-in verre-regulier rounded-carte flex items-center justify-between gap-3 p-4 pe-18"
+        class="animate-fade-in verre-regulier rounded-carte flex items-center justify-between gap-3 p-4"
     >
         <div class="flex min-w-0 items-center gap-3">
             <div
@@ -102,5 +103,6 @@ const streakLabel = computed(() => {
                 {{ streakDays }} {{ streakDays === 1 ? 'jour' : 'jours' }}
             </span>
         </Link>
+        <Cloche class="bureau:hidden" />
     </header>
 </template>

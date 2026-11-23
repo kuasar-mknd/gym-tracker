@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { seDeconnecter } from '@/composables/useDeconnexion'
 
@@ -118,13 +119,13 @@ const menuGroups = [
     <AuthenticatedLayout page-title="Profil" titre-masque>
         <div class="space-y-6">
             <!-- User Profile Quick View -->
-            <div class="animate-fade-in flex items-center gap-4 py-2 pe-14">
+            <div class="animate-fade-in flex items-center gap-4 py-2">
                 <div
                     class="bg-surface-sunken font-display text-text-main flex h-20 w-20 items-center justify-center rounded-3xl text-3xl font-semibold"
                 >
                     {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                 </div>
-                <div>
+                <div class="min-w-0 flex-1">
                     <h2 class="titre-ecran">
                         {{ $page.props.auth.user.name }}
                     </h2>
@@ -147,6 +148,7 @@ const menuGroups = [
                         </button>
                     </div>
                 </div>
+                <Cloche class="bureau:hidden self-start" />
             </div>
 
             <!-- Menu Groups -->
