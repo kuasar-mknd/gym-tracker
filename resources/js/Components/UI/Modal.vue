@@ -188,11 +188,11 @@ const containerClass = computed(() =>
 
 const panelClass = computed(() => {
     if (isFeuille.value) {
-        return 'hauteur-max-tiroir marge-de-feuille fond-de-feuille rounded-carte'
+        return 'hauteur-max-tiroir marge-de-feuille fond-de-feuille rounded-carte rounded-b-none sm:rounded-b-carte'
     }
 
     return isTiroir.value
-        ? 'hauteur-tiroir marge-de-feuille fond-de-feuille rounded-carte'
+        ? 'hauteur-tiroir marge-de-feuille fond-de-feuille rounded-carte rounded-b-none sm:rounded-b-carte'
         : 'hauteur-sure-12 rounded-carte'
 })
 

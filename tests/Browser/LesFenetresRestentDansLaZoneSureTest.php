@@ -131,7 +131,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             );
 
             /*
-             * Le tiroir flotte à 8 px du bord de l'écran, son verre passant derrière
+             * Le tiroir est collé au bas de l'écran, son verre passant derrière
              * l'indicateur d'accueil (maquette de navigation) : c'est son contenu, la
              * liste (jusqu'à son dernier exercice), qui reste au-dessus de l'indicateur, et la marge du haut est de 24 px.
              */
@@ -154,7 +154,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $margeAuDessous = $fenetre['hauteur'] - $fenetre['panneauBas'];
 
             $this->assertEqualsWithDelta(24.0, $margeAuDessus, 1.0, sprintf('Le tiroir laisse %.0f px sous la barre d’état.', $margeAuDessus));
-            $this->assertEqualsWithDelta(8.0, $margeAuDessous, 1.0, sprintf('Le tiroir laisse %.0f px sous lui, au bord de l’écran.', $margeAuDessous));
+            $this->assertEqualsWithDelta(0.0, $margeAuDessous, 1.0, sprintf('Le tiroir laisse %.0f px sous lui, il doit toucher le bord de l’écran.', $margeAuDessous));
 
             /** @var array{listeDefile: bool, fenetreDefile: bool} $defilement */
             $defilement = $browser->script(<<<'JS'
