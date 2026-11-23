@@ -217,7 +217,7 @@ describe('le minuteur d’un repos repris', () => {
     const monterLeMinuteur = (props) =>
         mount(RestTimer, {
             props: { duration: 90, ...props },
-            global: { stubs: { GlassToggle: true } },
+            global: { stubs: { Modal: { template: '<div><slot /></div>' } } },
         })
 
     it('repart de ce qu’il reste, sur la durée d’origine', () => {

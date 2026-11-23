@@ -45,6 +45,7 @@ import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
+import RestTimer from '@/Components/Workout/RestTimer.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 
 const EXERCISE = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
@@ -520,7 +521,7 @@ describe('Workouts/Show — a finished session', () => {
 describe('Workouts/Show — the rest timer', () => {
     it('starts a fresh countdown for every completed set', async () => {
         const wrapper = await mountPage(workoutWithSet)
-        const timer = () => wrapper.find('[dusk="rest-timer"]')
+        const timer = () => wrapper.findComponent(RestTimer)
 
         await click(wrapper, 'complete-set-0-0')
         await flushPromises()

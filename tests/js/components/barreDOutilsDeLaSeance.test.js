@@ -122,4 +122,15 @@ describe('la barre d’outils de la séance', () => {
 
         expect(wrapper.emitted('ajouter-un-exercice')).toHaveLength(1)
     })
+
+    it('cède la place du bouton « Repos » à l’anneau pendant un repos', () => {
+        const wrapper = mount(ActionsDeLaSeance, {
+            props: { reposEnCours: true },
+            slots: { repos: '<button dusk="rest-timer">1:12</button>' },
+            global: { directives: { press: {} } },
+        })
+
+        expect(wrapper.find('[dusk="open-rest-timer"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="barre-d-outils-de-la-seance"] [dusk="rest-timer"]').text()).toBe('1:12')
+    })
 })

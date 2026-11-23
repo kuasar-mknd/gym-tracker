@@ -10,7 +10,13 @@ import { dansUnGeste, installerLaSortieWebKit, retirerLaSortieWebKit, sorties } 
 const mountTimer = (props = {}) =>
     mount(RestTimer, {
         props: { duration: 90, autoStart: false, ...props },
-        global: { directives: { press: {} }, stubs: { GlassButton: { template: '<button><slot /></button>' } } },
+        global: {
+            directives: { press: {} },
+            stubs: {
+                GlassButton: { template: '<button><slot /></button>' },
+                Modal: { template: '<div><slot /></div>' },
+            },
+        },
     })
 
 const bar = (wrapper) => wrapper.find('[role="progressbar"]')
@@ -106,7 +112,13 @@ describe('RestTimer countdown', () => {
     it('démarre au montage quand la page ne lui dit rien', async () => {
         const wrapper = mount(RestTimer, {
             props: { duration: 90 },
-            global: { directives: { press: {} }, stubs: { GlassButton: { template: '<button><slot /></button>' } } },
+            global: {
+                directives: { press: {} },
+                stubs: {
+                    GlassButton: { template: '<button><slot /></button>' },
+                    Modal: { template: '<div><slot /></div>' },
+                },
+            },
         })
 
         expect(vi.getTimerCount()).toBe(1)
@@ -188,7 +200,7 @@ describe('RestTimer countdown', () => {
 
         await wrapper.setProps({ duration: 60 })
 
-        expect(wrapper.get('[role="status"]').text()).toBe('Repos')
+        expect(wrapper.get('[role="status"]').text()).toBe('')
         expect(clock(wrapper)).toBe('1:00')
         expect(toggleButton(wrapper).exists()).toBe(true)
         vi.advanceTimersByTime(10000)
@@ -233,14 +245,14 @@ describe('RestTimer countdown', () => {
         await button(wrapper, 'close-timer-x').trigger('click')
 
         expect(wrapper.emitted('close')).toHaveLength(1)
-        expect(wrapper.get('[role="status"]').text()).toBe('Repos')
+        expect(wrapper.get('[role="status"]').text()).toBe('')
 
         // Closing also stops the countdown; a hidden timer must not fire.
         vi.advanceTimersByTime(120000)
-        expect(wrapper.get('[role="status"]').text()).toBe('Repos')
+        expect(wrapper.get('[role="status"]').text()).toBe('')
     })
 
-    it('désactive la bascule et retire Passer à la fin naturelle du repos, et garde « Fermer »', async () => {
+    it('retire la bascule et Passer à la fin naturelle du repos, et garde « Fermer »', async () => {
         const wrapper = mountTimer({ duration: 3, autoStart: true })
         expect(toggleButton(wrapper).exists()).toBe(true)
         expect(button(wrapper, 'skip-rest-timer').exists()).toBe(true)
@@ -248,7 +260,7 @@ describe('RestTimer countdown', () => {
         vi.advanceTimersByTime(3000)
         await wrapper.vm.$nextTick()
 
-        expect(toggleButton(wrapper).attributes('disabled')).toBeDefined()
+        expect(toggleButton(wrapper).exists()).toBe(false)
         expect(button(wrapper, 'skip-rest-timer').exists()).toBe(false)
         expect(button(wrapper, 'close-timer-x').exists()).toBe(true)
     })
@@ -260,7 +272,7 @@ describe('RestTimer countdown', () => {
             wrapper = mount(RestTimer, {
                 props: { duration: 3, autoStart: true },
                 attachTo: document.body,
-                global: { directives: { press: {} } },
+                global: { directives: { press: {} }, stubs: { Modal: { template: '<div><slot /></div>' } } },
             })
 
             return wrapper
@@ -502,7 +514,7 @@ describe('la carte du repos', () => {
 
         await toggleButton(wrapper).trigger('click')
 
-        expect(wrapper.get('[role="status"]').text()).toBe('Repos')
+        expect(wrapper.get('[role="status"]').text()).toBe('')
         expect(toggleButton(wrapper).attributes('aria-label')).toBe('Mettre le repos en pause')
     })
 

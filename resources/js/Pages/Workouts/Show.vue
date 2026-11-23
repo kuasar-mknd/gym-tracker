@@ -291,15 +291,6 @@ onUnmounted(() => {
         </template>
 
         <div class="pb-main-safe">
-            <RestTimer
-                v-if="showTimer"
-                v-bind="liaisonDuMinuteur"
-                class="mb-4"
-                :ensuite="ensuiteDuRepos"
-                :sortie-audio="sortieAudio"
-                @close="showTimer = false"
-                dusk="rest-timer"
-            />
             <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" :seance="localWorkout" />
             <SeriesHorsDeLaCopie :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
@@ -356,7 +347,17 @@ onUnmounted(() => {
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"
                 @terminer="finishWorkout"
-            />
+                :repos-en-cours="showTimer"
+            >
+                <template #repos>
+                    <RestTimer
+                        v-bind="liaisonDuMinuteur"
+                        :ensuite="ensuiteDuRepos"
+                        :sortie-audio="sortieAudio"
+                        @close="showTimer = false"
+                    />
+                </template>
+            </ActionsDeLaSeance>
         </div>
 
         <!-- Modals -->

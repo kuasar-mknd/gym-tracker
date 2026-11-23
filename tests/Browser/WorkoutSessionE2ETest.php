@@ -320,7 +320,9 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             $browser->waitFor('@pr-trophy-0-0', 15);
 
-            $browser->waitFor('[dusk="skip-rest-timer"]', 20)
+            $browser->waitFor('[dusk="rest-timer"]', 20)
+                ->click('[dusk="rest-timer"]')
+                ->waitFor('[dusk="skip-rest-timer"]', 10)
                 ->click('[dusk="skip-rest-timer"]')
                 ->waitUntilMissing('[dusk="rest-timer"]', 15);
 

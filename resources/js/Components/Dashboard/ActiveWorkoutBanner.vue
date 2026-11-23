@@ -19,6 +19,7 @@
  * `role="status"`), jamais à chaque seconde, puis le dépôt s'efface.
  */
 import { Link } from '@inertiajs/vue3'
+import AnneauDuRepos from '@/Components/Workout/AnneauDuRepos.vue'
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { compte, entier } from '@/Utils/nombre'
 import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
@@ -165,17 +166,12 @@ onUnmounted(() => {
         class="verre-epais rounded-capsule text-text-main focus-visible:ring-accent-primary focus-visible:ring-offset-surface-page flex min-h-16 items-center gap-2 py-2 pr-2 pl-5 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
-        <span
+        <AnneauDuRepos
             v-if="reposAffiche !== null"
-            class="relative -ml-2 size-10 shrink-0 rounded-full"
-            :style="{
-                background: `conic-gradient(var(--color-accent-primary) ${fractionDuRepos * 360}deg, var(--color-border) 0)`,
-            }"
+            :fraction="fractionDuRepos"
+            class="-ml-2 size-10"
             dusk="anneau-du-repos"
-            aria-hidden="true"
-        >
-            <span class="bg-surface-page absolute inset-1 rounded-full"></span>
-        </span>
+        />
         <span class="min-w-0 flex-1">
             <span class="block truncate text-sm font-medium">{{ workout.name || 'Séance' }}</span>
             <span class="text-text-muted block truncate text-xs tabular-nums">
