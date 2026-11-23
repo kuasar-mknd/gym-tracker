@@ -1131,6 +1131,19 @@ describe('ExerciseCard', () => {
         }
     })
 
+    it('shows one edit button below sm, with a variant that beats the button’s own inline-flex (#2453)', () => {
+        const wrapper = mountCard()
+
+        const classes = wrapper.get('[data-testid="edit-exercise-button"]').classes()
+
+        expect(classes).toContain('max-sm:hidden')
+        expect(classes).not.toContain('hidden')
+        expect(wrapper.get('[dusk="edit-exercise-btn-12"]').classes()).toContain('sm:hidden')
+        expect(wrapper.get('[data-testid="delete-exercise-button"]').classes()).not.toContain('max-sm:hidden')
+
+        wrapper.unmount()
+    })
+
     it('hands only the id to the delete handler', async () => {
         const wrapper = mountCard()
 
