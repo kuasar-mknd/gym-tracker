@@ -19,7 +19,8 @@ class GetStatsDashboardAction
         protected FetchStatsOverviewAction $fetchStatsOverview,
         protected VolumeStatsService $volumeStats,
         protected ExerciseStatsService $exerciseStats,
-        protected WorkoutStatsService $workoutStats
+        protected WorkoutStatsService $workoutStats,
+        protected FetchRegulariteAction $fetchRegularite
     ) {
     }
 
@@ -48,9 +49,26 @@ class GetStatsDashboardAction
 
         return [
             ...$this->fetchStatsOverview->chiffresImmediats($user, $period),
-            'deferredData' => fn (): array => [
-                'performance' => $this->performanceOverview($user, $jours),
-            ],
+            'deferredData' => fn (): array => $this->donneesDifferees($user, $jours),
+        ];
+    }
+
+    /**
+     * Le groupe différé de la page : la vue « performance », le volume des six
+     * derniers mois et la régularité (séances par mois et par jour). Les deux
+     * dernières suivent le mois calendaire, pas la période choisie, et
+     * reçoivent le même instant, lu une fois (#2033).
+     *
+     * @return array{performance: array<string, mixed>, volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>, regularite: array<string, mixed>}
+     */
+    private function donneesDifferees(User $user, int $jours): array
+    {
+        $maintenant = now();
+
+        return [
+            'performance' => $this->performanceOverview($user, $jours),
+            'volumeMensuel' => $this->volumeStats->getMonthlyVolumeHistory($user, 6, $maintenant),
+            'regularite' => $this->fetchRegularite->execute($user, $maintenant),
         ];
     }
 

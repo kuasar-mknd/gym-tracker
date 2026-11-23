@@ -70,6 +70,44 @@ it('ne rend aucune prop de pesée et ne lit pas le cache des mesures', function 
     $props['exercises']();
     $differees = $props['deferredData']();
 
-    expect(array_keys($differees))->toBe(['performance'])
+    expect(array_keys($differees))->toBe(['performance', 'volumeMensuel', 'regularite'])
         ->and($lectures)->toBe(0);
+});
+
+/*
+ * Progrès porte le volume mensuel (fusionné avec « Volume mois ») et la
+ * régularité (séances par mois et par jour) : les trois séries suivent le mois
+ * calendaire, pas la période choisie, et la régularité ne compte que les
+ * séances faites sur les six derniers mois.
+ */
+it('sert le volume des six derniers mois et la régularité, quelle que soit la période', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-06-17 12:00:00'));
+    $user = User::factory()->create();
+
+    Workout::withoutEvents(function () use ($user): void {
+        Workout::factory()->faite()->create([
+            'user_id' => $user->id,
+            'started_at' => Carbon::parse('2026-06-15 10:00:00'),
+            'ended_at' => Carbon::parse('2026-06-15 11:00:00'),
+        ]);
+        Workout::factory()->faite()->create([
+            'user_id' => $user->id,
+            'started_at' => Carbon::parse('2026-04-06 10:00:00'),
+            'ended_at' => Carbon::parse('2026-04-06 11:00:00'),
+        ]);
+        Workout::factory()->faite()->create([
+            'user_id' => $user->id,
+            'started_at' => Carbon::parse('2025-10-06 10:00:00'),
+            'ended_at' => Carbon::parse('2025-10-06 11:00:00'),
+        ]);
+    });
+
+    foreach (['7j', '1a'] as $periode) {
+        $props = app(GetStatsDashboardAction::class)->execute($user, Request::create('/stats', 'GET', ['period' => $periode]));
+        $differees = $props['deferredData']();
+
+        expect($differees['volumeMensuel'])->toHaveCount(6)
+            ->and($differees['regularite']['monthly_frequency']->pluck('count')->all())->toBe([0, 0, 0, 1, 0, 1])
+            ->and($differees['regularite']['day_of_week_frequency']->sum('count'))->toBe(2);
+    }
 });
