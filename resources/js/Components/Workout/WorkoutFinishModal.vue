@@ -172,8 +172,7 @@ const avisDAttente = computed(() =>
                     class="text-text-main text-sm font-medium"
                     dusk="finish-workout-proposed"
                 >
-                    Terminer à l'heure {{ depuisUneSerie ? 'de la dernière série saisie' : 'de démarrage' }} :
-                    {{ jourEtHeure(finProposee) }}.
+                    {{ depuisUneSerie ? 'Dernière série' : 'Démarrage' }} : {{ jourEtHeure(finProposee) }}
                 </p>
                 <GlassInput
                     v-else
@@ -196,7 +195,7 @@ const avisDAttente = computed(() =>
                     @click="confirmer"
                     class="bouton-de-bilan w-full"
                 >
-                    Confirmer
+                    Terminer
                 </GlassButton>
                 <GlassButton variant="secondary" autofocus @click="emit('close')" class="bouton-de-bilan w-full">
                     Annuler

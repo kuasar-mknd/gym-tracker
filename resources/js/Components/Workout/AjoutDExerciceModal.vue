@@ -292,30 +292,30 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
                 </div>
             </template>
 
-            <form
-                v-else
-                class="pb-feuille-6 min-h-0 flex-1 space-y-6 overflow-y-auto px-6"
-                @submit.prevent="createAndAddExercise"
-            >
-                <ChampsDUnExercice
-                    v-model:name="createExerciseForm.name"
-                    v-model:type="createExerciseForm.type"
-                    v-model:category="createExerciseForm.category"
-                    :errors="createExerciseForm.errors"
-                    dusk-nom="new-exercise-name"
-                    dusk-type="new-exercise-type"
-                    dusk-categorie="new-exercise-category"
-                />
+            <form class="flex min-h-0 flex-1 flex-col" v-else @submit.prevent="createAndAddExercise">
+                <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-4">
+                    <ChampsDUnExercice
+                        v-model:name="createExerciseForm.name"
+                        v-model:type="createExerciseForm.type"
+                        v-model:category="createExerciseForm.category"
+                        :errors="createExerciseForm.errors"
+                        dusk-nom="new-exercise-name"
+                        dusk-type="new-exercise-type"
+                        dusk-categorie="new-exercise-category"
+                    />
+                </div>
 
-                <GlassButton
-                    type="submit"
-                    variant="primary"
-                    class="w-full"
-                    :loading="createExerciseForm.processing"
-                    dusk="submit-new-exercise"
-                >
-                    Créer et ajouter
-                </GlassButton>
+                <div class="pb-feuille-6 shrink-0 px-6 pt-2">
+                    <GlassButton
+                        type="submit"
+                        variant="primary"
+                        class="w-full"
+                        :loading="createExerciseForm.processing"
+                        dusk="submit-new-exercise"
+                    >
+                        Créer et ajouter
+                    </GlassButton>
+                </div>
             </form>
         </div>
     </Modal>
