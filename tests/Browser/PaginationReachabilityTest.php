@@ -61,12 +61,10 @@ class PaginationReachabilityTest extends DuskTestCase
     }
 
     /**
-     * The counter read workouts.meta.total. Laravel's paginator puts total at the
-     * top level — meta only exists on an API resource collection — so it was
-     * always undefined and fell back to the length of the current page, capping
-     * the figure at the paginator size.
+     * L'historique de vingt-trois séances se lit sur deux pages : vingt cartes
+     * sur la première, trois sur la seconde, atteinte par « Page suivante ».
      */
-    public function test_the_session_counter_is_not_capped_at_one_page(): void
+    public function test_the_workout_history_spans_two_pages(): void
     {
         $this->browse(function (Browser $browser): void {
             $user = User::factory()->create();
@@ -82,14 +80,12 @@ class PaginationReachabilityTest extends DuskTestCase
                 ->visit(route('workouts.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@workouts-next', 15);
-
-            $total = $browser->script(
-                'return [...document.querySelectorAll("p, div, span")]'
-                .'.filter(el => el.children.length === 0 && el.textContent.trim() === "23").length;'
-            )[0];
-
-            $this->assertGreaterThan(0, $total, 'The total must read 23, not the 20 on this page.');
+                ->waitFor('@workouts-next', 15)
+                ->assertScript('document.querySelectorAll(\'[dusk^="delete-workout-"]\').length', 20)
+                ->assertSee('Page 1 sur 2')
+                ->click('@workouts-next')
+                ->waitForText('Page 2 sur 2', 15)
+                ->assertScript('document.querySelectorAll(\'[dusk^="delete-workout-"]\').length', 3);
         });
     }
 

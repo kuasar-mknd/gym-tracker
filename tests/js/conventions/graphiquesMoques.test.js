@@ -35,7 +35,7 @@ for (const chemin of fichiers('resources/js', '.vue')) {
 
 it('moque les graphiques chargés à la demande dans chaque test qui monte leur page', () => {
     // Une forme d'appel que l'expression ne lirait plus ferait passer la garde sans rien vérifier.
-    expect([...graphiquesDe.values()].flat().length).toBeGreaterThan(32)
+    expect([...graphiquesDe.values()].flat().length).toBeGreaterThan(30)
 
     const manquants = []
 

@@ -42,6 +42,11 @@ const monter = (props = {}) =>
     })
 
 describe('CarteDeSeance', () => {
+    it('signale par une pastille la séance ouverte, et elle seule', () => {
+        expect(monter().text()).not.toContain('En cours')
+        expect(monter({ enCours: true }).text()).toContain('En cours')
+    })
+
     it('dit le nom de la séance, sa date en français et combien d’exercices elle compte', () => {
         const wrapper = monter()
 

@@ -4,43 +4,21 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, Link, useForm, Deferred, router } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
-import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
+import { Head, Link, useForm, router } from '@inertiajs/vue3'
+import { computed, ref, watch } from 'vue'
 import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
-import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
-import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
-import GlassStat from '@/Components/UI/GlassStat.vue'
-import { entier } from '@/Utils/nombre'
 import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
-const WorkoutHistoryTimelineChart = graphiqueAsynchrone(
-    () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
-)
-
 const props = defineProps({
     workouts: Object, // Laravel paginator: { data: [...], total, current_page, last_page, prev_page_url, next_page_url }
-    totalExercises: Number,
-    deferredData: {
-        type: Object,
-        default: () => ({
-            charts: {
-                monthly_frequency: [],
-                monthly_volume: [],
-                duration_history: [],
-                volume_history: [],
-            },
-            exercises: [],
-        }),
-    },
 })
 
 /**
@@ -114,13 +92,18 @@ const {
     )
 })
 const { isRefreshing, pullDistance } = usePullToRefresh()
+
+/** Un compte neuf n'a qu'un bouton, celui de son état vide : ni l'en-tête ni la ligne d'action ne démarrent. */
+const compteNeuf = computed(() => workoutList.value.length === 0)
+
+/** Une séance démarrée sans réseau n'a pas d'adresse que le serveur connaisse : le bandeau du layout l'ouvre. */
+const reprise = (seance) => Boolean(seance) && typeof seance.enAttenteDe !== 'string'
 </script>
 
 <template>
     <Head title="Mes séances" />
 
     <AuthenticatedLayout page-title="Mes séances" titre-masque>
-        <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header>
             <div class="flex items-center justify-between">
                 <h1 class="titre-ecran">Mes séances</h1>
@@ -135,6 +118,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         Modèles
                     </GlassButton>
                     <GlassButton
+                        v-if="!compteNeuf"
                         variant="primary"
                         :loading="demarrageEnCours"
                         @click="createWorkout"
@@ -147,198 +131,144 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             </div>
         </template>
 
-        <div class="space-y-6">
-            <!-- Les actions de l'en-tête de bureau, qui ne se montre qu'à partir de 1 024 px. -->
-            <div class="bureau:hidden space-y-3">
-                <div class="flex items-center gap-3">
-                    <GlassButton
-                        variant="primary"
-                        class="min-w-0 flex-1"
-                        :loading="demarrageEnCours"
-                        @click="createWorkout"
-                    >
-                        <GlassIcon name="add" size="sm" class="mr-2" />
-                        Démarrer une séance
-                    </GlassButton>
-                    <Cloche />
-                </div>
-                <nav
-                    aria-label="Séances"
-                    class="border-glass-border bg-surface-card/50 flex rounded-xl border p-1 text-sm font-bold"
-                >
-                    <span
-                        aria-current="page"
-                        class="bg-text-main text-text-on-dark-accent min-h-touch flex flex-1 items-center justify-center rounded-lg px-3"
-                    >
-                        Historique
-                    </span>
-                    <Link
-                        :href="route('templates.index')"
-                        class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
-                    >
-                        Modèles
-                    </Link>
-                    <Link
-                        :href="route('calendar.index')"
-                        class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
-                    >
-                        Calendrier
-                    </Link>
-                </nav>
-            </div>
+        <template #default="{ seanceEnCours }">
+            <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
 
-            <!-- Stats Row -->
-            <div v-if="workoutList.length > 0" class="animate-slide-up space-y-6">
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <GlassStat :valeur="entier(workouts.total ?? workoutList.length)" libelle="Séances" />
-                    <GlassStat :valeur="entier(totalExercises || 0)" libelle="Exercices" ton="text-accent-state-deep" />
-                </div>
-
-                <Deferred data="deferredData">
-                    <template #rescue>
-                        <IndisponibleHorsLigne />
-                    </template>
-
-                    <template #fallback>
-                        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                            <GlassCard v-for="i in 4" :key="i">
-                                <div class="mb-4">
-                                    <GlassSkeleton width="120px" height="1.5rem" />
-                                    <GlassSkeleton width="180px" height="0.8rem" class="mt-2" />
-                                </div>
-                                <GlassSkeleton height="200px" width="100%" class="rounded-xl" />
-                            </GlassCard>
-                        </div>
-                    </template>
-
-                    <GraphiquesDesSeances :charts="deferredData?.charts" />
-                </Deferred>
-            </div>
-
-            <!-- Timeline Chart -->
-            <div class="stagger-2 animate-slide-up">
-                <GlassCard v-if="workoutList.length > 0">
-                    <div class="mb-4">
-                        <h3 class="titre-plat">Aperçu historique</h3>
-                        <p class="etiquette">Volume et durée des dernières séances</p>
-                    </div>
-                    <WorkoutHistoryTimelineChart :data="workoutList" />
-                </GlassCard>
-            </div>
-
-            <!-- Available Exercises -->
-            <div class="stagger-2 animate-slide-up">
-                <h3 class="titre-plat mb-3">Exercices disponibles</h3>
-
-                <Deferred data="deferredData">
-                    <template #rescue>
-                        <IndisponibleHorsLigne />
-                    </template>
-
-                    <template #fallback>
-                        <!-- Loading State -->
-                        <div class="flex gap-2 overflow-x-hidden pb-2">
-                            <div v-for="i in 5" :key="i" class="shrink-0">
-                                <GlassSkeleton width="120px" height="60px" class="rounded-xl" />
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- Data State -->
-                    <div v-if="deferredData?.exercises" class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
-                        <div
-                            v-for="exercise in deferredData.exercises"
-                            :key="exercise.id"
-                            class="border-border bg-surface-card/50 shrink-0 rounded-xl border px-3 py-2 text-sm shadow-sm"
+            <div class="space-y-6">
+                <!-- Les actions de l'en-tête de bureau, qui ne se montre qu'à partir de 1 024 px. -->
+                <div class="bureau:hidden space-y-3">
+                    <div class="flex items-center gap-3">
+                        <GlassButton
+                            v-if="reprise(seanceEnCours)"
+                            variant="primary"
+                            class="min-w-0 flex-1"
+                            :href="route('workouts.show', { workout: seanceEnCours.id })"
+                            dusk="reprendre-la-seance"
                         >
-                            <div class="text-text-main font-medium">{{ exercise.name }}</div>
-                            <div class="text-text-muted text-xs">{{ exercise.category }}</div>
-                        </div>
+                            <GlassIcon name="play_arrow" size="sm" class="mr-2" />
+                            Reprendre
+                        </GlassButton>
+                        <GlassButton
+                            v-else-if="!seanceEnCours && !compteNeuf"
+                            variant="primary"
+                            class="min-w-0 flex-1"
+                            :loading="demarrageEnCours"
+                            @click="createWorkout"
+                        >
+                            <GlassIcon name="add" size="sm" class="mr-2" />
+                            Démarrer une séance
+                        </GlassButton>
+                        <Cloche class="ms-auto" />
                     </div>
-                </Deferred>
-            </div>
+                    <nav
+                        aria-label="Séances"
+                        class="border-glass-border bg-surface-card/50 flex rounded-xl border p-1 text-sm font-bold"
+                    >
+                        <span
+                            aria-current="page"
+                            class="bg-text-main text-text-on-dark-accent min-h-touch flex flex-1 items-center justify-center rounded-lg px-3"
+                        >
+                            Historique
+                        </span>
+                        <Link
+                            :href="route('templates.index')"
+                            class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
+                        >
+                            Modèles
+                        </Link>
+                        <Link
+                            :href="route('calendar.index')"
+                            class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
+                        >
+                            Calendrier
+                        </Link>
+                    </nav>
+                </div>
 
-            <!-- Workouts List -->
-            <div class="stagger-4 animate-slide-up">
-                <h3 class="titre-plat mb-3">Historique</h3>
+                <div class="stagger-2 animate-slide-up">
+                    <h3 class="titre-plat bureau:block mb-3 hidden">Historique</h3>
 
-                <!-- Skeleton Loading -->
-                <div v-if="!workouts" class="space-y-3">
-                    <GlassCard v-for="i in 3" :key="i" padding="p-4">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1 space-y-2">
-                                <div class="flex items-center gap-2">
-                                    <GlassSkeleton width="40%" height="1.5rem" />
-                                    <GlassSkeleton width="40px" height="1.2rem" />
-                                </div>
-                                <GlassSkeleton width="30%" height="0.8rem" />
-                                <div class="mt-2 flex gap-2">
-                                    <GlassSkeleton width="60px" height="1.2rem" />
-                                    <GlassSkeleton width="60px" height="1.2rem" />
+                    <div v-if="!workouts" class="space-y-3">
+                        <GlassCard v-for="i in 3" :key="i" padding="p-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1 space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <GlassSkeleton width="40%" height="1.5rem" />
+                                        <GlassSkeleton width="40px" height="1.2rem" />
+                                    </div>
+                                    <GlassSkeleton width="30%" height="0.8rem" />
+                                    <div class="mt-2 flex gap-2">
+                                        <GlassSkeleton width="60px" height="1.2rem" />
+                                        <GlassSkeleton width="60px" height="1.2rem" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </GlassCard>
-                </div>
+                        </GlassCard>
+                    </div>
 
-                <div v-else-if="workoutList.length === 0">
-                    <GlassEmptyState
-                        title="Aucune séance"
-                        description="Démarre ta première séance."
-                        icon="fitness_center"
-                        action-label="Commencer maintenant"
-                        action-id="empty-state-start-workout"
-                        @action="createWorkout"
-                        color="orange"
-                    />
-                </div>
+                    <div v-else-if="compteNeuf">
+                        <GlassEmptyState
+                            title="Pas encore de séance"
+                            description="Ton historique commence à la première."
+                            icon="fitness_center"
+                            action-label="Démarrer une séance"
+                            action-id="empty-state-start-workout"
+                            @action="createWorkout"
+                            color="orange"
+                        />
+                    </div>
 
-                <div v-else class="space-y-3">
-                    <CarteDeSeance
-                        v-for="workout in workoutList"
-                        :key="workout.id"
-                        :seance="workout"
-                        @supprimer="confirmDeletion"
-                    />
-                </div>
+                    <div v-else class="space-y-3">
+                        <CarteDeSeance
+                            v-for="workout in workoutList"
+                            :key="workout.id"
+                            :seance="workout"
+                            :en-cours="seanceEnCours?.id === workout.id"
+                            @supprimer="confirmDeletion"
+                        />
+                    </div>
 
-                <nav
-                    v-if="workouts?.last_page > 1"
-                    class="mt-6 flex items-center justify-center gap-4"
-                    aria-label="Pagination de l'historique"
-                >
-                    <GlassButton
-                        :disabled="!workouts.prev_page_url"
-                        @click="goToPage(workouts.prev_page_url)"
-                        aria-label="Page précédente"
-                        dusk="workouts-prev"
+                    <nav
+                        v-if="workouts?.last_page > 1"
+                        class="mt-6 flex items-center justify-center gap-4"
+                        aria-label="Pagination de l'historique"
                     >
-                        <GlassIcon name="chevron_left" />
-                    </GlassButton>
+                        <GlassButton
+                            :disabled="!workouts.prev_page_url"
+                            @click="goToPage(workouts.prev_page_url)"
+                            aria-label="Page précédente"
+                            dusk="workouts-prev"
+                        >
+                            <GlassIcon name="chevron_left" />
+                        </GlassButton>
 
-                    <span class="text-text-muted text-sm font-bold" aria-live="polite">
-                        Page {{ workouts.current_page }} sur {{ workouts.last_page }}
-                    </span>
+                        <span class="text-text-muted text-sm font-bold" aria-live="polite">
+                            Page {{ workouts.current_page }} sur {{ workouts.last_page }}
+                        </span>
 
-                    <GlassButton
-                        :disabled="!workouts.next_page_url"
-                        @click="goToPage(workouts.next_page_url)"
-                        aria-label="Page suivante"
-                        dusk="workouts-next"
-                    >
-                        <GlassIcon name="chevron_right" />
-                    </GlassButton>
-                </nav>
+                        <GlassButton
+                            :disabled="!workouts.next_page_url"
+                            @click="goToPage(workouts.next_page_url)"
+                            aria-label="Page suivante"
+                            dusk="workouts-next"
+                        >
+                            <GlassIcon name="chevron_right" />
+                        </GlassButton>
+                    </nav>
+                </div>
             </div>
-        </div>
-        <ConfirmDialog
-            :ouvert="suppressionDemandee"
-            titre="Supprimer cette séance ?"
-            :description="
-                seanceASupprimer ? `« ${seanceASupprimer.name || 'Séance'} » sera effacée, avec toutes ses séries.` : ''
-            "
-            @confirmer="confirmerSuppression"
-            @annuler="annulerSuppression"
-        />
+
+            <ConfirmDialog
+                :ouvert="suppressionDemandee"
+                titre="Supprimer cette séance ?"
+                :description="
+                    seanceASupprimer
+                        ? `« ${seanceASupprimer.name || 'Séance'} » sera effacée, avec toutes ses séries.`
+                        : ''
+                "
+                @confirmer="confirmerSuppression"
+                @annuler="annulerSuppression"
+            />
+        </template>
     </AuthenticatedLayout>
 </template>

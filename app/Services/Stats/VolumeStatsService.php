@@ -6,7 +6,6 @@ namespace App\Services\Stats;
 
 use App\DTOs\Stats\MonthlyVolumePoint;
 use App\DTOs\Stats\VolumeComparison;
-use App\DTOs\Stats\VolumeHistoryPoint;
 use App\DTOs\Stats\VolumeTrendPoint;
 use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
@@ -136,59 +135,6 @@ final class VolumeStatsService
                 }
 
                 return $trend;
-            }
-        );
-    }
-
-    /**
-     * Le volume des dernières séances terminées, une par point, de la plus
-     * ancienne à la plus récente.
-     *
-     * Les vingt DERNIÈRES (comme l'historique des durées, qui lit pourtant les séances faites : celui-ci lit les séances terminées, ended_at seul, et compte les échauffements dans le volume) :
-     * le tri croissant suivi de la limite rendait les vingt premières du
-     * compte, et le graphique ne bougeait plus après la vingtième séance
-     * (#1957).
-     *
-     * @param  User  $user  L'utilisateur concerné.
-     * @param  int  $limit  Le nombre de séances au plus.
-     * @return array<int, VolumeHistoryPoint>
-     */
-    public function getVolumeHistory(User $user, int $limit = 20): array
-    {
-        return Cache::remember(
-            ClesDeStats::seances($user, "volume_history.{$limit}"),
-            now()->addMinutes(30),
-            function () use ($user, $limit): array {
-                /*
-                 * Meme raison que dans `getVolumeTrend` : le `toBase()` qui
-                 * etait ici portait sur une requete bornee par `limit($limit)`,
-                 * donc il n'evitait l'hydratation que de `$limit` lignes, pour
-                 * deux entrees de baseline PHPStan. Le début vient avec son
-                 * décalage (#2159), comme dans `getVolumeTrend`.
-                 */
-                $workouts = $user->workouts()
-                    ->whereNotNull('ended_at')
-                    ->select(['id', 'started_at', 'started_at_offset', 'name', 'workout_volume'])
-                    ->latest('started_at')
-                    ->latest('id')
-                    ->limit($limit)
-                    ->get()
-                    ->reverse();
-
-                $historique = [];
-                foreach ($workouts as $row) {
-                    $historique[] = new VolumeHistoryPoint(
-                        $row->started_at->format('d/m'),
-                        $row->workout_volume,
-                        // Le meme repli que WorkoutStatsService:45. Sans lui,
-                        // une seance sans nom sortait sous une etiquette VIDE
-                        // ici, et sous « Séance » la — memes donnees, deux
-                        // reponses.
-                        $row->name ?? __('Workout'),
-                    );
-                }
-
-                return $historique;
             }
         );
     }

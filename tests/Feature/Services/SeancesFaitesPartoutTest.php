@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -14,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\DonneesDeProgres;
 
 /*
  * Une séance « faite » se lit partout de la même façon (#2333) : terminée, avec
@@ -55,7 +55,7 @@ it('ne compte pas les séances démarrées sans série cochée dans les fréquen
     Workout::factory()->create(['user_id' => $user->id, 'started_at' => '2026-08-10 10:00:00', 'ended_at' => '2026-08-10 11:00:00']);
 
     Cache::flush();
-    $graphiques = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
+    $graphiques = DonneesDeProgres::graphiques($user);
 
     $lundi = $graphiques['day_of_week_frequency']->firstWhere('day', 'Lun');
     $aout = $graphiques['monthly_frequency']->last();
@@ -188,7 +188,7 @@ it('ne compte pas une séance dont seul l\'échauffement est coché dans les fr�
     seanceTermineeAvecEchauffementSeul($user, '2026-08-17 07:00:00');
 
     Cache::flush();
-    $graphiques = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
+    $graphiques = DonneesDeProgres::graphiques($user);
 
     expect($graphiques['day_of_week_frequency']->firstWhere('day', 'Lun')['count'] ?? null)->toBe(1)
         ->and($graphiques['monthly_frequency']->last()['count'] ?? null)->toBe(1)

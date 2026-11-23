@@ -16,15 +16,12 @@ const MaxWeightChart = (await import('@/Components/Stats/MaxWeightChart.vue')).d
 const MonthlyVolumeChart = (await import('@/Components/Stats/MonthlyVolumeChart.vue')).default
 const OneRepMaxPercentagesChart = (await import('@/Components/Stats/OneRepMaxPercentagesChart.vue')).default
 const SupplementUsageChart = (await import('@/Components/Stats/SupplementUsageChart.vue')).default
-const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkoutChart.vue')).default
 const VolumeTrendChart = (await import('@/Components/Stats/VolumeTrendChart.vue')).default
 const WaterHistoryChart = (await import('@/Components/Stats/WaterHistoryChart.vue')).default
 const WeightHistoryChart = (await import('@/Components/Stats/WeightHistoryChart.vue')).default
 const WilksHistoryChart = (await import('@/Components/Stats/WilksHistoryChart.vue')).default
 const WilksScoreChart = (await import('@/Components/Stats/WilksScoreChart.vue')).default
-const WorkoutDurationChart = (await import('@/Components/Stats/WorkoutDurationChart.vue')).default
 const WorkoutFrequencyChart = (await import('@/Components/Stats/WorkoutFrequencyChart.vue')).default
-const WorkoutHistoryTimelineChart = (await import('@/Components/Stats/WorkoutHistoryTimelineChart.vue')).default
 
 /**
  * Chart.js resolves a *scriptable* colour by calling it on every frame with the
@@ -156,17 +153,6 @@ const cases = [
             [1, jetonTransparent('accent-primary', 0)],
         ],
     },
-    {
-        chart: 'WorkoutDurationChart',
-        component: WorkoutDurationChart,
-        type: 'Line',
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jetonTransparent('accent-tertiary', 0.2)],
-            [1, jetonTransparent('accent-tertiary', 0)],
-        ],
-    },
 ]
 
 /**
@@ -232,12 +218,6 @@ const flats = [
         expected: () => jetonTransparent('accent-primary', 0.6),
     },
     {
-        chart: 'VolumePerWorkoutChart',
-        component: VolumePerWorkoutChart,
-        key: 'backgroundColor',
-        expected: () => jeton('accent-primary'),
-    },
-    {
         chart: 'VolumeTrendChart',
         component: VolumeTrendChart,
         key: 'backgroundColor',
@@ -273,13 +253,6 @@ const flats = [
     {
         chart: 'WorkoutFrequencyChart',
         component: WorkoutFrequencyChart,
-        key: 'backgroundColor',
-        expected: () => jetonTransparent('accent-primary', 0.6),
-    },
-    {
-        chart: 'WorkoutHistoryTimelineChart',
-        component: WorkoutHistoryTimelineChart,
-        datasetIndex: 1,
         key: 'backgroundColor',
         expected: () => jetonTransparent('accent-primary', 0.6),
     },

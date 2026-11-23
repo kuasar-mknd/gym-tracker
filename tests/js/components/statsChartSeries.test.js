@@ -24,7 +24,6 @@ const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue'
 const ExerciseCategoryChart = (await import('@/Components/Stats/ExerciseCategoryChart.vue')).default
 const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryChart.vue')).default
 const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
-const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkoutChart.vue')).default
 
 const chartIn = (wrapper, name) => wrapper.findComponent({ name })
 const seriesOf = (wrapper, name) => chartIn(wrapper, name).props('data')
@@ -226,26 +225,6 @@ describe('SetsPerSessionChart series', () => {
     })
 })
 
-describe('VolumePerWorkoutChart series', () => {
-    it('plots the volume of each session against its date', () => {
-        const series = seriesOf(
-            mount(VolumePerWorkoutChart, {
-                props: {
-                    data: [
-                        { date: '01/07', volume: 8250 },
-                        { date: '03/07', volume: 12500 },
-                    ],
-                },
-            }),
-            'Bar',
-        )
-
-        expect(series.labels).toEqual(['01/07', '03/07'])
-        expect(series.datasets[0].label).toBe('Volume')
-        expect(series.datasets[0].data).toEqual([8250, 12500])
-    })
-})
-
 /**
  * Chacune peint ses barres d'une seule couleur, la même à la première image
  * qu'aux suivantes : plus de dégradé à construire sur une zone de tracé qui
@@ -260,12 +239,6 @@ describe.each([
         jetonTransparent('accent-primary', 0.6),
     ],
     ['SetsPerSessionChart', SetsPerSessionChart, { data: [{ date: '01/07', sets: 12 }] }, jeton('accent-secondary')],
-    [
-        'VolumePerWorkoutChart',
-        VolumePerWorkoutChart,
-        { data: [{ date: '01/07', volume: 8250 }] },
-        jeton('accent-primary'),
-    ],
 ])('%s first frame', (_name, component, props, expected) => {
     it('peint ses barres d’une couleur unie', () => {
         expect(seriesOf(mount(component, { props }), 'Bar').datasets[0].backgroundColor).toBe(expected)

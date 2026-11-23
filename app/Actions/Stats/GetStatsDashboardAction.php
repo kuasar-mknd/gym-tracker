@@ -11,6 +11,7 @@ use App\Services\Stats\ExerciseStatsService;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 class GetStatsDashboardAction
@@ -39,7 +40,14 @@ class GetStatsDashboardAction
      * @return array{
      *     exercises: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>,
      *     selectedPeriod: string,
-     *     deferredData: \Closure(): array<string, mixed>
+     *     deferredData: \Closure(): array{
+     *         performance: array<string, mixed>,
+     *         volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
+     *         regularite: array{
+     *             monthly_frequency: \Illuminate\Support\Collection<int, array{month: string, count: int}>,
+     *             day_of_week_frequency: \Illuminate\Support\Collection<int, array{day: string, count: int}>
+     *         }
+     *     }
      * }
      */
     public function execute(User $user, Request $request): array
@@ -59,14 +67,21 @@ class GetStatsDashboardAction
      * dernières suivent le mois calendaire, pas la période choisie, et
      * reçoivent le même instant, lu une fois (#2033).
      *
-     * @return array{performance: array<string, mixed>, volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>, regularite: array<string, mixed>}
+     * @return array{
+     *     performance: array<string, mixed>,
+     *     volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
+     *     regularite: array{
+     *         monthly_frequency: \Illuminate\Support\Collection<int, array{month: string, count: int}>,
+     *         day_of_week_frequency: \Illuminate\Support\Collection<int, array{day: string, count: int}>
+     *     }
+     * }
      */
     private function donneesDifferees(User $user, int $jours): array
     {
         $maintenant = now();
 
         return [
-            'performance' => $this->performanceOverview($user, $jours),
+            'performance' => $this->performanceOverview($user, $jours, $maintenant),
             'volumeMensuel' => $this->volumeStats->getMonthlyVolumeHistory($user, 6, $maintenant),
             'regularite' => $this->fetchRegularite->execute($user, $maintenant),
         ];
@@ -99,11 +114,12 @@ class GetStatsDashboardAction
      * le service, la comparaison pouvait tomber dans le mois suivant, et
      * l'entrée rangée sous septembre gardait celle d'octobre (#2033).
      *
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, quand la page en affiche d'autres à côté ; à défaut, l'horloge.
      * @return array<string, mixed>
      */
-    public function performanceOverview(User $user, int $jours = 30): array
+    public function performanceOverview(User $user, int $jours = 30, ?Carbon $maintenant = null): array
     {
-        $maintenant = now();
+        $maintenant ??= now();
         $mois = $maintenant->format('Y-m');
 
         return Cache::remember(

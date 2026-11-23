@@ -72,10 +72,6 @@ test('workouts index page renders with paginated data structure', function (): v
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Workouts/Index')
-                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                    ->has('deferredData.charts')
-                    ->has('deferredData.exercises')
-                )
                 // CRITICAL: workouts must be paginated object with data array
                 ->has('workouts.data')
                 ->has('workouts.links')

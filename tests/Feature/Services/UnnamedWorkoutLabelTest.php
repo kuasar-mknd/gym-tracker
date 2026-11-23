@@ -53,16 +53,6 @@ it('étiquette une séance sans nom dans la tendance de volume', function (): vo
         ->and($trend[0]->name)->not->toBe('');
 });
 
-it('étiquette une séance sans nom dans l’historique de volume', function (): void {
-    [$user] = seanceSansNom();
-
-    $historique = app(VolumeStatsService::class)->getVolumeHistory($user, 10);
-
-    expect($historique)->toHaveCount(1)
-        ->and($historique[0]->name)->toBe(__('Workout'))
-        ->and($historique[0]->name)->not->toBe('');
-});
-
 /**
  * Celui-ci repliait deja correctement. Le test existe pour que les deux
  * services restent d'accord : c'est leur desaccord qui etait le defaut.

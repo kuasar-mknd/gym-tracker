@@ -71,7 +71,7 @@ class WorkoutLoggingTest extends TestCase
         ]);
     }
 
-    public function test_workouts_index_displays_workout_frequency_data(): void
+    public function test_stats_index_displays_workout_frequency_data(): void
     {
         $user = User::factory()->create();
 
@@ -86,15 +86,14 @@ class WorkoutLoggingTest extends TestCase
             'started_at' => now()->subMonth(),
         ]);
 
-        $response = $this->actingAs($user)->get(route('workouts.index'));
+        $response = $this->actingAs($user)->get(route('stats.index'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
-            ->component('Workouts/Index')
+            ->component('Stats/Index')
             ->loadDeferredProps(fn ($page) => $page
-                ->has('deferredData.charts')
-                ->has('deferredData.charts.monthly_frequency')
-                ->has('deferredData.charts.volume_history')
+                ->has('deferredData.regularite.monthly_frequency')
+                ->has('deferredData.volumeMensuel')
             )
         );
     }

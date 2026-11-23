@@ -13,7 +13,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
-class WorkoutMonthlyVolumeTest extends TestCase
+class StatsMonthlyVolumeTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -25,7 +25,7 @@ class WorkoutMonthlyVolumeTest extends TestCase
      * (#2173 : la passe du 31 octobre était rouge, celles des autres jours vertes).
      */
     #[DataProvider('joursDuMois')]
-    public function test_workouts_index_has_monthly_volume_prop(string $maintenant): void
+    public function test_stats_index_has_monthly_volume_series(string $maintenant): void
     {
         $this->travelTo($maintenant);
 
@@ -48,14 +48,14 @@ class WorkoutMonthlyVolumeTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/workouts')
+            ->get('/stats')
             ->assertStatus(200)
             ->assertInertia(
                 fn (Assert $page): Assert => $page
-                    ->component('Workouts/Index')
+                    ->component('Stats/Index')
                     ->loadDeferredProps(fn (Assert $page): Assert => $page
-                        ->has('deferredData.charts')
-                        ->where('deferredData.charts.monthly_volume.4.volume', 1000) // 4th index is last month (5 months ago to current month = 6 items. Index 0=5 months ago, 5=current. Last month=4)
+                        ->has('deferredData.volumeMensuel')
+                        ->where('deferredData.volumeMensuel.4.volume', 1000) // 4th index is last month (5 months ago to current month = 6 items. Index 0=5 months ago, 5=current. Last month=4)
                     )
             );
     }
