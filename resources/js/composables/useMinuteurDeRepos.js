@@ -107,6 +107,7 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
         timerDuration.value = duree || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
         restantInitial.value = null
+        echeanceDeReprise.value = null
         demarrageEnPause.value = false
         echeance = Date.now() + timerDuration.value * 1000
         restantEnPause = null
