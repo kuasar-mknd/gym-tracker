@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 
 import { mount as monterVraiment, flushPromises } from '@vue/test-utils'
-import { ref } from 'vue'
+import { inject, ref } from 'vue'
 import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 
 /*
@@ -127,6 +127,12 @@ import GoalsEdit from '@/Pages/Goals/Edit.vue'
 import StatsIndex from '@/Pages/Stats/Index.vue'
 import { layoutStub, passesSlot } from './pageStubs'
 
+/** Le layout donne à la page la séance en cours de l'appareil, que le test fournit par injection. */
+const layoutAvecSeance = {
+    setup: () => ({ seanceEnCours: inject(CLE_DE_LA_SEANCE_EN_COURS, ref(null)) }),
+    template: '<div><slot :seance-en-cours="seanceEnCours" /></div>',
+}
+
 beforeAll(() => {
     globalThis.route = (name, params) => (params === undefined ? `/${name}` : `/${name}/${JSON.stringify(params)}`)
 })
@@ -151,7 +157,7 @@ beforeEach(() => {
 const recording = (name, props) => ({ name, props, template: '<div />' })
 
 describe('Dashboard', () => {
-    const quickActions = recording('QuickActions', ['processing'])
+    const quickActions = recording('QuickActions', ['processing', 'sansDemarrage'])
     const recentActivity = recording('RecentActivity', ['recentWorkouts'])
     const goalsSummary = recording('GoalsSummary', ['activeGoals', 'indisponible'])
 
@@ -166,7 +172,7 @@ describe('Dashboard', () => {
                 directives: { press: {} },
                 mocks: { route: globalThis.route, $page: { props: { auth: { user: { name: 'Sam' } } } } },
                 stubs: {
-                    AuthenticatedLayout: layoutStub,
+                    AuthenticatedLayout: layoutAvecSeance,
                     GlassCard: passesSlot,
                     QuickActions: quickActions,
                     RecentActivity: recentActivity,
@@ -314,11 +320,15 @@ describe('Dashboard', () => {
             expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
         })
 
-        it('garde l’en-tête « Bon retour », sans les actions rapides qui doubleraient le bouton de l’état vide', () => {
+        it('garde l’en-tête « Bon retour » et les actions rapides sans la tuile Démarrer, donc un seul bouton Démarrer', () => {
             const wrapper = monterUnCompteNeuf()
+            const actions = wrapper.findComponent({ name: 'QuickActions' })
 
             expect(wrapper.get('[dusk="dashboard-welcome"]').text()).toBe('Bon retour')
-            expect(wrapper.findComponent({ name: 'QuickActions' }).exists()).toBe(false)
+            expect(actions.exists()).toBe(true)
+            expect(actions.props('sansDemarrage')).toBe(true)
+            expect(wrapper.findAll('[dusk="start-workout-button"]')).toHaveLength(1)
+            expect(wrapper.findAll('#start-workout-button')).toHaveLength(0)
         })
 
         it('sur une copie hors ligne, garde le bouton de l’état vide actif et démarre la séance', async () => {
@@ -387,7 +397,7 @@ describe('Dashboard', () => {
                         $page: { props: { auth: { user: { name: 'Sam' } } }, flash },
                     },
                     stubs: {
-                        AuthenticatedLayout: layoutStub,
+                        AuthenticatedLayout: layoutAvecSeance,
                         GlassCard: passesSlot,
                         QuickActions: quickActions,
                         RecentActivity: recentActivity,

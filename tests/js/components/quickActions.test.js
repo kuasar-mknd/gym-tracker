@@ -53,6 +53,15 @@ describe('QuickActions', () => {
         expect(libre.emitted('startWorkout')).toHaveLength(1)
     })
 
+    it('sans démarrage, ne garde que Mes modèles en rangée compacte', () => {
+        const wrapper = monter({ sansDemarrage: true })
+
+        expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
+        expect(wrapper.find('#start-workout-button').exists()).toBe(false)
+        expect(wrapper.get('a').text()).toContain('Mes modèles')
+        expect(wrapper.get('section').classes()).toContain('grid-cols-1')
+    })
+
     it('garde un seul aplat orange, sans dégradé ni halo', () => {
         const html = monter().html()
 

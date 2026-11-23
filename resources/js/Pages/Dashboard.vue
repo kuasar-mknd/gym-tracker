@@ -11,11 +11,10 @@ import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
-import { computed, inject, ref } from 'vue'
+import { ref } from 'vue'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
-import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
 /**
@@ -38,11 +37,11 @@ const props = defineProps({
 
 /**
  * Un compte neuf : aucune séance du tout, donc aucune carte à remplir. Une séance
- * démarrée hors ligne, encore dans la file, en est une : sans cela l'état vide
- * garderait un bouton « Démarrer » que la tuile, elle, ne propose plus.
+ * démarrée hors ligne, encore dans la file, en est une : le layout la donne (il
+ * la tient, la page est son parent et ne peut pas l'injecter), sans quoi l'état
+ * vide garderait un bouton « Démarrer » que les actions rapides ne proposent plus.
  */
-const seanceEnCours = inject(CLE_DE_LA_SEANCE_EN_COURS, null)
-const compteNeuf = computed(() => props.recentWorkouts.length === 0 && (seanceEnCours?.value ?? null) === null)
+const estUnCompteNeuf = (seanceEnCours) => props.recentWorkouts.length === 0 && (seanceEnCours ?? null) === null
 
 /**
  * Une copie hors ligne de l'accueil ne garde pas les objectifs, qu'aucune copie
@@ -63,11 +62,15 @@ const installationProposee = ref(false)
 <template>
     <Head title="Accueil" />
 
-    <AuthenticatedLayout page-title="Accueil" titre-masque largeur="moyenne">
+    <AuthenticatedLayout v-slot="{ seanceEnCours }" page-title="Accueil" titre-masque largeur="moyenne">
         <div class="space-y-6">
             <DashboardHeader :user="$page.props.auth.user" />
 
-            <QuickActions v-if="!compteNeuf" :processing="demarrageEnCours" @start-workout="startWorkout" />
+            <QuickActions
+                :processing="demarrageEnCours"
+                :sans-demarrage="estUnCompteNeuf(seanceEnCours)"
+                @start-workout="startWorkout"
+            />
 
             <InvitationDInstallation @visibilite="installationProposee = $event" />
 
@@ -78,7 +81,7 @@ const installationProposee = ref(false)
             />
 
             <GlassEmptyState
-                v-if="compteNeuf"
+                v-if="estUnCompteNeuf(seanceEnCours)"
                 icon="fitness_center"
                 title="Pas encore de séance"
                 description="Tes chiffres s'affichent ici après la première."

@@ -4,8 +4,10 @@ import { Link } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 
-defineProps({
+const props = defineProps({
     processing: { type: Boolean, default: false },
+    /** Un compte neuf démarre par le bouton de son état vide : ici ne reste que « Mes modèles ». */
+    sansDemarrage: { type: Boolean, default: false },
 })
 
 /*
@@ -16,7 +18,7 @@ const emit = defineEmits(['startWorkout'])
 
 /** La séance en cours de l'appareil que le layout offre : « Reprendre » la remplace alors. */
 const seanceEnCours = inject(CLE_DE_LA_SEANCE_EN_COURS, null)
-const demarrageEstPropose = computed(() => (seanceEnCours?.value ?? null) === null)
+const demarrageEstPropose = computed(() => !props.sansDemarrage && (seanceEnCours?.value ?? null) === null)
 </script>
 
 <template>

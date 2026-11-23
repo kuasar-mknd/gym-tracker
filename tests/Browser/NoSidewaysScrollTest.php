@@ -93,7 +93,7 @@ class NoSidewaysScrollTest extends DuskTestCase
         const ligne = ouverte ? barre.querySelector('.h-16').getBoundingClientRect() : null;
         return {
             barreDeBureau: ouverte,
-            enteteMobile: affiche(document.querySelector('header.z-collant')),
+            enteteMobile: affiche(document.querySelector('[dusk="entete-mobile"]')),
             barreDuBas: affiche(document.querySelector('nav.glass-nav')),
             compte: compte === null ? null : { droite: compte.right, haut: compte.top, bas: compte.bottom },
             barre: ligne === null ? null : { haut: ligne.top, bas: ligne.bottom },

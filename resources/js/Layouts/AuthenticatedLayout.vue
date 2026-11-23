@@ -330,6 +330,7 @@ onUnmounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
+            dusk="entete-mobile"
             class="bureau:hidden"
             :class="
                 clocheDansLaPage
@@ -461,7 +462,7 @@ onUnmounted(() => {
                 réponse, son animation d'entrée et le focus du bouton compris.
             -->
             <div class="mx-auto" :class="LARGEURS[largeur]">
-                <slot />
+                <slot :seance-en-cours="activeWorkout" />
             </div>
         </main>
 
