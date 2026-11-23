@@ -168,7 +168,6 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                         icon="delete"
                         :label="`Supprimer ${exercise.name}`"
                         ton="danger"
-                        class="max-sm:hidden"
                         :dusk="`delete-exercise-btn-${exercise.id}`"
                         :disabled="surUneCopie"
                         :aria-describedby="raisonDUneEcriture"

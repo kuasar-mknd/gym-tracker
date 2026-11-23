@@ -723,10 +723,10 @@ const BASCULES_DE_MISE_EN_PAGE = [
     {
         fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
         bascule: 'max-sm:hidden',
-        nombre: 2,
+        nombre: 1,
         raison:
-            '« Modifier » et « Supprimer » côte à côte dès sm, à la place du précédent ; `max-sm:hidden` et non ' +
-            '`hidden sm:inline-flex`, que l’`inline-flex` du bouton battait (#2453)',
+            '« Modifier » pour la souris, à la place du précédent ; `max-sm:hidden` et non `hidden sm:inline-flex`, ' +
+            'que l’`inline-flex` du bouton battait (#2453). « Supprimer » reste visible à toute largeur',
     },
     {
         fichier: 'resources/js/Components/Workout/RangeeDeSerie.vue',
