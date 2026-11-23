@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
@@ -35,6 +35,20 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'confirm'])
+
+/** Le focus arrive sur Annuler : une touche Entrée distraite ne termine pas la séance. */
+const annuler = ref(null)
+
+watch(
+    () => props.show,
+    async (ouvert) => {
+        if (ouvert) {
+            await nextTick()
+            annuler.value?.$el?.focus()
+        }
+    },
+    { immediate: true },
+)
 
 /** Le début de la séance (instant ISO) : la fin choisie ne le précède pas. */
 const debut = ref(null)
@@ -197,7 +211,7 @@ const avisDAttente = computed(() =>
                 >
                     Terminer
                 </GlassButton>
-                <GlassButton variant="secondary" autofocus @click="emit('close')" class="bouton-de-bilan w-full">
+                <GlassButton ref="annuler" variant="secondary" @click="emit('close')" class="bouton-de-bilan w-full">
                     Annuler
                 </GlassButton>
             </div>

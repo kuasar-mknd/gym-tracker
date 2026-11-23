@@ -14,7 +14,7 @@
  * le même exercice d'une séance à l'autre. La déconnexion l'efface
  * (`Utils/rechercheDExercice`, #2050).
  */
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
@@ -100,6 +100,8 @@ const quickCreate = () => {
     createExerciseForm.category =
         categorie.value === TOUTES || categorie.value === SANS_CATEGORIE ? '' : categorie.value
     showCreateForm.value = true
+
+    nextTick(() => document.querySelector('[dusk="new-exercise-name"]')?.focus())
 }
 
 /** Chaque fermeture ou retour invalide la création en vol : sa réponse n'ajoutera plus rien à la séance. */

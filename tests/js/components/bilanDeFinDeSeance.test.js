@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 
 import BilanDeFinDeSeance from '@/Components/Workout/BilanDeFinDeSeance.vue'
@@ -177,17 +178,21 @@ describe('la question « Terminer la séance ? » reste simple', () => {
         vi.useRealTimers()
     })
 
-    it('ne porte plus de chiffres du bilan : le bilan vient après la fin', () => {
+    it('ne porte plus de chiffres du bilan : le bilan vient après la fin', async () => {
         // La séance du test date du 19/11/2026 : un jour plus tard, elle passe pour oubliée, et la question propose une heure de fin.
         vi.useFakeTimers({ now: new Date('2026-11-19T18:30:00.000Z') })
 
         const wrapper = mount(WorkoutFinishModal, {
             props: { show: true, seance: SEANCE },
             global: { stubs: { Modal: { template: '<div><slot /></div>' } } },
+            attachTo: document.body,
         })
+
+        await nextTick()
 
         expect(wrapper.find('[dusk="finish-workout-bilan"]').exists()).toBe(false)
         expect(wrapper.findAll('button').map((bouton) => bouton.text())).toEqual(['Terminer', 'Annuler'])
-        expect(wrapper.get('button:not([dusk])').attributes('autofocus')).toBeDefined()
+        expect(document.activeElement.textContent.trim()).toBe('Annuler')
+        wrapper.unmount()
     })
 })
