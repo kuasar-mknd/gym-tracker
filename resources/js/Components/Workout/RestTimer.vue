@@ -319,7 +319,10 @@ watch(
 </script>
 
 <template>
-    <div ref="carte" class="carte-portable verre-regulier animate-slide-up flex flex-col gap-3 rounded-carte bg-surface-card/90 p-4">
+    <div
+        ref="carte"
+        class="carte-portable verre-regulier animate-slide-up rounded-carte bg-surface-card/90 flex flex-col gap-3 p-4"
+    >
         <div class="flex items-center justify-between gap-4">
             <button
                 ref="boutonBascule"
@@ -332,8 +335,8 @@ watch(
             >
                 <span
                     role="status"
-                    class="text-text-muted block text-sm"
-                    :class="termine ? 'text-text-main font-medium' : ''"
+                    class="block text-sm"
+                    :class="termine ? 'text-text-main font-medium' : 'text-text-muted'"
                     dusk="rest-timer-status"
                 >
                     {{ termine ? 'Repos terminé' : enPauseDemandee ? 'Repos en pause' : 'Repos' }}
