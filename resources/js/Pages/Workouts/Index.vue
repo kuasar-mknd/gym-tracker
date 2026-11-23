@@ -87,14 +87,25 @@ const {
                 remettre()
                 triggerHaptic('error')
             },
-            { preserveScroll: true },
+            { preserveScroll: true, onSuccess: revenirSiLaPageEstVide },
         ),
     )
 })
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
-/** Un compte neuf n'a qu'un bouton, celui de son état vide : ni l'en-tête ni la ligne d'action ne démarrent. Il se lit sur le total du serveur : vider la dernière page d'une liste n'est pas un compte neuf. */
-const compteNeuf = computed(() => (props.workouts?.total ?? workoutList.value.length) === 0)
+const pageCourante = computed(() => props.workouts?.current_page ?? 1)
+
+/** Un compte neuf n'a qu'un bouton, celui de son état vide : ni l'en-tête ni la ligne d'action ne démarrent. La liste vide sur la première page le dit, même si le total du serveur n'a pas encore suivi (suppression en file hors ligne). */
+const compteNeuf = computed(() => workoutList.value.length === 0 && pageCourante.value === 1)
+
+/** Une page au-delà de la première dont la dernière carte est partie n'est pas un compte neuf : on revient en arrière. */
+const pageVide = computed(() => workoutList.value.length === 0 && pageCourante.value > 1)
+
+const revenirSiLaPageEstVide = () => {
+    if (pageVide.value) {
+        router.visit(props.workouts?.prev_page_url ?? route('workouts.index'), { replace: true, preserveScroll: true })
+    }
+}
 </script>
 
 <template>
@@ -203,6 +214,16 @@ const compteNeuf = computed(() => (props.workouts?.total ?? workoutList.value.le
                             @action="createWorkout"
                             color="orange"
                         />
+                    </div>
+
+                    <div v-else-if="pageVide" class="space-y-3 text-center">
+                        <p class="text-text-muted">Cette page est vide.</p>
+                        <GlassButton
+                            :href="workouts.prev_page_url ?? route('workouts.index')"
+                            dusk="workouts-page-vide"
+                        >
+                            Revenir à la page précédente
+                        </GlassButton>
                     </div>
 
                     <div v-else class="space-y-3">

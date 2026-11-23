@@ -644,8 +644,8 @@ describe('Workouts/Index — le journal', () => {
         expect(wrapper.text()).not.toContain('Démarrer une séance')
     })
 
-    it('ne dit pas « Pas encore de séance » quand on supprime la dernière carte d’une page autre que la première', async () => {
-        const wrapper = mountPage({
+    const pageDeux = () =>
+        mountPage({
             workouts: {
                 ...structuredClone(paginator),
                 data: [{ id: 9, name: 'Dernière', started_at: '2026-06-01T08:00:00.000000Z', workout_lines: [] }],
@@ -657,11 +657,50 @@ describe('Workouts/Index — le journal', () => {
             },
         })
 
+    it('ne dit pas « Pas encore de séance » quand on supprime la dernière carte d’une page autre que la première, et revient à la page précédente une fois la suppression aboutie', async () => {
+        const wrapper = pageDeux()
+
         await deleteRow(wrapper, 9)
 
         expect(rowIds(wrapper)).toEqual([])
         expect(wrapper.find('[dusk="empty-state"]').exists()).toBe(false)
         expect(wrapper.text()).not.toContain('Pas encore de séance')
+        expect(wrapper.find('[dusk="workouts-page-vide"]').exists()).toBe(true)
+        expect(visit).not.toHaveBeenCalled()
+
+        destroy.mock.calls[0][1].onSuccess()
+
+        expect(visit).toHaveBeenCalledWith('/workouts?page=1', { replace: true, preserveScroll: true })
+    })
+
+    it('ne quitte pas la page 2 tant que la suppression n’a pas abouti, et la liste revient si elle échoue', async () => {
+        const wrapper = pageDeux()
+
+        await deleteRow(wrapper, 9)
+        destroy.mock.calls[0][1].onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(visit).not.toHaveBeenCalled()
+        expect(rowIds(wrapper)).toEqual([9])
+    })
+
+    it('montre l’état vide, jamais une page sans carte, quand la seule séance de la première page est supprimée avant que le total ait suivi', async () => {
+        const wrapper = mountPage({
+            workouts: {
+                ...structuredClone(paginator),
+                data: [{ id: 9, name: 'Seule', started_at: '2026-06-01T08:00:00.000000Z', workout_lines: [] }],
+                total: 1,
+                last_page: 1,
+                next_page_url: null,
+            },
+        })
+
+        await deleteRow(wrapper, 9)
+
+        expect(rowIds(wrapper)).toEqual([])
+        expect(wrapper.findAll('[dusk="empty-state"]')).toHaveLength(1)
+        expect(wrapper.text()).not.toContain('Démarrer une séance Démarrer')
+        expect(wrapper.find('[aria-label="Nouvelle séance"]').exists()).toBe(false)
     })
 
     it('marque d’une pastille la seule séance ouverte de la liste', () => {
