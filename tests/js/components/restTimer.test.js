@@ -207,17 +207,6 @@ describe('RestTimer countdown', () => {
         expect(wrapper.emitted('close')).toBeUndefined()
     })
 
-    it('does not close a second time once the card is closed by hand during the end notice', async () => {
-        const wrapper = mountTimer({ duration: 3, autoStart: true })
-        vi.advanceTimersByTime(3000)
-        await wrapper.vm.$nextTick()
-
-        await wrapper.get('[dusk="close-timer-x"]').trigger('click')
-        vi.advanceTimersByTime(10000)
-
-        expect(wrapper.emitted('close')).toHaveLength(1)
-    })
-
     it('finishes early when the rest is skipped', async () => {
         const wrapper = mountTimer({ duration: 90, autoStart: true })
 
@@ -239,20 +228,7 @@ describe('RestTimer countdown', () => {
         expect(wrapper.emitted('close')).toHaveLength(1)
     })
 
-    it('closes without claiming the rest was completed', async () => {
-        const wrapper = mountTimer({ duration: 90, autoStart: true })
-
-        await button(wrapper, 'close-timer-x').trigger('click')
-
-        expect(wrapper.emitted('close')).toHaveLength(1)
-        expect(wrapper.get('[role="status"]').text()).toBe('')
-
-        // Closing also stops the countdown; a hidden timer must not fire.
-        vi.advanceTimersByTime(120000)
-        expect(wrapper.get('[role="status"]').text()).toBe('')
-    })
-
-    it('retire la bascule et Passer à la fin naturelle du repos, et garde « Fermer »', async () => {
+    it('retire la bascule et Passer à la fin naturelle du repos, ', async () => {
         const wrapper = mountTimer({ duration: 3, autoStart: true })
         expect(toggleButton(wrapper).exists()).toBe(true)
         expect(button(wrapper, 'skip-rest-timer').exists()).toBe(true)
@@ -262,7 +238,6 @@ describe('RestTimer countdown', () => {
 
         expect(toggleButton(wrapper).exists()).toBe(false)
         expect(button(wrapper, 'skip-rest-timer').exists()).toBe(false)
-        expect(button(wrapper, 'close-timer-x').exists()).toBe(true)
     })
 
     describe('le focus, quand Pause et Passer disparaissent', () => {
@@ -283,7 +258,7 @@ describe('RestTimer countdown', () => {
         it.each([
             ['Pause', (cible) => toggleButton(cible).element],
             ['Passer', (cible) => button(cible, 'skip-rest-timer').element],
-        ])('passe de « %s » à « Fermer le minuteur »', async (_nom, boutonFocalise) => {
+        ])('passe de « %s » à l’interrupteur de la feuille', async (_nom, boutonFocalise) => {
             monterAttache()
             boutonFocalise(wrapper).focus()
             expect(document.activeElement).toBe(boutonFocalise(wrapper))
@@ -292,7 +267,7 @@ describe('RestTimer countdown', () => {
             await wrapper.vm.$nextTick()
             await wrapper.vm.$nextTick()
 
-            expect(document.activeElement).toBe(button(wrapper, 'close-timer-x').element)
+            expect(document.activeElement).toBe(wrapper.get('[dusk="auto-rest-timer-feuille"] [role="switch"]').element)
         })
 
         describe('à la fermeture de la carte, que la page démonte', () => {
@@ -308,11 +283,6 @@ describe('RestTimer countdown', () => {
             afterEach(() => principal.remove())
 
             it.each([
-                [
-                    '« Fermer »',
-                    (cible) => button(cible, 'close-timer-x'),
-                    (cible) => button(cible, 'close-timer-x').trigger('click'),
-                ],
                 [
                     '« Passer »',
                     (cible) => button(cible, 'skip-rest-timer'),
@@ -347,7 +317,7 @@ describe('RestTimer countdown', () => {
                 monterAttache()
                 champ.focus()
 
-                await button(wrapper, 'close-timer-x').trigger('click')
+                await button(wrapper, 'skip-rest-timer').trigger('click')
 
                 expect(document.activeElement).toBe(champ)
                 champ.remove()

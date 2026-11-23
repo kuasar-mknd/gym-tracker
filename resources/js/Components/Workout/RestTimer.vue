@@ -3,7 +3,7 @@
 
   Le repos de la séance, dans la barre d'outils (#2434) : le bouton « Repos »
   devient un anneau et le décompte pendant qu'il court. Un toucher ouvre une
-  petite feuille : Pause, Passer, Fermer, la série qui suit et le démarrage
+  petite feuille : Pause, Passer, la série qui suit et le démarrage
   automatique du repos, réglé aussi dans les paramètres de la séance.
 -->
 <script setup>
@@ -116,14 +116,14 @@ const termine = ref(false)
 /** Le minuteur qui ferme la carte une fois la fin annoncée. */
 const fermeture = ref(null)
 
-/** La feuille des commandes est ouverte (Pause, Passer, Fermer). */
+/** La feuille des commandes est ouverte (Pause, Passer). */
 const feuilleOuverte = ref(false)
 const racine = ref(null)
 
-/** Pause et Passer disparaissent à la fin du repos : le focus qu'ils portaient passe à « Fermer ». */
+/** Pause et Passer disparaissent à la fin du repos : le focus qu'ils portaient passe à l'interrupteur de la feuille. */
 const boutonBascule = ref(null)
 const boutonPasser = ref(null)
-const boutonFermer = ref(null)
+const interrupteur = ref(null)
 
 /** La page démonte la carte sur `close` : le focus qu'elle portait, ou perdu, passe au contenu principal. */
 const fermerLaCarte = () => {
@@ -290,16 +290,8 @@ const finishTimer = (rendreLeFocus = true) => {
     fermeture.value = setTimeout(fermerLaCarte, DELAI_DE_FERMETURE_MS)
 
     if (rendreLeFocus && focusSurUnBoutonRetire) {
-        nextTick(() => boutonFermer.value?.$el.focus())
+        nextTick(() => interrupteur.value?.$el.querySelector('[role="switch"]')?.focus())
     }
-}
-
-/** Closes the timer component. */
-const close = () => {
-    triggerHaptic('tap')
-    pauseTimer()
-    clearTimeout(fermeture.value)
-    fermerLaCarte()
 }
 
 /** Handles document visibility changes to sync the timer when app returns from background. */
@@ -391,6 +383,7 @@ watch(
                     ></div>
                 </div>
                 <GlassToggle
+                    ref="interrupteur"
                     :model-value="reposAutomatique"
                     label="Démarrage automatique du repos"
                     class="mb-4"
@@ -418,15 +411,6 @@ watch(
                         @click="skipTimer"
                     >
                         Passer
-                    </GlassButton>
-                    <GlassButton
-                        ref="boutonFermer"
-                        variant="ghost"
-                        aria-label="Fermer le minuteur"
-                        dusk="close-timer-x"
-                        @click="close"
-                    >
-                        Fermer
                     </GlassButton>
                 </div>
             </div>

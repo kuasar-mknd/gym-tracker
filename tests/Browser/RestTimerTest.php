@@ -208,11 +208,10 @@ class RestTimerTest extends DuskTestCase
                 'le decompte recouvre Terminer'
             );
 
-            // 2. Un toucher ouvre la feuille ; Fermer ferme le repos.
+            // 2. Un toucher ouvre la feuille ; Passer arrete le repos.
             $browser->click('@rest-timer')
-                ->waitFor('@close-timer-x', 10)
-                ->click('@close-timer-x')
-                ->waitUntilMissing('[dusk="close-timer-x"]', 10)
+                ->waitFor('@skip-rest-timer', 10)
+                ->click('@skip-rest-timer')
                 ->waitUntilMissing('[dusk="rest-timer"]', 10);
 
             // 3. Trigger again and use "Skip" (Passer)
