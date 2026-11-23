@@ -6,11 +6,9 @@
  */
 import { useForm } from '@inertiajs/vue3'
 import Modal from '@/Components/UI/Modal.vue'
-import GlassInput from '@/Components/UI/GlassInput.vue'
-import GlassSelect from '@/Components/UI/GlassSelect.vue'
+import ChampsDUnExercice from '@/Components/Exercises/ChampsDUnExercice.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
-import { EXERCISE_CATEGORIES, EXERCISE_TYPES } from '@/Utils/constants'
 
 defineProps({
     show: { type: Boolean, default: false },
@@ -41,31 +39,13 @@ const submit = () => {
         <div class="p-6">
             <h3 id="new-exercise-title" class="titre-plat mb-5" dusk="exercise-modal-title">Nouvel exercice</h3>
             <form @submit.prevent="submit" class="space-y-4">
-                <GlassInput
-                    v-model="form.name"
-                    name="name"
-                    dusk="exercise-name-input"
-                    label="Nom de l'exercice"
-                    placeholder="Ex. : Développé couché"
-                    :error="form.errors.name"
+                <ChampsDUnExercice
+                    v-model:name="form.name"
+                    v-model:type="form.type"
+                    v-model:category="form.category"
+                    :errors="form.errors"
+                    dusk-nom="exercise-name-input"
                 />
-                <div class="grid grid-cols-2 gap-4">
-                    <GlassSelect
-                        v-model="form.type"
-                        name="type"
-                        label="Type"
-                        :options="EXERCISE_TYPES"
-                        :error="form.errors.type"
-                        placeholder=""
-                    />
-                    <GlassSelect
-                        v-model="form.category"
-                        name="category"
-                        label="Catégorie"
-                        :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
-                        empty-label="— Aucune —"
-                    />
-                </div>
                 <GlassButton
                     type="submit"
                     variant="primary"

@@ -21,7 +21,7 @@ import { createScrollLockToken, lockPageScroll, releasePageScroll } from '@/comp
  * @property {String} maxWidth - Controls the maximum width of the modal (sm, md, lg, xl, 2xl).
  * @property {Boolean} closeable - Determines if the modal can be closed via background click or Escape key.
  * @property {String} ariaLabelledby - The ID of the element providing the modal's accessible title.
- * @property {String} position - Where the panel sits on small screens: 'center' (default) or 'bottom' for a thumb-reachable sheet.
+ * @property {String} position - Where the panel sits on small screens: 'center' (default), 'bottom' for a thumb-reachable sheet, or 'tiroir' for a drawer glued to the bottom edge as in the navigation mockup: a floating sheet, 16 px from the sides, with a grabber and a swipe-down to dismiss.
  */
 const props = defineProps({
     show: {
@@ -35,7 +35,7 @@ const props = defineProps({
     position: {
         type: String,
         default: 'center',
-        validator: (value) => ['center', 'bottom'].includes(value),
+        validator: (value) => ['center', 'bottom', 'tiroir'].includes(value),
     },
     closeable: {
         type: Boolean,
@@ -178,8 +178,87 @@ const maxWidthClass = computed(() => {
  */
 const isBottomSheet = computed(() => props.position === 'bottom')
 
+const isTiroir = computed(() => props.position === 'tiroir')
+
 const containerClass = computed(() =>
-    isBottomSheet.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
+    isBottomSheet.value || isTiroir.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
+)
+
+const panelClass = computed(() => (isTiroir.value ? 'hauteur-tiroir rounded-carte' : 'hauteur-sure-12 rounded-carte'))
+
+const enterFromClass = computed(() =>
+    isTiroir.value
+        ? 'translate-y-full opacity-0 sm:translate-y-0 sm:scale-95'
+        : 'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95',
+)
+
+const leaveToClass = computed(() =>
+    isTiroir.value
+        ? 'translate-y-full opacity-0 sm:translate-y-0 sm:scale-95'
+        : 'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95',
+)
+
+/**
+ * Le glissement vers le bas du tiroir, par la poignée. Au-delà de 120 px, ou
+ * d'un geste vif (0,6 px par ms sur 40 px au moins), le tiroir se ferme ; en
+ * deçà, il revient à sa place. La poignée porte `touch-none` : sans lui, le
+ * geste devient un défilement de la page.
+ */
+const decalage = ref(0)
+const enGlissement = ref(false)
+let departY = 0
+let departT = 0
+
+const debutDuGlissement = (event) => {
+    if (!props.closeable) {
+        return
+    }
+
+    enGlissement.value = true
+    departY = event.clientY
+    departT = event.timeStamp
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+}
+
+const glissement = (event) => {
+    if (enGlissement.value) {
+        decalage.value = Math.max(0, event.clientY - departY)
+    }
+}
+
+const finDuGlissement = (event) => {
+    if (!enGlissement.value) {
+        return
+    }
+
+    enGlissement.value = false
+
+    const distance = decalage.value
+    const vitesse = distance / Math.max(1, event.timeStamp - departT)
+
+    if (distance > 120 || (distance > 40 && vitesse > 0.6)) {
+        close()
+
+        return
+    }
+
+    decalage.value = 0
+}
+
+const styleDuPanneau = computed(() =>
+    decalage.value > 0
+        ? { transform: `translateY(${decalage.value}px)`, transition: enGlissement.value ? 'none' : undefined }
+        : undefined,
+)
+
+watch(
+    () => props.show,
+    (isVisible) => {
+        if (isVisible) {
+            decalage.value = 0
+            enGlissement.value = false
+        }
+    },
 )
 </script>
 
@@ -217,11 +296,11 @@ const containerClass = computed(() =>
 
                 <Transition
                     enter-active-class="ease-out duration-300"
-                    enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    :enter-from-class="enterFromClass"
                     enter-to-class="opacity-100 translate-y-0 sm:scale-100"
                     leave-active-class="ease-in duration-200"
                     leave-from-class="opacity-100 translate-y-0 sm:scale-100"
-                    leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    :leave-to-class="leaveToClass"
                 >
                     <!--
                       overflow-y-auto, et non overflow-hidden : `hidden` coupait
@@ -242,9 +321,22 @@ const containerClass = computed(() =>
                     -->
                     <div
                         v-show="show"
-                        class="glass-modal verre-epais text-text-main hauteur-sure-12 rounded-carte relative flex transform flex-col overflow-y-auto backdrop-blur-xl transition sm:mx-auto sm:w-full"
-                        :class="maxWidthClass"
+                        class="glass-modal verre-epais text-text-main relative flex transform flex-col overflow-y-auto backdrop-blur-xl transition sm:mx-auto sm:w-full"
+                        :class="[panelClass, maxWidthClass]"
+                        :style="styleDuPanneau"
                     >
+                        <div
+                            v-if="isTiroir"
+                            class="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center sm:hidden"
+                            data-testid="poignee-du-tiroir"
+                            aria-hidden="true"
+                            @pointerdown="debutDuGlissement"
+                            @pointermove="glissement"
+                            @pointerup="finDuGlissement"
+                            @pointercancel="finDuGlissement"
+                        >
+                            <span class="bg-text-muted/45 h-1.25 w-9 rounded-full" />
+                        </div>
                         <slot v-if="showSlot" />
                     </div>
                 </Transition>

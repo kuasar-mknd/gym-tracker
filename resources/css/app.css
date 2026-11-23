@@ -1339,6 +1339,23 @@
 }
 
 /*
+ * La hauteur du tiroir (`Modal position="tiroir"`) : un cran, le grand, que la
+ * liste et le formulaire de création partagent, pour que la feuille ne change
+ * pas de taille d'un écran à l'autre. Sur un téléphone, la zone sûre moins les
+ * deux marges de la fenêtre (`py-sure-6`) ; à partir de `sm`, la fenêtre
+ * centrée plafonne à 44 rem.
+ */
+@utility hauteur-tiroir {
+    height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
+    height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
+
+    @media (width >= 40rem) {
+        height: min(44rem, calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem));
+        height: min(44rem, calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem));
+    }
+}
+
+/*
  * Ce qui colle sous l'en-tête de l'application : le titre d'un mois du journal,
  * la ligne des jours des habitudes. L'en-tête mobile mesure 76 px sous la barre
  * d'état (16 + 44 + 16, sans bordure), la barre de bureau 65 (64 + 1), et

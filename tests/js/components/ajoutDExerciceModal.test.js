@@ -32,6 +32,9 @@ const monter = (props = {}, Modale = AjoutDExerciceModal) =>
         attachTo: document.body,
     })
 
+/** Les noms des exercices proposés, sans l'icône de la ligne. */
+const noms = (wrapper) => wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.get('span').text())
+
 beforeEach(() => {
     localStorage.clear()
     globalThis.route = (nom) => `/${nom}`
@@ -45,16 +48,74 @@ afterEach(() => {
     poserLaPage(null)
 })
 
+describe('le tiroir « Ajouter un exercice »', () => {
+    it('propose « Créer » en première ligne même quand la recherche trouve des exercices (#tiroir)', async () => {
+        const wrapper = monter()
+
+        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer un exercice')
+
+        await wrapper.get('#search-workout-exercise').setValue('dév')
+
+        expect(noms(wrapper)).toEqual(['Développé couché'])
+        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer « dév »')
+
+        await wrapper.get('[dusk="quick-create-exercise"]').trigger('click')
+
+        expect(wrapper.vm.showCreateForm).toBe(true)
+        expect(wrapper.vm.createExerciseForm.name).toBe('dév')
+    })
+
+    it('groupe les exercices par catégorie, dans l’ordre de la charte', () => {
+        const wrapper = monter({
+            exercises: [
+                { id: 3, name: 'Tractions', category: 'Dos' },
+                { id: 2, name: 'Squat', category: 'Jambes' },
+                { id: 1, name: 'Développé couché', category: 'Pectoraux' },
+                { id: 4, name: 'Pompes', category: 'Pectoraux' },
+                { id: 5, name: 'Planche', category: null },
+            ],
+        })
+
+        expect(wrapper.findAll('section[aria-label]').map((groupe) => groupe.attributes('aria-label'))).toEqual([
+            'Pectoraux',
+            'Dos',
+            'Jambes',
+            'Autres',
+        ])
+        expect(noms(wrapper)).toEqual(['Développé couché', 'Pompes', 'Tractions', 'Squat', 'Planche'])
+    })
+
+    it('filtre par pastille de catégorie, et crée dans la catégorie retenue', async () => {
+        const wrapper = monter()
+
+        await wrapper.get('[dusk="categorie-Jambes"]').trigger('click')
+
+        expect(noms(wrapper)).toEqual(['Squat'])
+
+        await wrapper.get('[dusk="quick-create-exercise"]').trigger('click')
+
+        expect(wrapper.vm.createExerciseForm.category).toBe('Jambes')
+    })
+
+    it('se ferme par son bouton « Fermer » et remet la catégorie à « Tous »', async () => {
+        const wrapper = monter()
+
+        await wrapper.get('[dusk="categorie-Jambes"]').trigger('click')
+        await wrapper.get('[dusk="fermer-ajout-exercice"]').trigger('click')
+
+        expect(wrapper.emitted('close')).toHaveLength(1)
+        expect(wrapper.vm.categorie).toBe('all')
+    })
+})
+
 describe('choisir un exercice', () => {
     it('trouve un exercice sans tenir compte des accents ni de la casse', async () => {
         const wrapper = monter()
 
         await wrapper.get('#search-workout-exercise').setValue('DEVELOPPE')
 
-        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual([
-            'Développé couchéPectoraux',
-        ])
-        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(false)
+        expect(noms(wrapper)).toEqual(['Développé couché'])
+        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(true)
 
         await wrapper.get('#search-workout-exercise').setValue('développé')
 
@@ -94,7 +155,7 @@ describe('choisir un exercice', () => {
 
         await wrapper.get('#search-workout-exercise').setValue('  Squat bulgare ')
 
-        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer "Squat bulgare"')
+        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer « Squat bulgare »')
 
         await wrapper.get('[dusk="quick-create-exercise"]').trigger('click')
 
@@ -110,7 +171,7 @@ describe('choisir un exercice', () => {
 
         await wrapper.get('#search-workout-exercise').setValue('squ')
 
-        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual(['SquatJambes'])
+        expect(noms(wrapper)).toEqual(['Squat'])
         expect(JSON.parse(localStorage.getItem('gymtracker_add_exercise_search'))).toMatchObject({ texte: 'squ' })
         wrapper.unmount()
 
@@ -169,7 +230,7 @@ describe('choisir un exercice', () => {
         const wrapper = monter()
         await wrapper.get('#search-workout-exercise').setValue('squ')
 
-        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual(['SquatJambes'])
+        expect(noms(wrapper)).toEqual(['Squat'])
         wrapper.unmount()
     })
 

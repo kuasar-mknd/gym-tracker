@@ -729,6 +729,12 @@ const BASCULES_DE_MISE_EN_PAGE = [
             'que l’`inline-flex` du bouton battait (#2453). « Supprimer » reste visible à toute largeur',
     },
     {
+        fichier: 'resources/js/Components/UI/Modal.vue',
+        bascule: 'sm:hidden',
+        nombre: 1,
+        raison: 'la poignée du tiroir, qui ne sert qu’au doigt : dès sm la fenêtre est centrée, sans glissement',
+    },
+    {
         fichier: 'resources/js/Components/Workout/RangeeDeSerie.vue',
         bascule: 'hidden sm:block',
         nombre: 1,
