@@ -38,6 +38,17 @@ describe('le minuteur de repos', () => {
         expect(minuteur.timerRun.value).toBe(2)
     })
 
+    it('ne rend l’échéance déposée qu’au repos repris, pas au repos qui le suit', () => {
+        const minuteur = minuteurDeLaPage()
+        const echeance = Date.now() + 40_000
+
+        minuteur.reprendreUnRepos({ duree: 90, restant: 40, enPause: false, echeance })
+        expect(minuteur.liaisonDuMinuteur.value.echeance).toBe(echeance)
+
+        minuteur.openRestTimer()
+        expect(minuteur.liaisonDuMinuteur.value.echeance).toBeNull()
+    })
+
     it('écrit le réglage tout de suite et ne démarre plus rien après une validation quand il est coupé', () => {
         const minuteur = minuteurDeLaPage()
 

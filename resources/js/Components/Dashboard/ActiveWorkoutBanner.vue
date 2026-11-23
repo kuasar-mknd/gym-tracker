@@ -19,6 +19,7 @@
  * `role="status"`), jamais à chaque seconde, puis le dépôt s'efface.
  */
 import { Link } from '@inertiajs/vue3'
+import AnneauDuRepos from '@/Components/Workout/AnneauDuRepos.vue'
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { compte, entier } from '@/Utils/nombre'
 import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
@@ -76,7 +77,19 @@ const reposAffiche = computed(() => {
     return `${props.repos.echeance === null ? 'Repos en pause' : 'Repos'} ${Math.floor(resteDuRepos.value / 60)}:${String(resteDuRepos.value % 60).padStart(2, '0')}`
 })
 
+/** Ce qu'il reste du repos sur sa durée, de 0 à 1 : l'anneau de la capsule. */
+const fractionDuRepos = computed(() => {
+    if (reposAffiche.value === null || !props.repos.duree) {
+        return 0
+    }
+
+    return Math.min(1, Math.max(0, resteDuRepos.value / props.repos.duree))
+})
+
 const reposTermine = computed(() => resteDuRepos.value === 0)
+
+/** Le repos en cours, ou « Repos terminé » le temps de l'annonce ; sinon rien. */
+const reposDit = computed(() => (reposTermine.value ? 'Repos terminé' : reposAffiche.value))
 
 let fermetureDuRepos = null
 let annonceCommencee = false
@@ -156,10 +169,16 @@ onUnmounted(() => {
         class="verre-epais rounded-capsule text-text-main focus-visible:ring-accent-primary focus-visible:ring-offset-surface-page flex min-h-16 items-center gap-2 py-2 pr-2 pl-5 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
+        <AnneauDuRepos
+            v-if="reposDit !== null"
+            :fraction="fractionDuRepos"
+            class="-ml-2 size-10"
+            dusk="anneau-du-repos"
+        />
         <span class="min-w-0 flex-1">
             <span class="block truncate text-sm font-medium">{{ workout.name || 'Séance' }}</span>
             <span class="text-text-muted block truncate text-xs tabular-nums">
-                <span dusk="active-workout-elapsed">{{ reposAffiche ?? elapsed }}</span>
+                <span dusk="active-workout-elapsed">{{ reposDit ?? elapsed }}</span>
                 <template v-if="workout.workout_lines_count">
                     · {{ compte(workout.workout_lines_count, 'exo', 'exos') }}
                 </template>

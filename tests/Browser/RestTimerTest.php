@@ -95,17 +95,18 @@ class RestTimerTest extends DuskTestCase
      *    occurrence nommera le libelle reellement porte, et tranchera.
      */
     /**
-     * Les rectangles des commandes du minuteur, mesures par le navigateur.
+     * Les rectangles des trois boutons de la barre d'outils, mesures par le
+     * navigateur.
      *
      * jsdom n'a pas de moteur de rendu : `getBoundingClientRect()` y rend des
      * zeros, et aucun temoin Vitest ne peut donc voir deux boutons se
      * recouvrir. Seul Dusk le peut.
      *
-     * @return array<string, array{x: float, y: float, w: float, h: float}>
+     * @return array<string, array{x: float, y: float, w: float, h: float}|null>
      */
-    private function rectanglesDesCommandes(Browser $browser): array
+    private function rectanglesDeLaBarre(Browser $browser): array
     {
-        /** @var array<string, array{x: float, y: float, w: float, h: float}> */
+        /** @var array<string, array{x: float, y: float, w: float, h: float}|null> */
         return $browser->script(
             <<<'JS'
                 const rect = (selecteur) => {
@@ -116,9 +117,9 @@ class RestTimerTest extends DuskTestCase
                 };
 
                 return {
-                    pause: rect('[aria-label="Pause"], [aria-label="Démarrer le minuteur"]'),
-                    fermer: rect('[aria-label="Fermer le minuteur"]'),
-                    passer: rect('[dusk="skip-rest-timer"]'),
+                    exercice: rect('[dusk="add-exercise-existing"]'),
+                    repos: rect('[dusk="rest-timer"]'),
+                    terminer: rect('[dusk="finish-workout-mobile"]'),
                 };
             JS
         )[0];
@@ -136,7 +137,7 @@ class RestTimerTest extends DuskTestCase
         $this->waitForToggle($browser, 'true');
         $this->waitForCompletionInDatabase($browser, $seance, true);
 
-        return $browser->waitFor('[dusk="skip-rest-timer"]', 15);
+        return $browser->waitFor('[dusk="rest-timer"]', 15);
     }
 
     private function performTimerLifecycle(Browser $browser, string $sizeMacro): void
@@ -162,7 +163,7 @@ class RestTimerTest extends DuskTestCase
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->assertMissing('[dusk="skip-rest-timer"]'); // Ensure timer is NOT visible initially
+                ->assertMissing('[dusk="rest-timer"]'); // Ensure timer is NOT visible initially
 
             // Add exercise
             $browser->clickWhenSettled('[dusk="add-first-exercise"]');
@@ -180,38 +181,43 @@ class RestTimerTest extends DuskTestCase
 
             // 1. Trigger timer by completing set
             $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
-            $browser->waitFor('[dusk="skip-rest-timer"]', 15)
-                ->assertSee('Repos en cours');
+            $browser->waitFor('[dusk="rest-timer"]', 15)
+                ->assertPresent('[dusk="anneau-de-la-barre"], [dusk="rest-timer"]');
             $this->waitForCompletionInDatabase($browser, $workout, true);
 
             /*
-             * La croix etait posee en `absolute` PAR-DESSUS le bouton de pause :
-             * 28 x 20 px de recouvrement visible, 34 x 26 px de zone tactile.
-             * Un appui sur le coin de la pause fermait le minuteur, et la croix
-             * se lisait mal sur l'orange.
+             * Le bouton « Repos » est devenu l'anneau et le decompte, dans la
+             * barre : les trois boutons gardent 44 px de haut et ne se
+             * recouvrent pas.
              */
-            $rectangles = $this->rectanglesDesCommandes($browser);
+            $rectangles = $this->rectanglesDeLaBarre($browser);
 
-            foreach (['pause', 'fermer', 'passer'] as $nom) {
-                $this->assertNotNull($rectangles[$nom] ?? null, "la commande « {$nom} » est absente");
+            foreach (['exercice', 'repos', 'terminer'] as $nom) {
+                $this->assertNotNull($rectangles[$nom] ?? null, "le bouton « {$nom} » est absent");
                 $this->assertGreaterThanOrEqual(44, $rectangles[$nom]['h'], "« {$nom} » est sous 44 px de haut");
             }
 
-            $pause = $rectangles['pause'];
-            $fermer = $rectangles['fermer'];
+            $this->assertLessThanOrEqual(
+                $rectangles['repos']['x'] + 0.5,
+                $rectangles['exercice']['x'] + $rectangles['exercice']['w'],
+                'Exercice recouvre le decompte'
+            );
+            $this->assertLessThanOrEqual(
+                $rectangles['terminer']['x'] + 0.5,
+                $rectangles['repos']['x'] + $rectangles['repos']['w'],
+                'le decompte recouvre Terminer'
+            );
 
-            $recouvrement = max(0, min($pause['x'] + $pause['w'], $fermer['x'] + $fermer['w']) - max($pause['x'], $fermer['x']))
-                * max(0, min($pause['y'] + $pause['h'], $fermer['y'] + $fermer['h']) - max($pause['y'], $fermer['y']));
-
-            $this->assertSame(0.0, (float) $recouvrement, 'la croix et la pause se recouvrent');
-
-            // 2. Close via "X" button — desormais la seule affordance de
-            // fermeture, le bouton « Fermer » qui la doublait ayant ete retire.
-            $browser->click('@close-timer-x')
+            // 2. Un toucher ouvre la feuille ; Passer arrete le repos.
+            $browser->click('@rest-timer')
+                ->waitFor('@skip-rest-timer', 10)
+                ->click('@skip-rest-timer')
                 ->waitUntilMissing('[dusk="rest-timer"]', 10);
 
             // 3. Trigger again and use "Skip" (Passer)
             $this->retriggerRestTimer($browser, $workout)
+                ->click('@rest-timer')
+                ->waitFor('@skip-rest-timer', 10)
                 ->click('@skip-rest-timer')
                 ->waitUntilMissing('[dusk="rest-timer"]', 10)
                 ->assertNoConsoleExceptions();

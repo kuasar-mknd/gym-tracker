@@ -11,15 +11,19 @@ import Modal from '@/Components/UI/Modal.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
+import GlassToggle from '@/Components/UI/GlassToggle.vue'
 import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     show: { type: Boolean, required: true },
     form: { type: Object, required: true },
+
+    /** Le repos part tout seul après une série validée : un réglage du compte, qui s'écrit tout de suite. */
+    reposAutomatique: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['close', 'submit'])
+const emit = defineEmits(['close', 'submit', 'update:reposAutomatique'])
 
 /**
  * Les réglages ne s'enregistrent pas sans le serveur (#2048) : sans réseau,
@@ -62,6 +66,15 @@ const envoyer = () => {
                         :error="form.errors.notes"
                     />
                 </div>
+
+                <GlassToggle
+                    :model-value="reposAutomatique"
+                    label="Démarrage automatique du repos"
+                    dusk="auto-rest-timer"
+                    :disabled="surUneCopie"
+                    :aria-describedby="surUneCopie ? raisonDUneEcriture : undefined"
+                    @update:model-value="emit('update:reposAutomatique', $event)"
+                />
 
                 <p v-if="form.errors.base" role="alert" class="text-accent-danger-deep text-center text-sm font-medium">
                     {{ form.errors.base }}

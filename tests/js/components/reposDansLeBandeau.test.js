@@ -72,6 +72,33 @@ describe('le repos dans le bandeau de la séance', () => {
         expect(duree(wrapper)).toContain('Repos 1:00')
     })
 
+    it('dessine l’anneau du repos, rempli de ce qu’il reste sur sa durée, et pas sans repos', async () => {
+        const wrapper = monter(depot())
+
+        const trait = () => wrapper.get('[dusk="anneau-du-repos"] [data-testid="trait-de-l-anneau"]')
+
+        expect(trait().attributes('style')).toContain('stroke-dashoffset: 20')
+
+        await vi.advanceTimersByTimeAsync(12_000)
+
+        expect(trait().attributes('style')).toContain('stroke-dashoffset: 33.3')
+        expect(monter(null).find('[dusk="anneau-du-repos"]').exists()).toBe(false)
+    })
+
+    it('ne dessine aucun trait à zéro, pour ne laisser aucun point au bout de l’anneau', async () => {
+        const wrapper = monter(depot({ echeance: MAINTENANT.getTime() + 1_000 }))
+
+        await vi.advanceTimersByTimeAsync(1_000)
+
+        expect(wrapper.find('[data-testid="trait-de-l-anneau"]').exists()).toBe(false)
+    })
+
+    it('dessine le trait au bout plat, qui ne laisse pas de pastille à la dernière seconde', () => {
+        const wrapper = monter(depot({ echeance: MAINTENANT.getTime() + 1_000 }))
+
+        expect(wrapper.get('[data-testid="trait-de-l-anneau"]').attributes('stroke-linecap')).toBeUndefined()
+    })
+
     it('dit un repos en pause, au reste figé', async () => {
         const wrapper = monter(depot({ echeance: null, restantEnPause: 45 }))
 
@@ -93,7 +120,7 @@ describe('le repos dans le bandeau de la séance', () => {
         expect(annonce()).toBe('')
         await vi.advanceTimersByTimeAsync(1_000)
         expect(annonce()).toBe('Repos terminé')
-        expect(duree(wrapper)).toContain('10 min')
+        expect(duree(wrapper)).toContain('Repos terminé')
     })
 
     /*
@@ -206,7 +233,7 @@ describe('le minuteur d’un repos repris', () => {
     const monterLeMinuteur = (props) =>
         mount(RestTimer, {
             props: { duration: 90, ...props },
-            global: { stubs: { GlassToggle: true } },
+            global: { stubs: { Modal: { template: '<div><slot /></div>' } } },
         })
 
     it('repart de ce qu’il reste, sur la durée d’origine', () => {
@@ -222,13 +249,13 @@ describe('le minuteur d’un repos repris', () => {
         await vi.advanceTimersByTimeAsync(5_000)
         expect(wrapper.get('[role="timer"]').text()).toBe('0:40')
 
-        await wrapper.get('button[aria-label="Démarrer le minuteur"]').trigger('click')
+        await wrapper.get('button[aria-label="Reprendre le repos"]').trigger('click')
         expect(wrapper.emitted('reprise')).toEqual([[40]])
 
         await vi.advanceTimersByTimeAsync(3_000)
         expect(wrapper.get('[role="timer"]').text()).toBe('0:37')
 
-        await wrapper.get('button[aria-label="Pause"]').trigger('click')
+        await wrapper.get('button[aria-label="Mettre le repos en pause"]').trigger('click')
         expect(wrapper.emitted('pause')).toEqual([[37]])
     })
 })

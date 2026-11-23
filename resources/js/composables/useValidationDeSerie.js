@@ -11,7 +11,7 @@ import { createWriteQueue } from '@/Utils/writeOrdering'
  *   isLatestWrite: (cle: string, seq: number) => boolean,
  *   flushPendingUpdates: (setId: unknown) => Promise<unknown>,
  *   reportSyncFailure: (message: string) => void,
- *   apresValidation: (exerciseRestTime: number|undefined) => void,
+ *   apresValidation: (exerciseRestTime: number|undefined, set: object) => void,
  *   noterUneEcritureNonConfirmee?: (cle: string, serie: object, champ: string, valeurDeRepli: unknown) => void,
  *   oublierLEcritureNonConfirmee?: (cle: string) => void,
  * }} page
@@ -100,7 +100,7 @@ export const useValidationDeSerie = ({
         // Optimistic update — no router.reload
         set.is_completed = newState
         if (newState) {
-            apresValidation(exerciseRestTime)
+            apresValidation(exerciseRestTime, set)
         }
 
         /*

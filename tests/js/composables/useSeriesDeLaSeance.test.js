@@ -291,7 +291,7 @@ describe('valider une série', () => {
         series.updateSet(serie, 'weight', '60')
         series.toggleSetCompletion(serie, 120)
         expect(serie.is_completed).toBe(true)
-        expect(apresValidation).toHaveBeenCalledWith(120)
+        expect(apresValidation).toHaveBeenCalledWith(120, serie)
 
         await flushPromises()
 

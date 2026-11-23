@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { reactive } from 'vue'
+import RestTimer from '@/Components/Workout/RestTimer.vue'
 
 /*
  * Sur une copie hors ligne, rien ne part vers le serveur, sauf la déconnexion
@@ -33,7 +34,6 @@ vi.mock('@inertiajs/vue3', async () => {
 const { default: QuickActions } = await import('@/Components/Dashboard/QuickActions.vue')
 const { default: ActionsDeLaSeance } = await import('@/Components/Workout/ActionsDeLaSeance.vue')
 const { default: WorkoutSettingsModal } = await import('@/Components/Workout/WorkoutSettingsModal.vue')
-const { default: RestTimer } = await import('@/Components/Workout/RestTimer.vue')
 const { default: GlassEmptyState } = await import('@/Components/UI/GlassEmptyState.vue')
 const { default: GlassToggle } = await import('@/Components/UI/GlassToggle.vue')
 const { ID_DE_LA_RAISON_DES_ECRITURES } = await import('@/composables/useCopieHorsLigne')
@@ -184,18 +184,27 @@ describe('les réglages de la séance', () => {
     })
 })
 
-describe('le minuteur de repos', () => {
-    const monter = (props = {}) => mount(RestTimer, { props: { autoStart: false, ...props }, global })
-    const interrupteur = (wrapper) => wrapper.get('[role="switch"]')
+describe('le démarrage automatique du repos, dans les réglages', () => {
+    const monter = () =>
+        mount(WorkoutSettingsModal, {
+            props: {
+                show: true,
+                form: reactive({ name: 'Jambes', started_at: '', notes: '', errors: {}, processing: false }),
+                reposAutomatique: true,
+            },
+            global: { ...global, stubs: { Modal: { template: '<div><slot /></div>' } } },
+        })
+    const interrupteur = (wrapper) => wrapper.get('[dusk="auto-rest-timer"] [role="switch"]')
 
-    it('ne change pas son démarrage automatique quand la page le désactive, et dit pourquoi', async () => {
-        const wrapper = monter({ reglageDesactive: true, raisonDuReglage: ID_DE_LA_RAISON_DES_ECRITURES })
+    it('ne change pas sur une copie, et dit pourquoi', async () => {
+        servirUneCopie()
+        const wrapper = monter()
 
         attendreDesactive(interrupteur(wrapper))
 
         await interrupteur(wrapper).trigger('click')
 
-        expect(wrapper.emitted('update:autoRestTimer')).toBeUndefined()
+        expect(wrapper.emitted('update:reposAutomatique')).toBeUndefined()
         wrapper.unmount()
     })
 
@@ -206,7 +215,7 @@ describe('le minuteur de repos', () => {
 
         await interrupteur(wrapper).trigger('click')
 
-        expect(wrapper.emitted('update:autoRestTimer')).toEqual([[false]])
+        expect(wrapper.emitted('update:reposAutomatique')).toEqual([[false]])
         wrapper.unmount()
     })
 })
@@ -243,5 +252,20 @@ describe('les briques', () => {
 
         attendreDesactive(wrapper.get('[role="switch"]'), 'pourquoi')
         expect(wrapper.attributes('aria-describedby')).toBeUndefined()
+    })
+
+    it('ne change pas non plus depuis la feuille du repos, sur une copie', async () => {
+        servirUneCopie()
+        const wrapper = mount(RestTimer, {
+            props: { duration: 90, autoStart: false },
+            global: { ...global, stubs: { Modal: { template: '<div><slot /></div>' } } },
+        })
+        const interrupteurDeLaFeuille = wrapper.get('[dusk="auto-rest-timer-feuille"] [role="switch"]')
+
+        attendreDesactive(interrupteurDeLaFeuille)
+        await interrupteurDeLaFeuille.trigger('click')
+
+        expect(wrapper.emitted('update:reposAutomatique')).toBeUndefined()
+        wrapper.unmount()
     })
 })

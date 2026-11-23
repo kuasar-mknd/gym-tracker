@@ -107,6 +107,7 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
         timerDuration.value = duree || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
         restantInitial.value = null
+        echeanceDeReprise.value = null
         demarrageEnPause.value = false
         echeance = Date.now() + timerDuration.value * 1000
         restantEnPause = null
@@ -132,6 +133,7 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
         timerDuration.value = duree
         timerRun.value += 1
         restantInitial.value = restant
+        echeanceDeReprise.value = enPause ? null : echeanceDuDepot
         demarrageEnPause.value = enPause
         echeance = enPause ? null : (echeanceDuDepot ?? Date.now() + restant * 1000)
         restantEnPause = enPause ? restant : null
@@ -219,6 +221,9 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
 
     /** Un repos repris en route : ce qu'il reste au minuteur remonté, et s'il attend en pause. */
     const restantInitial = ref(null)
+
+    /** L'échéance déposée d'un repos repris : le minuteur remonté la garde, sans la refaire des secondes arrondies. */
+    const echeanceDeReprise = ref(null)
     const demarrageEnPause = ref(false)
 
     /**
@@ -234,15 +239,13 @@ export const useMinuteurDeRepos = ({ sortieAudio, memoire = null } = {}) => {
 
     /**
      * Tout ce que la page lie au minuteur (`v-bind` sur `RestTimer`) : sa clé,
-     * sa durée, le réglage et ce qu'elle en écoute, et, d'un repos repris en
-     * route, ce qu'il reste et la pause.
+     * sa durée et, d'un repos repris en route, ce qu'il reste et la pause.
      */
     const liaisonDuMinuteur = computed(() => ({
         key: timerRun.value,
         duration: timerDuration.value,
-        autoRestTimer: autoRestTimer.value,
-        'onUpdate:autoRestTimer': setAutoRestTimer,
         secondesRestantes: restantInitial.value,
+        echeance: echeanceDeReprise.value,
         enPause: demarrageEnPause.value,
         onPause: noterLaPause,
         onReprise: noterLaReprise,

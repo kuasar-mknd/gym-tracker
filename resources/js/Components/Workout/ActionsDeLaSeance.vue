@@ -98,8 +98,9 @@ const raisonDuModele = computed(() => {
                 <span class="bureau:hidden">Exercice</span>
                 <span class="bureau:inline hidden">Ajouter un exercice</span>
             </GlassButton>
+            <slot v-if="$slots.repos" name="repos" />
             <GlassButton
-                v-if="!vide"
+                v-else-if="!vide"
                 variant="secondary"
                 @click="emit('demarrer-un-repos')"
                 class="bouton-de-barre bureau:w-full flex-auto"
@@ -111,7 +112,7 @@ const raisonDuModele = computed(() => {
             </GlassButton>
             <GlassButton
                 v-if="peutAbandonner"
-                variant="accent"
+                variant="danger"
                 @click="abandon.demander(idDeLaSeance)"
                 :loading="abandon.enCours.value"
                 class="bouton-de-barre bureau:w-full flex-auto"

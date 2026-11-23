@@ -12,11 +12,11 @@ import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { memoireDeLaPage, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useEnsuiteDuRepos } from '@/composables/useEnsuiteDuRepos'
 import { useSortieAudio } from '@/composables/useSortieAudio'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
-import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import { useSeanceEnAttente } from '@/composables/useSeanceEnAttente'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
@@ -79,12 +79,12 @@ watch(
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const sortieAudio = useSortieAudio()
-const { showTimer, liaisonDuMinuteur, openRestTimer, apresValidation } = useMinuteurDeRepos({
-    sortieAudio,
-    memoire: memoireDeLaPage({ page, localWorkout, estClose: isFinished }),
-})
-// Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
-const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
+const { showTimer, liaisonDuMinuteur, autoRestTimer, setAutoRestTimer, openRestTimer, apresValidation } =
+    useMinuteurDeRepos({
+        sortieAudio,
+        memoire: memoireDeLaPage({ page, localWorkout, estClose: isFinished }),
+    })
+const { apresLaValidation, ensuiteDuRepos } = useEnsuiteDuRepos({ localWorkout, apresValidation })
 
 const { nouvelIdTemporaire, newRowKey, rowKey, pendingIds, queuedLineIds } = useIdentiteDesRangees()
 const showAddExercise = ref(false)
@@ -183,7 +183,7 @@ const {
     clearUnsynced,
     reportSyncFailure,
     reportEditFailure,
-    apresValidation,
+    apresValidation: apresLaValidation,
     bornesDUneSerie: props.bornesDUneSerie,
 })
 
@@ -290,7 +290,7 @@ onUnmounted(() => {
             />
         </template>
 
-        <div :class="showTimer ? 'pb-main-safe-repos' : 'pb-main-safe'">
+        <div class="pb-main-safe">
             <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" :seance="localWorkout" />
             <SeriesHorsDeLaCopie :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
@@ -347,7 +347,18 @@ onUnmounted(() => {
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"
                 @terminer="finishWorkout"
-            />
+            >
+                <template v-if="showTimer" #repos>
+                    <RestTimer
+                        v-bind="liaisonDuMinuteur"
+                        :ensuite="ensuiteDuRepos"
+                        :repos-automatique="autoRestTimer"
+                        :sortie-audio="sortieAudio"
+                        @update:repos-automatique="setAutoRestTimer"
+                        @close="showTimer = false"
+                    />
+                </template>
+            </ActionsDeLaSeance>
         </div>
 
         <!-- Modals -->
@@ -362,6 +373,8 @@ onUnmounted(() => {
         <WorkoutSettingsModal
             :show="showSettingsModal"
             :form="settingsForm"
+            :repos-automatique="autoRestTimer"
+            @update:repos-automatique="setAutoRestTimer"
             @close="showSettingsModal = false"
             @submit="updateSettings"
         />
@@ -382,17 +395,6 @@ onUnmounted(() => {
             :titre="titreDuRetrait"
             @confirmer="confirmerLeRetrait"
             @annuler="annulerLeRetrait"
-        />
-
-        <RestTimer
-            v-if="showTimer"
-            v-bind="liaisonDuMinuteur"
-            class="bureau:translate-y-0 -translate-y-18"
-            :reglage-desactive="surUneCopie"
-            :raison-du-reglage="raisonDUneEcriture"
-            :sortie-audio="sortieAudio"
-            @close="showTimer = false"
-            dusk="rest-timer"
         />
     </AuthenticatedLayout>
 </template>

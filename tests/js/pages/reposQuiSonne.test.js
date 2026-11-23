@@ -134,6 +134,7 @@ const monterLaSeance = async () => {
                 ActionsDeLaSeance,
                 GlassButton: Bouton,
                 RestTimer,
+                Modal: { template: '<div><slot /></div>' },
             },
         },
     })
@@ -150,7 +151,7 @@ const toucher = async (page, dusk) => {
 }
 
 /** Le bouton du minuteur qui le met en pause ou le relance. */
-const boutonDuMinuteur = (page, libelle) => page.get(`[dusk="rest-timer"] button[aria-label="${libelle}"]`)
+const boutonDuMinuteur = (page, libelle) => page.get(`button[aria-label="${libelle}"]`)
 
 /** Le temps passe ; la fin du repos tombe dans le rappel de la minuterie. */
 const attendre = async (secondes) => {
@@ -321,10 +322,10 @@ describe('la fin du repos sur la page de séance (#2112)', () => {
 
         await toucher(page, 'complete-set-0-0')
         await attendre(30)
-        await dansUnGeste(() => boutonDuMinuteur(page, 'Pause').trigger('click'))
+        await dansUnGeste(() => boutonDuMinuteur(page, 'Mettre le repos en pause').trigger('click'))
         sorties[0].interrompre()
 
-        await dansUnGeste(() => boutonDuMinuteur(page, 'Démarrer le minuteur').trigger('click'))
+        await dansUnGeste(() => boutonDuMinuteur(page, 'Reprendre le repos').trigger('click'))
 
         expect(sorties[0].reprises.at(-1)).toEqual({ dansUnGeste: true, etat: 'interrupted' })
         expect(sorties[0].state).toBe('running')
