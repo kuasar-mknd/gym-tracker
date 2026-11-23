@@ -105,17 +105,19 @@ const quickCreate = () => {
     nextTick(() => document.querySelector('[dusk="new-exercise-name"]')?.focus())
 }
 
+/** Une création sans réponse rend le bouton après ce délai, plutôt que de le laisser inerte. */
+const DELAI_DE_LA_CREATION_MS = 15_000
+
 /** Chaque fermeture ou retour invalide la création en vol : sa réponse n'ajoutera plus rien à la séance. */
 let generationDeCreation = 0
 
 const retourALaListe = () => {
     generationDeCreation++
-    createExerciseForm.processing = false
     showCreateForm.value = false
 }
 
-/** Échap dans le formulaire revient à la liste : le navigateur ne doit pas fermer le dialogue en plus. */
-const surEchap = (event) => {
+/** Échap, d'où qu'il parte dans le dialogue, revient à la liste depuis le formulaire : la demande native est refusée. */
+const surAnnulation = (event) => {
     if (showCreateForm.value) {
         event.preventDefault()
         retourALaListe()
@@ -124,7 +126,6 @@ const surEchap = (event) => {
 
 const fermer = () => {
     generationDeCreation++
-    createExerciseForm.processing = false
     showCreateForm.value = false
     searchQuery.value = ''
     categorie.value = TOUTES
@@ -153,6 +154,7 @@ const createAndAddExercise = async () => {
                 type: createExerciseForm.type,
                 category: createExerciseForm.category,
             }),
+            signal: AbortSignal.timeout(DELAI_DE_LA_CREATION_MS),
         })
         if (response.ok) {
             const { exercise } = await response.json()
@@ -194,9 +196,7 @@ const createAndAddExercise = async () => {
         createExerciseForm.setError('name', 'Connexion impossible. Vérifie ta connexion réseau.')
         triggerHaptic('error')
     } finally {
-        if (generation === generationDeCreation) {
-            createExerciseForm.processing = false
-        }
+        createExerciseForm.processing = false
     }
 }
 
@@ -204,8 +204,15 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
 </script>
 
 <template>
-    <Modal :show="show" position="tiroir" max-width="lg" aria-labelledby="add-exercise-title" @close="fermer">
-        <div class="flex min-h-0 flex-1 flex-col" @keydown.esc="surEchap">
+    <Modal
+        :show="show"
+        position="tiroir"
+        max-width="lg"
+        aria-labelledby="add-exercise-title"
+        @close="fermer"
+        @annuler="surAnnulation"
+    >
+        <div class="flex min-h-0 flex-1 flex-col">
             <div class="flex shrink-0 items-center gap-3 px-6 pb-4">
                 <GlassIconButton
                     v-if="showCreateForm"

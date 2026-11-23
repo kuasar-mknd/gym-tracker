@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
@@ -75,12 +75,23 @@ const heureChoisie = ref('')
 /** Maintenant, à l'ouverture : la borne haute du champ. */
 const maintenant = ref(new Date())
 
+/** L'horloge de la comparaison au futur : une heure future devient passée sans que le champ change. */
+const horloge = ref(Date.now())
+let tic = null
+const arreterLHorloge = () => clearInterval(tic)
+onUnmounted(arreterLHorloge)
+
 watch(
     () => props.show,
     (ouverte) => {
+        arreterLHorloge()
+
         if (!ouverte) {
             return
         }
+
+        horloge.value = Date.now()
+        tic = setInterval(() => (horloge.value = Date.now()), 5_000)
 
         choix.value = 'derniere'
         maintenant.value = new Date()
@@ -115,8 +126,8 @@ const erreurDeLHeure = computed(() => {
         return 'La fin ne peut pas précéder le début de la séance.'
     }
 
-    // Comparée à l'instant où l'on confirme, pas à celui de l'ouverture.
-    return heure > new Date() ? 'La fin ne peut pas être dans le futur.' : ''
+    // Comparée à l'horloge, pas à l'instant de l'ouverture.
+    return heure.getTime() > horloge.value ? 'La fin ne peut pas être dans le futur.' : ''
 })
 
 const confirmer = () => {
