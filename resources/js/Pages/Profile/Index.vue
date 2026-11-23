@@ -118,7 +118,7 @@ const menuGroups = [
     <AuthenticatedLayout page-title="Profil" titre-masque>
         <div class="space-y-6">
             <!-- User Profile Quick View -->
-            <div class="animate-fade-in flex items-center gap-4 py-2">
+            <div class="animate-fade-in flex items-center gap-4 py-2 pe-14">
                 <div
                     class="bg-surface-sunken font-display text-text-main flex h-20 w-20 items-center justify-center rounded-3xl text-3xl font-semibold"
                 >

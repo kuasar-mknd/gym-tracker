@@ -47,7 +47,7 @@ const streakLabel = computed(() => {
 <template>
     <header
         id="dashboard-header"
-        class="animate-fade-in verre-regulier rounded-carte flex items-center justify-between gap-3 p-4"
+        class="animate-fade-in verre-regulier rounded-carte flex items-center justify-between gap-3 p-4 pe-16"
     >
         <div class="flex min-w-0 items-center gap-3">
             <div

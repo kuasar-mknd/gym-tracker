@@ -92,6 +92,14 @@ const props = defineProps({
 const CLASSES_DU_RETOUR_DE_BUREAU =
     'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none'
 
+/*
+ * Accueil et Profil n'ont pas de titre visible : la cloche y flotte, sans barre
+ * qui lui réserve une rangée de la page. Une bande de la hauteur de la barre
+ * d'état garde l'horloge lisible quand le contenu défile dessous ; la première
+ * carte de la page garde de quoi loger la cloche à sa droite.
+ */
+const clocheFlottante = computed(() => props.titreMasque && !props.showBack)
+
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
 // `?` ouvre la liste des raccourcis, d'où qu'on soit — le seul moyen de la
@@ -318,8 +326,18 @@ onUnmounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between pb-4 backdrop-blur-xl"
+            class="bureau:hidden"
+            :class="
+                clocheFlottante
+                    ? 'contents'
+                    : 'bg-surface-page/40 z-collant px-sure-5 pt-sure-4 sticky top-0 flex items-center justify-between pb-4 backdrop-blur-xl'
+            "
         >
+            <div
+                v-if="clocheFlottante"
+                class="bg-surface-page/40 z-collant bureau:hidden left-sure-0 right-sure-0 pt-sure-0 pointer-events-none fixed top-0 h-(--safe-area-top) backdrop-blur-xl"
+                aria-hidden="true"
+            ></div>
             <div class="flex min-w-0 items-center gap-4">
                 <Link
                     v-if="showBack"
@@ -345,7 +363,7 @@ onUnmounted(() => {
                 </h1>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div :class="clocheFlottante ? 'top-sure-12 right-sure-5 z-collant fixed' : 'flex items-center gap-2'">
                 <Link
                     v-press
                     :href="route('notifications.index')"
@@ -393,7 +411,7 @@ onUnmounted(() => {
             tabindex="-1"
             class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6 focus:outline-none"
             :class="[
-                { 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack },
+                { 'pt-main-safe sm:pt-main-safe': (!pageTitle && !showBack) || clocheFlottante },
                 accessoireDeSeance ? 'pb-main-safe-accessoire bureau:pb-main-safe' : 'pb-main-safe',
             ]"
         >
