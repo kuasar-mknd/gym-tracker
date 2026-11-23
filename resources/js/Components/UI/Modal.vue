@@ -21,7 +21,7 @@ import { createScrollLockToken, lockPageScroll, releasePageScroll } from '@/comp
  * @property {String} maxWidth - Controls the maximum width of the modal (sm, md, lg, xl, 2xl).
  * @property {Boolean} closeable - Determines if the modal can be closed via background click or Escape key.
  * @property {String} ariaLabelledby - The ID of the element providing the modal's accessible title.
- * @property {String} position - Where the panel sits on small screens: 'center' (default), 'bottom' for a thumb-reachable sheet, or 'tiroir' for a drawer glued to the bottom edge as in the navigation mockup: a floating sheet, 16 px from the sides, with a grabber and a swipe-down to dismiss.
+ * @property {String} position - Where the panel sits on small screens: 'center' (default), 'bottom' for a thumb-reachable sheet, 'tiroir' for a full-height drawer glued to the bottom edge as in the navigation mockup (a floating sheet 8 px from the sides, with a grabber and a swipe-down to dismiss), or 'feuille' for the same sheet at the height of its content.
  */
 const props = defineProps({
     show: {
@@ -35,7 +35,7 @@ const props = defineProps({
     position: {
         type: String,
         default: 'center',
-        validator: (value) => ['center', 'bottom', 'tiroir'].includes(value),
+        validator: (value) => ['center', 'bottom', 'tiroir', 'feuille'].includes(value),
     },
     closeable: {
         type: Boolean,
@@ -178,15 +178,21 @@ const maxWidthClass = computed(() => {
  */
 const isBottomSheet = computed(() => props.position === 'bottom')
 
-const isTiroir = computed(() => props.position === 'tiroir')
+const isFeuille = computed(() => props.position === 'feuille')
+
+const isTiroir = computed(() => props.position === 'tiroir' || isFeuille.value)
 
 const containerClass = computed(() =>
     isBottomSheet.value || isTiroir.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
 )
 
-const panelClass = computed(() =>
-    isTiroir.value ? 'hauteur-tiroir -mx-2 -mb-4 rounded-carte sm:mx-0 sm:mb-0' : 'hauteur-sure-12 rounded-carte',
-)
+const panelClass = computed(() => {
+    if (isFeuille.value) {
+        return 'hauteur-max-tiroir marge-de-feuille rounded-carte'
+    }
+
+    return isTiroir.value ? 'hauteur-tiroir marge-de-feuille rounded-carte' : 'hauteur-sure-12 rounded-carte'
+})
 
 const enterFromClass = computed(() =>
     isTiroir.value
@@ -292,7 +298,7 @@ watch(
                     leave-to-class="opacity-0"
                 >
                     <div v-show="show" class="fixed inset-0 transform transition" @click="close">
-                        <div class="glass-overlay" />
+                        <div :class="isTiroir ? 'voile-de-feuille' : 'glass-overlay'" />
                     </div>
                 </Transition>
 

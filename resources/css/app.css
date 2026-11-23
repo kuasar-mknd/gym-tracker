@@ -1193,6 +1193,14 @@
     z-index: 50;
 }
 
+@utility voile-de-feuille {
+    /* Le voile d'un tiroir ou d'une feuille : plus léger que `glass-overlay`, sans flou, pour que la page reste lisible derrière le verre (maquette de navigation). */
+    position: fixed;
+    inset: 0;
+    background: rgb(from var(--color-shadow-cast) r g b / 0.3);
+    z-index: 50;
+}
+
 @utility glass-modal {
     /* Sa hauteur se borne dans Modal.vue, par `hauteur-sure-*` : la zone sûre, pas 85vh (#2043). */
     overflow-y: auto;
@@ -1339,20 +1347,44 @@
 }
 
 /*
- * La hauteur du tiroir (`Modal position="tiroir"`) : un cran, le grand, que la
- * liste et le formulaire de création partagent, pour que la feuille ne change
- * pas de taille d'un écran à l'autre. Sur un téléphone, la feuille déborde la
- * marge de la fenêtre (`-mx-2 -mb-4` du panneau) pour laisser 8 px aux côtés et
- * en bas, 24 px en haut : la zone sûre moins 2 rem. À partir de `sm`, la fenêtre
- * centrée plafonne à 44 rem.
+ * Le tiroir et la feuille (`Modal position="tiroir"` et `"feuille"`) flottent à
+ * 8 px des bords de l'écran, le verre passant derrière l'indicateur d'accueil,
+ * comme dans la maquette de navigation. La fenêtre garde ses marges sûres
+ * (`px-sure-4 py-sure-6`) : le panneau les déborde (`marge-de-feuille`) et
+ * reprend la zone sûre du bas en remplissage, pour que le contenu reste au-dessus
+ * de l'indicateur. Hauteur sur téléphone : l'écran moins la barre d'état et 2 rem
+ * (24 px au-dessus du panneau) ; à partir de `sm`, la fenêtre centrée plafonne
+ * à 44 rem. `hauteur-tiroir` fixe la hauteur, `hauteur-max-tiroir` la borne.
  */
+@utility marge-de-feuille {
+    margin-inline: -0.5rem;
+    margin-bottom: calc(var(--safe-area-bottom) * -1 - 1rem);
+    padding-bottom: var(--safe-area-bottom);
+
+    @media (width >= 40rem) {
+        margin-inline: 0;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+}
+
 @utility hauteur-tiroir {
-    height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 2rem);
-    height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 2rem);
+    height: calc(100vh - var(--safe-area-top) - 2rem);
+    height: calc(100dvh - var(--safe-area-top) - 2rem);
 
     @media (width >= 40rem) {
         height: min(44rem, calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem));
         height: min(44rem, calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem));
+    }
+}
+
+@utility hauteur-max-tiroir {
+    max-height: calc(100vh - var(--safe-area-top) - 2rem);
+    max-height: calc(100dvh - var(--safe-area-top) - 2rem);
+
+    @media (width >= 40rem) {
+        max-height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
+        max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
     }
 }
 

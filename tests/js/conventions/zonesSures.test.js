@@ -248,6 +248,7 @@ const PLEIN_ECRAN = [
 /** Les utilitaires de la feuille qui couvrent tout l'écran, pour la même raison. */
 const UTILITAIRES_PLEIN_ECRAN = {
     'glass-overlay': 'le voile flouté derrière une fenêtre',
+    'voile-de-feuille': 'le voile léger derrière un tiroir ou une feuille',
 }
 
 /**
@@ -594,7 +595,8 @@ describe('les zones sûres', () => {
     })
 
     it('ne borne aucune fenêtre de la feuille par la hauteur de l’écran', () => {
-        const bornes = UTILITAIRES.filter(({ nom }) => !nom.startsWith('hauteur-sure-'))
+        // `hauteur-max-tiroir` compte la zone sûre du haut et la déborde en bas à dessein (`marge-de-feuille`).
+        const bornes = UTILITAIRES.filter(({ nom }) => !nom.startsWith('hauteur-sure-') && nom !== 'hauteur-max-tiroir')
             .filter(({ corps }) => /max-height:[^;]*\b\d+(?:d|s|l)?vh\b/.test(corps))
             .map(({ nom }) => nom)
 

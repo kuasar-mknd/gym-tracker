@@ -187,6 +187,6 @@ describe('la question « Terminer la séance ? » reste simple', () => {
         })
 
         expect(wrapper.find('[dusk="finish-workout-bilan"]').exists()).toBe(false)
-        expect(wrapper.findAll('button').map((bouton) => bouton.text())).toEqual(['Annuler', 'Confirmer'])
+        expect(wrapper.findAll('button').map((bouton) => bouton.text())).toEqual(['Confirmer', 'Annuler'])
     })
 })

@@ -220,17 +220,22 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
                         @action="quickCreate"
                     />
 
-                    <GlassButton
+                    <button
                         v-if="ligneDeCreation"
                         type="button"
-                        variant="primary"
-                        class="mx-2 mb-2 w-[calc(100%-1rem)]"
+                        class="focus-visible:ring-accent-primary hover:bg-surface-card/50 flex min-h-14 w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition focus-visible:ring-2 focus-visible:outline-none"
                         dusk="quick-create-exercise"
                         @click="quickCreate"
                     >
-                        <GlassIcon name="add" size="sm" />
-                        {{ requete ? `Créer « ${requete} »` : 'Créer un exercice' }}
-                    </GlassButton>
+                        <span
+                            class="bg-accent-primary/10 text-accent-primary flex size-9 shrink-0 items-center justify-center rounded-xl"
+                        >
+                            <GlassIcon name="add" size="sm" />
+                        </span>
+                        <span class="text-text-main min-w-0 flex-1 truncate font-medium">
+                            {{ requete ? `Créer « ${requete} »` : 'Créer un exercice' }}
+                        </span>
+                    </button>
 
                     <p
                         v-if="ligneDeCreation && filteredExercises.length === 0"

@@ -135,8 +135,14 @@ const avisDAttente = computed(() =>
 </script>
 
 <template>
-    <Modal :show="show" @close="emit('close')" max-width="sm" aria-labelledby="finish-workout-modal-title">
-        <div class="p-6 text-center">
+    <Modal
+        :show="show"
+        position="feuille"
+        max-width="sm"
+        aria-labelledby="finish-workout-modal-title"
+        @close="emit('close')"
+    >
+        <div class="px-6 pt-1 pb-6">
             <h3 id="finish-workout-modal-title" class="titre-plat mb-6" dusk="finish-workout-modal-title">
                 Terminer la séance ?
             </h3>
@@ -180,10 +186,7 @@ const avisDAttente = computed(() =>
                     dusk="finish-workout-end-input"
                 />
             </div>
-            <div class="flex flex-col-reverse gap-3 min-[24rem]:flex-row">
-                <GlassButton variant="secondary" @click="emit('close')" class="bouton-de-bilan min-w-0 flex-1">
-                    Annuler
-                </GlassButton>
+            <div class="flex flex-col gap-3">
                 <GlassButton
                     variant="accent"
                     id="confirm-finish-button"
@@ -191,9 +194,12 @@ const avisDAttente = computed(() =>
                     :loading="enCours"
                     :disabled="erreurDeLHeure !== ''"
                     @click="confirmer"
-                    class="bouton-de-bilan min-w-0 flex-1"
+                    class="bouton-de-bilan w-full"
                 >
                     Confirmer
+                </GlassButton>
+                <GlassButton variant="secondary" @click="emit('close')" class="bouton-de-bilan w-full">
+                    Annuler
                 </GlassButton>
             </div>
         </div>
