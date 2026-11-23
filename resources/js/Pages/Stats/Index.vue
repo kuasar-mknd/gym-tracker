@@ -1,4 +1,5 @@
 <script setup>
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
@@ -76,10 +77,10 @@ const handlePeriodChange = (period) => {
 <template>
     <Head title="Statistiques" />
 
-    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon évolution" titre-dans-la-page>
+    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon évolution" titre-dans-la-page titre-masque>
         <div class="space-y-6">
             <!-- Header -->
-            <header class="animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <header class="animate-fade-in flex flex-wrap items-center gap-3 sm:items-start sm:justify-between">
                 <!--
                     Le titre du bureau. Sur téléphone, c'est la barre collante de
                     la mise en page qui le porte, et l'afficher ici aussi le
@@ -99,6 +100,8 @@ const handlePeriodChange = (period) => {
                     class="shrink-0"
                     @update:model-value="handlePeriodChange"
                 />
+
+                <Cloche class="bureau:hidden ms-auto" />
             </header>
 
             <!--

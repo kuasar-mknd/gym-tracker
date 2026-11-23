@@ -1,4 +1,5 @@
 <script setup>
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -118,7 +119,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 <template>
     <Head title="Mes séances" />
 
-    <AuthenticatedLayout page-title="Mes séances">
+    <AuthenticatedLayout page-title="Mes séances" titre-masque>
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header>
             <div class="flex items-center justify-between">
@@ -149,10 +150,18 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         <div class="space-y-6">
             <!-- Les actions de l'en-tête de bureau, qui ne se montre qu'à partir de 1 024 px. -->
             <div class="bureau:hidden space-y-3">
-                <GlassButton variant="primary" class="w-full" :loading="demarrageEnCours" @click="createWorkout">
-                    <GlassIcon name="add" size="sm" class="mr-2" />
-                    Démarrer une séance
-                </GlassButton>
+                <div class="flex items-center gap-3">
+                    <GlassButton
+                        variant="primary"
+                        class="min-w-0 flex-1"
+                        :loading="demarrageEnCours"
+                        @click="createWorkout"
+                    >
+                        <GlassIcon name="add" size="sm" class="mr-2" />
+                        Démarrer une séance
+                    </GlassButton>
+                    <Cloche />
+                </div>
                 <nav
                     aria-label="Séances"
                     class="border-glass-border bg-surface-card/50 flex rounded-xl border p-1 text-sm font-bold"

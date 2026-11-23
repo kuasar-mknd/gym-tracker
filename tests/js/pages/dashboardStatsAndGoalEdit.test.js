@@ -410,7 +410,10 @@ describe('Stats/Index', () => {
             props: { exercises: [], ...props },
             global: {
                 directives: { press: {} },
-                mocks: { route: globalThis.route },
+                mocks: {
+                    route: globalThis.route,
+                    $page: { props: { auth: { user: { unread_notifications_count: 0 } } } },
+                },
                 stubs: { AuthenticatedLayout: layoutStub, ...cards },
             },
         })
@@ -523,7 +526,7 @@ describe('Stats/Index', () => {
         it('laisse la bibliothèque, qui s’ouvre sans réseau', () => {
             const wrapper = mountStats({ exercises: [], selectedPeriod: '30j' })
 
-            expect(wrapper.get('a').attributes('href')).toBe('/exercises.index')
+            expect(wrapper.get('a:not([href="/notifications.index"])').attributes('href')).toBe('/exercises.index')
         })
 
         it('ne propose pas Corps, dont les mesures ne sont pas gardées', () => {

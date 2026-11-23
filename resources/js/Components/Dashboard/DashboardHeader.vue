@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import { Link } from '@inertiajs/vue3'
 import { nombre } from '@/Utils/nombre'
 
@@ -102,5 +103,6 @@ const streakLabel = computed(() => {
                 {{ streakDays }} {{ streakDays === 1 ? 'jour' : 'jours' }}
             </span>
         </Link>
+        <Cloche class="bureau:hidden" />
     </header>
 </template>
