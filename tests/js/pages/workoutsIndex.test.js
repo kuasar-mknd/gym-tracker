@@ -629,18 +629,39 @@ describe('Workouts/Index — le journal', () => {
         expect(wrapper.findAll('[dusk="empty-state"]')).toHaveLength(1)
     })
 
-    it('propose « Reprendre » à la place de « Démarrer » quand une séance est ouverte', () => {
+    it('ne montre qu’une action « Reprendre » : celle du bandeau du layout, pas de bouton ni de « Démarrer » dans la page', () => {
         const wrapper = avecUneSeanceEnCours({ id: 2 })
 
-        expect(wrapper.get('[dusk="reprendre-la-seance"]').text()).toBe('Reprendre')
+        expect(wrapper.text()).not.toContain('Reprendre')
+        expect(wrapper.text()).not.toContain('Démarrer une séance')
+        expect(wrapper.find('[dusk="reprendre-la-seance"]').exists()).toBe(false)
+    })
+
+    it('ne propose pas « Démarrer » pour une séance en attente de la file : le bandeau l’ouvre', () => {
+        const wrapper = avecUneSeanceEnCours({ id: 'attente', enAttenteDe: 'cle' })
+
+        expect(wrapper.text()).not.toContain('Reprendre')
         expect(wrapper.text()).not.toContain('Démarrer une séance')
     })
 
-    it('ne propose ni « Reprendre » ni « Démarrer » pour une séance en attente de la file : le bandeau l’ouvre', () => {
-        const wrapper = avecUneSeanceEnCours({ id: 'attente', enAttenteDe: 'cle' })
+    it('ne dit pas « Pas encore de séance » quand on supprime la dernière carte d’une page autre que la première', async () => {
+        const wrapper = mountPage({
+            workouts: {
+                ...structuredClone(paginator),
+                data: [{ id: 9, name: 'Dernière', started_at: '2026-06-01T08:00:00.000000Z', workout_lines: [] }],
+                total: 21,
+                current_page: 2,
+                last_page: 2,
+                prev_page_url: '/workouts?page=1',
+                next_page_url: null,
+            },
+        })
 
-        expect(wrapper.find('[dusk="reprendre-la-seance"]').exists()).toBe(false)
-        expect(wrapper.text()).not.toContain('Démarrer une séance')
+        await deleteRow(wrapper, 9)
+
+        expect(rowIds(wrapper)).toEqual([])
+        expect(wrapper.find('[dusk="empty-state"]').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('Pas encore de séance')
     })
 
     it('marque d’une pastille la seule séance ouverte de la liste', () => {

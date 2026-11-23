@@ -93,11 +93,8 @@ const {
 })
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
-/** Un compte neuf n'a qu'un bouton, celui de son état vide : ni l'en-tête ni la ligne d'action ne démarrent. */
-const compteNeuf = computed(() => workoutList.value.length === 0)
-
-/** Une séance démarrée sans réseau n'a pas d'adresse que le serveur connaisse : le bandeau du layout l'ouvre. */
-const reprise = (seance) => Boolean(seance) && typeof seance.enAttenteDe !== 'string'
+/** Un compte neuf n'a qu'un bouton, celui de son état vide : ni l'en-tête ni la ligne d'action ne démarrent. Il se lit sur le total du serveur : vider la dernière page d'une liste n'est pas un compte neuf. */
+const compteNeuf = computed(() => (props.workouts?.total ?? workoutList.value.length) === 0)
 </script>
 
 <template>
@@ -139,17 +136,7 @@ const reprise = (seance) => Boolean(seance) && typeof seance.enAttenteDe !== 'st
                 <div class="bureau:hidden space-y-3">
                     <div class="flex items-center gap-3">
                         <GlassButton
-                            v-if="reprise(seanceEnCours)"
-                            variant="primary"
-                            class="min-w-0 flex-1"
-                            :href="route('workouts.show', { workout: seanceEnCours.id })"
-                            dusk="reprendre-la-seance"
-                        >
-                            <GlassIcon name="play_arrow" size="sm" class="mr-2" />
-                            Reprendre
-                        </GlassButton>
-                        <GlassButton
-                            v-else-if="!seanceEnCours && !compteNeuf"
+                            v-if="!seanceEnCours && !compteNeuf"
                             variant="primary"
                             class="min-w-0 flex-1"
                             :loading="demarrageEnCours"
