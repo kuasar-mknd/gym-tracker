@@ -230,8 +230,13 @@ final class VolumeStatsService
 
     /**
      * Le volume de la semaine en cours contre celui de la semaine précédente
-     * sur la même durée écoulée : du lundi 00:00 jusqu'à maintenant, face au
-     * lundi précédent à 00:00 jusqu'au même jour et à la même heure.
+     * sur la même durée écoulée : la semaine en cours va du lundi 00:00 au
+     * dimanche soir, face au lundi précédent à 00:00 jusqu'au même jour et à
+     * la même heure que maintenant.
+     *
+     * `sessions_count` compte les séances faites de la semaine en cours
+     * (`User::seancesFaites()` : terminées, avec une série de travail
+     * cochée), là où le volume somme toutes les séances.
      *
      * La semaine précédente entière, face à une semaine à moitié écoulée,
      * annonçait « −100 % » le lundi matin. La variation reste nulle sans
@@ -263,7 +268,8 @@ final class VolumeStatsService
                 $debutDeSemaine,
                 $semainePrecedente,
                 $maintenant->copy()->subWeek(),
-                $debutDeSemaine->copy()->endOfWeek()
+                $debutDeSemaine->copy()->endOfWeek(),
+                compterLesSeances: true,
             )
         );
 
@@ -346,9 +352,10 @@ final class VolumeStatsService
      * @param  Carbon  $prevStart  Le début de la période précédente.
      * @param  Carbon  $prevEnd  La fin de la période précédente.
      * @param  Carbon|null  $currentEnd  La fin de la période courante ; à défaut, elle n'a pas de borne.
+     * @param  bool  $compterLesSeances  Lire aussi les séances faites de la période courante (`User::seancesFaites()`), par une requête à part ; sinon `sessions_count` vaut 0.
      * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null, sessions_count: int} Le pourcentage est nul quand il n'y a rien à comparer.
      */
-    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd, ?Carbon $currentEnd = null): array
+    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd, ?Carbon $currentEnd = null, bool $compterLesSeances = false): array
     {
         $dansLaPeriodeCourante = $currentEnd === null ? 'started_at >= ?' : 'started_at >= ? AND started_at <= ?';
         $bornesCourantes = $currentEnd === null ? [$currentStart] : [$currentStart, $currentEnd];
@@ -368,14 +375,18 @@ final class VolumeStatsService
         // comportement d'origine » protegeait du code que personne n'executait.
         $query->selectRaw("
             SUM(CASE WHEN {$dansLaPeriodeCourante} THEN workout_volume ELSE 0 END) as current_volume,
-            SUM(CASE WHEN {$dansLaPeriodeCourante} THEN 1 ELSE 0 END) as sessions_count,
             SUM(CASE WHEN started_at <= ? THEN workout_volume ELSE 0 END) as previous_volume
-        ", [...$bornesCourantes, ...$bornesCourantes, $prevEnd]);
+        ", [...$bornesCourantes, $prevEnd]);
 
         /** @var \stdClass|null $stats */
         $stats = $query->first();
 
-        $sessionsCount = is_numeric($stats?->sessions_count) ? (int) $stats->sessions_count : 0;
+        $sessionsCount = $compterLesSeances
+            ? $user->seancesFaites()
+                ->where('workouts.started_at', '>=', $currentStart)
+                ->when($currentEnd !== null, fn ($requete) => $requete->where('workouts.started_at', '<=', $currentEnd))
+                ->count()
+            : 0;
         $currentVolume = is_numeric($stats?->current_volume) ? (float) $stats->current_volume : 0.0;
         $previousVolume = is_numeric($stats?->previous_volume) ? (float) $stats->previous_volume : 0.0;
 

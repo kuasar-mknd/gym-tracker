@@ -277,7 +277,13 @@ describe('démarrer une séance sans réseau, depuis l’accueil', () => {
 
         expect(bouton()).toBeNull()
         expect(document.body.textContent).toContain('Mes modèles')
-        expect(page.url).not.toBe(premiere)
+
+        const reprendre = document.querySelector('[dusk="active-workout-banner"]')
+        expect(reprendre).not.toBeNull()
+        reprendre.click()
+        await vi.waitUntil(() => page.component === 'Workouts/Show')
+
+        expect(page.url).toBe(premiere)
         expect(fileStockee()).toHaveLength(1)
         expect(api.requetes).toHaveLength(0)
     })

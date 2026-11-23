@@ -144,21 +144,19 @@ it('rend le volume de la semaine sous ses deux cles, avec les valeurs qui les re
     $user = scenePourTableauDeBord();
 
     // Semaine precedente (8 au 14 juin), avant jeudi 12h00 de sa semaine : 100.
-    Workout::factory()->create([
+    Workout::withoutEvents(fn () => Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::parse('2026-06-10 10:00:00'),
-        'ended_at' => Carbon::parse('2026-06-10 11:00:00'),
         'workout_volume' => 100,
-    ]);
+    ]));
 
     // Semaine courante (15 au 21 juin), avant jeudi 12h00 : 250 en deux seances.
     foreach ([['2026-06-16 10:00:00', 150], ['2026-06-17 10:00:00', 100]] as [$debut, $volume]) {
-        Workout::factory()->create([
+        Workout::withoutEvents(fn () => Workout::factory()->faite()->create([
             'user_id' => $user->id,
             'started_at' => Carbon::parse($debut),
-            'ended_at' => Carbon::parse($debut)->addHour(),
             'workout_volume' => $volume,
-        ]);
+        ]));
     }
 
     $volume = app(FetchDashboardDataAction::class)->getWeeklyVolumeData($user);

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 /*
  * La carte « Cette semaine » compare la semaine en cours à la précédente sur
- * la même durée écoulée (#2434) : du lundi 00:00 jusqu'à maintenant, face au
- * lundi précédent à 00:00 jusqu'au même jour et à la même heure. Comparée à la
+ * la même durée écoulée (#2434) : la semaine va du lundi 00:00 au dimanche soir,
+ * face au lundi précédent à 00:00 jusqu'au même jour et à la même heure que
+ * maintenant. Le compte des séances ne retient que les séances faites. Comparée à la
  * semaine précédente entière, elle annonçait « −100 % » le lundi matin.
  *
  * L'horloge est arrêtée un mercredi à midi, dans la semaine du lundi 15 au
@@ -23,16 +24,17 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Une séance au volume posé, à l'instant posé.
+ * Une séance faite (terminée, avec une série de travail cochée) au volume
+ * posé, à l'instant posé. Sans les écouteurs, qui recalculeraient le volume.
  */
 function seanceDeLaSemaine(User $compte, string $debut, float $volume): void
 {
-    Workout::factory()->create([
+    Workout::withoutEvents(fn () => Workout::factory()->faite()->create([
         'user_id' => $compte->id,
         'started_at' => Carbon::parse($debut),
         'ended_at' => Carbon::parse($debut)->addHour(),
         'workout_volume' => $volume,
-    ]);
+    ]));
 }
 
 function comparaisonDeLaSemaine(User $compte): VolumeComparison
@@ -123,6 +125,54 @@ it('compte les séances de la semaine, et seulement les siennes', function (): v
         ->and($comparaison->current_volume)->toBe(200.0);
 });
 
+it('ne compte pas la séance sans série cochée, ni celle sans fin, mais garde leur volume', function (): void {
+    $compte = User::factory()->create();
+
+    seanceDeLaSemaine($compte, '2026-06-16 10:00:00', 100);
+    Workout::factory()->create([
+        'user_id' => $compte->id,
+        'started_at' => Carbon::parse('2026-06-16 11:00:00'),
+        'ended_at' => Carbon::parse('2026-06-16 12:00:00'),
+        'workout_volume' => 200,
+    ]);
+    Workout::withoutEvents(function () use ($compte): void {
+        $enCours = Workout::factory()->faite()->create([
+            'user_id' => $compte->id,
+            'started_at' => Carbon::parse('2026-06-17 09:00:00'),
+            'workout_volume' => 400,
+        ]);
+        $enCours->ended_at = null;
+        $enCours->save();
+    });
+    Workout::withoutEvents(fn () => Workout::factory()->create([
+        'user_id' => $compte->id,
+        'started_at' => Carbon::parse('2026-06-17 09:30:00'),
+        'ended_at' => null,
+        'workout_volume' => 800,
+    ]));
+
+    $comparaison = comparaisonDeLaSemaine($compte);
+
+    expect($comparaison->sessions_count)->toBe(1)
+        ->and($comparaison->current_volume)->toBe(1500.0);
+});
+
+it('laisse la variation nulle quand aucune séance de la semaine n’est faite, même avec un volume', function (): void {
+    $compte = User::factory()->create();
+
+    seanceDeLaSemaine($compte, '2026-06-09 10:00:00', 500);
+    Workout::factory()->create([
+        'user_id' => $compte->id,
+        'started_at' => Carbon::parse('2026-06-16 11:00:00'),
+        'workout_volume' => 300,
+    ]);
+
+    $comparaison = comparaisonDeLaSemaine($compte);
+
+    expect($comparaison->sessions_count)->toBe(0)
+        ->and($comparaison->percentage)->toBeNull();
+});
+
 it('arrête la semaine au dimanche soir, comme les sept barres de la carte', function (): void {
     $compte = User::factory()->create();
 
@@ -136,7 +186,7 @@ it('arrête la semaine au dimanche soir, comme les sept barres de la carte', fun
         ->and($comparaison->sessions_count)->toBe(1);
 });
 
-it('lit tout dans une seule requête, et garde le résultat sous la clef de la semaine', function (): void {
+it('lit le volume et le compte des séances en deux requêtes, et garde le résultat sous la clef de la semaine', function (): void {
     $compte = User::factory()->create();
     seanceDeLaSemaine($compte, '2026-06-16 10:00:00', 100);
 
@@ -147,8 +197,8 @@ it('lit tout dans une seule requête, et garde le résultat sous la clef de la s
     $instructions = DB::getQueryLog();
     DB::disableQueryLog();
 
-    // La version des statistiques vit dans le cache : seule la lecture des séances touche la base.
-    expect($instructions)->toHaveCount(1)
+    // La version des statistiques vit dans le cache : seules les deux lectures des séances touchent la base.
+    expect($instructions)->toHaveCount(2)
         ->and(Cache::has(ClesDeStats::seances($compte, 'weekly_volume_to_date.2026-25')))->toBeTrue();
 });
 

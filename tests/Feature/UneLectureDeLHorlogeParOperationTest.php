@@ -256,13 +256,14 @@ it('montre le même jour au compteur et au graphique de la page Hydratation quan
  * 1 000 la semaine du 28 septembre, 500 celle du 5 octobre, rien encore celle
  * du 12 : la semaine du 5 se lit « 500, -50 % », celle du 12 « 0 », sans écart : aucune
  * séance cette semaine-là.
- * Le volume est posé, les écouteurs sont coupés.
+ * Le volume est posé, les écouteurs sont coupés ; les séances sont faites, seules
+ * comptées par la variation.
  */
 function carteHebdomadaireSurDeuxSemaines(User $user): void
 {
     Workout::withoutEvents(function () use ($user): void {
-        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-09-30 10:00:00'), 'workout_volume' => 1000]);
-        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-10-07 10:00:00'), 'workout_volume' => 500]);
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-09-30 10:00:00'), 'workout_volume' => 1000]);
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-10-07 10:00:00'), 'workout_volume' => 500]);
     });
 }
 

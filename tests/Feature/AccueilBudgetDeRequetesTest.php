@@ -192,12 +192,12 @@ it('compte à part les instructions SQL de sa prop différée', function (): voi
     // plus le compte des non-lus, le dernier badge ni la séance en cours.
     // Trois depuis que les chiffres immédiats sont des fermetures (étape 3a) :
     // elle ne relit plus la pesée, les séances, les records ni les objectifs.
-    // Deux depuis la structure B (#2434) : la comparaison à la même date, qui
-    // compte aussi les séances, et les sept jours de la semaine ; les
+    // Trois depuis la structure B (#2434) : la comparaison à la même date, le
+    // compte des séances faites, à part, et les sept jours de la semaine ; les
     // répartitions de durée et d'heure, que plus aucune carte ne montre, ont
     // perdu leur requête.
     expect($reponse->json('props.analyticalStats'))->toBeArray()
-        ->and(count($instructions))->toBe(2, accueilBudgetMessage('La prop différée de l’accueil', $instructions));
+        ->and(count($instructions))->toBe(3, accueilBudgetMessage('La prop différée de l’accueil', $instructions));
 });
 
 /*

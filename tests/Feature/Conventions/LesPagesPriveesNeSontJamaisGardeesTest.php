@@ -172,6 +172,20 @@ it('lit, dans le module, les props qu’aucune copie ne garde', function (): voi
     ]);
 });
 
+it('ne donne plus de prop de mesure à l’accueil, que son contrat compte parmi les pages gardées', function (): void {
+    $contrat = json_decode((string) file_get_contents(dirname(__DIR__).'/HorsLigne/contrat-des-pages-gardees.json'), true, flags: JSON_THROW_ON_ERROR);
+    assert(is_array($contrat) && is_array($contrat['pages']) && is_array($contrat['pages']['Dashboard']) && is_array($contrat['pages']['Dashboard']['props']));
+
+    $premierNiveau = array_values(array_unique(array_map(
+        static fn (int|string $chemin): string => (string) preg_replace('/(\[\]|\{\}).*$/', '', explode('.', (string) $chemin)[0]),
+        array_keys($contrat['pages']['Dashboard']['props']),
+    )));
+
+    expect($premierNiveau)->not->toContain('latestWeight')
+        ->and(array_filter($premierNiveau, static fn (string $nom): bool => preg_match(PROPS_PRIVEES_AU_PREMIER_NIVEAU, $nom) === 1))->toBe([])
+        ->and(PagesGardees::propsJamaisGardees()['Dashboard'])->toBe(['activeGoals']);
+});
+
 /**
  * Les props de premier niveau que la copie de la racine de Progrès (`/stats`)
  * garde : les props partagées de chaque page, et deux props d'entraînement.
