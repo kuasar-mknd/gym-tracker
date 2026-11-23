@@ -83,7 +83,7 @@ class PaginationReachabilityTest extends DuskTestCase
                 ->waitFor('@workouts-next', 15)
                 ->assertScript('document.querySelectorAll(\'[dusk^="delete-workout-"]\').length', 20)
                 ->assertSee('Page 1 sur 2')
-                ->click('@workouts-next')
+                ->clickWhenSettled('[dusk="workouts-next"]')
                 ->waitForText('Page 2 sur 2', 15)
                 ->assertScript('document.querySelectorAll(\'[dusk^="delete-workout-"]\').length', 3);
         });
