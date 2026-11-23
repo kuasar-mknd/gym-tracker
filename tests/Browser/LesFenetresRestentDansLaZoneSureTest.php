@@ -130,27 +130,26 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
                 'Le titre « Ajouter un exercice » se lit sous la barre d’état.'
             );
 
+            /*
+             * Le tiroir flotte à 8 px du bord de l'écran, son verre passant derrière
+             * l'indicateur d'accueil (maquette de navigation) : c'est son contenu, la
+             * liste, qui reste au-dessus de l'indicateur, et la marge du haut est de 24 px.
+             */
             $basDeLaZoneSure = $fenetre['hauteur'] - $marges['bas'];
+
+            $listeBas = $browser->script('return document.querySelector(\'[dusk="liste-des-exercices"]\').getBoundingClientRect().bottom;')[0];
 
             $this->assertLessThanOrEqual(
                 $basDeLaZoneSure,
-                $fenetre['panneauBas'],
-                'Le bas de la fenêtre reste au-dessus de l’indicateur d’accueil.'
+                $listeBas,
+                'Le bas de la liste reste au-dessus de l’indicateur d’accueil.'
             );
 
-            /*
-             * Une longue liste remplit la zone sûre : la fenêtre garde la même
-             * marge au-dessus et au-dessous d'elle, au lieu d'un grand vide en bas.
-             */
             $margeAuDessus = $fenetre['panneauHaut'] - $marges['haut'];
-            $margeAuDessous = $basDeLaZoneSure - $fenetre['panneauBas'];
+            $margeAuDessous = $fenetre['hauteur'] - $fenetre['panneauBas'];
 
-            $this->assertEqualsWithDelta(
-                $margeAuDessus,
-                $margeAuDessous,
-                1.0,
-                sprintf('La fenêtre laisse %.0f px au-dessus d’elle et %.0f px au-dessous.', $margeAuDessus, $margeAuDessous)
-            );
+            $this->assertEqualsWithDelta(24.0, $margeAuDessus, 1.0, sprintf('Le tiroir laisse %.0f px sous la barre d’état.', $margeAuDessus));
+            $this->assertEqualsWithDelta(8.0, $margeAuDessous, 1.0, sprintf('Le tiroir laisse %.0f px sous lui, au bord de l’écran.', $margeAuDessous));
 
             /** @var array{listeDefile: bool, fenetreDefile: bool} $defilement */
             $defilement = $browser->script(<<<'JS'
@@ -245,10 +244,9 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $this->verifierLEnTeteEnPaysage($browser, $marges, 'la séance');
 
             /*
-             * Le formulaire de création dépasse la hauteur permise en paysage. Il
-             * ne se plie pas comme la liste : la fenêtre défile, et son bouton
-             * garde au bas la marge de la fenêtre. Plié, il débordait dans cette
-             * marge et l'arrondi du panneau rognait le bouton.
+             * Le formulaire de création peut dépasser la hauteur permise en paysage :
+             * il défile en lui-même, la fenêtre reste en place, et son bouton garde
+             * au bas la marge de la fenêtre. L'arrondi du panneau ne le rogne pas.
              */
             $browser->type('#search-workout-exercise', 'Exercice absent de la bibliothèque')
                 ->waitFor('@quick-create-exercise', 15)
@@ -259,15 +257,17 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             /** @var array{fenetreDefile: bool, margeSousLeBouton: float} $creation */
             $creation = $browser->script(<<<'JS'
                 const panneau = document.querySelector('dialog[open] .glass-modal');
+                const formulaire = panneau.querySelector('form');
+                formulaire.scrollTop = formulaire.scrollHeight;
                 panneau.scrollTop = panneau.scrollHeight;
                 return {
-                    fenetreDefile: panneau.scrollHeight > panneau.clientHeight,
+                    fenetreDefile: panneau.scrollHeight > panneau.clientHeight + 1,
                     margeSousLeBouton: panneau.getBoundingClientRect().bottom
                         - panneau.querySelector('button[type="submit"]').getBoundingClientRect().bottom,
                 };
                 JS)[0];
 
-            $this->assertTrue($creation['fenetreDefile'], 'En paysage, le formulaire de création fait défiler la fenêtre.');
+            $this->assertFalse($creation['fenetreDefile'], 'En paysage, le formulaire de création défile en lui-même : la fenêtre reste en place.');
             $this->assertGreaterThanOrEqual(
                 24.0,
                 $creation['margeSousLeBouton'],
