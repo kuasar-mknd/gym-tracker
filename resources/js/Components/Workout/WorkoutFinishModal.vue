@@ -4,6 +4,9 @@ import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import ChiffresDeLaSeance from '@/Components/Workout/ChiffresDeLaSeance.vue'
+import ListeDesRecords from '@/Components/Workout/ListeDesRecords.vue'
+import { recordsDeLaSeance } from '@/Utils/recordsDeLaSeance'
 import { formatToLocalISO } from '@/Utils/date'
 import { estUneSeanceOubliee, finProposeeDUneSeance, jourEtHeure } from '@/Utils/seanceOubliee'
 
@@ -130,6 +133,24 @@ const erreurDeLHeure = computed(() => {
     return heure.getTime() > horloge.value ? 'La fin ne peut pas être dans le futur.' : ''
 })
 
+/** La fin que la durée suppose : l'heure proposée ou choisie d'une séance oubliée, sinon maintenant. */
+const finDesChiffres = computed(() => {
+    if (oubliee.value && choix.value === 'derniere') {
+        return finProposee.value
+    }
+
+    if (oubliee.value && erreurDeLHeure.value === '') {
+        return heureChoisie.value
+    }
+
+    return horloge.value
+})
+
+const records = computed(() => recordsDeLaSeance(props.seance))
+const titreDesRecords = computed(() =>
+    records.value.length === 1 ? '1 record battu' : `${records.value.length} records battus`,
+)
+
 const confirmer = () => {
     if (!oubliee.value) {
         emit('confirm')
@@ -169,8 +190,10 @@ const avisDAttente = computed(() =>
     >
         <div class="pb-feuille-6 px-6 pt-1">
             <h3 id="finish-workout-modal-title" class="titre-plat mb-6" dusk="finish-workout-modal-title">
-                Terminer la séance ?
+                {{ seance?.name || 'Terminer la séance' }}
             </h3>
+            <ChiffresDeLaSeance :seance="seance" :fin="finDesChiffres" />
+            <ListeDesRecords :records="records" :titre="titreDesRecords" dusk="finish-workout-records" />
             <p
                 v-if="enCours"
                 role="status"
@@ -220,10 +243,10 @@ const avisDAttente = computed(() =>
                     @click="confirmer"
                     class="bouton-de-bilan w-full"
                 >
-                    Terminer
+                    Enregistrer
                 </GlassButton>
                 <GlassButton ref="annuler" variant="secondary" @click="emit('close')" class="bouton-de-bilan w-full">
-                    Annuler
+                    Reprendre
                 </GlassButton>
             </div>
         </div>

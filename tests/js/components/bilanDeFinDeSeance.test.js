@@ -173,26 +173,65 @@ describe('le bilan de fin de séance', () => {
     })
 })
 
-describe('la question « Terminer la séance ? » reste simple', () => {
+describe('la feuille d’avant l’enregistrement porte déjà les chiffres de la séance', () => {
     afterEach(() => {
         vi.useRealTimers()
     })
 
-    it('ne porte plus de chiffres du bilan : le bilan vient après la fin', async () => {
-        // La séance du test date du 19/11/2026 : un jour plus tard, elle passe pour oubliée, et la question propose une heure de fin.
-        vi.useFakeTimers({ now: new Date('2026-11-19T18:30:00.000Z') })
+    const SEANCE_DU_JOUR = {
+        ...SEANCE,
+        name: 'Pousser',
+        workout_lines: [
+            {
+                exercise: { name: 'Développé couché' },
+                sets: [
+                    { is_completed: true, weight: '82.50', reps: 8, personal_record: true },
+                    { is_completed: true, weight: 80, reps: 8 },
+                ],
+            },
+            {
+                exercise: { name: 'Squat' },
+                sets: [{ is_completed: true, weight: 140, reps: 3, personal_record: false }],
+            },
+        ],
+    }
+
+    const monterLaFeuille = async (seance) => {
+        vi.useFakeTimers({ now: new Date('2026-11-19T18:00:00.000Z') })
 
         const wrapper = mount(WorkoutFinishModal, {
-            props: { show: true, seance: SEANCE },
+            props: { show: true, seance },
             global: { stubs: { Modal: { template: '<div><slot /></div>' } } },
             attachTo: document.body,
         })
 
         await nextTick()
 
-        expect(wrapper.find('[dusk="finish-workout-bilan"]').exists()).toBe(false)
-        expect(wrapper.findAll('button').map((bouton) => bouton.text())).toEqual(['Terminer', 'Annuler'])
-        expect(document.activeElement.textContent.trim()).toBe('Annuler')
+        return wrapper
+    }
+
+    it('dit le nom, la durée, le volume et les séries, puis propose Enregistrer ou Reprendre', async () => {
+        const wrapper = await monterLaFeuille(SEANCE_DU_JOUR)
+
+        expect(wrapper.get('[dusk="finish-workout-modal-title"]').text()).toBe('Pousser')
+        expect(wrapper.get('[dusk="finish-workout-duree"]').text()).toBe('54 min')
+        expect(wrapper.get('[dusk="finish-workout-series"]').text()).toBe('3')
+        expect(wrapper.findAll('button').map((bouton) => bouton.text())).toEqual(['Enregistrer', 'Reprendre'])
+        expect(document.activeElement.textContent.trim()).toBe('Reprendre')
         wrapper.unmount()
+    })
+
+    it('liste les records que les séries portent déjà, un par exercice, et rien sans record', async () => {
+        const wrapper = await monterLaFeuille(SEANCE_DU_JOUR)
+
+        expect(wrapper.get('[dusk="finish-workout-records"]').text()).toContain('1 record battu')
+        expect(wrapper.get('[dusk="finish-workout-records"]').text()).toContain('Développé couché')
+        expect(wrapper.get('[dusk="finish-workout-records"]').text()).not.toContain('Squat')
+        wrapper.unmount()
+
+        const sans = await monterLaFeuille({ ...SEANCE_DU_JOUR, workout_lines: [SEANCE_DU_JOUR.workout_lines[1]] })
+
+        expect(sans.find('[dusk="finish-workout-records"]').exists()).toBe(false)
+        sans.unmount()
     })
 })
