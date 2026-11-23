@@ -88,6 +88,9 @@ const fractionDuRepos = computed(() => {
 
 const reposTermine = computed(() => resteDuRepos.value === 0)
 
+/** Le repos en cours, ou « Repos terminé » le temps de l'annonce ; sinon rien. */
+const reposDit = computed(() => (reposTermine.value ? 'Repos terminé' : reposAffiche.value))
+
 let fermetureDuRepos = null
 let annonceCommencee = false
 
@@ -167,7 +170,7 @@ onUnmounted(() => {
         dusk="active-workout-banner"
     >
         <AnneauDuRepos
-            v-if="reposAffiche !== null"
+            v-if="reposDit !== null"
             :fraction="fractionDuRepos"
             class="-ml-2 size-10"
             dusk="anneau-du-repos"
@@ -175,7 +178,7 @@ onUnmounted(() => {
         <span class="min-w-0 flex-1">
             <span class="block truncate text-sm font-medium">{{ workout.name || 'Séance' }}</span>
             <span class="text-text-muted block truncate text-xs tabular-nums">
-                <span dusk="active-workout-elapsed">{{ reposAffiche ?? elapsed }}</span>
+                <span dusk="active-workout-elapsed">{{ reposDit ?? elapsed }}</span>
                 <template v-if="workout.workout_lines_count">
                     · {{ compte(workout.workout_lines_count, 'exo', 'exos') }}
                 </template>

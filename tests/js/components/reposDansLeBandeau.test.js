@@ -75,11 +75,13 @@ describe('le repos dans le bandeau de la séance', () => {
     it('dessine l’anneau du repos, rempli de ce qu’il reste sur sa durée, et pas sans repos', async () => {
         const wrapper = monter(depot())
 
-        expect(wrapper.get('[dusk="anneau-du-repos"]').attributes('style')).toContain('288deg')
+        const trait = () => wrapper.get('[dusk="anneau-du-repos"] [data-testid="trait-de-l-anneau"]')
+
+        expect(trait().attributes('style')).toContain('stroke-dashoffset: 20')
 
         await vi.advanceTimersByTimeAsync(12_000)
 
-        expect(wrapper.get('[dusk="anneau-du-repos"]').attributes('style')).toContain('240deg')
+        expect(trait().attributes('style')).toContain('stroke-dashoffset: 33.3')
         expect(monter(null).find('[dusk="anneau-du-repos"]').exists()).toBe(false)
     })
 
@@ -104,7 +106,7 @@ describe('le repos dans le bandeau de la séance', () => {
         expect(annonce()).toBe('')
         await vi.advanceTimersByTimeAsync(1_000)
         expect(annonce()).toBe('Repos terminé')
-        expect(duree(wrapper)).toContain('10 min')
+        expect(duree(wrapper)).toContain('Repos terminé')
     })
 
     /*

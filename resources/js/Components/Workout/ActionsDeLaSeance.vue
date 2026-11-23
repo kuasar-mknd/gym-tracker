@@ -112,7 +112,7 @@ const raisonDuModele = computed(() => {
             </GlassButton>
             <GlassButton
                 v-if="peutAbandonner"
-                variant="accent"
+                variant="danger"
                 @click="abandon.demander(idDeLaSeance)"
                 :loading="abandon.enCours.value"
                 class="bouton-de-barre bureau:w-full flex-auto"

@@ -392,6 +392,9 @@ watch(
                     :aria-describedby="surUneCopie ? raisonDUneEcriture : undefined"
                     @update:model-value="emit('update:reposAutomatique', $event)"
                 />
+                <p v-if="termine" class="text-text-main text-center text-lg font-medium" aria-hidden="true">
+                    Repos terminé
+                </p>
                 <div class="flex flex-col gap-2">
                     <GlassButton
                         v-if="!termine"
