@@ -147,7 +147,43 @@ onMounted(() => {
     }
 })
 
+/**
+ * La barre d'état d'une application installée est peinte par le système d'après
+ * `theme-color`, hors de la page : le voile d'un tiroir ne l'assombrit pas, et
+ * elle reste claire au-dessus d'un écran voilé. À l'ouverture, la couleur est
+ * assombrie du voile (30 %), et rendue à la fermeture.
+ */
+let couleurDeLaBarre = null
+
+const assombrirLaBarreDEtat = (assombrir) => {
+    const balise = document.querySelector('meta[name="theme-color"]')
+
+    if (!balise) {
+        return
+    }
+
+    if (!assombrir) {
+        if (couleurDeLaBarre !== null) {
+            balise.setAttribute('content', couleurDeLaBarre)
+            couleurDeLaBarre = null
+        }
+
+        return
+    }
+
+    const hex = /^#([0-9a-f]{6})$/i.exec(couleurDeLaBarre ?? balise.getAttribute('content') ?? '')
+
+    if (!hex) {
+        return
+    }
+
+    couleurDeLaBarre ??= balise.getAttribute('content')
+    const [r, g, b] = [0, 2, 4].map((i) => Math.round(parseInt(hex[1].slice(i, i + 2), 16) * 0.7))
+    balise.setAttribute('content', `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`)
+}
+
 onUnmounted(() => {
+    assombrirLaBarreDEtat(false)
     cancelPendingClose()
     releasePageScroll(scrollLock)
 
@@ -182,16 +218,23 @@ const isFeuille = computed(() => props.position === 'feuille')
 
 const isTiroir = computed(() => props.position === 'tiroir' || isFeuille.value)
 
+watch(
+    () => props.show && isTiroir.value,
+    (voilee) => assombrirLaBarreDEtat(voilee),
+)
+
 const containerClass = computed(() =>
     isBottomSheet.value || isTiroir.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
 )
 
 const panelClass = computed(() => {
     if (isFeuille.value) {
-        return 'hauteur-max-tiroir marge-de-feuille rounded-carte'
+        return 'hauteur-max-tiroir marge-de-feuille fond-de-feuille rounded-carte'
     }
 
-    return isTiroir.value ? 'hauteur-tiroir marge-de-feuille rounded-carte' : 'hauteur-sure-12 rounded-carte'
+    return isTiroir.value
+        ? 'hauteur-tiroir marge-de-feuille fond-de-feuille rounded-carte'
+        : 'hauteur-sure-12 rounded-carte'
 })
 
 const enterFromClass = computed(() =>

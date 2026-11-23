@@ -142,7 +142,7 @@ const avisDAttente = computed(() =>
         aria-labelledby="finish-workout-modal-title"
         @close="emit('close')"
     >
-        <div class="px-6 pt-1 pb-6">
+        <div class="pb-feuille-6 px-6 pt-1">
             <h3 id="finish-workout-modal-title" class="titre-plat mb-6" dusk="finish-workout-modal-title">
                 Terminer la séance ?
             </h3>

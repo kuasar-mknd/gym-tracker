@@ -75,7 +75,7 @@ const records = computed(() => (props.bilan?.enAttente === true ? [] : (props.bi
         aria-labelledby="bilan-de-fin-titre"
         @close="emit('fermer')"
     >
-        <div class="px-6 pt-1 pb-6" dusk="bilan-de-fin">
+        <div class="pb-feuille-6 px-6 pt-1" dusk="bilan-de-fin">
             <h3 id="bilan-de-fin-titre" class="titre-plat mb-4" dusk="bilan-de-fin-titre">Séance terminée</h3>
             <dl class="mb-4 grid grid-cols-3 gap-2" dusk="finish-workout-bilan">
                 <div>

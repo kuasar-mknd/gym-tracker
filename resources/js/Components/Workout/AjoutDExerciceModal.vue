@@ -210,7 +210,7 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
                     </div>
                 </div>
 
-                <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4" dusk="liste-des-exercices">
+                <div class="pb-feuille-4 min-h-0 flex-1 overflow-y-auto px-4" dusk="liste-des-exercices">
                     <GlassEmptyState
                         v-if="exercises.length === 0 && !requete"
                         taille="ligne"
@@ -269,7 +269,7 @@ defineExpose({ searchQuery, categorie, showCreateForm, createExerciseForm, quick
 
             <form
                 v-else
-                class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-6"
+                class="pb-feuille-6 min-h-0 flex-1 space-y-6 overflow-y-auto px-6"
                 @submit.prevent="createAndAddExercise"
             >
                 <ChampsDUnExercice

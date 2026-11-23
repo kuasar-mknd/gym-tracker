@@ -701,7 +701,7 @@
 }
 
 @utility verre-epais {
-    background: var(--color-surface-glass-strong);
+    background: var(--fond-du-verre-epais, var(--color-surface-glass-strong));
     backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
     -webkit-backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
     border: 1px solid var(--verre-lisere);
@@ -1316,6 +1316,19 @@
     padding-top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
     padding-bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
 }
+/*
+ * Le bas du contenu d'un tiroir ou d'une feuille : la marge voulue plus la zone
+ * sûre du bas. Le verre passe derrière l'indicateur d'accueil et c'est le
+ * contenu qui s'en écarte, en défilant jusqu'au bord comme sur iOS. À partir de
+ * `sm`, la fenêtre centrée a déjà sa marge.
+ */
+@utility pb-feuille-* {
+    padding-bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
+
+    @media (width >= 40rem) {
+        padding-bottom: calc(var(--spacing) * --value(integer));
+    }
+}
 @utility top-sure-* {
     top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
 }
@@ -1351,20 +1364,23 @@
  * 8 px des bords de l'écran, le verre passant derrière l'indicateur d'accueil,
  * comme dans la maquette de navigation. La fenêtre garde ses marges sûres
  * (`px-sure-4 py-sure-6`) : le panneau les déborde (`marge-de-feuille`) et
- * reprend la zone sûre du bas en remplissage, pour que le contenu reste au-dessus
- * de l'indicateur. Hauteur sur téléphone : l'écran moins la barre d'état et 2 rem
+ * laisse à son contenu (`pb-feuille-*`) la zone sûre du bas, pour qu'il reste au-dessus
+ * de l'indicateur en défilant jusqu'au bord. Hauteur sur téléphone : l'écran moins la barre d'état et 2 rem
  * (24 px au-dessus du panneau) ; à partir de `sm`, la fenêtre centrée plafonne
  * à 44 rem. `hauteur-tiroir` fixe la hauteur, `hauteur-max-tiroir` la borne.
  */
+@utility fond-de-feuille {
+    /* Le verre d'une feuille : la page presque opaque, pour ne pas tirer au gris du voile qui la précède. */
+    --fond-du-verre-epais: rgb(from var(--color-surface-page) r g b / 0.95);
+}
+
 @utility marge-de-feuille {
     margin-inline: -0.5rem;
     margin-bottom: calc(var(--safe-area-bottom) * -1 - 1rem);
-    padding-bottom: var(--safe-area-bottom);
 
     @media (width >= 40rem) {
         margin-inline: 0;
         margin-bottom: 0;
-        padding-bottom: 0;
     }
 }
 
