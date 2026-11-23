@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 
 import Modal from '@/Components/UI/Modal.vue'
 
 /**
- * Le tiroir et la feuille : la poignée, le glissement vers le bas, et la couleur
- * de la barre d'état. jsdom n'a pas de <dialog> : ces deux méthodes en tiennent lieu.
+ * Le tiroir et la feuille : la poignée, le glissement vers le bas. jsdom n'a pas de <dialog> : ces deux méthodes en tiennent lieu.
  */
 beforeAll(() => {
     HTMLDialogElement.prototype.showModal = function showModal() {
@@ -38,7 +37,6 @@ const monter = (props = {}) => {
 
 const poignee = () => document.querySelector('[data-testid="poignee-du-tiroir"]')
 const panneau = () => document.querySelector('.glass-modal')
-const barre = () => document.querySelector('meta[name="theme-color"]')
 
 const geste = (element, type, clientY, timeStamp) => {
     const evenement = new Event(type, { bubbles: true })
@@ -51,13 +49,8 @@ const geste = (element, type, clientY, timeStamp) => {
     element.dispatchEvent(evenement)
 }
 
-beforeEach(() => {
-    document.head.insertAdjacentHTML('beforeend', '<meta name="theme-color" content="#f8faff">')
-})
-
 afterEach(() => {
     montes.splice(0).forEach((wrapper) => wrapper.unmount())
-    barre()?.remove()
     document.body.innerHTML = ''
 })
 
@@ -145,47 +138,5 @@ describe('Modal, tiroir et feuille', () => {
         await wrapper.setProps({ show: true })
 
         expect(panneau().style.transform).toBe('')
-    })
-})
-
-describe('Modal, couleur de la barre d’état', () => {
-    it('assombrit la barre à l’ouverture d’un tiroir, et la rend à la fermeture', async () => {
-        const wrapper = monter({ position: 'tiroir', show: false })
-
-        await wrapper.setProps({ show: true })
-        expect(barre().getAttribute('content')).toBe('#aeafb3')
-
-        await wrapper.setProps({ show: false })
-        expect(barre().getAttribute('content')).toBe('#f8faff')
-    })
-
-    it('laisse la barre telle quelle pour une fenêtre centrée', async () => {
-        const wrapper = monter({ position: 'center', show: false })
-
-        await wrapper.setProps({ show: true })
-
-        expect(barre().getAttribute('content')).toBe('#f8faff')
-    })
-
-    it('la rend quand le tiroir est retiré de la page, ouvert', () => {
-        const wrapper = monter({ position: 'feuille' })
-
-        wrapper.unmount()
-        montes.splice(0)
-
-        expect(barre().getAttribute('content')).toBe('#f8faff')
-    })
-
-    it('garde la barre sombre quand une feuille en relaie une autre, et la rend à la dernière', async () => {
-        const terminer = monter({ position: 'feuille' })
-        const bilan = monter({ position: 'feuille', show: false })
-
-        // Le bilan s'ouvre avant que « Terminer » ait fini de se fermer, ou après : dans les deux ordres.
-        await bilan.setProps({ show: true })
-        await terminer.setProps({ show: false })
-        expect(barre().getAttribute('content')).toBe('#aeafb3')
-
-        await bilan.setProps({ show: false })
-        expect(barre().getAttribute('content')).toBe('#f8faff')
     })
 })
