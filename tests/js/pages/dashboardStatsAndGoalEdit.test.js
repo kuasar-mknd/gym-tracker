@@ -126,7 +126,6 @@ import { installerLInvitationDInstallation } from '@/composables/useInvitationDI
 import GoalsEdit from '@/Pages/Goals/Edit.vue'
 import StatsIndex from '@/Pages/Stats/Index.vue'
 import { layoutStub, passesSlot } from './pageStubs'
-import { ref } from 'vue'
 
 beforeAll(() => {
     globalThis.route = (name, params) => (params === undefined ? `/${name}` : `/${name}/${JSON.stringify(params)}`)
@@ -315,11 +314,23 @@ describe('Dashboard', () => {
             expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
         })
 
-        it('garde l’en-tête « Bon retour » et les actions rapides', () => {
+        it('garde l’en-tête « Bon retour », sans les actions rapides qui doubleraient le bouton de l’état vide', () => {
             const wrapper = monterUnCompteNeuf()
 
             expect(wrapper.get('[dusk="dashboard-welcome"]').text()).toBe('Bon retour')
-            expect(wrapper.findComponent({ name: 'QuickActions' }).exists()).toBe(true)
+            expect(wrapper.findComponent({ name: 'QuickActions' }).exists()).toBe(false)
+        })
+
+        it('sur une copie hors ligne, garde le bouton de l’état vide actif et démarre la séance', async () => {
+            pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }
+            const wrapper = monterUnCompteNeuf()
+            const bouton = wrapper.getComponent({ name: 'GlassEmptyState' }).getComponent({ name: 'GlassButton' })
+
+            expect(bouton.attributes('disabled')).toBeUndefined()
+
+            await bouton.trigger('click')
+
+            expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
         })
 
         it('démarre la séance par le bouton de l’état vide, et le dit occupé pendant le démarrage', async () => {

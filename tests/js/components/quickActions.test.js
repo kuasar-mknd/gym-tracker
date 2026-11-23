@@ -67,6 +67,8 @@ describe('QuickActions', () => {
         expect(wrapper.text()).not.toContain('Démarrer une séance')
         expect(wrapper.text()).toContain('Mes modèles')
         expect(wrapper.get('section').classes()).toContain('grid-cols-1')
+        expect(wrapper.get('a').classes()).toContain('items-center')
+        expect(wrapper.get('a').classes()).not.toContain('flex-col')
     })
 
     it('remontre « Démarrer une séance » dès que plus aucune séance n’est en cours', () => {

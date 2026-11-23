@@ -63,11 +63,11 @@ const installationProposee = ref(false)
 <template>
     <Head title="Accueil" />
 
-    <AuthenticatedLayout page-title="Accueil" titre-masque>
+    <AuthenticatedLayout page-title="Accueil" titre-masque largeur="moyenne">
         <div class="space-y-6">
             <DashboardHeader :user="$page.props.auth.user" />
 
-            <QuickActions :processing="demarrageEnCours" @start-workout="startWorkout" />
+            <QuickActions v-if="!compteNeuf" :processing="demarrageEnCours" @start-workout="startWorkout" />
 
             <InvitationDInstallation @visibilite="installationProposee = $event" />
 

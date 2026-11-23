@@ -48,21 +48,23 @@ const streakLabel = computed(() => {
             </div>
         </div>
 
-        <!--
-          Le badge de série mène à la page des statistiques, où la série est le
-          sujet des chiffres. L'orange y est réservé à l'icône de série.
-        -->
-        <Link
-            :href="route('stats.index')"
-            dusk="dashboard-streak"
-            :aria-label="streakLabel"
-            class="verre-epais rounded-capsule focus-visible:ring-accent-primary min-h-touch flex shrink-0 items-center gap-1.5 px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
-        >
-            <GlassIcon name="local_fire_department" fill class="text-accent-primary-deep" />
-            <span class="text-text-main text-sm font-medium tabular-nums" aria-hidden="true">
-                {{ streakDays }} {{ streakDays === 1 ? 'jour' : 'jours' }}
-            </span>
-        </Link>
-        <Cloche class="bureau:hidden" />
+        <div class="flex shrink-0 items-center gap-2">
+            <!--
+              Le badge de série mène à la page des statistiques, où la série est le
+              sujet des chiffres. L'orange y est réservé à l'icône de série.
+            -->
+            <Link
+                :href="route('stats.index')"
+                dusk="dashboard-streak"
+                :aria-label="streakLabel"
+                class="verre-epais rounded-capsule focus-visible:ring-accent-primary min-h-touch flex shrink-0 items-center gap-1.5 px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+            >
+                <GlassIcon name="local_fire_department" fill class="text-accent-primary-deep" />
+                <span class="text-text-main text-sm font-medium tabular-nums" aria-hidden="true">
+                    {{ streakDays }} {{ streakDays === 1 ? 'jour' : 'jours' }}
+                </span>
+            </Link>
+            <Cloche class="bureau:hidden" />
+        </div>
     </header>
 </template>
