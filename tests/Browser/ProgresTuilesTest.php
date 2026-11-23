@@ -22,6 +22,17 @@ class ProgresTuilesTest extends DuskTestCase
 {
     private const string LA_PAGE_NE_DEBORDE_PAS = 'document.documentElement.scrollWidth <= document.documentElement.clientWidth';
 
+    private const string LE_TOTAL_TIENT_SUR_UNE_LIGNE = <<<'JS'
+        (() => {
+            const titre = [...document.querySelectorAll('#main-content h3')].find((t) => t.textContent.trim() === 'Évolution du volume');
+            const valeur = titre?.closest('.rounded-carte')?.querySelector('.font-display');
+            if (!valeur) { return false; }
+            const style = getComputedStyle(valeur);
+            const ligne = style.lineHeight === 'normal' ? parseFloat(style.fontSize) * 1.5 : parseFloat(style.lineHeight);
+            return valeur.getBoundingClientRect().height <= ligne * 1.2;
+        })()
+        JS;
+
     private const string GEOMETRIE_DES_TUILES = <<<'JS'
         return (() => {
             const tuiles = [...document.querySelectorAll('#main-content [dusk="tuiles-d-acces"] a')];
@@ -109,12 +120,15 @@ class ProgresTuilesTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($compte): void {
             $browser->loginAs($compte)->visit('/stats')->disableAnimations()->waitFor('#main-content', 30);
 
-            foreach ([320, 390, 1280] as $largeur) {
+            foreach ([320, 390, 402, 1280] as $largeur) {
                 $browser->resize($largeur, 844)
                     ->waitFor('#main-content [dusk="tuiles-d-acces"]', 30)
                     ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'des cartes de Progrès attendent encore leurs données')
                     ->assertScript(self::LA_PAGE_NE_DEBORDE_PAS, true);
                 $this->assertLesTuilesTiennent($browser);
+
+                // Le total de « Évolution du volume » tient sur une ligne : la valeur et son unité ne s'empilent pas.
+                $browser->assertScript(self::LE_TOTAL_TIENT_SUR_UNE_LIGNE, true);
             }
 
             $browser->resize(390, 844);
@@ -160,6 +174,23 @@ class ProgresTuilesTest extends DuskTestCase
                 ->assertScript(self::LA_PAGE_NE_DEBORDE_PAS, true);
 
             $this->assertLesTuilesTiennent($browser);
+        });
+    }
+
+    public function test_un_compte_neuf_avec_une_seance_ouverte_ne_propose_pas_de_demarrer(): void
+    {
+        $compte = User::factory()->create();
+        Workout::factory()->create(['user_id' => $compte->id, 'name' => 'Pecs et triceps', 'started_at' => now()->subMinutes(20), 'ended_at' => null]);
+
+        $this->browse(function (Browser $browser) use ($compte): void {
+            $browser->loginAs($compte)
+                ->resize(320, 700)
+                ->visit('/stats')
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitForText('Pas encore de séance', 30)
+                ->assertMissing('[dusk="start-workout-button"]')
+                ->assertScript(self::LA_PAGE_NE_DEBORDE_PAS, true);
         });
     }
 

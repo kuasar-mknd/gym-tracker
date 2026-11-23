@@ -295,8 +295,8 @@ return Application::configure(basePath: dirname(__DIR__))
          *
          * `api/v1/*` answers JSON whatever the request declares, which is what
          * #1418 settled and what its contract test holds. The web router also
-         * serves JSON to a script — `stats.exercise`, which
-         * `ExerciseProgressCard.vue` calls through `http`
+         * serves JSON to a script — `workouts.records`, which
+         * `useReglagesDeLaSeance.js` calls through `http`
          * (resources/js/Utils/http.js) — and there it is the Accept header
          * that says so, exactly as it does for the genuine 404 that route
          * already returns.
@@ -473,9 +473,9 @@ return Application::configure(basePath: dirname(__DIR__))
          * a browser and an Inertia caller already see the same bytes whichever
          * exception produced them, and rewriting their answer would gain
          * nothing while costing every genuine `abort(404, '…')` its wording.
-         * The JSON web routes do read it — that is where `stats.exercise` would
+         * The JSON web routes do read it — that is where `workouts.records` would
          * otherwise have answered "Resource not found." for the hidden row and
-         * "No query results for model [App\Models\Exercise] 999999999" for the
+         * "No query results for model [App\Models\Workout] 999999999" for the
          * absent one.
          */
         $exceptions->render(fn (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, \Illuminate\Http\Request $request): ?\Symfony\Component\HttpFoundation\Response => $speaksJson($request) ? $jsonNotFound() : null);

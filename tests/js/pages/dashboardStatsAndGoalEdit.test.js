@@ -472,16 +472,17 @@ describe('Stats/Index', () => {
         RegulariteCard: recording('RegulariteCard', ['regularite']),
     }
 
-    const mountStats = (props = {}) =>
+    const mountStats = (props = {}, provide = {}) =>
         mount(StatsIndex, {
             props,
             global: {
+                provide,
                 directives: { press: {} },
                 mocks: {
                     route: globalThis.route,
                     $page: { props: { auth: { user: { unread_notifications_count: 0 } } } },
                 },
-                stubs: { AuthenticatedLayout: layoutStub, ...cards },
+                stubs: { AuthenticatedLayout: layoutAvecSeance, ...cards },
             },
         })
 
@@ -728,6 +729,17 @@ describe('Stats/Index', () => {
             await wrapper.get('[dusk="start-workout-button"]').trigger('click')
 
             expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+        })
+
+        it('ne propose pas de démarrer quand une séance est déjà ouverte, et garde son texte', () => {
+            const wrapper = mountStats(
+                { deferredData: { aucuneSeanceFaite: true } },
+                { [CLE_DE_LA_SEANCE_EN_COURS]: ref({ id: 3, cle: 'abc' }) },
+            )
+
+            expect(wrapper.text()).toContain('Pas encore de séance')
+            expect(wrapper.text()).toContain('Tes chiffres apparaissent après la première.')
+            expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
         })
 
         it('ne se décide que sur le booléen du serveur, jamais sur une série mensuelle vide', () => {

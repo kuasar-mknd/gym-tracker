@@ -83,7 +83,13 @@ const handlePeriodChange = (period) => {
 <template>
     <Head title="Progrès" />
 
-    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Progrès" titre-dans-la-page titre-masque>
+    <AuthenticatedLayout
+        v-slot="{ seanceEnCours }"
+        liquid-variant="cyan-magenta"
+        page-title="Progrès"
+        titre-dans-la-page
+        titre-masque
+    >
         <div class="space-y-6">
             <header class="animate-fade-in flex items-center gap-3 sm:items-start sm:justify-between">
                 <!--
@@ -126,7 +132,7 @@ const handlePeriodChange = (period) => {
                     title="Pas encore de séance"
                     description="Tes chiffres apparaissent après la première."
                 >
-                    <template #action>
+                    <template v-if="(seanceEnCours ?? null) === null" #action>
                         <GlassButton
                             variant="primary"
                             dusk="start-workout-button"
