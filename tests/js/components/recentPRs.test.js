@@ -1,86 +1,86 @@
-import { describe, it, expect, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
 
-vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
+import { nombre } from '@/Utils/nombre'
+import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
 
-// See durationSection.test.js: the async chart must already be in the module
-// cache, otherwise it stays a comment node for the whole test.
-await import('@/Components/Stats/RecentPRsChart.vue')
+const monter = (recentPRs) => mount(RecentPRs, { props: { recentPRs }, global: { directives: { press: {} } } })
 
-const RecentPRs = (await import('@/Components/Dashboard/RecentPRs.vue')).default
+/** Une ligne par record, dans l'ordre où l'accueil les a envoyés. */
+const lignes = (wrapper) => wrapper.findAllComponents({ name: 'GlassCard' })
 
-const mountSection = async (recentPRs) => {
-    const wrapper = mount(RecentPRs, { props: { recentPRs }, global: { directives: { press: {} } } })
-
-    await flushPromises()
-
-    return wrapper
-}
-
-/** One card per record, in the order the dashboard sent them. */
-const cards = (wrapper) => wrapper.findAllComponents({ name: 'GlassCard' })
+const record = (surcharge = {}) => ({
+    id: 1,
+    type: 'max_weight',
+    value: 120,
+    secondary_value: 5,
+    achieved_at: '2026-11-12T10:00:00Z',
+    exercise: { name: 'Développé couché' },
+    ...surcharge,
+})
 
 describe('RecentPRs', () => {
-    it('lists every record with its exercise, its kind and its value', async () => {
-        const wrapper = await mountSection([
-            { id: 1, type: 'max_weight', value: 120, exercise: { name: 'Développé couché' } },
-            { id: 2, type: 'max_1rm', value: 137.5, exercise: { name: 'Squat' } },
-        ])
+    it('dit l’exercice, le jour et la charge × répétitions du poids max', () => {
+        const wrapper = monter([record()])
 
-        expect(cards(wrapper)).toHaveLength(2)
-        expect(cards(wrapper)[0].text()).toContain('Développé couché')
-        expect(cards(wrapper)[0].text()).toContain('Poids max')
-        expect(cards(wrapper)[0].text()).toContain('120 kg')
-        expect(cards(wrapper)[1].text()).toContain('Squat')
-        expect(cards(wrapper)[1].text()).toContain('1RM estimé')
-        expect(cards(wrapper)[1].text()).toContain('137,5 kg')
+        expect(lignes(wrapper)).toHaveLength(1)
+        expect(lignes(wrapper)[0].text()).toContain('Développé couché')
+        expect(lignes(wrapper)[0].text()).toContain('12 nov.')
+        expect(lignes(wrapper)[0].text()).toContain('Poids max')
+        expect(lignes(wrapper)[0].text()).toContain('120 kg × 5')
     })
 
-    it('dit en kilos le volume d’une série, qui est un poids soulevé et non un compte', async () => {
-        /*
-         * `max_volume_set` vaut poids × répétitions (PersonalRecordService, la
-         * requête des trois classements) : c'est bien une charge, en kilos. La
-         * carte n'affichait aucune unité, et le graphique voisin l'annonçait en
-         * répétitions — deux lectures fausses de la même donnée.
-         */
-        const wrapper = await mountSection([
-            { id: 3, type: 'max_volume_set', value: 1200, exercise: { name: 'Rowing' } },
+    it('n’écrit « × » que pour le poids max, dont la valeur secondaire est des répétitions', () => {
+        const wrapper = monter([
+            record({ id: 1, type: 'max_1rm', value: 137.5, secondary_value: 120 }),
+            record({ id: 2, type: 'max_weight', value: 100, secondary_value: null }),
         ])
 
-        expect(cards(wrapper)[0].text()).toContain('Volume')
-        expect(cards(wrapper)[0].text()).toContain("1'200 kg")
+        expect(lignes(wrapper)[0].text()).toContain('1RM estimé')
+        expect(lignes(wrapper)[0].text()).toContain('137,5 kg')
+        expect(lignes(wrapper)[0].text()).not.toContain('×')
+        expect(lignes(wrapper)[1].text()).toContain('100 kg')
+        expect(lignes(wrapper)[1].text()).not.toContain('×')
     })
 
-    it('disappears entirely rather than showing an empty podium', async () => {
-        const wrapper = await mountSection([])
+    it('dit en kilos le volume d’une série, qui est un poids soulevé et non un compte', () => {
+        const wrapper = monter([record({ id: 3, type: 'max_volume_set', value: 1200, exercise: { name: 'Rowing' } })])
+
+        expect(lignes(wrapper)[0].text()).toContain('Volume')
+        expect(lignes(wrapper)[0].text()).toContain(`${nombre(1200, 0)} kg`)
+    })
+
+    it('n’affiche que deux lignes, même si la page en reçoit plus', () => {
+        const wrapper = monter([record({ id: 1 }), record({ id: 2 }), record({ id: 3 })])
+
+        expect(lignes(wrapper)).toHaveLength(2)
+    })
+
+    it('ne dessine aucun graphique', () => {
+        const wrapper = monter([record()])
+
+        expect(wrapper.find('canvas').exists()).toBe(false)
+        expect(wrapper.text()).toContain('Records récents')
+    })
+
+    it('disparaît entièrement plutôt que de montrer un podium vide', () => {
+        const wrapper = monter([])
 
         expect(wrapper.find('section').exists()).toBe(false)
-        expect(cards(wrapper)).toHaveLength(0)
+        expect(lignes(wrapper)).toHaveLength(0)
     })
 
-    it('ne se soulève ni ne se comprime au toucher : la section n’ouvre rien (#2355)', async () => {
-        const wrapper = await mountSection([{ id: 1, type: 'max_weight', value: 120, exercise: { name: 'Squat' } }])
-        const classes = wrapper.find('section').classes()
+    it('ne se soulève ni ne se comprime au toucher : la section n’ouvre rien (#2355)', () => {
+        const classes = monter([record()]).find('section').classes()
 
         expect(classes.filter((classe) => /^(hover|active):/.test(classe))).toEqual([])
-        expect(wrapper.find('section a, section button').exists()).toBe(false)
+        expect(monter([record()]).find('section a, section button').exists()).toBe(false)
     })
 
-    it('survives a record whose exercise was deleted under it', async () => {
-        const wrapper = await mountSection([{ id: 4, type: 'max_weight', value: 60, exercise: null }])
+    it('survit à un record dont l’exercice a été supprimé', () => {
+        const wrapper = monter([record({ exercise: null, secondary_value: null, value: 60 })])
 
-        expect(cards(wrapper)).toHaveLength(1)
-        expect(cards(wrapper)[0].text()).toContain('60 kg')
-    })
-
-    it('feeds the same records to the chart it lists below it', async () => {
-        const recentPRs = [{ id: 1, type: 'max_weight', value: 120, exercise: { name: 'Développé couché' } }]
-
-        const wrapper = await mountSection(recentPRs)
-
-        const chart = wrapper.findComponent({ name: 'RecentPRsChart' })
-
-        expect(chart.exists()).toBe(true)
-        expect(chart.props('data')).toEqual(recentPRs)
+        expect(lignes(wrapper)).toHaveLength(1)
+        expect(lignes(wrapper)[0].text()).toContain('60 kg')
     })
 })

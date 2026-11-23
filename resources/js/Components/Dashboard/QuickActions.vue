@@ -1,6 +1,8 @@
 <script setup>
+import { computed, inject } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 
 defineProps({
     processing: { type: Boolean, default: false },
@@ -11,12 +13,17 @@ defineProps({
  * par la file, sans rien tirer de la copie (`useDemarrageDUneSeance`).
  */
 const emit = defineEmits(['startWorkout'])
+
+/** La séance en cours de l'appareil que le layout offre : « Reprendre » la remplace alors. */
+const seanceEnCours = inject(CLE_DE_LA_SEANCE_EN_COURS, null)
+const demarrageEstPropose = computed(() => (seanceEnCours?.value ?? null) === null)
 </script>
 
 <template>
-    <section class="stagger-2 animate-slide-up grid grid-cols-2 gap-3">
+    <section class="stagger-2 animate-slide-up grid gap-3" :class="demarrageEstPropose ? 'grid-cols-2' : 'grid-cols-1'">
         <!-- Démarrer une séance : l'action principale, seul aplat orange de l'écran. -->
         <button
+            v-if="demarrageEstPropose"
             v-press
             @click="emit('startWorkout')"
             :disabled="processing"

@@ -1,8 +1,7 @@
 /**
  * Ce que les anneaux du tableau de bord ont en commun.
  *
- * `DurationDistributionChart` et `TimeOfDayChart` sont empilés l'un sous
- * l'autre et portaient chacun leur copie des options. Elles avaient dérivé :
+ * Les deux anneaux du tableau de bord portaient chacun leur copie des options. Elles avaient dérivé :
  * polices différentes, `layout.padding` sur un seul des deux, bordures
  * différentes. D'où deux cercles de tailles visiblement différentes — mesurés
  * à 172 px et 151 px de diamètre sur un écran de 375 px (#1316).
@@ -55,31 +54,5 @@ export const optionsDAnneau = (etiquetteInfobulle) => ({
             borderWidth: 1,
             callbacks: { label: etiquetteInfobulle },
         },
-    },
-})
-
-/**
- * Rapporte le centre RÉEL de l'anneau, après chaque tracé.
- *
- * L'icône centrale de `TimeOfDayChart` était posée en `absolute inset-0` avec
- * un `-ml-[120px]` codé en dur pour compenser la légende de droite. 120 px
- * n'était juste sous aucune largeur d'écran : mesuré, l'icône tombait à 41 px
- * du vrai centre. Et la valeur aurait été à refaire à chaque étiquette plus
- * longue.
- *
- * Chart.js connaît ce centre — c'est `x`/`y` du premier arc. Le demander plutôt
- * que le deviner rend la position juste quelle que soit la légende, la largeur
- * ou la police.
- *
- * @param {(centre: {x: number, y: number}) => void} rapporte
- */
-export const pluginCentreDAnneau = (rapporte) => ({
-    id: 'centreDAnneau',
-    afterDraw(chart) {
-        const arc = chart.getDatasetMeta(0)?.data?.[0]
-
-        if (arc) {
-            rapporte({ x: arc.x, y: arc.y })
-        }
     },
 })

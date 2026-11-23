@@ -21,7 +21,6 @@ vi.mock('vue-chartjs', () => {
 
 const BodyPartDiffChart = (await import('@/Components/Stats/BodyPartDiffChart.vue')).default
 const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue')).default
-const RecentWorkoutsExercisesChart = (await import('@/Components/Stats/RecentWorkoutsExercisesChart.vue')).default
 const ExerciseCategoryChart = (await import('@/Components/Stats/ExerciseCategoryChart.vue')).default
 const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryChart.vue')).default
 const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
@@ -124,46 +123,6 @@ describe('BodyFatLineChart series', () => {
 
         expect(dataset.borderColor).toBe(jeton('accent-secondary'))
         expect(dataset.backgroundColor(blankChart)).toBeNull()
-    })
-})
-
-describe('RecentWorkoutsExercisesChart series', () => {
-    /**
-     * A factory, not a shared const: the defect the last test in this block
-     * looks for is an in-place reverse of the prop, and a shared array would let
-     * an earlier mount reverse it back and hide exactly that.
-     *
-     * The API hands the most recent session back first.
-     */
-    const newestFirst = () => [
-        { started_at: '2026-07-09T18:00:00Z', workout_lines_count: 5 },
-        { started_at: '2026-07-05T10:00:00Z', workout_lines_count: 3 },
-        { started_at: '2026-07-01T09:00:00Z', workout_lines_count: 1 },
-    ]
-
-    const mountChart = (data = newestFirst()) => mount(RecentWorkoutsExercisesChart, { props: { data } })
-
-    it('reads chronologically, oldest bar on the left, counts following their date', () => {
-        const series = seriesOf(mountChart(), 'Bar')
-
-        expect(series.labels).toEqual(['01/07', '05/07', '09/07'])
-        expect(series.datasets[0].data).toEqual([1, 3, 5])
-    })
-
-    it('does not reverse the page prop it was handed', () => {
-        const source = newestFirst()
-
-        mountChart(source)
-
-        // props.data is the very array Inertia keeps on the page, so a bare
-        // props.data.reverse() reorders it for every other component reading it.
-        expect(source.map((workout) => workout.workout_lines_count)).toEqual([5, 3, 1])
-    })
-
-    it('draws a session with no exercises as a zero, not as a gap', () => {
-        const series = seriesOf(mountChart([{ started_at: '2026-07-05T10:00:00Z' }]), 'Bar')
-
-        expect(series.datasets[0].data).toEqual([0])
     })
 })
 
@@ -294,12 +253,6 @@ describe('VolumePerWorkoutChart series', () => {
  * composant.
  */
 describe.each([
-    [
-        'RecentWorkoutsExercisesChart',
-        RecentWorkoutsExercisesChart,
-        { data: [{ started_at: '2026-07-05T10:00:00Z', workout_lines_count: 5 }] },
-        jeton('accent-state'),
-    ],
     [
         'DurationHistoryChart',
         DurationHistoryChart,

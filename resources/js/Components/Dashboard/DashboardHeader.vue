@@ -3,32 +3,9 @@ import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import Cloche from '@/Components/Navigation/Cloche.vue'
 import { Link } from '@inertiajs/vue3'
-import { nombre } from '@/Utils/nombre'
 
 const props = defineProps({
     user: { type: Object, required: true },
-    /**
-     * The controller has always sent this and the dashboard never rendered it,
-     * so the query ran on every page load to fill a prop nothing read.
-     */
-    latestWeight: { type: [Number, String], default: null },
-    /**
-     * Le dernier poids manque parce que la page est une copie hors ligne,
-     * qui ne garde jamais rien des mesures (#2048) : le dire, plutôt que de
-     * laisser croire qu'aucun poids n'a été noté.
-     */
-    poidsIndisponible: { type: Boolean, default: false },
-})
-
-/**
- * Arrives as a decimal string ("75.50"). Trailing zeros are noise on a body
- * weight, and the separator has to be the French one to match every other
- * figure on the page.
- */
-const formattedWeight = computed(() => {
-    const formate = nombre(props.latestWeight)
-
-    return formate === '—' ? null : formate
 })
 
 const streakDays = computed(() => props.user.current_streak || 0)
@@ -67,23 +44,6 @@ const streakLabel = computed(() => {
                 -->
                 <p class="font-display text-text-main truncate text-xl leading-tight font-semibold">
                     {{ user.name?.split(' ')[0] }}
-                </p>
-                <Link
-                    v-if="formattedWeight"
-                    :href="route('corps.index')"
-                    dusk="dashboard-latest-weight"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary relative mt-1 inline-flex items-center gap-1 rounded-lg text-xs tabular-nums before:absolute before:-inset-x-2 before:-inset-y-3.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
-                >
-                    <GlassIcon name="monitor_weight" size="xs" />
-                    {{ formattedWeight }} kg
-                </Link>
-                <p
-                    v-else-if="poidsIndisponible"
-                    dusk="dashboard-latest-weight-indisponible"
-                    class="text-text-muted mt-1 inline-flex items-center gap-1 text-xs"
-                >
-                    <GlassIcon name="cloud_off" size="xs" />
-                    Dernier poids indisponible hors ligne
                 </p>
             </div>
         </div>

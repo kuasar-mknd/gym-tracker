@@ -154,15 +154,14 @@ describe('la séance en cours', () => {
 })
 
 describe('les props qu’aucune copie ne garde', () => {
-    it('écartent le dernier poids et les objectifs de l’accueil, et rien d’autre', () => {
-        expect(propJamaisGardee('Dashboard', 'latestWeight')).toBe(true)
+    it('écartent les objectifs de l’accueil, et rien d’autre', () => {
+        expect(propJamaisGardee('Dashboard', 'latestWeight')).toBe(false)
         expect(propJamaisGardee('Dashboard', 'activeGoals')).toBe(true)
         expect(propJamaisGardee('Dashboard', 'recentWorkouts')).toBe(false)
         expect(propJamaisGardee('Workouts/Show', 'latestWeight')).toBe(false)
         expect(
             propsGardables('Dashboard', {
                 auth: { user: { id: 7 } },
-                latestWeight: '78.40',
                 activeGoals: [],
                 recentPRs: [],
             }),

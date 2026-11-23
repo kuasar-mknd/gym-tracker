@@ -155,10 +155,11 @@ class NavigationHorsLigneTest extends DuskTestCase
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
                 $this->attendreLaCopie($browser, '/workouts', 'Mes séances');
 
-                // Démarrer reste ouvert sur une copie (#2049) : rien n'y est tiré d'elle, et sans réseau la séance s'ouvre depuis la file.
+                // Une séance est en cours : l'Accueil n'en propose pas une seconde (#2434), et la bannière qui reprend la première reste ouverte sur une copie.
                 $browser->clickWhenSettled('[dusk="nav-dashboard"]');
                 $this->attendreLaCopie($browser, '/dashboard', 'Accueil');
-                $browser->assertScript("(() => { const bouton = document.querySelector('[dusk=\"start-workout-button\"]'); return bouton !== null && !bouton.disabled && !bouton.hasAttribute('aria-describedby'); })()");
+                $browser->assertMissing('[dusk="start-workout-button"]')
+                    ->assertScript("(() => { const bandeau = document.querySelector('[dusk=\"active-workout-banner\"]'); return bandeau !== null && !bandeau.hasAttribute('aria-disabled'); })()");
 
                 // La barre du bas n'a plus de bouton central : Profil n'a pas de « démarrer ».
                 $browser->clickWhenSettled('[dusk="nav-profile"]');

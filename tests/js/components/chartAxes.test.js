@@ -19,7 +19,6 @@ vi.mock('vue-chartjs', () => {
 
 const MonthlyVolumeChart = (await import('@/Components/Stats/MonthlyVolumeChart.vue')).default
 const WaterHistoryChart = (await import('@/Components/Stats/WaterHistoryChart.vue')).default
-const RecentWorkoutsTimelineChart = (await import('@/Components/Stats/RecentWorkoutsTimelineChart.vue')).default
 const WorkoutHistoryTimelineChart = (await import('@/Components/Stats/WorkoutHistoryTimelineChart.vue')).default
 
 const chartIn = (wrapper, name) => wrapper.findComponent({ name })
@@ -81,27 +80,27 @@ describe('WaterHistoryChart Y axis', () => {
  * The duration dataset is found by its label rather than its index: one of
  * these charts draws a line over bars and its durations are not dataset zero.
  */
-describe.each([
-    ['RecentWorkoutsTimelineChart', RecentWorkoutsTimelineChart, 'Line'],
-    ['WorkoutHistoryTimelineChart', WorkoutHistoryTimelineChart, 'Bar'],
-])('%s', (_name, component, chartType) => {
-    it('plots nothing for the session still running rather than a zero', () => {
-        const wrapper = mount(component, {
-            props: {
-                data: [
-                    { started_at: '2026-07-31T10:00:00Z', ended_at: null, workout_volume: 100 },
-                    { started_at: '2026-07-30T10:00:00Z', ended_at: '2026-07-30T11:00:00Z', workout_volume: 200 },
-                ],
-            },
+describe.each([['WorkoutHistoryTimelineChart', WorkoutHistoryTimelineChart, 'Bar']])(
+    '%s',
+    (_name, component, chartType) => {
+        it('plots nothing for the session still running rather than a zero', () => {
+            const wrapper = mount(component, {
+                props: {
+                    data: [
+                        { started_at: '2026-07-31T10:00:00Z', ended_at: null, workout_volume: 100 },
+                        { started_at: '2026-07-30T10:00:00Z', ended_at: '2026-07-30T11:00:00Z', workout_volume: 200 },
+                    ],
+                },
+            })
+
+            const durations = chartIn(wrapper, chartType)
+                .props('data')
+                .datasets.find((dataset) => dataset.label === 'Durée (min)')
+
+            // Every one of them reverses its input to read chronologically, so the
+            // finished session comes first and the running one last. null is what
+            // Chart.js skips; 0 is what it plots on the axis.
+            expect(durations.data).toEqual([60, null])
         })
-
-        const durations = chartIn(wrapper, chartType)
-            .props('data')
-            .datasets.find((dataset) => dataset.label === 'Durée (min)')
-
-        // Every one of them reverses its input to read chronologically, so the
-        // finished session comes first and the running one last. null is what
-        // Chart.js skips; 0 is what it plots on the axis.
-        expect(durations.data).toEqual([60, null])
-    })
-})
+    },
+)

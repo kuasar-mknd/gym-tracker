@@ -15,10 +15,6 @@ const JournalChart = (await import('@/Components/Stats/JournalChart.vue')).defau
 const MaxWeightChart = (await import('@/Components/Stats/MaxWeightChart.vue')).default
 const MonthlyVolumeChart = (await import('@/Components/Stats/MonthlyVolumeChart.vue')).default
 const OneRepMaxPercentagesChart = (await import('@/Components/Stats/OneRepMaxPercentagesChart.vue')).default
-const RecentPRsChart = (await import('@/Components/Stats/RecentPRsChart.vue')).default
-const RecentWorkoutsChart = (await import('@/Components/Stats/RecentWorkoutsChart.vue')).default
-const RecentWorkoutsExercisesChart = (await import('@/Components/Stats/RecentWorkoutsExercisesChart.vue')).default
-const RecentWorkoutsTimelineChart = (await import('@/Components/Stats/RecentWorkoutsTimelineChart.vue')).default
 const SupplementUsageChart = (await import('@/Components/Stats/SupplementUsageChart.vue')).default
 const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkoutChart.vue')).default
 const VolumeTrendChart = (await import('@/Components/Stats/VolumeTrendChart.vue')).default
@@ -128,17 +124,6 @@ const cases = [
         ],
     },
     {
-        chart: 'RecentWorkoutsTimelineChart',
-        component: RecentWorkoutsTimelineChart,
-        type: 'Line',
-        key: 'backgroundColor',
-        requested: DOWNWARD,
-        stops: [
-            [0, jetonTransparent('accent-primary', 0.2)],
-            [1, jetonTransparent('accent-primary', 0)],
-        ],
-    },
-    {
         chart: 'WeightHistoryChart',
         component: WeightHistoryChart,
         type: 'Line',
@@ -232,31 +217,6 @@ const flats = [
         chart: 'OneRepMaxPercentagesChart',
         component: OneRepMaxPercentagesChart,
         key: 'backgroundColor',
-        expected: () => jeton('accent-primary'),
-    },
-    {
-        chart: 'RecentPRsChart',
-        component: RecentPRsChart,
-        key: 'backgroundColor',
-        expected: () => jeton('accent-primary'),
-    },
-    {
-        chart: 'RecentWorkoutsChart',
-        component: RecentWorkoutsChart,
-        key: 'backgroundColor',
-        expected: () => jeton('accent-primary'),
-    },
-    {
-        chart: 'RecentWorkoutsExercisesChart',
-        component: RecentWorkoutsExercisesChart,
-        key: 'backgroundColor',
-        expected: () => jeton('accent-state'),
-    },
-    {
-        chart: 'RecentWorkoutsTimelineChart',
-        component: RecentWorkoutsTimelineChart,
-        type: 'Line',
-        key: 'borderColor',
         expected: () => jeton('accent-primary'),
     },
     {
