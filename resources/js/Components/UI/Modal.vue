@@ -184,7 +184,9 @@ const containerClass = computed(() =>
     isBottomSheet.value || isTiroir.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
 )
 
-const panelClass = computed(() => (isTiroir.value ? 'hauteur-tiroir rounded-carte' : 'hauteur-sure-12 rounded-carte'))
+const panelClass = computed(() =>
+    isTiroir.value ? 'hauteur-tiroir -mx-2 -mb-4 rounded-carte sm:mx-0 sm:mb-0' : 'hauteur-sure-12 rounded-carte',
+)
 
 const enterFromClass = computed(() =>
     isTiroir.value

@@ -1341,13 +1341,14 @@
 /*
  * La hauteur du tiroir (`Modal position="tiroir"`) : un cran, le grand, que la
  * liste et le formulaire de création partagent, pour que la feuille ne change
- * pas de taille d'un écran à l'autre. Sur un téléphone, la zone sûre moins les
- * deux marges de la fenêtre (`py-sure-6`) ; à partir de `sm`, la fenêtre
+ * pas de taille d'un écran à l'autre. Sur un téléphone, la feuille déborde la
+ * marge de la fenêtre (`-mx-2 -mb-4` du panneau) pour laisser 8 px aux côtés et
+ * en bas, 24 px en haut : la zone sûre moins 2 rem. À partir de `sm`, la fenêtre
  * centrée plafonne à 44 rem.
  */
 @utility hauteur-tiroir {
-    height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
-    height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
+    height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 2rem);
+    height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 2rem);
 
     @media (width >= 40rem) {
         height: min(44rem, calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem));
