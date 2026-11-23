@@ -145,42 +145,42 @@ const revenirSiLaPageEstVide = () => {
             <div class="space-y-6">
                 <!-- Les actions de l'en-tête de bureau, qui ne se montre qu'à partir de 1 024 px. -->
                 <div class="bureau:hidden space-y-3">
-                    <div class="flex items-center gap-3">
-                        <GlassButton
-                            v-if="!seanceEnCours && !compteNeuf"
-                            variant="primary"
-                            class="min-w-0 flex-1"
-                            :loading="demarrageEnCours"
-                            @click="createWorkout"
+                    <div class="flex items-center gap-2">
+                        <nav
+                            aria-label="Séances"
+                            class="border-glass-border bg-surface-card/50 flex min-w-0 flex-1 rounded-xl border p-1 text-xs font-bold"
                         >
-                            <GlassIcon name="add" size="sm" class="mr-2" />
-                            Démarrer une séance
-                        </GlassButton>
-                        <Cloche class="ms-auto" />
+                            <span
+                                aria-current="page"
+                                class="bg-text-main text-text-on-dark-accent min-h-touch flex flex-1 items-center justify-center rounded-lg px-1"
+                            >
+                                Historique
+                            </span>
+                            <Link
+                                :href="route('templates.index')"
+                                class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-1 focus-visible:ring-2 focus-visible:outline-none"
+                            >
+                                Modèles
+                            </Link>
+                            <Link
+                                :href="route('calendar.index')"
+                                class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-1 focus-visible:ring-2 focus-visible:outline-none"
+                            >
+                                Calendrier
+                            </Link>
+                        </nav>
+                        <Cloche class="shrink-0" />
                     </div>
-                    <nav
-                        aria-label="Séances"
-                        class="border-glass-border bg-surface-card/50 flex rounded-xl border p-1 text-sm font-bold"
+                    <GlassButton
+                        v-if="!seanceEnCours && !compteNeuf"
+                        variant="primary"
+                        class="w-full"
+                        :loading="demarrageEnCours"
+                        @click="createWorkout"
                     >
-                        <span
-                            aria-current="page"
-                            class="bg-text-main text-text-on-dark-accent min-h-touch flex flex-1 items-center justify-center rounded-lg px-3"
-                        >
-                            Historique
-                        </span>
-                        <Link
-                            :href="route('templates.index')"
-                            class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                            Modèles
-                        </Link>
-                        <Link
-                            :href="route('calendar.index')"
-                            class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-3 focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                            Calendrier
-                        </Link>
-                    </nav>
+                        <GlassIcon name="add" size="sm" class="mr-2" />
+                        Démarrer une séance
+                    </GlassButton>
                 </div>
 
                 <div class="stagger-2 animate-slide-up">

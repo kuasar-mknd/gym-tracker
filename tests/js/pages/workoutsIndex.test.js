@@ -590,7 +590,7 @@ describe('Workouts/Index — le segment mobile', () => {
 })
 
 /**
- * La page est le journal : une ligne d'action, le segment, puis la liste. Sans
+ * La page est le journal : le segment et la cloche, le bouton de démarrage dessous, puis la liste. Sans
  * séance, un compte neuf n'a qu'un bouton, celui de son état vide.
  */
 describe('Workouts/Index — le journal', () => {
@@ -609,13 +609,13 @@ describe('Workouts/Index — le journal', () => {
             },
         })
 
-    it('range la ligne d’action, le segment puis la liste, et rien d’autre', () => {
+    it('range le segment et la cloche, le bouton « Démarrer » sous eux, puis la liste, et rien d’autre', () => {
         const wrapper = mountPage()
         const html = wrapper.html()
 
         expect(html.indexOf('Démarrer une séance')).toBeGreaterThan(-1)
-        expect(html.indexOf('Démarrer une séance')).toBeLessThan(html.indexOf('aria-label="Séances"'))
-        expect(html.indexOf('aria-label="Séances"')).toBeLessThan(html.indexOf('Push Day'))
+        expect(html.indexOf('aria-label="Séances"')).toBeLessThan(html.indexOf('Démarrer une séance'))
+        expect(html.indexOf('Démarrer une séance')).toBeLessThan(html.indexOf('Push Day'))
         expect(wrapper.text()).not.toContain('Exercices disponibles')
         expect(wrapper.text()).not.toContain('Aperçu historique')
         expect(wrapper.findAllComponents({ name: 'GlassStat' })).toHaveLength(0)
