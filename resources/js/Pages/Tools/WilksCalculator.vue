@@ -6,7 +6,6 @@
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1 class="titre-ecran">Calculateur Wilks</h1>
-                <p class="etiquette mt-2">Compare ta force relative</p>
             </header>
 
             <!-- Calculator Section -->

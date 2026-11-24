@@ -276,7 +276,7 @@ describe('démarrer une séance sans réseau, depuis l’accueil', () => {
         await remettreLAccueil()
 
         expect(bouton()).toBeNull()
-        expect(document.body.textContent).toContain('Mes modèles')
+        expect(document.body.textContent).toContain('Modèles')
 
         const reprendre = document.querySelector('[dusk="active-workout-banner"]')
         expect(reprendre).not.toBeNull()

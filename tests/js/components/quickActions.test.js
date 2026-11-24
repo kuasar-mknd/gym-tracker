@@ -31,7 +31,7 @@ describe('QuickActions', () => {
 
         for (const [selecteur, libelle] of [
             ['[dusk="start-workout-button"]', 'Démarrer une séance'],
-            ['a', 'Mes modèles'],
+            ['a', 'Modèles'],
         ]) {
             const tuile = wrapper.get(selecteur)
             const nom = tuile.attributes('aria-label') ?? tuile.text()
@@ -53,12 +53,12 @@ describe('QuickActions', () => {
         expect(libre.emitted('startWorkout')).toHaveLength(1)
     })
 
-    it('sans démarrage, ne garde que Mes modèles en rangée compacte', () => {
+    it('sans démarrage, ne garde que Modèles en rangée compacte', () => {
         const wrapper = monter({ sansDemarrage: true })
 
         expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
         expect(wrapper.find('#start-workout-button').exists()).toBe(false)
-        expect(wrapper.get('a').text()).toContain('Mes modèles')
+        expect(wrapper.get('a').text()).toContain('Modèles')
         expect(wrapper.get('section').classes()).toContain('grid-cols-1')
     })
 
@@ -69,12 +69,12 @@ describe('QuickActions', () => {
         expect(html).not.toMatch(/glow|bg-linear|bg-gradient|tertiary/)
     })
 
-    it('masque « Démarrer une séance » quand une séance est en cours, et garde « Mes modèles »', () => {
+    it('masque « Démarrer une séance » quand une séance est en cours, et garde « Modèles »', () => {
         const wrapper = monter({}, { id: 12, name: 'Push' })
 
         expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
         expect(wrapper.text()).not.toContain('Démarrer une séance')
-        expect(wrapper.text()).toContain('Mes modèles')
+        expect(wrapper.text()).toContain('Modèles')
         expect(wrapper.get('section').classes()).toContain('grid-cols-1')
         expect(wrapper.get('a').classes()).toContain('items-center')
         expect(wrapper.get('a').classes()).not.toContain('flex-col')

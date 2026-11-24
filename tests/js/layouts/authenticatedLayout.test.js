@@ -559,9 +559,9 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
     })
 
     it('laisse l’en-tête de page porter le titre de bureau', () => {
-        const wrapper = mountLayout({ props: { pageTitle: 'Mes Séances' }, slots: { header: '<h1>Mes Séances</h1>' } })
+        const wrapper = mountLayout({ props: { pageTitle: 'Séances' }, slots: { header: '<h1>Séances</h1>' } })
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mes Séances'], bureau: ['Mes Séances'] })
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Séances'], bureau: ['Séances'] })
     })
 
     it('s’efface devant le titre de bureau que la page pose dans son contenu', () => {
@@ -588,19 +588,19 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
     })
 
     it('ne masque pas le titre sans titre-masque', () => {
-        const [mobile] = mountLayout({ props: { pageTitle: 'Mes Séances' } }).findAll('h1')
+        const [mobile] = mountLayout({ props: { pageTitle: 'Séances' } }).findAll('h1')
 
         expect(mobile.classes()).not.toContain('sr-only')
     })
 
     /**
      * Le titre plat de l'en-tête mobile perd un cran au-delà de douze
-     * caractères, et sous 21 rem pour les autres : à vingt-huit pixels, « Mes
-     * objectifs » dépassait sa boîte à 375 px (#2434).
+     * caractères, et sous 21 rem pour les autres : à vingt-huit pixels, un
+     * titre de dix-huit caractères dépassait sa boîte à 375 px (#2434).
      */
     it('réduit le titre plat de l’en-tête mobile au-delà de douze caractères et sous 21 rem', () => {
         const [court] = mountLayout({ props: { pageTitle: 'Corps' } }).findAll('h1')
-        const [long] = mountLayout({ props: { pageTitle: 'Mes objectifs' } }).findAll('h1')
+        const [long] = mountLayout({ props: { pageTitle: 'Raccourcis clavier' } }).findAll('h1')
 
         expect(court.classes()).toEqual(expect.arrayContaining(['titre-ecran', 'max-[21rem]:titre-plat']))
         expect(long.classes()).toContain('titre-plat')

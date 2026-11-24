@@ -6,7 +6,6 @@
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1 class="titre-ecran">Calculateur de macros</h1>
-                <p class="etiquette mt-2">Estime tes besoins caloriques</p>
             </header>
 
             <!-- Calculator Section -->

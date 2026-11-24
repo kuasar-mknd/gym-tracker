@@ -111,7 +111,7 @@ class ReseauLentTest extends DuskTestCase
                 $duree = microtime(true) - $depart;
 
                 $browser->assertScript($this->leBandeauDit('Réseau lent'))
-                    ->assertScript($this->texteDe('header h1'), 'Mes séances');
+                    ->assertScript($this->texteDe('header h1'), 'Séances');
                 $this->assertGreaterThanOrEqual(5.0, $duree, 'la copie est arrivée avant les cinq secondes');
                 // La copie a pris la place du toast de la lenteur, qui ne vient qu'au bout de huit secondes.
                 $this->assertSame([], $this->messagesSansReseau($browser));

@@ -126,7 +126,7 @@ const formatDate = (dateString) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="titre-ecran bureau:block hidden">Mes compléments</h1>
+                    <h1 class="titre-ecran bureau:block hidden">Compléments</h1>
                     <p class="etiquette mt-2">
                         {{ compte(supplements.length, 'produit suivi', 'produits suivis') }}
                     </p>

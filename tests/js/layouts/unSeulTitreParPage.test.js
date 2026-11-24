@@ -75,14 +75,17 @@ describe('un seul h1 par page, sur téléphone comme sur bureau (#2120)', () => 
     it('les raccourcis : l’en-tête mobile, puis le titre que le layout pose pour les lecteurs d’écran', async () => {
         const wrapper = await monter(Raccourcis)
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Raccourcis'], bureau: ['Raccourcis'] })
+        expect(titresExposes(wrapper.element)).toEqual({
+            telephone: ['Raccourcis clavier'],
+            bureau: ['Raccourcis clavier'],
+        })
         expect(wrapper.findAll('h1').at(-1).classes()).toContain('sr-only')
     })
 
     it('les compléments : l’en-tête mobile, puis le titre que la page pose sur bureau', async () => {
         const wrapper = await monter(SupplementsIndex, { supplements: [], usageHistory: [] })
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Compléments'], bureau: ['Mes compléments'] })
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Compléments'], bureau: ['Compléments'] })
     })
 
     /*
@@ -104,8 +107,8 @@ describe('un seul h1 par page, sur téléphone comme sur bureau (#2120)', () => 
         const wrapper = await monter(OneRepMax, { history: [] })
 
         expect(titresExposes(wrapper.element)).toEqual({
-            telephone: ['Calculatrice 1RM'],
-            bureau: ['Calculatrice 1RM'],
+            telephone: ['Calculateur 1RM'],
+            bureau: ['Calculateur 1RM'],
         })
     })
 })

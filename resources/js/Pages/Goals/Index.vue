@@ -97,9 +97,9 @@ const goalDistribution = computed(() => {
 </script>
 
 <template>
-    <Head title="Mes objectifs" />
+    <Head title="Objectifs" />
 
-    <AuthenticatedLayout show-back back-route="stats.index" page-title="Mes objectifs">
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Objectifs">
         <!-- The #header slot is desktop-only (hidden bureau:block in the layout), so the
              create action has to be mirrored here or it is unreachable on phones. -->
         <template #header-actions>
@@ -116,7 +116,7 @@ const goalDistribution = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-ecran">Mes objectifs</h1>
+                <h1 class="titre-ecran">Objectifs</h1>
                 <GlassButton
                     :variant="showCreateForm ? 'secondary' : 'primary'"
                     dusk="create-goal-btn-desktop"

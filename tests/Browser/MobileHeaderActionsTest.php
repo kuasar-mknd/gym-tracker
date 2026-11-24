@@ -49,8 +49,7 @@ class MobileHeaderActionsTest extends DuskTestCase
                 ->waitFor('@create-goal-btn', 10)
                 ->assertVisible('@create-goal-btn')
                 ->click('@create-goal-btn')
-                // Asserted structurally rather than by text: several labels are
-                // uppercased in CSS, and WebDriver reports transformed text.
+                // Asserted structurally rather than by text.
                 ->waitFor('@goal-create-form', 10)
                 ->assertVisible('@goal-create-form')
                 ->assertNoConsoleExceptions();
@@ -119,14 +118,10 @@ class MobileHeaderActionsTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 // Scoped to the sticky mobile bar's own <h1>: asserting against the
                 // whole source would also match <Head title> and pass even when the
-                // bar renders nothing. Compared case-insensitively because the
-                // heading is uppercased in CSS and WebDriver returns rendered text.
+                // bar renders nothing.
                 ->assertVisible('header.sticky h1')
                 ->with('header.sticky h1', function (Browser $heading): void {
-                    $this->assertSame(
-                        'mes objectifs',
-                        mb_strtolower(trim($heading->text('')))
-                    );
+                    $this->assertSame('Objectifs', trim($heading->text('')));
                 });
         });
     }

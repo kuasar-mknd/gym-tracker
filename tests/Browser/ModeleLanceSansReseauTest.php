@@ -32,7 +32,7 @@ use Tests\Support\ParcoursHorsLigne;
  *
  * Le réseau de la page est coupé et public/build introuvable pendant la
  * coupure (`Tests\Support\ParcoursHorsLigne`) : la page des modèles, ouverte
- * par la tuile « Mes modèles » de l'accueil (au téléphone, la liste des
+ * par la tuile « Modèles » de l'accueil (au téléphone, la liste des
  * séances ne montre pas son lien « Modèles », réservé à l'écran large), et la
  * séance viennent du precache, des copies et de la file. Le
  * parcours exige un contexte sûr : la CI sert 127.0.0.1 ; sous Sail, il se
@@ -95,7 +95,7 @@ class ModeleLanceSansReseauTest extends DuskTestCase
                 ->waitFor('[dusk="execute-template-'.$modele->id.'"]', 30);
             $this->attendreLesCopies($browser, ['/dashboard', '/templates']);
 
-            // Puis l'accueil, en ligne : au téléphone, c'est sa tuile « Mes modèles » qui ouvre les modèles.
+            // Puis l'accueil, en ligne : au téléphone, c'est sa tuile « Modèles » qui ouvre les modèles.
             $browser->clickWhenSettled('[dusk="nav-dashboard"]')
                 ->waitForLocation('/dashboard', 15)
                 ->waitFor('main a[href$="/templates"]', 15);
@@ -104,7 +104,7 @@ class ModeleLanceSansReseauTest extends DuskTestCase
             $outils = $this->outilsDuNavigateur($browser);
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $modele, $jeton): void {
-                // « Mes modèles » : la page des modèles, de sa copie.
+                // « Modèles » : la page des modèles, de sa copie.
                 $browser->clickWhenSettled('main a[href$="/templates"]')
                     ->waitForLocation('/templates', 15)
                     ->waitFor('[dusk="bandeau-hors-ligne"]', 15)

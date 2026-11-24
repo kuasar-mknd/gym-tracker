@@ -109,12 +109,12 @@ const revenirSiLaPageEstVide = () => {
 </script>
 
 <template>
-    <Head title="Mes séances" />
+    <Head title="Séances" />
 
-    <AuthenticatedLayout page-title="Mes séances" titre-masque>
+    <AuthenticatedLayout page-title="Séances" titre-masque>
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-ecran">Mes séances</h1>
+                <h1 class="titre-ecran">Séances</h1>
                 <div class="flex gap-2">
                     <!-- Des navigations : un seul lien chacune, par `href` (#2117). -->
                     <GlassButton :href="route('calendar.index')">
