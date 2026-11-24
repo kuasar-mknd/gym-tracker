@@ -29,7 +29,7 @@ use Tests\Support\PagesGardees;
  * seule compte une copie de l'accueil tirée d'une réponse complète arrivée
  * après le chargement (`copieDu`), celle de la page initiale. Rien de ce qu'ils
  * montrent ne se lit en clair dans la base ; la clé du témoin, et elle seule,
- * déchiffre la séance ; et la déconnexion par le menu « Plus » vide le
+ * déchiffre la séance ; et la déconnexion par le Profil vide le
  * magasin et ferme son état AVANT de partir (décision 6 du propriétaire) :
  * sans réseau, elle n'a pas lieu, et les copies sont pourtant oubliées. Le
  * réseau est coupé par les outils de Chrome, sur la page : la déconnexion,
@@ -229,7 +229,7 @@ class CopiesHorsLigneTest extends DuskTestCase
                 $dechiffree,
             );
 
-            // La déconnexion par le menu « Plus », d'abord sans réseau : elle n'a pas lieu, les copies sont oubliées.
+            // La déconnexion par le Profil, d'abord sans réseau : elle n'a pas lieu, les copies sont oubliées.
             $browser->clickWhenSettled('[dusk="nav-profile"]')
                 ->waitForLocation('/profile', 15)
                 ->waitFor('[data-testid="logout-button"]', 15);

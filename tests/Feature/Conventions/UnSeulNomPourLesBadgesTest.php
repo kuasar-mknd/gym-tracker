@@ -109,7 +109,7 @@ it('appelle « Badges » la page, les deux menus, la traduction et la notificati
 
     expect($textes['resources/js/Pages/Achievements/Index.vue'])->toContain('title="Badges"', 'page-title="Badges"')
         ->toMatch('/<h1 class="titre-ecran">\s*Badges\s*<\/h1>/u')
-        ->and($textes['resources/js/Pages/Profile/Index.vue'])->toContain("name: 'Badges'")
+        ->and($textes['resources/js/Pages/Stats/Index.vue'])->toContain('libelle="Badges"')
         ->and($textes['resources/js/Layouts/AuthenticatedLayout.vue'])->toMatch('/>\s*Badges\s*</u')
         ->and(unSeulNomTraductions()['Achievements'] ?? null)->toBe('Badges');
 

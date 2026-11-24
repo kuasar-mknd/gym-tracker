@@ -16,13 +16,13 @@ use Tests\Support\ParcoursHorsLigne;
  * La page Corps réunit le poids, la masse grasse et les mensurations (#2434,
  * lot 4b), et n'est jamais gardée hors ligne : ses chiffres sont des mesures.
  *
- * En ligne, le parcours part du Profil, où une tuile « Corps » remplace
+ * En ligne, le parcours part de Progrès, dont une tuile « Corps » remplace
  * celles du poids et des mensurations, et y lit les trois : le poids et la
  * masse grasse du compte, la dernière mensuration de chaque partie. Le retour
- * mène à Progrès, qui reste l'onglet allumé. Sans réseau, la tuile ne mène à
- * aucune copie : l'application dit que la page n'est pas disponible et reste
- * sur le Profil, et une navigation complète sur /corps n'ouvre que la page
- * hors ligne, sans une mesure du compte ; le réseau rendu, la page s'ouvre sur
+ * mène à Progrès, qui reste l'onglet allumé. Sans réseau, les copies de Progrès
+ * et du Profil, déchiffrées, ne portent ni le poids ni la masse grasse du
+ * compte, et une navigation complète sur /corps n'ouvre que la page hors
+ * ligne, sans une mesure du compte ; le réseau rendu, la page s'ouvre sur
  * ses mesures.
  */
 class CorpsTest extends DuskTestCase
@@ -35,8 +35,6 @@ class CorpsTest extends DuskTestCase
      * la fait suivre d'un `return`, que des retours à la ligne rendraient nul.
      */
     private const string LES_MESURES_SONT_A_L_ECRAN = "(() => { const texte = document.querySelector('#main-content')?.innerText ?? ''; return /(?<![\\d.,])83[.,]7(?![\\d])/.test(texte) && /(?<![\\d.,])19[.,]3(?![\\d])/.test(texte) && /(?<![\\d.,])81(?![\\d.,])/.test(texte); })()";
-
-    private const string PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau.";
 
     private function unCompteAvecDesMesures(): User
     {
@@ -70,10 +68,10 @@ class CorpsTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($compte): void {
             $browser->loginAs($compte)
                 ->resizeToIphone15()
-                ->visit('/profile')
+                ->visit('/stats')
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->clickWhenSettled('main a[href$="/corps"]')
+                ->clickWhenSettled('#main-content a[href$="/corps"]')
                 ->waitForLocation('/corps', 15)
                 ->waitFor('#main-content', 30)
                 ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'les cartes de Corps attendent encore leurs données')
@@ -101,23 +99,25 @@ class CorpsTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($compte): void {
             $browser->loginAs($compte)
-                ->visit('/profile')
+                ->visit('/stats')
                 ->waitFor('#main-content', 30);
 
             $this->exigerUnContexteSur($browser);
             $this->attendreLeWorker($browser);
-            $this->attendreLesCopies($browser, ['/profile']);
+
+            $browser->clickWhenSettled('[dusk="nav-profile"]')
+                ->waitForLocation('/profile', 15);
+
+            $this->attendreLesCopies($browser, ['/stats', '/profile']);
+
+            // Les copies de Progrès et du Profil, déchiffrées, ne portent ni le poids ni la masse grasse du compte.
+            $this->assertCopiesSansMesures($browser, $compte, ['/stats', '/profile']);
 
             $this->noterLesMessages($browser);
 
             $outils = $this->outilsDuNavigateur($browser);
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser): void {
-                $browser->clickWhenSettled('main a[href$="/corps"]')
-                    ->waitUntil($this->laPageDit(self::PAGE_INDISPONIBLE), 15, 'Corps n’a rien dit sans réseau')
-                    ->assertPathIs('/profile')
-                    ->assertScript('!/(?<![\d.,])(83[.,]7|19[.,]3)(?![\d])/.test(document.body.textContent)');
-
                 // Une navigation complète sur Corps, sans copie : la page qui dit ce qui s'ouvre sans réseau, sans une mesure.
                 $this->attendreLaCoquilleServieA($browser->visit('/corps'), '/corps')
                     ->waitUsing(15, 200, fn (): bool => (bool) $browser->script('return document.querySelector(\'[dusk="page-hors-ligne-sans-copie"], [dusk="page-hors-ligne"]\') !== null')[0])
@@ -130,5 +130,27 @@ class CorpsTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitUntil(self::LES_MESURES_SONT_A_L_ECRAN, 30, 'les mesures ne reviennent pas avec le réseau');
         });
+    }
+
+    /**
+     * Chaque copie demandée se déchiffre, et son contenu ne porte ni le poids
+     * ni la masse grasse du compte : sans cette lecture, « aucune mesure hors
+     * ligne » ne tiendrait que par l'absence d'un lien à cliquer.
+     *
+     * @param  list<string>  $chemins
+     */
+    private function assertCopiesSansMesures(Browser $browser, User $compte, array $chemins): void
+    {
+        $cle = $this->temoinDesCopies($browser);
+        $this->assertIsString($cle, 'le témoin des copies manque');
+
+        $copies = collect($this->dechiffrerLeMagasin($browser, $cle, (string) $compte->id));
+
+        foreach ($chemins as $chemin) {
+            $copie = $copies->firstWhere('chemin', $chemin);
+            $this->assertIsArray($copie, "la copie de {$chemin} manque");
+            $this->assertIsString($copie['texte'], "la copie de {$chemin} ne se déchiffre pas");
+            $this->assertDoesNotMatchRegularExpression('/(?<![\d.,])(83[.,]7|19[.,]3)(?![\d])/', $copie['texte'], "la copie de {$chemin} garde une mesure du compte");
+        }
     }
 }

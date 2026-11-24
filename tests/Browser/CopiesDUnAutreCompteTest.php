@@ -19,8 +19,8 @@ use Tests\Support\ParcoursHorsLigne;
  * vie privée).
  *
  * Un appareil, deux comptes : A ouvre l'accueil et sa séance en cours, qui se
- * gardent chiffrées sous la clé de sa session, puis se déconnecte par le menu
- * « Plus » ; B se connecte sur le même navigateur et ouvre l'accueil. Le
+ * gardent chiffrées sous la clé de sa session, puis se déconnecte par le
+ * Profil ; B se connecte sur le même navigateur et ouvre l'accueil. Le
  * réseau coupé, la séance de A, ouverte à son adresse, ne s'ouvre pas : la
  * coquille ne trouve pour B aucune copie de cette adresse, et monte la page
  * `HorsLigne`, qui ne liste que ce que B garde. Ni le nom de A, ni son
@@ -96,7 +96,7 @@ class CopiesDUnAutreCompteTest extends DuskTestCase
             $cleDeA = $this->temoinDesCopies($browser);
             $this->assertIsString($cleDeA, 'le témoin de A manque');
 
-            // A se déconnecte par le menu « Plus ».
+            // A se déconnecte par le Profil.
             $browser->clickWhenSettled('[dusk="nav-profile"]')
                 ->waitForLocation('/profile', 15)
                 ->clickWhenSettled('[data-testid="logout-button"]')

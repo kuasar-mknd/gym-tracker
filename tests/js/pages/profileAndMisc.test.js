@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -20,6 +20,9 @@ const formDelete = vi.fn()
 const formReset = vi.fn()
 const routerPost = vi.fn()
 const routerVisit = vi.fn()
+
+/** La page que `usePage()` rend : une copie hors ligne y porte la marque `horsLigne`. */
+const pageCourante = vi.hoisted(() => ({ props: {} }))
 
 /**
  * `useForm` is mocked, but not into an inert bag of values: the pages read back
@@ -43,6 +46,7 @@ vi.mock('@inertiajs/vue3', async () => {
             delete: vi.fn(),
             patch: vi.fn(),
         },
+        usePage: () => pageCourante,
         useForm: (data) => {
             const initial = { ...data }
 
@@ -808,7 +812,7 @@ const mountProfile = (user = { name: 'samuel', email: 'sam@example.com' }) =>
         global: {
             mocks: { route, $page: { props: { auth: { user } } } },
             directives: { press: {} },
-            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            stubs: { AuthenticatedLayout: layoutStub },
         },
     })
 
@@ -826,14 +830,14 @@ describe('Profile/Index — the menu', () => {
         expect(menuItems(wrapper).length).toBeGreaterThan(0)
     })
 
-    it('gives every entry an icon and something to read', () => {
+    it('gives every entry an icon and a name', () => {
         const wrapper = mountProfile()
 
         const bare = menuItems(wrapper)
-            .filter((item) => !item.icon?.trim() || !item.name?.trim() || !item.description?.trim())
+            .filter((item) => !item.icon?.trim() || !item.name?.trim())
             .map((item) => item.route)
 
-        expect(bare, 'menu entries missing an icon, a name or a description').toEqual([])
+        expect(bare, 'menu entries missing an icon or a name').toEqual([])
     })
 
     it('renders every declared entry as a link that carries its icon', () => {
@@ -896,14 +900,111 @@ describe('Profile/Index — the identity block', () => {
 
         expect(wrapper.text()).toContain('samuel')
         expect(wrapper.text()).toContain('sam@example.com')
-        expect(wrapper.get('.h-20.w-20').text()).toBe('S')
+        expect(wrapper.get('.size-14').text()).toBe('S')
     })
 
     it('survives an account with no name rather than blanking the page', () => {
         const wrapper = mountProfile({ name: null, email: 'sam@example.com' })
 
-        expect(wrapper.get('.h-20.w-20').text()).toBe('')
+        expect(wrapper.get('.size-14').text()).toBe('')
         expect(wrapper.text()).toContain('sam@example.com')
+    })
+})
+
+describe('Profile/Index — le compte et les outils', () => {
+    afterEach(() => {
+        pageCourante.props = {}
+    })
+
+    const destinations = (liste) => liste.findAll('a').map((lien) => lien.attributes('href').replace('/routes/', ''))
+
+    it('range les rangées en deux listes nommées, sans titre de groupe ni description', () => {
+        const wrapper = mountProfile()
+        const listes = wrapper.findAll('nav')
+
+        expect(listes.map((liste) => liste.attributes('aria-label'))).toEqual(['Outils et suivi', 'Compte'])
+        expect(destinations(listes[0])).toEqual([
+            'tools.index',
+            'habits.index',
+            'daily-journals.index',
+            'supplements.index',
+        ])
+        expect(destinations(listes[1])).toEqual(['profile.edit', 'shortcuts.index'])
+        expect(wrapper.findAll('h3, h4')).toHaveLength(0)
+        expect(wrapper.findAll('h2').map((titre) => titre.text())).toEqual(['samuel'])
+    })
+
+    it('ne reprend aucune entrée que Séances ou Progrès portent déjà', () => {
+        const routes = menuItems(mountProfile()).map((item) => item.route)
+
+        for (const doublon of [
+            'calendar.index',
+            'exercises.index',
+            'achievements.index',
+            'goals.index',
+            'corps.index',
+        ]) {
+            expect(routes).not.toContain(doublon)
+        }
+    })
+
+    it('ne montre « Raccourcis clavier » qu’au bureau', () => {
+        const wrapper = mountProfile()
+        const raccourcis = wrapper.get('a[href="/routes/shortcuts.index"]')
+
+        expect(raccourcis.classes()).toEqual(expect.arrayContaining(['hidden', 'bureau:flex']))
+
+        wrapper.findAll('nav a:not([href$="shortcuts.index"])').forEach((lien) => {
+            expect(lien.classes(), lien.text()).not.toContain('hidden')
+        })
+    })
+
+    it('pose la cloche dans le coin de la carte d’identité, sur téléphone seulement', () => {
+        const wrapper = mountProfile()
+        const cloche = wrapper.get('a[href="/routes/notifications.index"]')
+        const carte = wrapper.get('h2').element.closest('.rounded-carte')
+        const coin = cloche.element.parentElement
+
+        expect(carte.contains(cloche.element)).toBe(true)
+        expect(coin.classList.contains('bureau:hidden')).toBe(true)
+        expect(coin.classList.contains('absolute')).toBe(true)
+        expect(cloche.element.classList.contains('absolute')).toBe(false)
+    })
+
+    it('tronque le nom et l’adresse, et réserve la place de la cloche au texte', () => {
+        const wrapper = mountProfile({ name: 'Nom très long', email: 'une.adresse.tres.longue@example.org' })
+        const titre = wrapper.get('h2')
+        const adresse = wrapper.get('p.text-text-muted')
+        const texte = titre.element.parentElement
+
+        expect(titre.classes()).toContain('truncate')
+        expect(adresse.classes()).toContain('truncate')
+        expect(texte.classList.contains('min-w-0')).toBe(true)
+        expect(texte.parentElement.classList.contains('pe-14')).toBe(true)
+        expect(texte.parentElement.classList.contains('bureau:pe-0')).toBe(true)
+    })
+
+    it('sans réseau, garde l’identité, « Outils », une phrase et la déconnexion', async () => {
+        seDeconnecter.mockClear()
+        pageCourante.props = { horsLigne: { copieDu: 1, raison: 'reseau' } }
+
+        const wrapper = mountProfile()
+
+        expect(destinations(wrapper.get('nav'))).toEqual(['tools.index'])
+        expect(wrapper.findAll('nav')).toHaveLength(1)
+        expect(wrapper.get('[data-indisponible-hors-ligne] span:last-child').text()).toBe(
+            'Habitudes, journal, compléments et paramètres reviennent avec le réseau.',
+        )
+        expect(wrapper.get('h2').text()).toBe('samuel')
+        expect(wrapper.find('a[href="/routes/notifications.index"]').exists()).toBe(true)
+
+        await wrapper.get('[data-testid="logout-button"]').trigger('click')
+
+        expect(seDeconnecter).toHaveBeenCalledTimes(1)
+    })
+
+    it('en ligne, ne montre pas la phrase des pages indisponibles', () => {
+        expect(mountProfile().find('[data-indisponible-hors-ligne]').exists()).toBe(false)
     })
 })
 

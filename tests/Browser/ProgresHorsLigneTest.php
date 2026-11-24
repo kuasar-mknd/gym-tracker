@@ -88,10 +88,13 @@ class ProgresHorsLigneTest extends DuskTestCase
                 ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'les cartes de Progrès attendent encore leurs données en ligne')
                 ->assertScript(self::LES_MESURES_SONT_A_L_ECRAN, false);
 
-            // Profil, puis la bibliothèque : leurs copies, et celle de Progrès, que la page vient de recevoir.
+            // Profil, puis la bibliothèque, par la tuile de Progrès : leurs copies, et celle de Progrès, que la page vient de recevoir.
             $browser->clickWhenSettled('[dusk="nav-profile"]')
                 ->waitForLocation('/profile', 15)
-                ->clickWhenSettled('main a[href$="/exercises"]')
+                ->clickWhenSettled('[dusk="nav-stats"]')
+                ->waitForLocation('/stats', 15)
+                ->waitFor('#main-content a[href$="/exercises"]', 30)
+                ->clickWhenSettled('#main-content a[href$="/exercises"]')
                 ->waitForLocation('/exercises', 15);
 
             $magasin = $this->attendreLesCopies($browser, ['/stats', '/profile', '/exercises']);
