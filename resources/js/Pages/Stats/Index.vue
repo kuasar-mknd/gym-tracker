@@ -111,7 +111,10 @@ const handlePeriodChange = (period) => {
                 la bibliothèque.
             -->
             <template v-if="surUneCopie">
-                <IndisponibleHorsLigne texte="Tes chiffres reviennent avec le réseau." />
+                <IndisponibleHorsLigne
+                    texte="Tes chiffres reviennent avec le réseau."
+                    class="bureau:min-h-0 bureau:pe-4 min-h-[4.5rem] pe-16"
+                />
 
                 <div class="grid grid-cols-2 gap-3" dusk="tuiles-d-acces">
                     <TuileDAcces

@@ -117,6 +117,19 @@ class ProgresHorsLigneTest extends DuskTestCase
                 // Rien n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
                 $this->assertSame([], $this->messagesSansReseau($browser));
 
+                // La cloche, posée dans le coin de la première carte, ne recouvre pas la phrase et ne dépasse pas sous la carte.
+                $browser->resize(320, 844)
+                    ->assertScript(<<<'JS'
+                        (() => {
+                            const carte = document.querySelector('#main-content [data-indisponible-hors-ligne]');
+                            const texte = carte.querySelector('span').getBoundingClientRect();
+                            const cloche = document.querySelector('#main-content a[href$="/notifications"]').getBoundingClientRect();
+                            const bas = carte.getBoundingClientRect().bottom;
+                            const separes = texte.right <= cloche.left || texte.left >= cloche.right || texte.bottom <= cloche.top || texte.top >= cloche.bottom;
+                            return separes && cloche.bottom <= bas;
+                        })()
+                        JS, true);
+
                 // Aucun contrôle qui mènerait à « Hors ligne » : pas de période (`/stats?period=…` n'est jamais gardée).
                 $browser->assertScript("[...document.querySelectorAll('#main-content button')].some((b) => /^(\\d+ jours|\\d+ mois|1 an)$/.test(b.textContent.trim()))", false)
                     ->assertScript("document.querySelectorAll('#main-content [role=\"combobox\"], #main-content select').length", 0)
