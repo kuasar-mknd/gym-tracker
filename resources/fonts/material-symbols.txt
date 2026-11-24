@@ -51,7 +51,6 @@ history
 install_mobile
 inventory_2
 keyboard
-library_books
 local_cafe
 local_drink
 local_fire_department
@@ -67,7 +66,6 @@ notifications
 notifications_off
 pause
 person
-person_edit
 pie_chart
 play_arrow
 play_circle
@@ -90,7 +88,6 @@ task_alt
 timer
 timer_off
 touch_app
-tour
 trending_down
 trending_flat
 trending_up

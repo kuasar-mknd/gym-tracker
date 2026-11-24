@@ -105,7 +105,7 @@ const clocheDansLaPage = computed(() => props.titreMasque && !props.showBack)
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
 // `?` ouvre la liste des raccourcis, d'où qu'on soit — le seul moyen de la
-// découvrir sans passer par « Plus ».
+// découvrir sans passer par le Profil.
 useRaccourciClavier(
     (evenement) => evenement.key === '?',
     () => router.visit(route('shortcuts.index')),

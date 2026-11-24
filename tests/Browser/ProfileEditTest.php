@@ -42,7 +42,7 @@ class ProfileEditTest extends DuskTestCase
                 ->disableAnimations()
                 ->waitFor('#main-content', 30);
 
-            $this->assertTitreVisible($browser, 'Mon profil');
+            $this->assertTitreVisible($browser, 'Paramètres');
 
             // Verify Profile Info Section
             // Le champ d'adresse porte la nouvelle adresse (`email`) ;
