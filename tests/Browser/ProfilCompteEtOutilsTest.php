@@ -27,8 +27,6 @@ class ProfilCompteEtOutilsTest extends DuskTestCase
 {
     use ParcoursHorsLigne;
 
-    private const string LA_PAGE_NE_DEBORDE_PAS = 'document.documentElement.scrollWidth <= document.documentElement.clientWidth';
-
     /**
      * Le texte de la carte d'identité, la cloche et la déconnexion, mesurés
      * après un défilement jusqu'au bas de la page : c'est là que la
@@ -135,7 +133,7 @@ class ProfilCompteEtOutilsTest extends DuskTestCase
      */
     private function assertMesure(array $mesure, string $ou): void
     {
-        $this->assertTrue($mesure['bandeauPresent'] && $mesure['barrePresente'], "{$ou} : le bandeau « Reprendre » ou la barre d'onglets manque, la mesure ne prouve rien");
+        $this->assertTrue($mesure['bandeauPresent'] === true && $mesure['barrePresente'] === true, "{$ou} : le bandeau « Reprendre » ou la barre d'onglets manque, la mesure ne prouve rien");
         $this->assertSame(0, $mesure['debordement'], "{$ou} : la page déborde horizontalement");
         $this->assertTrue($mesure['titreLibreDeLaCloche'], "{$ou} : le nom passe sous la cloche");
         $this->assertTrue($mesure['adresseLibreDeLaCloche'], "{$ou} : l'adresse passe sous la cloche");

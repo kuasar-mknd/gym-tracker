@@ -123,7 +123,7 @@ class ProgresHorsLigneTest extends DuskTestCase
                 // La cloche, posée dans le coin de la première carte, ne recouvre pas la phrase (le dernier enfant de la carte, après l'icône) et ne dépasse pas sous la carte : à 320 px la phrase passe sous elle, à 402 px la carte est trop basse.
                 foreach ([320, 402] as $largeur) {
                     $browser->resize($largeur, 844)
-                        ->pause(400)
+                        ->waitForStableLayout()
                         ->assertScript(<<<'JS'
                             (() => {
                                 const carte = document.querySelector('#main-content [data-indisponible-hors-ligne]');
