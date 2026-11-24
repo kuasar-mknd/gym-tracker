@@ -34,7 +34,6 @@ Route::middleware('auth')->group(function (): void {
         ->name('workouts.en-attente');
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/stats', [\App\Http\Controllers\StatsController::class, 'index'])->name('stats.index');
-    Route::get('/stats/exercise/{exercise}', [\App\Http\Controllers\StatsController::class, 'exercise'])->name('stats.exercise');
 
     Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
     Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);

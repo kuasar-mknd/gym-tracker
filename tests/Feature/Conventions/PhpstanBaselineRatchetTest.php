@@ -76,7 +76,7 @@ function comptesDuBaseline(): array
  * se cachaient.
  */
 const BASELINE_BLOCS_MAX = 209;
-const BASELINE_ERREURS_MAX = 372;
+const BASELINE_ERREURS_MAX = 371;
 
 it('ne laisse pas grossir le nombre d’entrées du baseline', function (): void {
     $comptes = comptesDuBaseline();

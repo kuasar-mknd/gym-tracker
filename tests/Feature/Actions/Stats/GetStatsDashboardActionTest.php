@@ -64,13 +64,12 @@ it('ne rend aucune prop de pesée et ne lit pas le cache des mesures', function 
 
     $props = app(GetStatsDashboardAction::class)->execute($user, Request::create('/stats', 'GET', ['period' => '7j']));
 
-    expect(array_keys($props))->toBe(['exercises', 'selectedPeriod', 'deferredData'])
+    expect(array_keys($props))->toBe(['selectedPeriod', 'deferredData'])
         ->and($props['selectedPeriod'])->toBe('7j');
 
-    $props['exercises']();
     $differees = $props['deferredData']();
 
-    expect(array_keys($differees))->toBe(['performance', 'volumeMensuel', 'regularite'])
+    expect(array_keys($differees))->toBe(['aucuneSeanceFaite', 'performance', 'volumeMensuel', 'regularite'])
         ->and($lectures)->toBe(0);
 });
 
@@ -110,4 +109,59 @@ it('sert le volume des six derniers mois et la régularité, quelle que soit la 
             ->and($differees['regularite']['monthly_frequency']->pluck('count')->all())->toBe([0, 0, 0, 1, 0, 1])
             ->and($differees['regularite']['day_of_week_frequency']->sum('count'))->toBe(2);
     }
+});
+
+/*
+ * Le signal du compte neuf est un vrai booléen, lu sur `User::seancesFaites()` :
+ * ni la somme des fréquences mensuelles (qui ne couvre que six mois : un
+ * historique plus ancien passerait pour un compte neuf), ni la simple
+ * existence d'une séance (une séance close sans série de travail cochée, ou
+ * encore ouverte, n'est pas faite).
+ */
+it('dit qu’aucune séance n’est faite pour un compte sans séance', function (): void {
+    $differees = app(GetStatsDashboardAction::class)
+        ->execute(User::factory()->create(), Request::create('/stats'))['deferredData']();
+
+    expect($differees['aucuneSeanceFaite'])->toBeTrue();
+});
+
+it('ne prend pas pour faite une séance ouverte ni une séance close sans série cochée', function (): void {
+    $user = User::factory()->create();
+
+    Workout::withoutEvents(function () use ($user): void {
+        Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subHour(), 'ended_at' => null]);
+        Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDay(), 'ended_at' => now()->subDay()->addHour()]);
+    });
+
+    $differees = app(GetStatsDashboardAction::class)->execute($user, Request::create('/stats'))['deferredData']();
+
+    expect($differees['aucuneSeanceFaite'])->toBeTrue();
+});
+
+it('dit qu’une séance est faite, même si elle date de plus de six mois', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-06-17 12:00:00'));
+    $user = User::factory()->create();
+
+    Workout::withoutEvents(function () use ($user): void {
+        Workout::factory()->faite()->create([
+            'user_id' => $user->id,
+            'started_at' => Carbon::parse('2025-01-06 10:00:00'),
+            'ended_at' => Carbon::parse('2025-01-06 11:00:00'),
+        ]);
+    });
+
+    $differees = app(GetStatsDashboardAction::class)->execute($user, Request::create('/stats'))['deferredData']();
+
+    expect($differees['aucuneSeanceFaite'])->toBeFalse()
+        ->and(array_sum($differees['regularite']['monthly_frequency']->pluck('count')->all()))->toBe(0);
+});
+
+it('ne lit que les séances du compte demandé', function (): void {
+    $autre = User::factory()->create();
+    Workout::withoutEvents(fn () => Workout::factory()->faite()->create(['user_id' => $autre->id]));
+
+    $differees = app(GetStatsDashboardAction::class)
+        ->execute(User::factory()->create(), Request::create('/stats'))['deferredData']();
+
+    expect($differees['aucuneSeanceFaite'])->toBeTrue();
 });

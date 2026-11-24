@@ -19,7 +19,7 @@ import { PAGES_GARDEES, PROPS_JAMAIS_GARDEES, propJamaisGardee } from '@/Utils/p
  * fermée plutôt qu'un motif.
  */
 
-const PROPS_QUE_LA_COPIE_GARDE = ['exercises', 'selectedPeriod']
+const PROPS_QUE_LA_COPIE_GARDE = ['selectedPeriod']
 
 const propsDeclareesParLaPage = () => {
     const source = readFileSync(join(jsRoot, 'Pages', 'Stats', 'Index.vue'), 'utf8')
@@ -39,7 +39,7 @@ describe('la racine de Progrès gardée hors ligne', () => {
     })
 
     it('ne déclare plus la pesée, la variation ni la masse grasse, passées sur la page Corps (lot 4b)', () => {
-        expect(propsDeclareesParLaPage().sort()).toEqual(['deferredData', 'exercises', 'selectedPeriod'])
+        expect(propsDeclareesParLaPage().sort()).toEqual(['deferredData', 'selectedPeriod'])
     })
 
     it('ne monte aucune carte de poids ni de masse grasse', () => {

@@ -467,18 +467,22 @@ describe('Stats/Index', () => {
     const cards = {
         MonthlyVolumeCard: recording('MonthlyVolumeCard', ['monthlyComparison']),
         VolumeTrendCard: recording('VolumeTrendCard', ['volumeTrend', 'currentPeriod']),
+        MuscleDistributionCard: recording('MuscleDistributionCard', ['muscleDistribution']),
+        DurationHistoryCard: recording('DurationHistoryCard', ['durationHistory']),
+        RegulariteCard: recording('RegulariteCard', ['regularite']),
     }
 
-    const mountStats = (props = {}) =>
+    const mountStats = (props = {}, provide = {}) =>
         mount(StatsIndex, {
-            props: { exercises: [], ...props },
+            props,
             global: {
+                provide,
                 directives: { press: {} },
                 mocks: {
                     route: globalThis.route,
                     $page: { props: { auth: { user: { unread_notifications_count: 0 } } } },
                 },
-                stubs: { AuthenticatedLayout: layoutStub, ...cards },
+                stubs: { AuthenticatedLayout: layoutAvecSeance, ...cards },
             },
         })
 
@@ -567,40 +571,42 @@ describe('Stats/Index', () => {
         })
 
         it('dit une seule fois que les mesures reviennent avec le réseau, sans carte', () => {
-            const wrapper = mountStats({ exercises: [{ id: 1, name: 'Squat' }], selectedPeriod: '30j' })
+            const wrapper = mountStats({ selectedPeriod: '30j' })
 
             expect(wrapper.findAll('[data-indisponible-hors-ligne]')).toHaveLength(1)
             expect(wrapper.get('[data-indisponible-hors-ligne]').text()).toContain(
-                'Les mesures reviennent avec le réseau.',
+                'Tes chiffres reviennent avec le réseau.',
             )
             expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(false)
             expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).exists()).toBe(false)
-            expect(wrapper.findComponent({ name: 'SummaryStatsGrid' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'RegulariteCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(false)
         })
 
-        it('ne propose ni période ni courbe d’exercice, qui mèneraient à « Hors ligne »', () => {
-            const wrapper = mountStats({ exercises: [{ id: 1, name: 'Squat' }], selectedPeriod: '30j' })
+        it('ne propose pas de période, qui mènerait à « Hors ligne »', () => {
+            const wrapper = mountStats({ selectedPeriod: '30j' })
 
             expect(wrapper.findAll('button').filter((bouton) => bouton.text().includes('JOURS'))).toEqual([])
             expect(wrapper.findComponent({ name: 'GlassSegmented' }).exists()).toBe(false)
-            expect(wrapper.findComponent({ name: 'ExerciseProgressCard' }).exists()).toBe(false)
             expect(routerVisit).not.toHaveBeenCalled()
         })
 
-        it('laisse la bibliothèque, qui s’ouvre sans réseau', () => {
-            const wrapper = mountStats({ exercises: [], selectedPeriod: '30j' })
+        it('laisse la seule tuile qui s’ouvre sans réseau : Exercices, vers la bibliothèque', () => {
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+            const tuiles = wrapper.findAll('[dusk="tuiles-d-acces"] a')
 
-            expect(wrapper.get('a:not([href="/notifications.index"])').attributes('href')).toBe('/exercises.index')
+            expect(tuiles.map((lien) => lien.attributes('href'))).toEqual(['/exercises.index'])
+            expect(tuiles[0].get('.titre-plat').text()).toBe('Exercices')
         })
 
         it('ne propose pas Corps, dont les mesures ne sont pas gardées', () => {
-            const wrapper = mountStats({ exercises: [], selectedPeriod: '30j' })
+            const wrapper = mountStats({ selectedPeriod: '30j' })
 
             expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).not.toContain('/corps.index')
         })
 
         it('ne propose pas Records, qui demande le réseau', () => {
-            const wrapper = mountStats({ exercises: [], selectedPeriod: '30j' })
+            const wrapper = mountStats({ selectedPeriod: '30j' })
 
             expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).not.toContain('/records.index')
             expect(wrapper.text()).not.toContain('Charge max')
@@ -616,11 +622,57 @@ describe('Stats/Index', () => {
         })
     })
 
-    it('mène à Corps, où le poids, la masse grasse et les mensurations ont été rangés', () => {
-        const wrapper = mountStats()
+    describe('les tuiles d’accès', () => {
+        const tuiles = (wrapper) => wrapper.findAll('[dusk="tuiles-d-acces"] a')
 
-        expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).toContain('/corps.index')
-        expect(wrapper.text()).toContain('Poids, masse grasse, mensurations')
+        it('viennent dans l’ordre Records, Exercices, Corps, Objectifs, Badges, chacune vers sa page', () => {
+            const wrapper = mountStats()
+
+            expect(tuiles(wrapper).map((lien) => [lien.get('.titre-plat').text(), lien.attributes('href')])).toEqual([
+                ['Records', '/records.index'],
+                ['Exercices', '/exercises.index'],
+                ['Corps', '/corps.index'],
+                ['Objectifs', '/goals.index'],
+                ['Badges', '/achievements.index'],
+            ])
+            expect(tuiles(wrapper).map((lien) => lien.get('.material-symbols-outlined').text())).toEqual([
+                'emoji_events',
+                'fitness_center',
+                'accessibility_new',
+                'flag',
+                'military_tech',
+            ])
+        })
+
+        it('mettent Records pleine largeur et les autres deux par ligne, sans chiffre ni donnée', () => {
+            const wrapper = mountStats({
+                deferredData: { performance: { monthlyComparison: { current_volume: 5000 } } },
+            })
+            const liens = tuiles(wrapper)
+
+            expect(liens[0].classes()).toContain('col-span-2')
+            liens.slice(1).forEach((lien) => expect(lien.classes()).not.toContain('col-span-2'))
+            expect(wrapper.get('[dusk="tuiles-d-acces"]').classes()).toContain('grid-cols-2')
+            liens.forEach((lien) => expect(lien.text()).not.toMatch(/\d/))
+        })
+
+        it('tiennent au moins 44 pt de haut', () => {
+            const wrapper = mountStats()
+
+            tuiles(wrapper).forEach((lien) => expect(lien.get('.min-h-22').exists()).toBe(true))
+        })
+
+        it('viennent sous le héros, avant la régularité et la période', () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: false } })
+            const apres = (premier, second) =>
+                Boolean(premier.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+            const heros = wrapper.findComponent({ name: 'MonthlyVolumeCard' }).element
+            const nav = wrapper.get('[dusk="tuiles-d-acces"]').element
+
+            expect(apres(heros, nav)).toBe(true)
+            expect(apres(nav, wrapper.findComponent({ name: 'RegulariteCard' }).element)).toBe(true)
+            expect(apres(nav, wrapper.get('section').element)).toBe(true)
+        })
     })
 
     it('mène à Records, avant Corps', () => {
@@ -629,7 +681,85 @@ describe('Stats/Index', () => {
 
         expect(liens).toContain('/records.index')
         expect(liens.indexOf('/records.index')).toBeLessThan(liens.indexOf('/corps.index'))
-        expect(wrapper.text()).toContain('Charge max, 1RM estimé, meilleur volume')
+    })
+
+    it('ne montre plus les quatre tuiles de chiffres ni la courbe d’un exercice', () => {
+        const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: false, performance: {} } })
+
+        expect(wrapper.findComponent({ name: 'SummaryStatsGrid' }).exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('vs mois')
+    })
+
+    it('rassemble le choix de période et ses deux seules cartes sous « Sur la période », avant la durée', () => {
+        const wrapper = mountStats({ selectedPeriod: '90j', deferredData: { aucuneSeanceFaite: false } })
+        const section = wrapper.get('section')
+
+        expect(section.get('h2').text()).toBe('Sur la période')
+        expect(section.findAllComponents({ name: 'GlassSegmented' })).toHaveLength(1)
+        expect(section.findComponent({ name: 'VolumeTrendCard' }).props('currentPeriod')).toBe('90j')
+        expect(section.findComponent({ name: 'MuscleDistributionCard' }).exists()).toBe(true)
+        expect(section.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(false)
+        expect(wrapper.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(true)
+        expect(wrapper.findComponent({ name: 'RegulariteCard' }).exists()).toBe(true)
+    })
+
+    describe('un compte neuf', () => {
+        it('montre un seul état vide à la place du héros, de la régularité, de la période et de la durée', () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: true } })
+
+            expect(wrapper.text()).toContain('Pas encore de séance')
+            expect(wrapper.text()).toContain('Tes chiffres apparaissent après la première.')
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'RegulariteCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'MuscleDistributionCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'GlassSegmented' }).exists()).toBe(false)
+        })
+
+        it('garde les tuiles d’accès', () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: true } })
+
+            expect(wrapper.findAll('[dusk="tuiles-d-acces"] a')).toHaveLength(5)
+        })
+
+        it('démarre une séance par le démarrage commun', async () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: true } })
+
+            await wrapper.get('[dusk="start-workout-button"]').trigger('click')
+
+            expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+        })
+
+        it('ne propose pas de démarrer quand une séance est déjà ouverte, et garde son texte', () => {
+            const wrapper = mountStats(
+                { deferredData: { aucuneSeanceFaite: true } },
+                { [CLE_DE_LA_SEANCE_EN_COURS]: ref({ id: 3, cle: 'abc' }) },
+            )
+
+            expect(wrapper.text()).toContain('Pas encore de séance')
+            expect(wrapper.text()).toContain('Tes chiffres apparaissent après la première.')
+            expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
+        })
+
+        it('ne se décide que sur le booléen du serveur, jamais sur une série mensuelle vide', () => {
+            const wrapper = mountStats({
+                deferredData: {
+                    aucuneSeanceFaite: false,
+                    regularite: { monthly_frequency: [{ month: '2026-05', count: 0 }] },
+                },
+            })
+
+            expect(wrapper.text()).not.toContain('Pas encore de séance')
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(true)
+        })
+
+        it('ne s’affiche pas tant que la prop différée n’est pas arrivée', () => {
+            const wrapper = mountStats()
+
+            expect(wrapper.text()).not.toContain('Pas encore de séance')
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(true)
+        })
     })
 
     it('ne monte aucune carte de poids ni de masse grasse', () => {

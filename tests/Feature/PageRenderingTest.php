@@ -142,7 +142,7 @@ test('stats page renders without cache errors', function (): void {
                     ->has('deferredData.performance.volumeTrend')
                     ->missing('deferredData.body')
                 )
-                ->has('exercises')
+                ->missing('exercises')
         );
 });
 

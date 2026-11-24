@@ -197,7 +197,7 @@ it('ne donne plus de prop de mesure à l’accueil, que son contrat compte parmi
  */
 function propsQueLaCopieDeProgresGarde(): array
 {
-    return ['auth', 'errors', 'exercises', 'flash', 'is_local', 'is_testing', 'pending_migrations', 'selectedPeriod', 'social_login_enabled', 'vapidPublicKey'];
+    return ['auth', 'errors', 'flash', 'is_local', 'is_testing', 'pending_migrations', 'selectedPeriod', 'social_login_enabled', 'vapidPublicKey'];
 }
 
 it('ne garde de la racine de Progrès que des props classées : ni poids, ni masse grasse, ni mensuration, ni objectif', function (): void {

@@ -1,119 +1,12 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
 
 /**
- * Three defects found by auditing the interface rather than by writing tests,
+ * Two defects found by auditing the interface rather than by writing tests,
  * each pinned here so the fix cannot quietly come undone.
  */
-const get = vi.fn()
-
-vi.mock('@/Utils/http', () => ({ http: { get: (...args) => get(...args) } }))
-vi.mock('@/Components/Stats/OneRepMaxChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'OneRepMaxChart', props: ['data'], template: '<div />' },
-}))
-
-import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
-
-beforeAll(() => {
-    globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
-})
-
-beforeEach(() => {
-    vi.clearAllMocks()
-})
-
-/** A promise whose settling this test controls. */
-const deferred = () => {
-    let resolve
-    let reject
-    const promise = new Promise((res, rej) => {
-        resolve = res
-        reject = rej
-    })
-
-    return { promise, resolve, reject }
-}
-
-describe('the 1RM progress card', () => {
-    const EXERCISES = [
-        { id: 1, name: 'Développé couché' },
-        { id: 2, name: 'Squat' },
-    ]
-
-    const mountCard = () =>
-        mount(ExerciseProgressCard, {
-            props: { exercises: EXERCISES },
-            global: {
-                mocks: { route: globalThis.route },
-                stubs: {
-                    GlassCard: { template: '<div><slot /></div>' },
-                    /*
-                     * `options` est declare, sinon il retombe en ATTRIBUT sur le
-                     * `<select>` natif — ou `options` est une collection en
-                     * lecture seule. Vue avertit alors « Failed setting prop
-                     * "options" », et cet avertissement, emis apres la fin du
-                     * fichier de test, fait sortir Vitest en erreur (voir
-                     * vitest.setup.js).
-                     */
-                    GlassSelect: { props: ['modelValue', 'options'], template: '<select />' },
-                },
-            },
-        })
-
-    it('ignores an answer about an exercise the user has already left', async () => {
-        const first = deferred()
-        const second = deferred()
-        get.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
-
-        const wrapper = mountCard()
-
-        wrapper.vm.selectedExercise = 1
-        await flushPromises()
-        wrapper.vm.selectedExercise = 2
-        await flushPromises()
-
-        // The newer request answers first, the older one after it. Applied in
-        // arrival order, the chart would carry exercise 1's curve under
-        // exercise 2's name — wrong numbers, presented confidently.
-        second.resolve({ data: { progress: [{ date: '01/02', value: 100 }] } })
-        await flushPromises()
-        first.resolve({ data: { progress: [{ date: '01/01', value: 42 }] } })
-        await flushPromises()
-
-        expect(wrapper.vm.exerciseProgressData).toEqual([{ date: '01/02', value: 100 }])
-
-        wrapper.unmount()
-    })
-
-    it('does not report a stale failure against the exercise now shown', async () => {
-        const first = deferred()
-        const second = deferred()
-        get.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
-
-        const wrapper = mountCard()
-
-        wrapper.vm.selectedExercise = 1
-        await flushPromises()
-        wrapper.vm.selectedExercise = 2
-        await flushPromises()
-
-        second.resolve({ data: { progress: [{ date: '01/02', value: 100 }] } })
-        await flushPromises()
-        first.reject(new Error('réseau'))
-        await flushPromises()
-
-        // The overtaken request failed, but its exercise is no longer on
-        // screen. Showing "impossible de charger" over a chart that loaded
-        // fine would be a lie about the one being displayed.
-        expect(wrapper.vm.loadFailed).toBe(false)
-        expect(wrapper.vm.loadingExercise).toBe(false)
-
-        wrapper.unmount()
-    })
-})
 
 describe('a row that swipes', () => {
     const mountRow = () =>

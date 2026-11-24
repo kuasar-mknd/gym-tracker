@@ -42,7 +42,6 @@ const graphique = (nom) => ({
 vi.mock('@/Components/Stats/VolumeTrendChart.vue', () => graphique('VolumeTrendChart'))
 vi.mock('@/Components/Stats/DurationHistoryChart.vue', () => graphique('DurationHistoryChart'))
 vi.mock('@/Components/Stats/MuscleDistributionChart.vue', () => graphique('MuscleDistributionChart'))
-vi.mock('@/Components/Stats/OneRepMaxChart.vue', () => graphique('OneRepMaxChart'))
 
 /** Les erreurs que Vue a relevées, rendu compris. */
 const erreurs = []
@@ -110,7 +109,6 @@ const statistiques = (periode) => ({
     version: 'v',
     props: {
         ...partage(),
-        exercises: [{ id: 1, name: `Exercice ${periode}`, category: 'Pectoraux' }],
         selectedPeriod: periode,
     },
     deferredProps: { default: ['deferredData'] },
@@ -118,6 +116,7 @@ const statistiques = (periode) => ({
 
 /** Les props différées d'une période : chaque graphique y a ses propres points. */
 const donneesDifferees = (periode) => ({
+    aucuneSeanceFaite: false,
     performance: {
         volumeTrend: [{ date: periode, volume: periode === '7j' ? 700 : 3000 }],
         durationHistory: [{ date: periode, duration: 45 }],
@@ -187,8 +186,11 @@ const enTeteDuCalendrier = () => textes('[dusk="calendar-heading"]').map((texte)
 const donneesDuGraphique = (nom) =>
     [...document.querySelectorAll(`[data-graphique="${nom}"]`)].map((noeud) => JSON.parse(noeud.textContent))
 
-/** Les exercices que la carte de progression propose : la valeur immédiate de la période. */
-const exercicesProposes = () => document.body.textContent.match(/Exercice \d+[ja]/g) ?? []
+/** La période que le sélecteur montre : la valeur immédiate, qui ne dépend d'aucune prop différée. */
+const periodeMontree = () =>
+    [...document.querySelectorAll('[role="group"][aria-label="Période"] button[aria-pressed="true"]')].map((bouton) =>
+        bouton.textContent.trim(),
+    )
 
 const boutonDePeriode = (libelle) =>
     [...document.querySelectorAll('[role="group"][aria-label="Période"] button')].find(
@@ -278,7 +280,7 @@ describe('la période des statistiques', () => {
         await ouvrir(trenteJours)
         await servirSansImage(await requeteSuivante(), reponseDifferee(trenteJours, '30j'))
 
-        expect(exercicesProposes()).toEqual(['Exercice 30j'])
+        expect(periodeMontree()).toEqual(['30 jours'])
         expect(donneesDuGraphique('VolumeTrendChart')).toEqual([donneesDifferees('30j').performance.volumeTrend])
 
         boutonDePeriode('7 jours').click()
@@ -291,7 +293,7 @@ describe('la période des statistiques', () => {
         await servirSansImage(visite, reponseInertia(septJours))
 
         // La valeur immédiate de la nouvelle période, dès sa réponse ; les graphiques attendent leurs props.
-        expect(exercicesProposes()).toEqual(['Exercice 7j'])
+        expect(periodeMontree()).toEqual(['7 jours'])
         expect(donneesDuGraphique('VolumeTrendChart')).toEqual([])
 
         await servirSansImage(await requeteSuivante(), reponseDifferee(septJours, '7j'))
