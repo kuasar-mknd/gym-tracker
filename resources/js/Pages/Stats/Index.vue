@@ -90,20 +90,18 @@ const handlePeriodChange = (period) => {
         titre-dans-la-page
         titre-masque
     >
-        <div class="space-y-6">
-            <header class="animate-fade-in flex items-center gap-3 sm:items-start sm:justify-between">
-                <!--
-                    Le titre du bureau. Sur téléphone, c'est la barre collante de
-                    la mise en page qui le porte, et l'afficher ici aussi le
-                    dirait deux fois — en plus de mettre deux `<h1>` dans une
-                    même page.
-                -->
-                <div class="bureau:block hidden">
-                    <h1 class="titre-ecran">Progrès</h1>
-                </div>
-
-                <Cloche class="bureau:hidden ms-auto" />
+        <div class="relative flex flex-col gap-6">
+            <!--
+                Le titre du bureau. Sur téléphone, c'est la barre collante de la
+                mise en page qui le porte (masqué ici), et la cloche se pose dans
+                le coin de la première carte, comme sur l'Accueil et le Profil :
+                une rangée qui ne porterait qu'elle resterait vide.
+            -->
+            <header class="animate-fade-in bureau:block hidden">
+                <h1 class="titre-ecran">Progrès</h1>
             </header>
+
+            <div class="bureau:hidden absolute top-3 right-3 z-10"><Cloche /></div>
 
             <!--
                 Sur une copie hors ligne, aucune carte n'a de quoi se remplir : ni
