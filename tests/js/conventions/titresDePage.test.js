@@ -273,24 +273,27 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
     })
 
     /*
-     * L'Accueil et le Profil ne montrent pas leur titre : une salutation, une
-     * carte d'identité en tient lieu, et le layout garde un `<h1>` masqué.
+     * Les quatre racines (Accueil, Séances, Progrès, Profil) ne montrent pas leur
+     * titre sur téléphone : une salutation, une carte d'identité ou un titre de
+     * bureau en tient lieu, et le layout garde un `<h1>` masqué.
      * Retirer `titre-masque` rend le titre visible sans qu'aucun autre test ne tombe.
      */
-    it.each(['resources/js/Pages/Dashboard.vue', 'resources/js/Pages/Profile/Index.vue'])(
-        'masque le titre visible de %s sans retirer son h1',
-        (chemin) => {
-            const { elements } = elementsDuGabarit(gabarit(readFileSync(`${jsRoot}/../../${chemin}`, 'utf8')))
-            const layout = elements.find(({ nom }) => nom === 'AuthenticatedLayout')
+    it.each([
+        'resources/js/Pages/Dashboard.vue',
+        'resources/js/Pages/Workouts/Index.vue',
+        'resources/js/Pages/Stats/Index.vue',
+        'resources/js/Pages/Profile/Index.vue',
+    ])('masque le titre visible de %s sans retirer son h1', (chemin) => {
+        const { elements } = elementsDuGabarit(gabarit(readFileSync(`${jsRoot}/../../${chemin}`, 'utf8')))
+        const layout = elements.find(({ nom }) => nom === 'AuthenticatedLayout')
 
-            expect(layout.attributs).toMatch(/(?:^|\s)titre-masque(?:\s|$)/)
-            expect(layout.attributs).toMatch(/(?:^|\s)page-title="[^"]*\S[^"]*"/)
-            expect(titresDeLaPage(readFileSync(`${jsRoot}/../../${chemin}`, 'utf8'))).toEqual({
-                telephone: 1,
-                bureau: 1,
-            })
-        },
-    )
+        expect(layout.attributs).toMatch(/(?:^|\s)titre-masque(?:\s|$)/)
+        expect(layout.attributs).toMatch(/(?:^|\s)page-title="[^"]*\S[^"]*"/)
+        expect(titresDeLaPage(readFileSync(`${jsRoot}/../../${chemin}`, 'utf8'))).toEqual({
+            telephone: 1,
+            bureau: 1,
+        })
+    })
 
     it('tient pour composant tout fichier qui n’est ni un layout ni une page', () => {
         const page = '<template><AuthenticatedLayout page-title="Profil"><h1 /></AuthenticatedLayout></template>'
@@ -310,13 +313,13 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
 
         // Les défauts de #2120 : un en-tête de bureau titré en h2, une page sans titre de bureau.
         expect(
-            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h2>Mes Séances</h2></template><p />')),
+            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h2>Séances</h2></template><p />')),
         ).toEqual({
             telephone: 1,
             bureau: 0,
         })
         expect(
-            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h1>Mes Séances</h1></template><p />')),
+            titresDeLaPage(pageDe('page-title="Séances"', '<template #header><h1>Séances</h1></template><p />')),
         ).toEqual({
             telephone: 1,
             bureau: 1,
@@ -345,7 +348,7 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
         })
         // Les calculateurs : un retour sans titre dans l'en-tête mobile, leur titre à toute largeur.
         expect(
-            titresDeLaPage(pageDe('show-back back-route="tools.index"', '<header><h1>Calculatrice 1RM</h1></header>')),
+            titresDeLaPage(pageDe('show-back back-route="tools.index"', '<header><h1>Calculateur 1RM</h1></header>')),
         ).toEqual({
             telephone: 1,
             bureau: 1,

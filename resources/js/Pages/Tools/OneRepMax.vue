@@ -1,12 +1,11 @@
 <template>
-    <Head title="Calculatrice 1RM" />
+    <Head title="Calculateur 1RM" />
 
     <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1 class="titre-ecran">Calculatrice 1RM</h1>
-                <p class="etiquette mt-2">Estime ton maximum sur une répétition</p>
+                <h1 class="titre-ecran">Calculateur 1RM</h1>
             </header>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -113,6 +112,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { Head } from '@inertiajs/vue3'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'

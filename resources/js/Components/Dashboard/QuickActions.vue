@@ -6,7 +6,7 @@ import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 
 const props = defineProps({
     processing: { type: Boolean, default: false },
-    /** Un compte neuf démarre par le bouton de son état vide : ici ne reste que « Mes modèles ». */
+    /** Un compte neuf démarre par le bouton de son état vide : ici ne reste que « Modèles ». */
     sansDemarrage: { type: Boolean, default: false },
 })
 
@@ -54,7 +54,7 @@ const demarrageEstPropose = computed(() => !props.sansDemarrage && (seanceEnCour
             <span class="bg-text-main/10 rounded-icone flex size-10 items-center justify-center">
                 <GlassIcon name="assignment_add" size="lg" />
             </span>
-            Mes modèles
+            Modèles
         </Link>
     </section>
 </template>

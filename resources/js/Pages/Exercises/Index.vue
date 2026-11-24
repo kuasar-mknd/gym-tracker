@@ -185,13 +185,13 @@ const typeLabel = (type) => {
 </script>
 
 <template>
-    <Head title="Bibliothèque" />
+    <Head title="Exercices" />
 
     <AuthenticatedLayout
         show-back
         back-route="stats.index"
         liquid-variant="subtle"
-        page-title="Bibliothèque"
+        page-title="Exercices"
         titre-dans-la-page
     >
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
@@ -199,7 +199,7 @@ const typeLabel = (type) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="titre-ecran bureau:block hidden">Bibliothèque</h1>
+                    <h1 class="titre-ecran bureau:block hidden">Exercices</h1>
                     <p class="etiquette mt-2">
                         {{ compte(exercises.length, 'exercice disponible', 'exercices disponibles') }}
                     </p>
@@ -350,7 +350,7 @@ const typeLabel = (type) => {
             Le « + » de la barre collante. Il vivait dans le corps de la page,
             en `sm:hidden`, à côté de son jumeau de bureau — donc sous
             l'en-tête plutôt que dedans, et pas au même endroit que celui de
-            « Mes Séances » ou de « Mes Modèles ».
+            « Séances » ou de « Modèles ».
         -->
         <template #header-actions>
             <GlassButton

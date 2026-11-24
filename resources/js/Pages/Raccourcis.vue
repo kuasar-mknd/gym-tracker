@@ -24,7 +24,7 @@ const groupes = [
         raccourcis: [{ touches: ['?'], quoi: 'Ouvrir cette page' }],
     },
     {
-        titre: 'Bibliothèque d’exercices',
+        titre: 'Exercices',
         raccourcis: [
             { touches: ['CMD', 'K'], quoi: 'Aller au champ de recherche' },
             { touches: ['Échap'], quoi: 'Vider la recherche' },
@@ -40,7 +40,7 @@ const groupes = [
 <template>
     <Head title="Raccourcis clavier" />
 
-    <AuthenticatedLayout page-title="Raccourcis" show-back back-route="profile.index" largeur="etroite">
+    <AuthenticatedLayout page-title="Raccourcis clavier" show-back back-route="profile.index" largeur="etroite">
         <div class="space-y-6">
             <p class="text-text-muted text-sm font-medium">
                 Les raccourcis n'agissent jamais pendant que tu écris dans un champ.

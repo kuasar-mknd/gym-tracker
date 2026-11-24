@@ -72,8 +72,8 @@ export const exposeA = (element, largeur) => {
 }
 
 /**
- * Le texte d'un titre, un `<br>` comptant pour une espace : « Calculatrice<br />1RM »
- * se lit « Calculatrice 1RM », pas « Calculatrice1RM ».
+ * Le texte d'un titre, un `<br>` comptant pour une espace : « Calculateur<br />1RM »
+ * se lit « Calculateur 1RM », pas « Calculateur1RM ».
  *
  * @param {Element} titre
  * @returns {string}

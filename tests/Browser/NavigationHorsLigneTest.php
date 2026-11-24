@@ -126,7 +126,7 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 // La flèche de l'en-tête, un lien d'Inertia vers les séances, ouvre leur copie.
                 $browser->clickWhenSettled('header a[aria-label="Retour"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes séances');
+                $this->attendreLaCopie($browser, '/workouts', 'Séances');
                 // La séance en cours est dans la copie, que la liste lit entière : rien n'y est différé.
                 $browser->waitForText($jetons['seance'], 15, true)
                     ->waitUntil(self::LA_LISTE_DES_SEANCES_EST_ENTIERE, 15, 'la copie des séances dit qu’une partie lui manque');
@@ -139,7 +139,7 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 // Depuis la séance : Séances, Accueil, Profil, Outils, puis le minuteur d'intervalles.
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes séances');
+                $this->attendreLaCopie($browser, '/workouts', 'Séances');
 
                 // Une séance est en cours : l'Accueil n'en propose pas une seconde (#2434), et la bannière qui reprend la première reste ouverte sur une copie.
                 $browser->clickWhenSettled('[dusk="nav-dashboard"]');
@@ -156,11 +156,11 @@ class NavigationHorsLigneTest extends DuskTestCase
                 $this->attendreLaCopie($browser, '/tools', 'Outils');
 
                 $browser->clickWhenSettled('main a[href$="/tools/interval-timer"]');
-                $this->attendreLaCopie($browser, '/tools/interval-timer', 'Minuteur');
+                $this->attendreLaCopie($browser, '/tools/interval-timer', 'Minuteur d\'intervalle');
 
                 // Puis les séances de nouveau : c'est la copie que le réseau retrouvera.
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes séances');
+                $this->attendreLaCopie($browser, '/workouts', 'Séances');
                 $browser->waitUntil(self::LA_LISTE_DES_SEANCES_EST_ENTIERE, 15, 'la copie des séances dit qu’une partie lui manque');
 
                 // Rien d'autre n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
@@ -173,7 +173,7 @@ class NavigationHorsLigneTest extends DuskTestCase
              */
             $browser->waitUntilMissing('[dusk="bandeau-hors-ligne"]', 90)
                 ->assertPathIs('/workouts')
-                ->assertScript($this->texteDe('header h1'), 'Mes séances')
+                ->assertScript($this->texteDe('header h1'), 'Séances')
                 ->waitUntil(self::LA_LISTE_DES_SEANCES_EST_ENTIERE, 30, 'la liste des séances a disparu au retour du réseau');
         });
     }
