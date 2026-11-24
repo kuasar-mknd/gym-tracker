@@ -44,6 +44,7 @@ const NOMS = Object.freeze({
     'Workouts/Index': 'Séances',
     'Workouts/Templates/Index': 'Modèles',
     'Exercises/Index': 'Exercices',
+    'Stats/Index': 'Progrès',
     'Profile/Index': 'Profil',
     'Tools/Index': 'Outils',
     'Tools/IntervalTimer': "Minuteur d'intervalle",

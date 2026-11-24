@@ -21,6 +21,7 @@ vi.mock('@/Utils/messagesDuWorker', () => ({ attendreLaReponse }))
 
 import HorsLigne from '@/Pages/HorsLigne.vue'
 import { dateAvecJour, heureCourte } from '@/Utils/date'
+import { PAGES_GARDEES } from '@/Utils/pagesGardees'
 import { passesSlot } from './pageStubs'
 
 /*
@@ -56,6 +57,27 @@ const monter = (raison) => {
 }
 
 describe('la page HorsLigne', () => {
+    it('nomme chaque page gardée, sans jamais afficher le nom brut de son composant', () => {
+        page.props = reactive({ horsLigne: { copieDu: COPIE_DU, raison: 'reseau', datesDesProps: {} } })
+        const pagesSansReseau = PAGES_GARDEES.map(({ composant, chemin }) => ({
+            chemin,
+            composant,
+            copieDu: COPIE_DU,
+            enCours: false,
+        }))
+        const wrapper = mount(HorsLigne, {
+            props: { pagesSansReseau },
+            global: { stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot } },
+        })
+        const noms = wrapper.findAll('[dusk="page-sans-reseau"] span:first-child').map((nom) => nom.text())
+
+        expect(noms).toHaveLength(PAGES_GARDEES.length)
+        for (const { composant } of PAGES_GARDEES) {
+            expect(noms, composant).not.toContain(composant)
+        }
+        expect(noms).toContain('Progrès')
+    })
+
     it('dit que la page n’est pas disponible, et liste ce qui s’ouvre sans réseau, nommé et daté', () => {
         const wrapper = monter('reseau')
         const date = new Date(COPIE_DU)
