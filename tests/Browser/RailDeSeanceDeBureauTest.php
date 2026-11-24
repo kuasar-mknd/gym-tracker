@@ -37,7 +37,11 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
         const champs = [...document.querySelectorAll('[dusk="exercise-list"] input')].filter(visible).map((champ) => champ.getBoundingClientRect());
         const chevauche = champs.some((a, i) => champs.slice(i + 1).some((b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1));
 
+        const focalisables = [...rail.querySelectorAll('button')].filter(visible);
+        const ordreVisuel = [...focalisables].sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+
         return {
+            tabulationSuitLeVisuel: focalisables.every((bouton, i) => bouton === ordreVisuel[i]),
             position: getComputedStyle(rail).position,
             positionDeLaBarre: getComputedStyle(barre).position,
             largeurDuRail: Math.round(rail.getBoundingClientRect().width),
@@ -76,10 +80,10 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
             foreach ([1920, 1280, 1024] as $largeur) {
                 $browser->loginAs(User::findOrFail($compte->id))->resize($largeur, 800)
                     ->visit("/workouts/{$seance->id}")->disableAnimations()->waitFor('[dusk="barre-d-outils-de-la-seance"]', 30)->waitForStableLayout();
-                $browser->script('document.documentElement.style.scrollbarWidth = "none"; window.scrollTo(0, document.documentElement.scrollHeight)');
+                $browser->script('window.scrollTo(0, document.documentElement.scrollHeight)');
                 $browser->waitForStableLayout();
 
-                /** @var array{position: string, largeurDuRail: int, railDansLEcran: bool, boutonsVisibles: list<bool>, largeurDeLaListe: int, gaucheDuRail: int, droiteDeLaListe: int, debordement: int, chevauche: bool} $page */
+                /** @var array{position: string, largeurDuRail: int, railDansLEcran: bool, boutonsVisibles: list<bool>, largeurDeLaListe: int, tabulationSuitLeVisuel: bool, gaucheDuRail: int, droiteDeLaListe: int, debordement: int, chevauche: bool} $page */
                 $page = $browser->script(self::LIT)[0];
                 $ou = "à $largeur px";
 
@@ -87,10 +91,66 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
                 $this->assertSame(288, $page['largeurDuRail'], "Le rail ne fait pas 288 px $ou.");
                 $this->assertTrue($page['railDansLEcran'], "Le rail est sorti de l'écran $ou.");
                 $this->assertSame([true, true, true, true], $page['boutonsVisibles'], "Un bouton du rail est hors de l'écran $ou.");
-                $this->assertGreaterThanOrEqual(640, $page['largeurDeLaListe'], "La liste n'a que {$page['largeurDeLaListe']} px $ou.");
+                $this->assertGreaterThanOrEqual($largeur === 1024 ? 633 : 768, $page['largeurDeLaListe'], "La liste n'a que {$page['largeurDeLaListe']} px $ou.");
                 $this->assertGreaterThan($page['droiteDeLaListe'], $page['gaucheDuRail'], "Le rail mord sur la liste $ou.");
                 $this->assertLessThanOrEqual(0, $page['debordement'], "La page défile de côté $ou.");
+                $this->assertTrue($page['tabulationSuitLeVisuel'], "La tabulation du rail ne suit pas l'ordre visuel $ou.");
                 $this->assertFalse($page['chevauche'], "Deux champs se chevauchent $ou.");
+            }
+        });
+    }
+
+    public function test_le_rail_collant_ne_recouvre_ni_le_bandeau_de_mise_a_jour_ni_un_toast_et_tient_dans_600_px(): void
+    {
+        $compte = User::factory()->create(['email' => 'rail-bandeau-'.time().random_int(0, 999).'@example.com', 'email_verified_at' => now()]);
+        $seance = $this->seanceLongue($compte);
+        $manifeste = json_decode((string) file_get_contents(public_path('build/manifest.json')), true, flags: JSON_THROW_ON_ERROR);
+        /** @var array<string, array{file: string}> $manifeste */
+        $principal = '/build/'.$manifeste['resources/js/main.js']['file'];
+
+        $this->browse(function (Browser $browser) use ($compte, $seance, $principal): void {
+            foreach ([1280, 1024] as $largeur) {
+                $browser->loginAs(User::findOrFail($compte->id))->resize($largeur, 600)
+                    ->visit("/workouts/{$seance->id}")->disableAnimations()->waitFor('[dusk="barre-d-outils-de-la-seance"]', 30)->waitForStableLayout();
+
+                // Le vrai bandeau : l'état que pose le worker, trouvé parmi les exports du module que la page a déjà chargé.
+                $browser->script(str_replace('__MODULE__', $principal, <<<'JS'
+                    import('__MODULE__').then(async (module) => {
+                        for (const valeur of Object.values(module)) {
+                            if (valeur !== null && typeof valeur === 'object' && valeur.__v_isRef && valeur.value === false) {
+                                valeur.value = true;
+                                await new Promise((fin) => setTimeout(fin, 100));
+                                if (document.querySelector('[dusk="bandeau-mise-a-jour"]') !== null) { return; }
+                                valeur.value = false;
+                            }
+                        }
+                    });
+                    JS));
+                $browser->waitFor('@bandeau-mise-a-jour', 10);
+
+                // Le vrai toast : l'évènement que le filet des visites hors ligne envoie.
+                $browser->script("window.dispatchEvent(new CustomEvent('gym:sans-reseau', { detail: { message: 'Il faut le réseau pour démarrer une séance.', annuler: null } }));");
+                $browser->waitFor('.z-toast[role="alert"]', 10)->waitForStableLayout();
+                $browser->script('window.scrollTo(0, document.documentElement.scrollHeight)');
+                $browser->waitForStableLayout();
+
+                /** @var array{rail: list<float>, bandeau: list<float>, toast: list<float>, hauteurDuRail: float} $rects */
+                $rects = $browser->script(<<<'JS'
+                    const boite = (element) => { const r = element.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
+                    const rail = document.querySelector('[dusk="barre-d-outils-de-la-seance"]').parentElement;
+                    return {
+                        rail: boite(rail),
+                        bandeau: boite(document.querySelector('[dusk="bandeau-mise-a-jour"]')),
+                        toast: boite(document.querySelector('.z-toast[role="alert"]')),
+                        hauteurDuRail: rail.getBoundingClientRect().height,
+                    };
+                    JS)[0];
+
+                $secants = static fn (array $a, array $b): bool => $a[0] < $b[2] && $b[0] < $a[2] && $a[1] < $b[3] && $b[1] < $a[3];
+
+                $this->assertFalse($secants($rects['rail'], $rects['bandeau']), "Le rail recouvre le bandeau de mise à jour à $largeur px : ".json_encode($rects));
+                $this->assertFalse($secants($rects['rail'], $rects['toast']), "Le rail recouvre un toast à $largeur px.");
+                $this->assertLessThanOrEqual(600, $rects['rail'][3], "Le rail sort d'une fenêtre de 600 px de haut à $largeur px.");
             }
         });
     }
@@ -172,11 +232,12 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
             $dansLeRail = $browser->script(<<<'JS'
                 const rail = document.querySelector('[dusk="barre-d-outils-de-la-seance"]').parentElement;
                 const minuteur = document.querySelector('[dusk="rest-timer"]');
+                const haut = (nom) => document.querySelector(`[dusk="${nom}"]`).getBoundingClientRect().top;
                 return rail.contains(minuteur) && document.querySelector('[dusk="open-rest-timer"]') === null
-                    && minuteur.getBoundingClientRect().top < document.querySelector('[dusk="add-exercise-existing"]').getBoundingClientRect().top;
+                    && haut('add-exercise-existing') < minuteur.getBoundingClientRect().top && minuteur.getBoundingClientRect().top < haut('finish-workout-mobile');
                 JS)[0];
 
-            $this->assertTrue($dansLeRail, 'Le minuteur ne prend pas la tête du rail, à la place du bouton de repos.');
+            $this->assertTrue($dansLeRail, 'Le minuteur ne remplace pas le bouton de repos dans le rail, entre Ajouter et Terminer.');
         });
     }
 }

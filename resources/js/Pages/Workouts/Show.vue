@@ -289,7 +289,7 @@ onUnmounted(() => {
             />
         </template>
 
-        <div class="pb-main-safe" :class="{ 'rail-de-bureau': !lectureSeule }">
+        <div :class="lectureSeule ? 'pb-main-safe' : 'rail-de-bureau'">
             <EtatDeLaSeanceEnAttente class="bureau:col-span-2" :etat="etatDeLaSeance" :seance="localWorkout" />
             <SeriesHorsDeLaCopie class="bureau:col-span-2" :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">

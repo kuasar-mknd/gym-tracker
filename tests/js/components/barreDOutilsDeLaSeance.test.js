@@ -70,7 +70,7 @@ describe('la barre d’outils de la séance', () => {
         const classes = mount(ActionsDeLaSeance, { global: { directives: { press: {} } } }).classes()
 
         expect(classes).toEqual(
-            expect.arrayContaining(['bureau:sticky', 'bureau:top-sure-20', 'bureau:col-start-2', 'bureau:self-start']),
+            expect.arrayContaining(['bureau:sticky', 'bureau:top-sure-48', 'bureau:col-start-2', 'bureau:self-start']),
         )
     })
 
