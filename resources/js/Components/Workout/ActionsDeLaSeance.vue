@@ -73,7 +73,7 @@ const raisonDuModele = computed(() => {
 
 <template>
     <div
-        class="bureau:flex bureau:flex-col bureau:gap-3 bureau:mt-0 bureau:sticky bureau:top-sure-20 bureau:col-start-2 bureau:self-start mt-8 space-y-3 px-1"
+        class="bureau:flex bureau:flex-col bureau:gap-3 bureau:px-0 bureau:mt-0 bureau:sticky bureau:top-sure-20 bureau:col-start-2 bureau:self-start mt-8 space-y-3 px-1"
     >
         <!--
             Les trois gestes de la séance : sur téléphone, la barre d'outils
@@ -139,7 +139,7 @@ const raisonDuModele = computed(() => {
             l'atteint plus (#2434). Sur bureau, pas de clavier à fermer : il reprend
             la largeur de la colonne, mais garde la variante effacée.
         -->
-        <div v-if="!vide" class="bureau:block flex justify-end pt-6">
+        <div v-if="!vide" class="bureau:block bureau:pt-0 flex justify-end pt-6">
             <GlassButton
                 variant="ghost"
                 @click="emit('enregistrer-comme-modele')"

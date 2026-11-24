@@ -348,7 +348,7 @@ watch(
     <div ref="racine" class="contents">
         <GlassButton
             variant="secondary"
-            class="bouton-de-barre bureau:w-full flex-auto"
+            class="bouton-de-barre bureau:w-full bureau:order-first flex-auto"
             :class="enPauseDemandee ? 'opacity-70' : ''"
             dusk="rest-timer"
             @click="feuilleOuverte = true"
