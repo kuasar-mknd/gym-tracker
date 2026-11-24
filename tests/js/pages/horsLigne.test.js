@@ -72,7 +72,7 @@ describe('la page HorsLigne', () => {
             'Accueil',
             'Séance en cours',
             'Séance terminée',
-            "Minuteur d'intervalles",
+            "Minuteur d'intervalle",
             'Modèles',
         ])
         expect(wrapper.find('[dusk="page-sans-reseau"] span:last-child').text()).toBe(

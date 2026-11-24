@@ -24,7 +24,7 @@ const groupes = [
         raccourcis: [{ touches: ['?'], quoi: 'Ouvrir cette page' }],
     },
     {
-        titre: 'Bibliothèque d’exercices',
+        titre: 'Exercices',
         raccourcis: [
             { touches: ['CMD', 'K'], quoi: 'Aller au champ de recherche' },
             { touches: ['Échap'], quoi: 'Vider la recherche' },

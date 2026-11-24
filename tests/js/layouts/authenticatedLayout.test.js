@@ -596,7 +596,8 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
     /**
      * Le titre plat de l'en-tête mobile perd un cran au-delà de douze
      * caractères, et sous 21 rem pour les autres : à vingt-huit pixels, un
-     * titre de dix-huit caractères dépassait sa boîte à 375 px (#2434).
+     * titre de treize caractères (l'ancien « Mes objectifs ») dépassait sa boîte
+     * à 375 px (#2434). « Raccourcis clavier » en a dix-huit.
      */
     it('réduit le titre plat de l’en-tête mobile au-delà de douze caractères et sous 21 rem', () => {
         const [court] = mountLayout({ props: { pageTitle: 'Corps' } }).findAll('h1')

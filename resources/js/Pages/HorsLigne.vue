@@ -46,7 +46,7 @@ const NOMS = Object.freeze({
     'Exercises/Index': 'Exercices',
     'Profile/Index': 'Profil',
     'Tools/Index': 'Outils',
-    'Tools/IntervalTimer': "Minuteur d'intervalles",
+    'Tools/IntervalTimer': "Minuteur d'intervalle",
     'Tools/PlateCalculator': 'Calculateur de plaques',
     'Tools/OneRepMax': 'Calculateur 1RM',
     'Tools/WarmupCalculator': "Calculateur d'échauffement",
