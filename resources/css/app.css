@@ -1261,6 +1261,18 @@
 }
 
 /* Le bas de la page avec l'accessoire de séance (64 px) au-dessus de la barre : `pb-main-safe` plus de quoi le franchir. */
+/*
+ * La page de séance en cours sur bureau : la liste et, à sa droite, le rail
+ * des actions (288 px, `ActionsDeLaSeance`). Les bandeaux prennent les deux colonnes.
+ */
+@utility rail-de-bureau {
+    @variant bureau {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 18rem;
+        column-gap: 1.5rem;
+    }
+}
+
 @utility pb-main-safe-accessoire {
     padding-bottom: calc(13.25rem + var(--safe-area-bottom));
 }

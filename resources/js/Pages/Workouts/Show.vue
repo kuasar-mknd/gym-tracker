@@ -267,7 +267,7 @@ onUnmounted(() => {
         :page-title="localWorkout.name || 'Séance'"
         :show-back="true"
         back-route="workouts.index"
-        largeur="moyenne"
+        :largeur="lectureSeule ? 'moyenne' : 'rail'"
     >
         <ErreurDeSaisie v-bind="erreurDeSaisie" />
 
@@ -290,9 +290,9 @@ onUnmounted(() => {
             />
         </template>
 
-        <div class="pb-main-safe">
-            <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" :seance="localWorkout" />
-            <SeriesHorsDeLaCopie :seance="localWorkout.id" />
+        <div class="pb-main-safe" :class="{ 'rail-de-bureau': !lectureSeule }">
+            <EtatDeLaSeanceEnAttente class="bureau:col-span-2" :etat="etatDeLaSeance" :seance="localWorkout" />
+            <SeriesHorsDeLaCopie class="bureau:col-span-2" :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
                 <GlassCard
                     v-if="localWorkout.workout_lines.length === 0"
@@ -302,6 +302,7 @@ onUnmounted(() => {
                     <GlassButton
                         v-if="!lectureSeule"
                         variant="primary"
+                        class="bureau:hidden"
                         @click="showAddExercise = true"
                         dusk="add-first-exercise"
                         >Ajouter un exercice</GlassButton
@@ -336,7 +337,6 @@ onUnmounted(() => {
             </div>
 
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
-
             <ActionsDeLaSeance
                 v-if="!lectureSeule"
                 :vide="localWorkout.workout_lines.length === 0"

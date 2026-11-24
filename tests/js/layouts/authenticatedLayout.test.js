@@ -166,6 +166,7 @@ describe('la largeur du contenu', () => {
     })
 
     it.each([
+        ['rail', 'max-w-270'],
         ['moyenne', 'max-w-3xl'],
         ['etroite', 'max-w-2xl'],
     ])('resserre la page à %s', (largeur, classe) => {

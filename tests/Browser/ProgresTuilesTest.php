@@ -33,38 +33,38 @@ class ProgresTuilesTest extends DuskTestCase
         })()
         JS;
 
-    private const string GEOMETRIE_DES_TUILES = <<<'JS'
-        return (() => {
-            const tuiles = [...document.querySelectorAll('#main-content [dusk="tuiles-d-acces"] a')];
-            const cadres = tuiles.map((a) => a.getBoundingClientRect());
-            return JSON.stringify({
-                chemins: tuiles.map((a) => new URL(a.href).pathname),
-                hauteurs: cadres.map((c) => Math.round(c.height)),
-                largeurs: cadres.map((c) => Math.round(c.width)),
-                hauts: cadres.map((c) => Math.round(c.top)),
-                chiffres: tuiles.some((a) => /\d/.test(a.textContent)),
-            });
-        })();
-        JS;
+    private const string GEOMETRIE_DES_TUILES = <<<'JS_WRAP'
+    return (() => {
+        const tuiles = [...document.querySelectorAll('#main-content [dusk="tuiles-d-acces"] a')];
+        const cadres = tuiles.map((a) => a.getBoundingClientRect());
+        return JSON.stringify({
+            chemins: tuiles.map((a) => new URL(a.href).pathname),
+            hauteurs: cadres.map((c) => Math.round(c.height)),
+            largeurs: cadres.map((c) => Math.round(c.width)),
+            hauts: cadres.map((c) => Math.round(c.top)),
+            chiffres: tuiles.some((a) => /\d/.test(a.textContent)),
+        });
+    })();
+    JS_WRAP;
 
-    private const string POSITIONS_DES_BLOCS = <<<'JS'
-        return (() => {
-            const titres = [...document.querySelectorAll('#main-content h2, #main-content h3, #main-content h4')];
-            const position = (texte) => {
-                const noeud = titres.find((t) => t.textContent.trim() === texte);
-                return noeud ? noeud.getBoundingClientRect().top : null;
-            };
-            return JSON.stringify({
-                tuiles: document.querySelector('#main-content [dusk="tuiles-d-acces"]').getBoundingClientRect().top,
-                volume: position('Volume mensuel'),
-                regularite: position('Régularité'),
-                periode: position('Sur la période'),
-                evolution: position('Évolution du volume'),
-                muscles: position('Répartition musculaire'),
-                duree: position('Durée des séances'),
-            });
-        })();
-        JS;
+    private const string POSITIONS_DES_BLOCS = <<<'JS_WRAP'
+    return (() => {
+        const titres = [...document.querySelectorAll('#main-content h2, #main-content h3, #main-content h4')];
+        const position = (texte) => {
+            const noeud = titres.find((t) => t.textContent.trim() === texte);
+            return noeud ? noeud.getBoundingClientRect().top : null;
+        };
+        return JSON.stringify({
+            tuiles: document.querySelector('#main-content [dusk="tuiles-d-acces"]').getBoundingClientRect().top,
+            volume: position('Volume mensuel'),
+            regularite: position('Régularité'),
+            periode: position('Sur la période'),
+            evolution: position('Évolution du volume'),
+            muscles: position('Répartition musculaire'),
+            duree: position('Durée des séances'),
+        });
+    })();
+    JS_WRAP;
 
     /**
      * @return array<string, mixed>

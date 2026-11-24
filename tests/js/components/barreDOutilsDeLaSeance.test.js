@@ -66,6 +66,14 @@ describe('la barre d’outils de la séance', () => {
         expect(classes).toContain('verre-epais')
     })
 
+    it('se fait rail collant sur bureau, sous la barre, dans la seconde colonne', () => {
+        const classes = mount(ActionsDeLaSeance, { global: { directives: { press: {} } } }).classes()
+
+        expect(classes).toEqual(
+            expect.arrayContaining(['bureau:sticky', 'bureau:top-sure-20', 'bureau:col-start-2', 'bureau:self-start']),
+        )
+    })
+
     /* Une séance vide garde un chemin vers sa fin quand l'abandon ne peut pas partir (#2049). */
     it('envoie « terminer » depuis une séance vide dont l’abandon ne peut pas partir', async () => {
         const wrapper = mount(ActionsDeLaSeance, {

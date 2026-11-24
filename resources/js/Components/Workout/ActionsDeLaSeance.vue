@@ -72,7 +72,9 @@ const raisonDuModele = computed(() => {
 </script>
 
 <template>
-    <div class="bureau:flex bureau:flex-col bureau:gap-3 mt-8 space-y-3 px-1">
+    <div
+        class="bureau:flex bureau:flex-col bureau:gap-3 bureau:mt-0 bureau:sticky bureau:top-sure-20 bureau:col-start-2 bureau:self-start mt-8 space-y-3 px-1"
+    >
         <!--
             Les trois gestes de la séance : sur téléphone, la barre d'outils
             flottante au-dessus de la barre du bas (#2434) ; sur bureau, la
