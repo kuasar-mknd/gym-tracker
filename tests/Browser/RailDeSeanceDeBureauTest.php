@@ -77,7 +77,7 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
         $seance = $this->seanceLongue($compte);
 
         $this->browse(function (Browser $browser) use ($compte, $seance): void {
-            foreach ([1920, 1280, 1024] as $largeur) {
+            foreach ([1920, 1280, 1100, 1024] as $largeur) {
                 $browser->loginAs(User::findOrFail($compte->id))->resize($largeur, 800)
                     ->visit("/workouts/{$seance->id}")->disableAnimations()->waitFor('[dusk="barre-d-outils-de-la-seance"]', 30)->waitForStableLayout();
                 $browser->script('window.scrollTo(0, document.documentElement.scrollHeight)');
@@ -91,7 +91,7 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
                 $this->assertSame(288, $page['largeurDuRail'], "Le rail ne fait pas 288 px $ou.");
                 $this->assertTrue($page['railDansLEcran'], "Le rail est sorti de l'écran $ou.");
                 $this->assertSame([true, true, true, true], $page['boutonsVisibles'], "Un bouton du rail est hors de l'écran $ou.");
-                $this->assertGreaterThanOrEqual($largeur === 1024 ? 633 : 768, $page['largeurDeLaListe'], "La liste n'a que {$page['largeurDeLaListe']} px $ou.");
+                $this->assertGreaterThanOrEqual([1024 => 633, 1100 => 709][$largeur] ?? 768, $page['largeurDeLaListe'], "La liste n'a que {$page['largeurDeLaListe']} px $ou.");
                 $this->assertGreaterThan($page['droiteDeLaListe'], $page['gaucheDuRail'], "Le rail mord sur la liste $ou.");
                 $this->assertLessThanOrEqual(0, $page['debordement'], "La page défile de côté $ou.");
                 $this->assertTrue($page['tabulationSuitLeVisuel'], "La tabulation du rail ne suit pas l'ordre visuel $ou.");
@@ -119,7 +119,9 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
                         for (const valeur of Object.values(module)) {
                             if (valeur !== null && typeof valeur === 'object' && valeur.__v_isRef && valeur.value === false) {
                                 valeur.value = true;
-                                await new Promise((fin) => setTimeout(fin, 100));
+                                for (let essai = 0; essai < 40 && document.querySelector('[dusk="bandeau-mise-a-jour"]') === null; essai++) {
+                                    await new Promise((fin) => requestAnimationFrame(fin));
+                                }
                                 if (document.querySelector('[dusk="bandeau-mise-a-jour"]') !== null) { return; }
                                 valeur.value = false;
                             }
@@ -171,6 +173,32 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
             $this->assertNotSame('sticky', $page['position'], 'Un rail collant existe à 1 023 px.');
             $this->assertLessThanOrEqual(0, $page['debordement'], 'La page défile de côté à 1 023 px.');
             $this->assertTrue($page['boutonsVisibles'][0] && $page['boutonsVisibles'][1] && $page['boutonsVisibles'][2], 'Les boutons de la barre sont absents.');
+        });
+    }
+
+    public function test_sous_1024_px_la_liste_garde_la_largeur_et_la_marge_de_la_colonne_moyenne(): void
+    {
+        $compte = User::factory()->create(['email' => 'rail-moyenne-'.time().random_int(0, 999).'@example.com', 'email_verified_at' => now()]);
+        $longue = $this->seanceLongue($compte);
+        $vide = Workout::factory()->for($compte)->create(['started_at' => now()->subMinutes(2), 'ended_at' => null]);
+
+        $this->browse(function (Browser $browser) use ($compte, $longue, $vide): void {
+            foreach ([900, 1023] as $largeur) {
+                foreach ([$longue, $vide] as $seance) {
+                    $browser->loginAs(User::findOrFail($compte->id))->resize($largeur, 800)
+                        ->visit("/workouts/{$seance->id}")->disableAnimations()->waitFor('[dusk="exercise-list"]', 30)->waitForStableLayout();
+
+                    /** @var array{gauche: float, largeur: float, fenetre: int} $liste */
+                    $liste = $browser->script(<<<'JS'
+                        const boite = document.querySelector('[dusk="exercise-list"]').getBoundingClientRect();
+                        return { gauche: boite.left, largeur: boite.width, fenetre: document.documentElement.clientWidth };
+                        JS)[0];
+
+                    $ou = "à $largeur px (séance {$seance->id})";
+                    $this->assertEqualsWithDelta(768.0, $liste['largeur'], 1.0, "La liste ne fait pas 768 px $ou.");
+                    $this->assertEqualsWithDelta(($liste['fenetre'] - 768) / 2, $liste['gauche'], 1.0, "La liste n'est pas centrée comme la colonne moyenne $ou.");
+                }
+            }
         });
     }
 
@@ -227,7 +255,7 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
             $browser->loginAs(User::findOrFail($compte->id))->resize(1280, 800)
                 ->visit("/workouts/{$seance->id}")->disableAnimations()->waitFor('@open-rest-timer', 30)->waitForStableLayout();
 
-            $browser->click('@open-rest-timer')->waitFor('@rest-timer', 10)->waitForStableLayout();
+            $browser->clickWhenSettled('[dusk="open-rest-timer"]')->waitFor('@rest-timer', 10)->waitForStableLayout();
 
             $dansLeRail = $browser->script(<<<'JS'
                 const rail = document.querySelector('[dusk="barre-d-outils-de-la-seance"]').parentElement;

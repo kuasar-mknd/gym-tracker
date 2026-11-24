@@ -102,7 +102,7 @@ const CLASSES_DU_RETOUR_DE_BUREAU =
  */
 const clocheDansLaPage = computed(() => props.titreMasque && !props.showBack)
 
-const LARGEURS = { large: 'max-w-7xl', rail: 'max-w-270', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
+const LARGEURS = { large: 'max-w-7xl', rail: 'max-w-3xl bureau:max-w-270', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
 // `?` ouvre la liste des raccourcis, d'où qu'on soit — le seul moyen de la
 // découvrir sans passer par le Profil.
