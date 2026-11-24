@@ -248,8 +248,6 @@ class ProfilCompteEtOutilsTest extends DuskTestCase
                 foreach ([320, 375, 402] as $largeur) {
                     $mesure = $this->mesurer($browser, $largeur);
 
-                    $this->assertMesure($mesure, "sur la copie à {$largeur} px");
-
                     // La phrase ne passe pas sous la cloche, que la carte d'identité contient.
                     $browser->assertScript(<<<'JS'
                         (() => {
@@ -259,6 +257,8 @@ class ProfilCompteEtOutilsTest extends DuskTestCase
                             return phrase.right <= cloche.left || phrase.left >= cloche.right || phrase.bottom <= cloche.top || phrase.top >= cloche.bottom;
                         })()
                         JS, true);
+
+                    $this->assertMesure($mesure, "sur la copie à {$largeur} px");
                 }
 
                 $this->assertSame([], $this->messagesSansReseau($browser));

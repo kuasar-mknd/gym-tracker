@@ -931,6 +931,7 @@ describe('Profile/Index — le compte et les outils', () => {
         ])
         expect(destinations(listes[1])).toEqual(['profile.edit', 'shortcuts.index'])
         expect(wrapper.findAll('h3, h4')).toHaveLength(0)
+        expect(wrapper.findAll('nav a p')).toHaveLength(0)
         expect(wrapper.findAll('h2').map((titre) => titre.text())).toEqual(['samuel'])
     })
 
@@ -966,6 +967,7 @@ describe('Profile/Index — le compte et les outils', () => {
         const coin = cloche.element.parentElement
 
         expect(carte.contains(cloche.element)).toBe(true)
+        expect(carte.classList.contains('relative')).toBe(true)
         expect(coin.classList.contains('bureau:hidden')).toBe(true)
         expect(coin.classList.contains('absolute')).toBe(true)
         expect(cloche.element.classList.contains('absolute')).toBe(false)

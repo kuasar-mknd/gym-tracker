@@ -152,7 +152,7 @@ class CorpsTest extends DuskTestCase
             $copie = $copies->firstWhere('chemin', $chemin);
             $this->assertIsArray($copie, "la copie de {$chemin} manque");
             $this->assertIsString($copie['texte'], "la copie de {$chemin} ne se déchiffre pas");
-            $this->assertDoesNotMatchRegularExpression('/(?<![\d.,])(83[.,]70?|19[.,]30?)(?![\d])/', $copie['texte'], "la copie de {$chemin} garde une mesure du compte");
+            $this->assertSame(0, preg_match('/(?<![\d.,])(83[.,]70?|19[.,]30?)(?![\d])/', $copie['texte']), "la copie de {$chemin} garde une mesure du compte");
         }
     }
 }
