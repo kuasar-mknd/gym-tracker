@@ -1266,6 +1266,29 @@
 }
 
 /*
+ * La page de séance en cours sur bureau : la liste et, à sa droite, le rail
+ * des actions (288 px, `ActionsDeLaSeance`). Les bandeaux prennent les deux colonnes.
+ * Le bas de page (`pb-main-safe`) passe sous la liste, et la grille mord sur
+ * celui de `<main>` : un rail collant ne descend pas sous la zone de sa grille,
+ * et sur une fenêtre basse il remontait sous la barre en fin de page.
+ */
+@utility rail-de-bureau {
+    padding-bottom: calc(9rem + var(--safe-area-bottom));
+
+    @variant bureau {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 18rem;
+        column-gap: 1.5rem;
+        padding-bottom: 0;
+        margin-bottom: calc(-9rem - var(--safe-area-bottom));
+
+        & > [dusk='exercise-list'] {
+            padding-bottom: calc(9rem + var(--safe-area-bottom));
+        }
+    }
+}
+
+/*
  * ===== ZONES SÛRES (#2043) =====
  *
  * L'application s'étend sous la barre d'état, l'encoche et l'indicateur
