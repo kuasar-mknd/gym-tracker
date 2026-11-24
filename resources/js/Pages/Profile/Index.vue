@@ -93,12 +93,7 @@ const rangee =
                         texte="Habitudes, journal, compléments et paramètres reviennent avec le réseau."
                     />
 
-                    <!--
-                        Le bouton que rendait `<Link as="button">`, à l'identique : la
-                        déconnexion détache d'abord l'appareil du compte (#1926), ce
-                        qu'un lien Inertia ne sait pas attendre. Sous 1 024 px, c'est
-                        la seule déconnexion de l'application.
-                    -->
+                    <!-- Un bouton : la déconnexion détache d'abord l'appareil du compte (#1926). -->
                     <button
                         v-if="rang === groupes.length - 1"
                         type="button"

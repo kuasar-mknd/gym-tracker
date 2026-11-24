@@ -105,7 +105,9 @@ class CorpsTest extends DuskTestCase
             $this->exigerUnContexteSur($browser);
             $this->attendreLeWorker($browser);
 
-            $browser->clickWhenSettled('[dusk="nav-profile"]')
+            $browser->disableAnimations()
+                ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'Progrès attend encore ses données')
+                ->clickWhenSettled('[dusk="nav-profile"]')
                 ->waitForLocation('/profile', 15);
 
             $this->attendreLesCopies($browser, ['/stats', '/profile']);
@@ -150,7 +152,7 @@ class CorpsTest extends DuskTestCase
             $copie = $copies->firstWhere('chemin', $chemin);
             $this->assertIsArray($copie, "la copie de {$chemin} manque");
             $this->assertIsString($copie['texte'], "la copie de {$chemin} ne se déchiffre pas");
-            $this->assertDoesNotMatchRegularExpression('/(?<![\d.,])(83[.,]7|19[.,]3)(?![\d])/', $copie['texte'], "la copie de {$chemin} garde une mesure du compte");
+            $this->assertDoesNotMatchRegularExpression('/(?<![\d.,])(83[.,]70?|19[.,]30?)(?![\d])/', $copie['texte'], "la copie de {$chemin} garde une mesure du compte");
         }
     }
 }

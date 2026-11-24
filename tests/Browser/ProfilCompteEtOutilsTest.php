@@ -76,14 +76,16 @@ class ProfilCompteEtOutilsTest extends DuskTestCase
 
             return {
                 ...mesureHaute,
-                largeur: window.innerWidth,
+                largeur: document.documentElement.clientWidth,
+                bandeauPresent: bandeau !== null,
+                barrePresente: barre !== null,
                 debordement: document.documentElement.scrollWidth - document.documentElement.clientWidth,
                 nomTronque: titre.scrollWidth > titre.clientWidth,
                 adresseTronquee: adresse.scrollWidth > adresse.clientWidth,
                 sortieDansLaFenetre: rSortie.haut >= 0 && rSortie.bas <= window.innerHeight,
                 sortieTouchee: points(rSortie).map(([x, y]) => atteint(sortie, x, y)).every(Boolean),
-                sortieAuDessusDuBandeau: bandeau === null || rSortie.bas <= rect(bandeau).haut,
-                sortieAuDessusDeLaBarre: barre === null || rSortie.bas <= rect(barre).haut,
+                sortieAuDessusDuBandeau: rSortie.bas <= rect(bandeau).haut,
+                sortieAuDessusDeLaBarre: rSortie.bas <= rect(barre).haut,
                 hauteurDeLaSortie: rSortie.bas - rSortie.haut,
             };
         })();
@@ -113,13 +115,17 @@ class ProfilCompteEtOutilsTest extends DuskTestCase
     private function mesurer(Browser $browser, int $largeur): array
     {
         $browser->resize($largeur, 640)
-            ->waitFor('[data-testid="logout-button"]', 30)
+            ->script('document.head.insertAdjacentHTML("beforeend", "<style>html{scrollbar-width:none}</style>")');
+
+        $browser->waitFor('[data-testid="logout-button"]', 30)
             ->waitFor('[dusk="active-workout-banner"]', 30)
             ->disableAnimations()
             ->waitForStableLayout();
 
         /** @var array<string, mixed> $mesure */
         $mesure = $browser->script(self::LA_MESURE)[0];
+
+        $this->assertSame($largeur, $mesure['largeur'], "la fenêtre n'a pas la largeur de {$largeur} px, la mesure ne prouve rien");
 
         return $mesure;
     }
@@ -129,6 +135,7 @@ class ProfilCompteEtOutilsTest extends DuskTestCase
      */
     private function assertMesure(array $mesure, string $ou): void
     {
+        $this->assertTrue($mesure['bandeauPresent'] && $mesure['barrePresente'], "{$ou} : le bandeau « Reprendre » ou la barre d'onglets manque, la mesure ne prouve rien");
         $this->assertSame(0, $mesure['debordement'], "{$ou} : la page déborde horizontalement");
         $this->assertTrue($mesure['titreLibreDeLaCloche'], "{$ou} : le nom passe sous la cloche");
         $this->assertTrue($mesure['adresseLibreDeLaCloche'], "{$ou} : l'adresse passe sous la cloche");
