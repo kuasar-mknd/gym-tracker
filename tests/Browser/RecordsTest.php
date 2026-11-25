@@ -182,6 +182,47 @@ class RecordsTest extends DuskTestCase
         });
     }
 
+    public function test_au_bureau_deux_cartes_d_une_meme_rangee_ont_la_meme_hauteur_meme_avec_un_seul_record(): void
+    {
+        $compte = $this->unCompteAvecDesRecords();
+        $court = Exercise::factory()->create(['user_id' => $compte->id, 'name' => 'Traction', 'type' => 'strength']);
+        PersonalRecord::factory()->createQuietly([
+            'user_id' => $compte->id,
+            'exercise_id' => $court->id,
+            'workout_id' => null,
+            'type' => PersonalRecordType::MaxWeight,
+            'value' => 20,
+            'secondary_value' => 5,
+            'achieved_at' => '2026-11-12 09:00:00',
+        ]);
+
+        $this->browse(function (Browser $browser) use ($compte): void {
+            $browser->loginAs($compte)
+                ->resize(1280, 800)
+                ->visit('/records')
+                ->disableAnimations()
+                ->waitFor('#main-content [data-record]', 30)
+                ->waitUntil(self::LES_RECORDS_SONT_A_L_ECRAN, 30, 'les records du compte ne sont pas à l’écran')
+                ->waitForStableLayout();
+
+            $ecart = $browser->script(<<<'JS'
+                const lignes = new Map();
+                for (const li of document.querySelectorAll('#main-content [data-record]')) {
+                    const haut = Math.round(li.getBoundingClientRect().top);
+                    const carte = li.firstElementChild.getBoundingClientRect().height;
+                    const colonne = li.getBoundingClientRect().height;
+                    lignes.set(haut, [...(lignes.get(haut) ?? []), { carte, colonne }]);
+                }
+                const plusDeUne = [...lignes.values()].filter((rangee) => rangee.length > 1);
+                return { rangeesDeDeux: plusDeUne.length, ecart: Math.max(0, ...plusDeUne.flat().map((c) => Math.abs(c.carte - c.colonne))) };
+            JS)[0];
+
+            $this->assertGreaterThanOrEqual(1, $ecart['rangeesDeDeux'], 'Au bureau, les cartes ne sont pas sur deux colonnes : la mesure ne vaudrait rien.');
+            $this->assertLessThanOrEqual(1.0, $ecart['ecart'], 'Une carte est plus basse que sa rangée.');
+            $browser->assertNoConsoleExceptions();
+        });
+    }
+
     public function test_sans_reseau_records_n_ouvre_que_la_page_hors_ligne_sans_un_record(): void
     {
         $compte = $this->unCompteAvecDesRecords();
