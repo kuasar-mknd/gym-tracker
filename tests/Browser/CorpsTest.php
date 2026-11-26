@@ -116,6 +116,16 @@ class CorpsTest extends DuskTestCase
     {
         $compte = $this->unCompteAvecDesMesures();
 
+        /*
+         * Les cas qui élargissent une pastille : deux décimales, un écart, des
+         * pouces, et un côté d'une autre date (donc une ligne de plus dessous).
+         */
+        $particuliers = [
+            'Biceps R' => ['value' => 123.45, 'unit' => 'cm'],
+            'Thigh L' => ['value' => 24.75, 'unit' => 'in'],
+            'Calf L' => ['value' => 38.5, 'unit' => 'cm', 'measured_at' => now()->subDays(20)->toDateString()],
+        ];
+
         foreach (array_diff(BodyPartMeasurement::COMMON_PARTS, ['Waist']) as $partie) {
             BodyPartMeasurement::factory()->create([
                 'user_id' => $compte->id,
@@ -124,8 +134,18 @@ class CorpsTest extends DuskTestCase
                 'unit' => 'cm',
                 'measured_at' => now()->subDay()->toDateString(),
                 'notes' => null,
+                ...($particuliers[$partie] ?? []),
             ]);
         }
+
+        BodyPartMeasurement::factory()->create([
+            'user_id' => $compte->id,
+            'part' => 'Biceps R',
+            'value' => 122.35,
+            'unit' => 'cm',
+            'measured_at' => now()->subDays(40)->toDateString(),
+            'notes' => null,
+        ]);
 
         return $compte;
     }

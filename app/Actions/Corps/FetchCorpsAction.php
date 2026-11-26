@@ -28,12 +28,12 @@ class FetchCorpsAction
     public const int JOURS_DES_COURBES = 90;
 
     /**
-     * Combien de lignes la carte des mensurations montre ; le reste est derrière « Toutes les mensurations ».
+     * Les lignes de la carte ; le reste est derrière « Toutes les mensurations ».
      */
     public const int MENSURATIONS_AFFICHEES = 6;
 
     /**
-     * L'ordre où la carte les range : un nom commence par l'un des débuts de son rang.
+     * Le rang d'une ligne : son nom commence par l'un des débuts.
      *
      * @var list<list<string>>
      */
@@ -86,11 +86,8 @@ class FetchCorpsAction
     }
 
     /**
-     * Les lignes que la carte montre : une par famille à deux côtés, une par
-     * autre partie, rangées par `ORDRE_DES_MENSURATIONS` et coupées après le
-     * regroupement. Un côté absent n'a pas de pastille ; une partie hors de la
-     * liste fermée `PAIRES` reste une ligne simple, telle que la page des
-     * mensurations la donne.
+     * Une ligne par famille de `PAIRES`, une par autre partie, rangées puis
+     * coupées après le regroupement.
      *
      * @param  Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>  $mesures
      * @return Collection<int, Ligne>

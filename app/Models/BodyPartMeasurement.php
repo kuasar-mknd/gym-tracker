@@ -77,9 +77,8 @@ class BodyPartMeasurement extends BaseMeasurement
     ];
 
     /**
-     * Les parties proposées qui se mesurent des deux côtés : la page Corps en
-     * fait une ligne par famille. La liste est fermée : « Biceps » sans côté,
-     * ou « Cuisse gauche » saisi à la main, n'y entrent jamais.
+     * Les parties qui se mesurent des deux côtés. La liste est fermée : une
+     * saisie libre (« Cuisse gauche ») n'y entre jamais.
      *
      * @var array<string, array{libelle: string, gauche: string, droite: string}>
      */

@@ -215,21 +215,20 @@ describe('Corps/Index', () => {
 
     it('distingue une partie nommée « Biceps » de la famille Biceps', async () => {
         const avertissements = []
+        const biceps = paire('Biceps', 'Biceps', 'Biceps L', 'Biceps R')
+        const lignes = [mensuration('Taille', 81), mensuration('Biceps', 38), biceps, mensuration('Hanches', 98)]
         const wrapper = await monter(
-            { latestMeasurements: [mensuration('Biceps', 38), paire('Biceps', 'Biceps', 'Biceps L', 'Biceps R')] },
+            { latestMeasurements: lignes },
             { warnHandler: (message) => avertissements.push(message) },
         )
 
-        // Vue ne signale deux clefs égales qu'à une mise à jour qui change l'ordre de la liste, pas au montage.
-        await wrapper.setProps({
-            latestMeasurements: [paire('Biceps', 'Biceps', 'Biceps L', 'Biceps R'), mensuration('Biceps', 38)],
-        })
-        const lignes = wrapper.findAll('li')
+        // Vue ne signale deux clefs égales que lorsqu'une mise à jour renverse l'ordre de la liste.
+        await wrapper.setProps({ latestMeasurements: [...lignes].reverse() })
 
-        expect(lignes).toHaveLength(2)
-        expect(lignes[1].get('a').attributes('href')).toBe('/body-parts/Biceps')
-        expect(lignes[0].findAll('a')).toHaveLength(2)
         expect(avertissements.join(' ')).not.toContain('Duplicate keys')
+        expect(wrapper.findAll('li')).toHaveLength(4)
+        expect(wrapper.findAll('li')[1].findAll('a')).toHaveLength(2)
+        expect(wrapper.findAll('li')[2].get('a').attributes('href')).toBe('/body-parts/Biceps')
     })
 
     it('annonce la durée des courbes que le serveur donne', async () => {
