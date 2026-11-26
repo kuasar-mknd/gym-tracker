@@ -8,6 +8,7 @@ use App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction;
 use App\DTOs\Stats\BodyFatHistoryPoint;
 use App\DTOs\Stats\LatestBodyMetrics;
 use App\DTOs\Stats\WeightHistoryPoint;
+use App\Models\BodyPartMeasurement;
 use App\Models\User;
 use App\Services\Stats\BodyStatsService;
 use Illuminate\Support\Collection;
@@ -15,6 +16,9 @@ use Illuminate\Support\Collection;
 /**
  * Ce que la page Corps réunit : le poids et la masse grasse, que la racine de
  * Progrès montrait, et les dernières mensurations.
+ *
+ * @phpstan-type Cote array{cote: string, part: string, label: string, current: float, unit: string, date: string, diff: float}
+ * @phpstan-type Ligne array{part: string, label: string, current: float, unit: string, date: string, diff: float}|array{famille: string, label: string, cotes: list<Cote>}
  */
 class FetchCorpsAction
 {
@@ -22,6 +26,25 @@ class FetchCorpsAction
      * La profondeur des courbes du poids et de la masse grasse, en jours.
      */
     public const int JOURS_DES_COURBES = 90;
+
+    /**
+     * Les lignes de la carte ; le reste est derrière « Toutes les mensurations ».
+     */
+    public const int MENSURATIONS_AFFICHEES = 6;
+
+    /**
+     * Le rang d'une ligne : son nom commence par l'un des débuts.
+     *
+     * @var list<list<string>>
+     */
+    private const array ORDRE_DES_MENSURATIONS = [
+        ['waist', 'taille'],
+        ['chest', 'poitrine'],
+        ['hips', 'hanches'],
+        ['thigh', 'cuisse'],
+        ['biceps'],
+        ['calf', 'mollet'],
+    ];
 
     public function __construct(
         protected BodyStatsService $bodyStats,
@@ -41,7 +64,7 @@ class FetchCorpsAction
      *     latestWeight: \Closure(): (float|string|null),
      *     weightChange: \Closure(): float,
      *     bodyFat: \Closure(): (float|string|null),
-     *     latestMeasurements: \Closure(): Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>,
+     *     latestMeasurements: \Closure(): Collection<int, Ligne>,
      *     bodyStats: \Closure(): array{weightHistory: array<int, WeightHistoryPoint>, bodyFatHistory: array<int, BodyFatHistoryPoint>}
      * }
      */
@@ -57,8 +80,83 @@ class FetchCorpsAction
             'latestWeight' => fn (): float|string|null => $dernieresMesures()->latest_weight,
             'weightChange' => fn (): float => $dernieresMesures()->weight_change,
             'bodyFat' => fn (): float|string|null => $dernieresMesures()->latest_body_fat,
-            'latestMeasurements' => fn (): Collection => $this->mensurations->execute($user)['latestMeasurements'],
+            'latestMeasurements' => fn (): Collection => $this->lesPlusUtiles($this->mensurations->execute($user)['latestMeasurements']),
             'bodyStats' => fn (): array => $this->bodyStats->getBodyProgressOverview($user, self::JOURS_DES_COURBES),
         ];
+    }
+
+    /**
+     * Une ligne par famille de `PAIRES`, une par autre partie, rangées puis
+     * coupées après le regroupement.
+     *
+     * @param  Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>  $mesures
+     * @return Collection<int, Ligne>
+     */
+    private function lesPlusUtiles(Collection $mesures): Collection
+    {
+        $familleDeChaquePartie = [];
+        foreach (BodyPartMeasurement::PAIRES as $famille => $paire) {
+            $familleDeChaquePartie[strtolower($paire['gauche'])] = $famille;
+            $familleDeChaquePartie[strtolower($paire['droite'])] = $famille;
+        }
+
+        $parNom = $mesures->keyBy(static fn (array $mesure): string => strtolower($mesure['part']));
+        $famillesFaites = [];
+        /** @var list<Ligne> $lignes */
+        $lignes = [];
+
+        foreach ($mesures as $mesure) {
+            $famille = $familleDeChaquePartie[strtolower($mesure['part'])] ?? null;
+
+            if ($famille === null) {
+                $lignes[] = $mesure;
+
+                continue;
+            }
+
+            if (isset($famillesFaites[$famille])) {
+                continue;
+            }
+
+            $famillesFaites[$famille] = true;
+            $paire = BodyPartMeasurement::PAIRES[$famille];
+            /** @var list<Cote> $cotes */
+            $cotes = [];
+
+            foreach (['gauche', 'droite'] as $cote) {
+                $cotePresent = $parNom->get(strtolower($paire[$cote]));
+
+                if ($cotePresent !== null) {
+                    $cotes[] = ['cote' => $cote, ...$cotePresent];
+                }
+            }
+
+            $lignes[] = ['famille' => $famille, 'label' => $paire['libelle'], 'cotes' => $cotes];
+        }
+
+        usort($lignes, fn (array $a, array $b): int => $this->rang($a) <=> $this->rang($b));
+
+        /** @var list<Ligne> $retenues */
+        $retenues = array_slice($lignes, 0, self::MENSURATIONS_AFFICHEES);
+
+        return collect($retenues);
+    }
+
+    /**
+     * @param  array{famille?: string, part?: string}  $ligne
+     */
+    private function rang(array $ligne): int
+    {
+        $nom = strtolower($ligne['famille'] ?? $ligne['part'] ?? '');
+
+        foreach (self::ORDRE_DES_MENSURATIONS as $position => $debuts) {
+            foreach ($debuts as $debut) {
+                if (str_starts_with($nom, $debut)) {
+                    return $position;
+                }
+            }
+        }
+
+        return count(self::ORDRE_DES_MENSURATIONS);
     }
 }

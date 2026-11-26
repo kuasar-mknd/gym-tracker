@@ -1,7 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
-import { computed } from 'vue'
 
 import BodyFatCard from '@/Components/Stats/BodyFatCard.vue'
 import WeightEvolutionCard from '@/Components/Stats/WeightEvolutionCard.vue'
@@ -11,24 +10,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { dateCourte, parseCalendarDate } from '@/Utils/date'
 import { nombre, variation } from '@/Utils/nombre'
 
-const MENSURATIONS_AFFICHEES = 6
-const ORDRE_DES_MENSURATIONS = [
-    ['waist', 'taille'],
-    ['chest', 'poitrine'],
-    ['hips', 'hanches'],
-    ['thigh', 'cuisse'],
-    ['biceps'],
-    ['calf', 'mollet'],
-]
-
-const rang = (mensuration) => {
-    const nom = String(mensuration.part).toLowerCase()
-    const position = ORDRE_DES_MENSURATIONS.findIndex((noms) => noms.some((debut) => nom.startsWith(debut)))
-
-    return position === -1 ? ORDRE_DES_MENSURATIONS.length : position
-}
-
-const props = defineProps({
+defineProps({
     joursDesCourbes: { type: Number, required: true },
     latestWeight: [Number, String],
     weightChange: Number,
@@ -37,9 +19,25 @@ const props = defineProps({
     bodyStats: Object,
 })
 
-const mensurations = computed(() =>
-    [...props.latestMeasurements].sort((a, b) => rang(a) - rang(b)).slice(0, MENSURATIONS_AFFICHEES),
-)
+const cleDeLaLigne = (ligne) => (ligne.cotes ? `famille:${ligne.famille}` : `part:${ligne.part}`)
+
+/** « Biceps gauche » → « Gauche » : le dernier mot du libellé que donne le serveur. */
+const nomDuCote = (cote) => {
+    const mot = cote.label.split(' ').pop()
+
+    return mot.charAt(0).toUpperCase() + mot.slice(1)
+}
+
+/** Les deux côtés portent-ils la même date ? Alors elle va au titre, sinon sous chaque valeur. */
+const memeDate = (ligne) => ligne.cotes.every((cote) => cote.date === ligne.cotes[0].date)
+
+const dateDe = (date) => dateCourte(parseCalendarDate(date))
+
+const nomAccessible = (cote) => {
+    const ecart = cote.diff === 0 ? '' : `, ${cote.diff > 0 ? 'plus' : 'moins'} ${nombre(Math.abs(cote.diff), 2)}`
+
+    return `${cote.label}, ${nombre(cote.current, 2)} ${cote.unit}${ecart}`
+}
 </script>
 
 <template>
@@ -64,22 +62,62 @@ const mensurations = computed(() =>
                 <h2 class="etiquette mb-3">Mensurations</h2>
 
                 <GlassEmptyState
-                    v-if="mensurations.length === 0"
+                    v-if="latestMeasurements.length === 0"
                     taille="ligne"
                     icon="accessibility_new"
                     title="Aucune mensuration enregistrée"
                 />
 
-                <ul v-else class="divide-border divide-y">
-                    <li v-for="item in mensurations" :key="item.part">
+                <ul v-else class="bureau:grid bureau:grid-cols-2 bureau:gap-x-7">
+                    <li
+                        v-for="item in latestMeasurements"
+                        :key="cleDeLaLigne(item)"
+                        class="border-border bureau:[&:nth-child(2)]:border-t-0 border-t first:border-t-0"
+                    >
+                        <div v-if="item.cotes" class="py-2">
+                            <div class="flex min-h-8 items-baseline justify-between gap-2">
+                                <span class="titre-plat min-w-0 truncate">{{ item.label }}</span>
+                                <span v-if="memeDate(item)" class="text-text-muted shrink-0 text-xs">
+                                    {{ dateDe(item.cotes[0].date) }}
+                                </span>
+                            </div>
+                            <div class="mt-1 flex gap-2">
+                                <Link
+                                    v-for="cote in item.cotes"
+                                    :key="cote.part"
+                                    :href="route('body-parts.show', { part: cote.part })"
+                                    :aria-label="nomAccessible(cote)"
+                                    class="border-border bg-surface-sunken focus-visible:ring-accent-primary min-h-touch flex min-w-0 flex-1 flex-col justify-center rounded-xl border px-3 py-1.5 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <span class="text-text-muted text-xs font-bold">{{ nomDuCote(cote) }}</span>
+                                    <span class="text-text-main text-lg font-bold whitespace-nowrap">
+                                        {{ nombre(cote.current, 2) }}
+                                        <span class="text-text-muted text-sm">{{ cote.unit }}</span>
+                                    </span>
+                                    <span
+                                        v-if="cote.diff !== 0"
+                                        :class="[
+                                            'text-xs font-bold',
+                                            cote.diff > 0 ? 'text-trend-up' : 'text-trend-down',
+                                        ]"
+                                    >
+                                        {{ variation(cote.diff, null, 2) }}
+                                    </span>
+                                    <span v-if="!memeDate(item)" class="text-text-muted text-xs">
+                                        {{ dateDe(cote.date) }}
+                                    </span>
+                                </Link>
+                            </div>
+                        </div>
                         <Link
+                            v-else
                             :href="route('body-parts.show', { part: item.part })"
                             class="flex items-center justify-between gap-3 py-3"
                         >
                             <span class="min-w-0">
                                 <span class="titre-plat block truncate">{{ item.label ?? item.part }}</span>
                                 <span class="text-text-muted block text-xs">
-                                    {{ dateCourte(parseCalendarDate(item.date)) }}
+                                    {{ dateDe(item.date) }}
                                 </span>
                             </span>
                             <span class="shrink-0 text-right">

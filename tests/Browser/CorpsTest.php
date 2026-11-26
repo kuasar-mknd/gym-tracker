@@ -93,6 +93,131 @@ class CorpsTest extends DuskTestCase
         });
     }
 
+    /**
+     * Les pastilles de la carte des mensurations : chacune tient dans sa boîte,
+     * son texte aussi, et mesure au moins 44 pt de haut.
+     */
+    private const string LES_PASTILLES = <<<'JS'
+        const pastilles = [...document.querySelectorAll('#main-content li a[aria-label]')];
+        const largeur = document.documentElement.clientWidth;
+
+        return {
+            nombre: pastilles.length,
+            debordeLaPage: document.documentElement.scrollWidth > largeur,
+            tronquees: pastilles.filter((p) => p.scrollWidth > p.clientWidth || [...p.querySelectorAll('span')].some((t) => t.scrollWidth > t.clientWidth)).length,
+            basses: pastilles.filter((p) => p.getBoundingClientRect().height < 44).length,
+            sorties: pastilles.filter((p) => p.getBoundingClientRect().right > largeur).length,
+            parLigne: [...document.querySelectorAll('#main-content li')].map((li) => new Set([...li.querySelectorAll('a[aria-label]')].map((a) => Math.round(a.getBoundingClientRect().top))).size).filter((n) => n > 0),
+            noms: pastilles.map((a) => a.getAttribute('aria-label').split(',')[0]),
+        };
+        JS;
+
+    private function unCompteAvecTreizeParties(): User
+    {
+        $compte = $this->unCompteAvecDesMesures();
+
+        /*
+         * Les cas qui élargissent une pastille : deux décimales, un écart, des
+         * pouces, et un côté d'une autre date (donc une ligne de plus dessous).
+         */
+        $particuliers = [
+            'Biceps R' => ['value' => 123.45, 'unit' => 'cm'],
+            'Thigh L' => ['value' => 24.75, 'unit' => 'in'],
+            'Calf L' => ['value' => 38.5, 'unit' => 'cm', 'measured_at' => now()->subDays(20)->toDateString()],
+        ];
+
+        foreach (array_diff(BodyPartMeasurement::COMMON_PARTS, ['Waist']) as $partie) {
+            BodyPartMeasurement::factory()->create([
+                'user_id' => $compte->id,
+                'part' => $partie,
+                'value' => 38.5,
+                'unit' => 'cm',
+                'measured_at' => now()->subDay()->toDateString(),
+                'notes' => null,
+                ...($particuliers[$partie] ?? []),
+            ]);
+        }
+
+        BodyPartMeasurement::factory()->create([
+            'user_id' => $compte->id,
+            'part' => 'Biceps R',
+            'value' => 122.35,
+            'unit' => 'cm',
+            'measured_at' => now()->subDays(40)->toDateString(),
+            'notes' => null,
+        ]);
+
+        return $compte;
+    }
+
+    public function test_les_paires_de_mensurations_tiennent_en_deux_pastilles_sur_une_ligne_a_toutes_les_largeurs(): void
+    {
+        $compte = $this->unCompteAvecTreizeParties();
+
+        $this->browse(function (Browser $browser) use ($compte): void {
+            $browser->loginAs($compte);
+
+            try {
+                foreach ([375, 320] as $largeur) {
+                    $browser->resize($largeur, 900)->visit('/corps')->disableAnimations()->waitFor('#main-content', 30)
+                        ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'Corps attend encore ses données')
+                        ->waitForStableLayout();
+
+                    /** @var array{nombre: int, debordeLaPage: bool, tronquees: int, basses: int, sorties: int, parLigne: list<int>, noms: list<string>} $mise */
+                    $mise = $browser->script(self::LES_PASTILLES)[0];
+
+                    $this->assertSame(6, $mise['nombre'], "À $largeur px, trois paires font six pastilles.");
+                    $this->assertFalse($mise['debordeLaPage'], "À $largeur px, la page défile de côté.");
+                    $this->assertSame(0, $mise['tronquees'], "À $largeur px, une pastille tronque son texte.");
+                    $this->assertSame(0, $mise['basses'], "À $largeur px, une pastille fait moins de 44 pt.");
+                    $this->assertSame(0, $mise['sorties'], "À $largeur px, une pastille sort de l'écran.");
+                    $this->assertSame([1, 1, 1], $mise['parLigne'], "À $largeur px, les deux pastilles d'une paire ne tiennent pas sur la même ligne.");
+                    $this->assertSame(
+                        ['Cuisse gauche', 'Cuisse droite', 'Biceps gauche', 'Biceps droit', 'Mollet gauche', 'Mollet droit'],
+                        $mise['noms'],
+                        "À $largeur px, l'ordre de tab n'est pas gauche puis droite, famille après famille.",
+                    );
+                }
+            } finally {
+                $browser->resize(393, 852);
+            }
+        });
+    }
+
+    public function test_au_bureau_les_lignes_de_mensurations_se_rangent_sur_deux_colonnes(): void
+    {
+        $compte = $this->unCompteAvecTreizeParties();
+
+        $this->browse(function (Browser $browser) use ($compte): void {
+            $browser->loginAs($compte);
+
+            try {
+                $browser->resize(1280, 900)->visit('/corps')->disableAnimations()->waitFor('#main-content', 30)
+                    ->waitUntil("document.querySelectorAll('#main-content .glass-skeleton').length === 0", 30, 'Corps attend encore ses données')
+                    ->waitForStableLayout();
+
+                /** @var array{colonnes: int, lignes: int, debordeLaPage: bool, tronquees: int} $mise */
+                $mise = $browser->script(<<<'JS'
+                    const liste = document.querySelector('#main-content ul[class~="bureau:grid-cols-2"]');
+
+                    return {
+                        colonnes: getComputedStyle(liste).gridTemplateColumns.split(' ').length,
+                        lignes: liste.children.length,
+                        debordeLaPage: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+                        tronquees: [...liste.querySelectorAll('a[aria-label]')].filter((p) => p.scrollWidth > p.clientWidth).length,
+                    };
+                    JS)[0];
+
+                $this->assertSame(2, $mise['colonnes']);
+                $this->assertSame(6, $mise['lignes']);
+                $this->assertFalse($mise['debordeLaPage']);
+                $this->assertSame(0, $mise['tronquees']);
+            } finally {
+                $browser->resize(393, 852);
+            }
+        });
+    }
+
     public function test_sans_reseau_corps_dit_qu_il_est_indisponible_sans_une_mesure(): void
     {
         $compte = $this->unCompteAvecDesMesures();

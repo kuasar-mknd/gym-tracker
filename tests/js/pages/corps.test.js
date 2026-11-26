@@ -34,7 +34,23 @@ const mensuration = (part, current, diff = 0) => ({
     diff,
 })
 
-const monter = async (props = {}) => {
+const libelleDuCote = (part, cote) =>
+    part.startsWith('Biceps') ? `Biceps ${cote === 'gauche' ? 'gauche' : 'droit'}` : part
+
+const paire = (famille, label, gauche, droite, surGauche = {}, surDroite = {}) => ({
+    famille,
+    label,
+    cotes: [
+        surGauche === null
+            ? null
+            : { cote: 'gauche', ...mensuration(gauche, 30), label: libelleDuCote(gauche, 'gauche'), ...surGauche },
+        surDroite === null
+            ? null
+            : { cote: 'droite', ...mensuration(droite, 30), label: libelleDuCote(droite, 'droite'), ...surDroite },
+    ].filter(Boolean),
+})
+
+const monter = async (props = {}, config = {}) => {
     const wrapper = mount(Corps, {
         props: {
             joursDesCourbes: 90,
@@ -45,6 +61,7 @@ const monter = async (props = {}) => {
             ...props,
         },
         global: {
+            config,
             directives: { press: {} },
             mocks: { route: globalThis.route },
             stubs: { AuthenticatedLayout: layoutStub },
@@ -96,50 +113,122 @@ describe('Corps/Index', () => {
         expect(liens(wrapper)).toContain('/body-parts.index')
     })
 
-    it('ne liste que les six premières mensurations, et renvoie vers les autres', async () => {
-        const toutes = [1, 2, 3, 4, 5, 6, 7, 8].map((rang) => mensuration(`Partie${rang}`, 30))
-        const wrapper = await monter({ latestMeasurements: toutes })
+    it('montre les lignes que le serveur a retenues, une `li` chacune, sans en recouper', async () => {
+        const wrapper = await monter({
+            latestMeasurements: [1, 2, 3, 4, 5, 6].map((rang) => mensuration(`Partie${rang}`, 30)),
+        })
 
         expect(wrapper.findAll('li')).toHaveLength(6)
-        expect(wrapper.text()).toContain('Partie6')
-        expect(wrapper.text()).not.toContain('Partie7')
+        expect(wrapper.findAll('li').map((ligne) => ligne.get('.titre-plat').text())).toEqual([
+            'Partie1',
+            'Partie2',
+            'Partie3',
+            'Partie4',
+            'Partie5',
+            'Partie6',
+        ])
         expect(liens(wrapper)).toContain('/body-parts.index')
     })
 
-    it('choisit les six mensurations par pertinence, pas par ordre alphabétique', async () => {
-        const noms = [
-            'Biceps L',
-            'Biceps R',
-            'Calf L',
-            'Calf R',
-            'Chest',
-            'Forearm L',
-            'Hips',
-            'Neck',
-            'Thigh L',
-            'Waist',
-        ]
-        const wrapper = await monter({ latestMeasurements: noms.map((nom) => mensuration(nom, 30)) })
-        const parties = wrapper.findAll('li').map((ligne) => ligne.get('.titre-plat').text())
-
-        expect(parties).toEqual(['Waist', 'Chest', 'Hips', 'Thigh L', 'Biceps L', 'Biceps R'])
-        expect(wrapper.text()).not.toContain('Neck')
-        expect(wrapper.text()).not.toContain('Forearm')
-    })
-
-    it('ne signale pas d’écart quand la mensuration n’a pas bougé, et colore les autres', async () => {
+    it('rend une ligne par famille à deux côtés, avec deux pastilles qui mènent à la partie exacte', async () => {
         const wrapper = await monter({
-            latestMeasurements: [
-                mensuration('Taille', 81, -1),
-                mensuration('Cuisse', 60, 2),
-                mensuration('Bras', 40, 0),
-            ],
+            latestMeasurements: [mensuration('Waist', 81), paire('Biceps', 'Biceps', 'Biceps L', 'Biceps R')],
         })
         const lignes = wrapper.findAll('li')
+        const pastilles = lignes[1].findAll('a')
 
-        expect(lignes[0].find('.text-trend-down').exists()).toBe(true)
-        expect(lignes[1].find('.text-trend-up').exists()).toBe(true)
-        expect(lignes[2].find('.text-trend-up, .text-trend-down').exists()).toBe(false)
+        expect(lignes).toHaveLength(2)
+        expect(lignes[1].get('.titre-plat').text()).toBe('Biceps')
+        expect(pastilles.map((lien) => lien.attributes('href'))).toEqual([
+            '/body-parts/Biceps%20L',
+            '/body-parts/Biceps%20R',
+        ])
+        expect(pastilles[0].text()).toContain('Gauche')
+        expect(pastilles[1].text()).toContain('Droit')
+        expect(lignes[1].find('a a').exists()).toBe(false)
+        expect(lignes[0].findAll('a')).toHaveLength(1)
+    })
+
+    it('nomme chaque pastille par son libellé, sa valeur, son unité et son écart en toutes lettres', async () => {
+        const wrapper = await monter({
+            latestMeasurements: [
+                paire('Biceps', 'Biceps', 'Biceps L', 'Biceps R', { diff: 0.5 }, { diff: -1.5, unit: 'in' }),
+            ],
+        })
+        const pastilles = wrapper.findAll('li a')
+
+        expect(pastilles[0].attributes('aria-label')).toBe('Biceps gauche, 30 cm, plus 0,5')
+        expect(pastilles[1].attributes('aria-label')).toBe('Biceps droit, 30 in, moins 1,5')
+    })
+
+    it('ne dit pas d’écart quand un côté n’a pas bougé, et le nomme sans écart', async () => {
+        const wrapper = await monter({
+            latestMeasurements: [paire('Calf', 'Mollet', 'Calf L', 'Calf R')],
+        })
+
+        expect(wrapper.findAll('li a')[0].attributes('aria-label')).toBe('Calf L, 30 cm')
+        expect(wrapper.find('li .text-trend-up, li .text-trend-down').exists()).toBe(false)
+    })
+
+    it('garde l’unité de chaque côté, qui peuvent différer', async () => {
+        const wrapper = await monter({
+            latestMeasurements: [paire('Thigh', 'Cuisse', 'Thigh L', 'Thigh R', { unit: 'cm' }, { unit: 'in' })],
+        })
+        const pastilles = wrapper.findAll('li a')
+
+        expect(pastilles[0].text()).toContain('cm')
+        expect(pastilles[0].text()).not.toContain('in')
+        expect(pastilles[1].text()).toContain('in')
+    })
+
+    it('met la date au titre quand les deux côtés la partagent, sous chaque valeur sinon', async () => {
+        const commune = await monter({ latestMeasurements: [paire('Thigh', 'Cuisse', 'Thigh L', 'Thigh R')] })
+
+        expect(
+            commune
+                .get('li')
+                .text()
+                .match(/10\/11\/2026/g),
+        ).toHaveLength(1)
+        expect(commune.get('li > div > div').text()).toContain('10/11/2026')
+
+        const distinctes = await monter({
+            latestMeasurements: [
+                paire('Thigh', 'Cuisse', 'Thigh L', 'Thigh R', { date: '2026-03-03' }, { date: '2026-11-10' }),
+            ],
+        })
+        const pastilles = distinctes.findAll('li a')
+
+        expect(distinctes.get('li > div > div').text()).not.toMatch(/03\/03|10\/11/)
+        expect(pastilles[0].text()).toContain('03/03/2026')
+        expect(pastilles[1].text()).toContain('10/11/2026')
+    })
+
+    it('ne rend qu’une pastille quand un seul côté est saisi', async () => {
+        const wrapper = await monter({
+            latestMeasurements: [paire('Calf', 'Mollet', 'Calf L', 'Calf R', {}, null)],
+        })
+
+        expect(wrapper.findAll('li a')).toHaveLength(1)
+        expect(wrapper.get('li a').attributes('href')).toBe('/body-parts/Calf%20L')
+    })
+
+    it('distingue une partie nommée « Biceps » de la famille Biceps', async () => {
+        const avertissements = []
+        const biceps = paire('Biceps', 'Biceps', 'Biceps L', 'Biceps R')
+        const lignes = [mensuration('Taille', 81), mensuration('Biceps', 38), biceps, mensuration('Hanches', 98)]
+        const wrapper = await monter(
+            { latestMeasurements: lignes },
+            { warnHandler: (message) => avertissements.push(message) },
+        )
+
+        // Vue ne signale deux clefs égales que lorsqu'une mise à jour renverse l'ordre de la liste.
+        await wrapper.setProps({ latestMeasurements: [...lignes].reverse() })
+
+        expect(avertissements.join(' ')).not.toContain('Duplicate keys')
+        expect(wrapper.findAll('li')).toHaveLength(4)
+        expect(wrapper.findAll('li')[1].findAll('a')).toHaveLength(2)
+        expect(wrapper.findAll('li')[2].get('a').attributes('href')).toBe('/body-parts/Biceps')
     })
 
     it('annonce la durée des courbes que le serveur donne', async () => {
