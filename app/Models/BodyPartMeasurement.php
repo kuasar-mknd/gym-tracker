@@ -77,6 +77,20 @@ class BodyPartMeasurement extends BaseMeasurement
     ];
 
     /**
+     * Les parties proposées qui se mesurent des deux côtés : la page Corps en
+     * fait une ligne par famille. La liste est fermée : « Biceps » sans côté,
+     * ou « Cuisse gauche » saisi à la main, n'y entrent jamais.
+     *
+     * @var array<string, array{libelle: string, gauche: string, droite: string}>
+     */
+    public const array PAIRES = [
+        'Biceps' => ['libelle' => 'Biceps', 'gauche' => 'Biceps L', 'droite' => 'Biceps R'],
+        'Forearm' => ['libelle' => 'Avant-bras', 'gauche' => 'Forearm L', 'droite' => 'Forearm R'],
+        'Thigh' => ['libelle' => 'Cuisse', 'gauche' => 'Thigh L', 'droite' => 'Thigh R'],
+        'Calf' => ['libelle' => 'Mollet', 'gauche' => 'Calf L', 'droite' => 'Calf R'],
+    ];
+
+    /**
      * La valeur dans l'unité demandée : la saisie accepte le centimètre et le
      * pouce, et deux relevés ne se comparent que dans la même.
      */
