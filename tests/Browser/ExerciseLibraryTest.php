@@ -15,9 +15,6 @@ class ExerciseLibraryTest extends DuskTestCase
     use DatabaseTruncation;
 
     /**
-     * Test the full lifecycle of exercise management in the library.
-     */
-    /**
      * WebDriver ne sait pas glisser : le focus clavier ouvre la rangée comme le
      * geste (SwipeableRow). Il est redonné à chaque essai, la fermeture de la
      * fenêtre de création pouvant le reprendre après coup.
@@ -30,6 +27,9 @@ class ExerciseLibraryTest extends DuskTestCase
         )[0], "la rangée ne s'est pas ouverte pour {$action}");
     }
 
+    /**
+     * Test the full lifecycle of exercise management in the library.
+     */
     private function performExerciseLibraryLifecycle(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create([
