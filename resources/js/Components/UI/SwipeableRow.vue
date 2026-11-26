@@ -341,10 +341,13 @@ defineExpose({ close: fermer })
                 v-if="aActionGauche"
                 ref="panneauGauche"
                 data-panneau="gauche"
-                class="absolute inset-y-0 left-0 w-0 overflow-hidden [&_button>*]:opacity-(--fondu)"
+                class="absolute inset-y-0 left-0 flex w-0 overflow-hidden [&_button>*]:opacity-(--fondu)"
                 :class="rayon"
             >
-                <div class="flex h-full w-full items-stretch whitespace-nowrap">
+                <div
+                    class="flex h-full w-full flex-none items-stretch whitespace-nowrap"
+                    :style="{ minWidth: `${actionThreshold - ECART}px` }"
+                >
                     <slot name="action-left" />
                 </div>
             </div>
@@ -353,10 +356,13 @@ defineExpose({ close: fermer })
                 v-if="aActionDroite"
                 ref="panneauDroit"
                 data-panneau="droite"
-                class="absolute inset-y-0 right-0 w-0 overflow-hidden [&_button>*]:opacity-(--fondu)"
+                class="absolute inset-y-0 right-0 flex w-0 justify-end overflow-hidden [&_button>*]:opacity-(--fondu)"
                 :class="rayon"
             >
-                <div class="flex h-full w-full items-stretch whitespace-nowrap">
+                <div
+                    class="flex h-full w-full flex-none items-stretch whitespace-nowrap"
+                    :style="{ minWidth: `${actionThreshold - ECART}px` }"
+                >
                     <slot name="action-right" />
                 </div>
             </div>

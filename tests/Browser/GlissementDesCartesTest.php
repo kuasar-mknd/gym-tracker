@@ -70,7 +70,13 @@ class GlissementDesCartesTest extends DuskTestCase
         $this->browse(function (Browser $browser): void {
             try {
                 $exercice = $this->bibliothequeAuTelephone($browser);
+                $opaciteDeLIcone = "return getComputedStyle(document.querySelector('[dusk=\"swipe-edit-exercise-{$exercice}\"]').firstElementChild).opacity;";
+
+                $this->assertSame('0', $browser->script($opaciteDeLIcone)[0], 'Fermée, l\'icône du panneau est effacée.');
+
                 $this->ouvrirAuFocus($browser, $exercice);
+
+                $this->assertSame('1', $browser->script($opaciteDeLIcone)[0], 'Ouverte, elle est pleine : le fondu s\'applique bien au contenu du bouton.');
 
                 /** @var array{hauteurCarte: float, hauteurPanneau: float, haut: array{float, float}, ecartDesBoites: float, ecartAMiHauteur: float, ecartPresDuCoin: float, rayonCarte: list<string>, rayonPanneau: list<string>, rayonEnPixels: float} $mesure */
                 $mesure = $browser->script(<<<JS
@@ -245,7 +251,8 @@ class GlissementDesCartesTest extends DuskTestCase
                 $this->assertSame('droite', $trace['ouverte'], 'Un geste de 80 px ouvre la rangée.');
                 $this->assertGreaterThanOrEqual(8, count($apres), 'Le ressort se joue sur plusieurs images, il ne saute pas.');
                 $this->assertLessThan(abs($trace['lache'] + 80), abs($apres[0] + 80), 'La première image se rapproche déjà du cran.');
-                $this->assertGreaterThan(0.0, abs($apres[0] - $trace['lache']), 'La première image bouge.');
+                $this->assertGreaterThan(1.0, abs($apres[0] + 80), 'La première image n\'est pas déjà sur le cran : le ressort ne saute pas.');
+                $this->assertGreaterThanOrEqual(6, count(array_filter($apres, fn (float $position): bool => abs($position + 80) > 0.5)), 'Au moins six images entre le lâcher et la pose.');
                 $this->assertLessThanOrEqual(30.0, max([0.0, ...$pas]), 'Aucune image ne saute de plus de 30 px.');
                 $this->assertEqualsWithDelta(-80.0, end($apres), 0.5, 'La rangée se pose sur le cran.');
                 $this->assertGreaterThanOrEqual(-80.0 - 12.0, min([0.0, ...$apres]), 'Le dépassement reste sous 12 px.');

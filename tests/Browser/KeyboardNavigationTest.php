@@ -183,12 +183,14 @@ class KeyboardNavigationTest extends DuskTestCase
             )[0], "The swipe delete action for workout {$workout->id} never rendered.");
 
             // Le panneau n'est plus rendu transparent : il n'a pas de largeur tant que la
-            // rangée est fermée, et le bouton, qui le suit, non plus.
+            // rangée est fermée. Le bouton garde la sienne, rognée par le panneau : c'est
+            // la largeur du panneau qui dit ce que l'écran en montre.
             $measure = 'const el = document.querySelector(\'[dusk="'.$selector.'"]\');'
                 .'const box = el.getBoundingClientRect();'
+                .'const panneau = el.closest("[data-panneau]").getBoundingClientRect();'
                 .'return {'
-                .'  largeur: box.width,'
-                .'  onScreen: box.right > 0 && box.left < window.innerWidth && box.width > 0,'
+                .'  largeur: panneau.width,'
+                .'  onScreen: box.right > 0 && box.left < window.innerWidth && panneau.width > 0,'
                 .'};';
 
             /** @var array{largeur: float, onScreen: bool} $closed */
@@ -203,7 +205,7 @@ class KeyboardNavigationTest extends DuskTestCase
 
             $browser->script('document.querySelector(\'[dusk="'.$selector.'"]\').focus();');
             $browser->waitUntil(
-                'document.querySelector(\'[dusk="'.$selector.'"]\').getBoundingClientRect().width > 60',
+                'document.querySelector(\'[dusk="'.$selector.'"]\').closest("[data-panneau]").getBoundingClientRect().width > 60',
                 10,
                 'Focusing the delete action must reveal it instead of leaving focus on an invisible control.'
             );
