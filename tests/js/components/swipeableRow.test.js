@@ -623,6 +623,105 @@ describe('SwipeableRow, le geste', () => {
     })
 })
 
+describe('SwipeableRow, un doigt qui coupe l’animation', () => {
+    it('relance le retour quand un tap le coupe en route, au lieu de figer la rangée', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'droite')
+        wrapper.vm.close()
+        for (let i = 0; i < 4; i += 1) {
+            image()
+        }
+        const enRoute = positionDe(wrapper)
+
+        expect(enRoute).toBeLessThan(0)
+        expect(enRoute).toBeGreaterThan(-80)
+
+        doigt(wrapper, 150).leve(40)
+        await poser()
+
+        expect(positionDe(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
+
+        wrapper.unmount()
+    })
+
+    it('reprend l’ouverture quand le doigt la coupe puis part en défilement vertical', async () => {
+        const wrapper = mountRow()
+
+        await wrapper.find('[data-testid="delete"]').trigger('focusin')
+        image()
+        image()
+
+        const main = doigt(wrapper, 200)
+
+        main.vers(205, 16, 30)
+        main.leve(16)
+        await poser()
+
+        expect(positionDe(wrapper)).toBe(-80)
+
+        wrapper.unmount()
+    })
+})
+
+describe('SwipeableRow, le clic sans geste derrière lui', () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    const cliquerLeLien = (wrapper) => {
+        const clic = new MouseEvent('click', { bubbles: true, cancelable: true })
+
+        wrapper.find('a').element.dispatchEvent(clic)
+
+        return clic
+    }
+
+    it('laisse passer un clic de clavier ou de lecteur d’écran venu longtemps après un tap sur rangée ouverte', async () => {
+        const wrapper = mountRow()
+        let maintenant = 5000
+
+        vi.spyOn(performance, 'now').mockImplementation(() => maintenant)
+        await ouvrirAuFocus(wrapper, 'droite')
+        doigt(wrapper, 150).leve(40)
+        maintenant += 2000
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    it('laisse passer un clic de clavier venu longtemps après un glissement', () => {
+        const wrapper = mountRow()
+        let maintenant = 5000
+
+        vi.spyOn(performance, 'now').mockImplementation(() => maintenant)
+        const main = doigt(wrapper, 200)
+
+        main.vers(188)
+        main.vers(100, 60)
+        main.leve()
+        maintenant += 2000
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    it('garde l’avalement d’un tap sur rangée ouverte quand un deuxième doigt se pose', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'droite')
+        const premier = doigt(wrapper, 150)
+
+        doigt(wrapper, 100, { pointerId: 2 })
+        premier.leve(40)
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(true)
+
+        wrapper.unmount()
+    })
+})
+
 describe('SwipeableRow, le clic qui suit un geste', () => {
     const cliquerLeLien = (wrapper) => {
         const clic = new MouseEvent('click', { bubbles: true, cancelable: true })

@@ -44,6 +44,7 @@ let image = 0
 let derniereImage = null
 let saisie = null
 let aAvaler = false
+let avalerJusqua = Infinity
 
 const crans = () =>
     [aActionDroite.value ? -props.actionThreshold : null, 0, aActionGauche.value ? props.actionThreshold : null].filter(
@@ -144,14 +145,19 @@ function relacherLaCapture() {
 }
 
 function auPointeurPose(evenement) {
+    if (saisie && estUnDoigt(evenement)) {
+        return
+    }
+
     aAvaler = false
 
-    if (props.disabled || !estUnDoigt(evenement) || saisie) {
+    if (props.disabled || !estUnDoigt(evenement)) {
         return
     }
 
     arreter()
     v = 0
+    avalerJusqua = Infinity
     aAvaler = ouverte.value === null ? false : 'fermeture'
 
     const depart =
@@ -219,8 +225,16 @@ function auPointeurLeve(evenement) {
 
     relacherLaCapture()
     saisie = null
+    avalerJusqua = performance.now() + 500
 
     if (verrou !== 'horizontal') {
+        const repos =
+            ouverte.value === 'gauche' ? props.actionThreshold : ouverte.value === 'droite' ? -props.actionThreshold : 0
+
+        if (x !== repos) {
+            aller(repos)
+        }
+
         return
     }
 
@@ -247,7 +261,9 @@ function auPointeurAnnule(evenement) {
 }
 
 function auClicEnCapture(evenement) {
-    if (!aAvaler) {
+    if (!aAvaler || performance.now() > avalerJusqua) {
+        aAvaler = false
+
         return
     }
 
