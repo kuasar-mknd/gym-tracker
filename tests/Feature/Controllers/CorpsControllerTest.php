@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Corps\FetchCorpsAction;
 use App\Models\BodyMeasurement;
 use App\Models\BodyPartMeasurement;
 use App\Models\User;
@@ -21,6 +22,7 @@ test('un compte sans mesure voit une page vide, sans erreur', function (): void 
         ->assertInertia(
             fn (Assert $page): Assert => $page
                 ->component('Corps/Index')
+                ->where('joursDesCourbes', FetchCorpsAction::JOURS_DES_COURBES)
                 ->where('latestWeight', null)
                 ->where('weightChange', 0)
                 ->where('bodyFat', null)
