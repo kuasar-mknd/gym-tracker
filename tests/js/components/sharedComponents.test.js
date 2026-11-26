@@ -1118,8 +1118,11 @@ describe('ExerciseCard', () => {
         wrapper.unmount()
     })
 
-    it('hands the whole exercise to the edit handler, from either button', async () => {
-        for (const selector of ['[data-testid="edit-exercise-button"]', '[dusk="edit-exercise-btn-12"]']) {
+    it('hands the whole exercise to the edit handler, from the desktop button and from the swipe', async () => {
+        for (const selector of [
+            '[data-testid="edit-exercise-button"]',
+            '[data-testid="edit-exercise-button-mobile"]',
+        ]) {
             const wrapper = mountCard()
 
             await wrapper.get(selector).trigger('click')
@@ -1131,15 +1134,15 @@ describe('ExerciseCard', () => {
         }
     })
 
-    it('shows one edit button below sm, with a variant that beats the button’s own inline-flex (#2453)', () => {
+    it('hides the whole button group below sm: a phone reaches edit and delete by swiping only', () => {
         const wrapper = mountCard()
 
-        const classes = wrapper.get('[data-testid="edit-exercise-button"]').classes()
+        const groupe = wrapper.get('[data-testid="edit-exercise-button"]').element.parentElement
 
-        expect(classes).toContain('max-sm:hidden')
-        expect(classes).not.toContain('hidden')
-        expect(wrapper.get('[dusk="edit-exercise-btn-12"]').classes()).toContain('sm:hidden')
-        expect(wrapper.get('[data-testid="delete-exercise-button"]').classes()).not.toContain('max-sm:hidden')
+        expect(groupe.classList).toContain('max-sm:hidden')
+        expect(groupe.contains(wrapper.get('[data-testid="delete-exercise-button"]').element)).toBe(true)
+        expect(wrapper.find('[dusk="edit-exercise-btn-12"]').exists()).toBe(false)
+        expect(wrapper.findAll('[data-testid="edit-exercise-button"]')).toHaveLength(1)
 
         wrapper.unmount()
     })
@@ -1281,11 +1284,9 @@ describe('ExerciseCard', () => {
 
         it('ne propose ni de modifier ni de supprimer, et dit pourquoi', async () => {
             const wrapper = mountCard()
-            const boutons = [
-                `[dusk="edit-exercise-btn-${EXERCISE.id}"]`,
-                '[data-testid="edit-exercise-button"]',
-                '[data-testid="delete-exercise-button"]',
-            ].map((selecteur) => wrapper.get(selecteur))
+            const boutons = ['[data-testid="edit-exercise-button"]', '[data-testid="delete-exercise-button"]'].map(
+                (selecteur) => wrapper.get(selecteur),
+            )
 
             // La rangée coupée retire ses actions : ni le doigt ni le clavier n'atteignent les siennes.
             expect(wrapper.getComponent(SwipeableRow).props('disabled')).toBe(true)
