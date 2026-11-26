@@ -718,17 +718,11 @@ const basculesDeLaSource = (source, vue = true) =>
 const BASCULES_DE_MISE_EN_PAGE = [
     {
         fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
-        bascule: 'sm:hidden',
-        nombre: 1,
-        raison: 'le bouton « Modifier » d’un exercice au doigt, qui supprime d’un glissement',
-    },
-    {
-        fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
         bascule: 'max-sm:hidden',
         nombre: 1,
         raison:
-            '« Modifier » pour la souris, à la place du précédent ; `max-sm:hidden` et non `hidden sm:inline-flex`, ' +
-            'que l’`inline-flex` du bouton battait (#2453). « Supprimer » reste visible à toute largeur',
+            'les boutons « Modifier » et « Supprimer » de la souris ; au doigt, seul le glissement les révèle (#2506) ; ' +
+            '`max-sm:hidden` et non `hidden sm:flex`, que le `flex` du groupe battait',
     },
     {
         fichier: 'resources/js/Components/UI/Modal.vue',
