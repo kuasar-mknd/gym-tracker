@@ -197,30 +197,34 @@ class RecordsTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($compte): void {
-            $browser->loginAs($compte)
-                ->resize(1280, 800)
-                ->visit('/records')
-                ->disableAnimations()
-                ->waitFor('#main-content [data-record]', 30)
-                ->waitUntil(self::LES_RECORDS_SONT_A_L_ECRAN, 30, 'les records du compte ne sont pas à l’écran')
-                ->waitForStableLayout();
+            try {
+                $browser->loginAs($compte)
+                    ->resize(1280, 800)
+                    ->visit('/records')
+                    ->disableAnimations()
+                    ->waitFor('#main-content [data-record]', 30)
+                    ->waitUntil(self::LES_RECORDS_SONT_A_L_ECRAN, 30, 'les records du compte ne sont pas à l’écran')
+                    ->waitForStableLayout();
 
-            /** @var array{rangeesDeDeux: int, ecart: float} $ecart */
-            $ecart = $browser->script(<<<'JS'
-                const lignes = new Map();
-                for (const li of document.querySelectorAll('#main-content [data-record]')) {
-                    const haut = Math.round(li.getBoundingClientRect().top);
-                    const carte = li.firstElementChild.getBoundingClientRect().height;
-                    const colonne = li.getBoundingClientRect().height;
-                    lignes.set(haut, [...(lignes.get(haut) ?? []), { carte, colonne }]);
-                }
-                const plusDeUne = [...lignes.values()].filter((rangee) => rangee.length > 1);
-                return { rangeesDeDeux: plusDeUne.length, ecart: Math.max(0, ...plusDeUne.flat().map((c) => Math.abs(c.carte - c.colonne))) };
-            JS)[0];
+                /** @var array{rangeesDeDeux: int, ecart: float} $ecart */
+                $ecart = $browser->script(<<<'JS'
+                    const lignes = new Map();
+                    for (const li of document.querySelectorAll('#main-content [data-record]')) {
+                        const haut = Math.round(li.getBoundingClientRect().top);
+                        const carte = li.firstElementChild.getBoundingClientRect().height;
+                        const colonne = li.getBoundingClientRect().height;
+                        lignes.set(haut, [...(lignes.get(haut) ?? []), { carte, colonne }]);
+                    }
+                    const plusDeUne = [...lignes.values()].filter((rangee) => rangee.length > 1);
+                    return { rangeesDeDeux: plusDeUne.length, ecart: Math.max(0, ...plusDeUne.flat().map((c) => Math.abs(c.carte - c.colonne))) };
+                    JS)[0];
 
-            $this->assertGreaterThanOrEqual(1, $ecart['rangeesDeDeux'], 'Au bureau, les cartes ne sont pas sur deux colonnes : la mesure ne vaudrait rien.');
-            $this->assertLessThanOrEqual(1.0, $ecart['ecart'], 'Une carte est plus basse que sa rangée.');
-            $browser->assertNoConsoleExceptions();
+                $this->assertGreaterThanOrEqual(1, $ecart['rangeesDeDeux'], 'Au bureau, les cartes ne sont pas sur deux colonnes : la mesure ne vaudrait rien.');
+                $this->assertLessThanOrEqual(1.0, $ecart['ecart'], 'Une carte est plus basse que sa rangée.');
+                $browser->assertNoConsoleExceptions();
+            } finally {
+                $browser->resize(393, 852);
+            }
         });
     }
 
