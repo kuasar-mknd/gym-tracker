@@ -36,7 +36,14 @@ const mensuration = (part, current, diff = 0) => ({
 
 const monter = async (props = {}) => {
     const wrapper = mount(Corps, {
-        props: { latestWeight: null, weightChange: 0, bodyFat: null, latestMeasurements: [], ...props },
+        props: {
+            joursDesCourbes: 90,
+            latestWeight: null,
+            weightChange: 0,
+            bodyFat: null,
+            latestMeasurements: [],
+            ...props,
+        },
         global: {
             directives: { press: {} },
             mocks: { route: globalThis.route },
@@ -133,6 +140,13 @@ describe('Corps/Index', () => {
         expect(lignes[0].find('.text-trend-down').exists()).toBe(true)
         expect(lignes[1].find('.text-trend-up').exists()).toBe(true)
         expect(lignes[2].find('.text-trend-up, .text-trend-down').exists()).toBe(false)
+    })
+
+    it('annonce la durée des courbes que le serveur donne', async () => {
+        const wrapper = await monter({ joursDesCourbes: 30, latestWeight: '80.40' })
+
+        expect(wrapper.text()).toContain('les 30 derniers jours')
+        expect(wrapper.text()).not.toContain('les 90 derniers jours')
     })
 
     it('survit à des courbes encore absentes', async () => {

@@ -30,13 +30,14 @@ class FetchCorpsAction
     }
 
     /**
-     * Chaque prop est une fermeture, qu'Inertia ne résout que si elle part
+     * Chaque prop est une fermeture (sauf `joursDesCourbes`, une constante), qu'Inertia ne résout que si elle part
      * dans la réponse : la requête de la prop différée `bodyStats`, qui rejoue
      * le contrôleur, ne relit ni la pesée ni les mensurations
      * (`.ai/rules/controllers.md`). Les trois chiffres de la pesée viennent
      * d'une seule lecture du cache, faite par la première fermeture résolue.
      *
      * @return array{
+     *     joursDesCourbes: int,
      *     latestWeight: \Closure(): (float|string|null),
      *     weightChange: \Closure(): float,
      *     bodyFat: \Closure(): (float|string|null),
@@ -52,6 +53,7 @@ class FetchCorpsAction
         };
 
         return [
+            'joursDesCourbes' => self::JOURS_DES_COURBES,
             'latestWeight' => fn (): float|string|null => $dernieresMesures()->latest_weight,
             'weightChange' => fn (): float => $dernieresMesures()->weight_change,
             'bodyFat' => fn (): float|string|null => $dernieresMesures()->latest_body_fat,
