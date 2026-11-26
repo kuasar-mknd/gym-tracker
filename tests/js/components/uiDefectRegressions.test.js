@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { evenementDeDoigt, imagesALaMain } from '../utils/geste'
 
 /**
  * Two defects found by auditing the interface rather than by writing tests,
@@ -9,6 +10,16 @@ import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 
 describe('a row that swipes', () => {
+    let images
+
+    beforeEach(() => {
+        images = imagesALaMain(vi)
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
     const mountRow = () =>
         mount(SwipeableRow, {
             props: { hasRightAction: true },
@@ -17,29 +28,33 @@ describe('a row that swipes', () => {
         })
 
     /** The foreground layer, which is the element that moves. */
-    const foreground = (wrapper) => wrapper.get('.z-10')
+    const foreground = (wrapper) => wrapper.get('[data-glissant]')
 
-    const swipe = async (wrapper, from, to) => {
-        await foreground(wrapper).trigger('touchstart', { touches: [{ clientX: from, clientY: 0 }] })
-        await foreground(wrapper).trigger('touchmove', { touches: [{ clientX: to, clientY: 0 }] })
+    const send = (wrapper, type, x, horloge) =>
+        foreground(wrapper).element.dispatchEvent(evenementDeDoigt(type, { x, horloge }))
+
+    const swipe = (wrapper, from, to) => {
+        send(wrapper, 'pointerdown', from, 0)
+        send(wrapper, 'pointermove', from - 11, 16)
+        send(wrapper, 'pointermove', to, 40)
     }
 
     it('goes back to rest when the system takes the gesture away', async () => {
         const wrapper = mountRow()
 
-        await swipe(wrapper, 200, 160)
-        expect(foreground(wrapper).attributes('style')).toContain('translateX')
+        swipe(wrapper, 200, 160)
+        expect(foreground(wrapper).element.style.transform).not.toBe('translateX(0px)')
 
-        // touchcancel fires when the browser or the OS claims the touch — a
+        // pointercancel fires when the browser or the OS claims the pointer — a
         // call arriving, the notification shade, the back gesture from the
         // edge. Unhandled, the row stayed frozen mid-swipe with its actions
-        // half-revealed, and no transition to carry it back.
-        await foreground(wrapper).trigger('touchcancel')
+        // half-revealed.
+        send(wrapper, 'pointercancel', 160, 41)
+        images.poser()
+        await flushPromises()
 
-        const style = foreground(wrapper).attributes('style')
-
-        expect(style).toContain('translateX(0px)')
-        expect(style).not.toContain('transition: none')
+        expect(foreground(wrapper).element.style.transform).toBe('translateX(0px)')
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
 
         wrapper.unmount()
     })
@@ -47,10 +62,14 @@ describe('a row that swipes', () => {
     it('still settles normally when the finger is simply lifted', async () => {
         const wrapper = mountRow()
 
-        await swipe(wrapper, 200, 199)
-        await foreground(wrapper).trigger('touchend')
+        send(wrapper, 'pointerdown', 200, 0)
+        send(wrapper, 'pointermove', 199, 16)
+        send(wrapper, 'pointerup', 199, 40)
+        images.poser()
+        await flushPromises()
 
-        expect(foreground(wrapper).attributes('style')).toContain('translateX(0px)')
+        expect(foreground(wrapper).element.style.transform).toBe('translateX(0px)')
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
 
         wrapper.unmount()
     })

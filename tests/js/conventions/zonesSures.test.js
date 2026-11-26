@@ -725,6 +725,12 @@ const BASCULES_DE_MISE_EN_PAGE = [
             '`max-sm:hidden` et non `hidden sm:flex`, que le `flex` du groupe battait',
     },
     {
+        fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
+        bascule: 'sm:hidden',
+        nombre: 1,
+        raison: 'le chevron qui laisse deviner le glissement, au doigt seulement : dès sm les boutons de la souris sont là, et il ne désigne plus rien',
+    },
+    {
         fichier: 'resources/js/Components/UI/Modal.vue',
         bascule: 'sm:hidden',
         nombre: 1,

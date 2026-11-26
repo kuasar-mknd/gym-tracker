@@ -152,7 +152,7 @@ class KeyboardNavigationTest extends DuskTestCase
     }
 
     /**
-     * SwipeableRow parks its actions behind the row at opacity 0 and only slides
+     * SwipeableRow parks its actions behind the row at zero width and only slides
      * them out on a swipe, but they never leave the tab order. On this page the
      * hidden action deletes the session and is the only way to delete one, so a
      * keyboard user could focus — and fire — a destructive control that draws
@@ -182,34 +182,38 @@ class KeyboardNavigationTest extends DuskTestCase
                 'return document.querySelector(\'[dusk="'.$selector.'"]\') !== null;'
             )[0], "The swipe delete action for workout {$workout->id} never rendered.");
 
+            // Le panneau n'est plus rendu transparent : il n'a pas de largeur tant que la
+            // rangée est fermée, et le bouton, qui le suit, non plus.
             $measure = 'const el = document.querySelector(\'[dusk="'.$selector.'"]\');'
                 .'const box = el.getBoundingClientRect();'
                 .'return {'
-                .'  opacity: Number(getComputedStyle(el.closest("[style*=opacity]")).opacity),'
+                .'  largeur: box.width,'
                 .'  onScreen: box.right > 0 && box.left < window.innerWidth && box.width > 0,'
                 .'};';
 
+            /** @var array{largeur: float, onScreen: bool} $closed */
             $closed = $browser->script($measure)[0];
 
             $this->assertEqualsWithDelta(
                 0.0,
-                $closed['opacity'],
-                0.001,
-                'The actions must start invisible — that is the design.'
+                $closed['largeur'],
+                0.5,
+                'The actions must start without any visible width — that is the design.'
             );
 
             $browser->script('document.querySelector(\'[dusk="'.$selector.'"]\').focus();');
             $browser->waitUntil(
-                'Number(getComputedStyle(document.querySelector(\'[dusk="'.$selector.'"]\').closest("[style*=opacity]")).opacity) > 0.9',
+                'document.querySelector(\'[dusk="'.$selector.'"]\').getBoundingClientRect().width > 60',
                 10,
                 'Focusing the delete action must reveal it instead of leaving focus on an invisible control.'
             );
 
+            /** @var array{largeur: float, onScreen: bool} $focused */
             $focused = $browser->script($measure)[0];
 
             $this->assertGreaterThan(
-                0.9,
-                $focused['opacity'],
+                60.0,
+                $focused['largeur'],
                 'Focusing the delete action must reveal it instead of leaving focus on an invisible control.'
             );
             $this->assertTrue($focused['onScreen'], 'The revealed action must actually be within the viewport.');

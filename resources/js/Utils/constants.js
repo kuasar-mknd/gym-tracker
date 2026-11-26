@@ -28,15 +28,15 @@ export const CATEGORY_COLORS = {
 }
 
 export const CATEGORY_BORDER_COLORS = {
-    Pectoraux: 'border-l-category-chest',
-    Dos: 'border-l-category-back',
-    Épaules: 'border-l-category-shoulders',
-    Bras: 'border-l-category-arms',
-    Jambes: 'border-l-category-legs',
-    Core: 'border-l-category-core',
-    Abdominaux: 'border-l-category-core',
-    Cardio: 'border-l-category-cardio',
-    Autres: 'border-l-category-other',
+    Pectoraux: 'border-l-category-chest!',
+    Dos: 'border-l-category-back!',
+    Épaules: 'border-l-category-shoulders!',
+    Bras: 'border-l-category-arms!',
+    Jambes: 'border-l-category-legs!',
+    Core: 'border-l-category-core!',
+    Abdominaux: 'border-l-category-core!',
+    Cardio: 'border-l-category-cardio!',
+    Autres: 'border-l-category-other!',
 }
 
 export const TYPE_ICONS = {

@@ -23,7 +23,7 @@ class ExerciseLibraryTest extends DuskTestCase
     {
         $browser->waitUsing(10, 250, fn (): bool => (bool) $browser->script(
             "const action = document.querySelector(\"{$action}\"); action.focus();"
-            .' return getComputedStyle(action.parentElement).opacity === "1";'
+            .' return action.getBoundingClientRect().width > 60;'
         )[0], "la rangée ne s'est pas ouverte pour {$action}");
     }
 

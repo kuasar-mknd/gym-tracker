@@ -15,7 +15,7 @@ use Tests\DuskTestCase;
 /**
  * The set row packs a check button, an index badge, two fixed-width inputs, two
  * unit labels and a delete button onto one line. On a 375pt screen that exceeds
- * the available width, and SwipeableRow clips the overflow — so the controls at
+ * the available width, and SwipeableRow clips the overflow sideways — so the controls at
  * the end of the row are simply unreachable on the narrowest iPhones.
  */
 class WorkoutRowOverflowTest extends DuskTestCase
@@ -81,7 +81,7 @@ class WorkoutRowOverflowTest extends DuskTestCase
             // is being cut off rather than merely wrapped.
             $overflow = $browser->script(
                 'const input = document.querySelector(\'[dusk="weight-input-0-0"]\');'
-                .'const row = input.closest(".relative.overflow-hidden") || input.parentElement;'
+                .'const row = input.closest(".relative.overflow-x-clip") || input.parentElement;'
                 .'return row.scrollWidth - row.clientWidth;'
             )[0];
 

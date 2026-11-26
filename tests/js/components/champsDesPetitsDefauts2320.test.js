@@ -1,14 +1,21 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
+import { evenementDeDoigt } from '../utils/geste'
 
 describe('SwipeableRow — rangée ouverte', () => {
     const racines = []
 
+    beforeEach(() => {
+        vi.stubGlobal('requestAnimationFrame', () => 1)
+        vi.stubGlobal('cancelAnimationFrame', () => {})
+    })
+
     afterEach(() => {
         racines.splice(0).forEach((wrapper) => wrapper.unmount())
+        vi.unstubAllGlobals()
     })
 
     const ouvrir = async () => {
@@ -17,27 +24,31 @@ describe('SwipeableRow — rangée ouverte', () => {
             attachTo: document.body,
         })
         racines.push(wrapper)
-        const contenu = wrapper.find('.relative.z-10')
-        await contenu.trigger('touchstart', { touches: [{ clientX: 200, clientY: 10 }] })
-        await contenu.trigger('touchmove', { touches: [{ clientX: 100, clientY: 10 }] })
-        await contenu.trigger('touchend')
+        const contenu = wrapper.find('[data-glissant]')
+        const envoyer = (type, x, horloge) => contenu.element.dispatchEvent(evenementDeDoigt(type, { x, horloge }))
+
+        envoyer('pointerdown', 200, 0)
+        envoyer('pointermove', 188, 16)
+        envoyer('pointermove', 100, 60)
+        envoyer('pointerup', 100, 64)
+        await flushPromises()
 
         return { wrapper, contenu }
     }
 
     it('se referme quand on touche ailleurs, pas quand on touche la rangée', async () => {
-        const { contenu } = await ouvrir()
-        const ouverte = contenu.attributes('style')
+        const { wrapper, contenu } = await ouvrir()
 
-        expect(ouverte).toMatch(/translateX\(-\d+/)
+        expect(wrapper.attributes('data-ouverte')).toBe('droite')
 
         contenu.element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
-        expect(contenu.attributes('style')).toBe(ouverte)
+        await flushPromises()
+        expect(wrapper.attributes('data-ouverte')).toBe('droite')
 
         document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
         await flushPromises()
 
-        expect(contenu.attributes('style')).toMatch(/translateX\(0px\)/)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
     })
 })
 

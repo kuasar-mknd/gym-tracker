@@ -115,18 +115,6 @@ parameters:
 			path: tests/Browser/KeyboardNavigationTest.php
 
 		-
-			message: '#^Cannot access offset ''onScreen'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Browser/KeyboardNavigationTest.php
-
-		-
-			message: '#^Cannot access offset ''opacity'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Browser/KeyboardNavigationTest.php
-
-		-
 			message: '#^Cannot access offset ''pressed'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
