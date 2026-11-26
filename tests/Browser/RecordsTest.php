@@ -205,6 +205,7 @@ class RecordsTest extends DuskTestCase
                 ->waitUntil(self::LES_RECORDS_SONT_A_L_ECRAN, 30, 'les records du compte ne sont pas à l’écran')
                 ->waitForStableLayout();
 
+            /** @var array{rangeesDeDeux: int, ecart: float} $ecart */
             $ecart = $browser->script(<<<'JS'
                 const lignes = new Map();
                 for (const li of document.querySelectorAll('#main-content [data-record]')) {
