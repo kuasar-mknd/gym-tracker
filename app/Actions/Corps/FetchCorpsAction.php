@@ -16,6 +16,9 @@ use Illuminate\Support\Collection;
 /**
  * Ce que la page Corps réunit : le poids et la masse grasse, que la racine de
  * Progrès montrait, et les dernières mensurations.
+ *
+ * @phpstan-type Cote array{cote: string, part: string, label: string, current: float, unit: string, date: string, diff: float}
+ * @phpstan-type Ligne array{part: string, label: string, current: float, unit: string, date: string, diff: float}|array{famille: string, label: string, cotes: list<Cote>}
  */
 class FetchCorpsAction
 {
@@ -61,7 +64,7 @@ class FetchCorpsAction
      *     latestWeight: \Closure(): (float|string|null),
      *     weightChange: \Closure(): float,
      *     bodyFat: \Closure(): (float|string|null),
-     *     latestMeasurements: \Closure(): Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}|array{famille: string, label: string, cotes: list<array{cote: string, part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>}>,
+     *     latestMeasurements: \Closure(): Collection<int, Ligne>,
      *     bodyStats: \Closure(): array{weightHistory: array<int, WeightHistoryPoint>, bodyFatHistory: array<int, BodyFatHistoryPoint>}
      * }
      */
@@ -90,7 +93,7 @@ class FetchCorpsAction
      * mensurations la donne.
      *
      * @param  Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>  $mesures
-     * @return Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}|array{famille: string, label: string, cotes: list<array{cote: string, part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>}>
+     * @return Collection<int, Ligne>
      */
     private function lesPlusUtiles(Collection $mesures): Collection
     {
@@ -102,6 +105,7 @@ class FetchCorpsAction
 
         $parNom = $mesures->keyBy(static fn (array $mesure): string => strtolower($mesure['part']));
         $famillesFaites = [];
+        /** @var list<Ligne> $lignes */
         $lignes = [];
 
         foreach ($mesures as $mesure) {
@@ -119,6 +123,7 @@ class FetchCorpsAction
 
             $famillesFaites[$famille] = true;
             $paire = BodyPartMeasurement::PAIRES[$famille];
+            /** @var list<Cote> $cotes */
             $cotes = [];
 
             foreach (['gauche', 'droite'] as $cote) {
@@ -134,15 +139,18 @@ class FetchCorpsAction
 
         usort($lignes, fn (array $a, array $b): int => $this->rang($a) <=> $this->rang($b));
 
-        return collect(array_slice($lignes, 0, self::MENSURATIONS_AFFICHEES));
+        /** @var list<Ligne> $retenues */
+        $retenues = array_slice($lignes, 0, self::MENSURATIONS_AFFICHEES);
+
+        return collect($retenues);
     }
 
     /**
-     * @param  array<string, mixed>  $ligne
+     * @param  array{famille?: string, part?: string}  $ligne
      */
     private function rang(array $ligne): int
     {
-        $nom = strtolower((string) ($ligne['famille'] ?? $ligne['part']));
+        $nom = strtolower($ligne['famille'] ?? $ligne['part'] ?? '');
 
         foreach (self::ORDRE_DES_MENSURATIONS as $position => $debuts) {
             foreach ($debuts as $debut) {

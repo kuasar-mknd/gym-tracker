@@ -69,9 +69,7 @@ it('rend la dernière mensuration de chaque partie, celles du compte seulement',
     assert($partie !== null);
 
     expect($mensurations)->toHaveCount(1)
-        ->and($partie['part'])->toBe('Waist')
-        ->and($partie['current'])->toBe(81.0)
-        ->and($partie['diff'])->toBe(-1.0);
+        ->and($partie)->toMatchArray(['part' => 'Waist', 'current' => 81.0, 'diff' => -1.0]);
 });
 
 /**
@@ -91,7 +89,7 @@ function mensurationsDeCorps(User $user, array $parties): void
 }
 
 /**
- * @return list<array<string, mixed>>
+ * @return list<array{famille?: string, part?: string, label: string}>
  */
 function lignesDeCorps(User $user): array
 {
@@ -99,12 +97,23 @@ function lignesDeCorps(User $user): array
 }
 
 /**
- * @param  list<array<string, mixed>>  $lignes
+ * Les pastilles d'une ligne à paire, la liste vide pour une ligne simple.
+ *
+ * @param  array{cotes?: list<array{cote: string, part: string, label: string, current: float, unit: string, date: string, diff: float}>}  $ligne
+ * @return list<array{cote: string, part: string, label: string, current: float, unit: string, date: string, diff: float}>
+ */
+function cotesDeCorps(array $ligne): array
+{
+    return $ligne['cotes'] ?? [];
+}
+
+/**
+ * @param  list<array{famille?: string, part?: string, label: string}>  $lignes
  * @return list<string>
  */
 function nomsDesLignesDeCorps(array $lignes): array
 {
-    return array_map(static fn (array $ligne): string => (string) ($ligne['famille'] ?? $ligne['part']), $lignes);
+    return array_map(static fn (array $ligne): string => $ligne['famille'] ?? $ligne['part'] ?? '', $lignes);
 }
 
 it('regroupe les treize parties en six lignes, dont trois paires, dans l’ordre de la carte', function (): void {
@@ -115,9 +124,9 @@ it('regroupe les treize parties en six lignes, dont trois paires, dans l’ordre
 
     expect(nomsDesLignesDeCorps($lignes))->toBe(['Waist', 'Chest', 'Hips', 'Thigh', 'Biceps', 'Calf'])
         ->and($lignes[3]['label'])->toBe('Cuisse')
-        ->and(array_column($lignes[3]['cotes'], 'part'))->toBe(['Thigh L', 'Thigh R'])
-        ->and(array_column($lignes[4]['cotes'], 'cote'))->toBe(['gauche', 'droite'])
-        ->and(array_column($lignes[5]['cotes'], 'label'))->toBe(['Mollet gauche', 'Mollet droit']);
+        ->and(array_column(cotesDeCorps($lignes[3]), 'part'))->toBe(['Thigh L', 'Thigh R'])
+        ->and(array_column(cotesDeCorps($lignes[4]), 'cote'))->toBe(['gauche', 'droite'])
+        ->and(array_column(cotesDeCorps($lignes[5]), 'label'))->toBe(['Mollet gauche', 'Mollet droit']);
 });
 
 it('donne à l’avant-bras la place qu’une cuisse et un mollet absents laissent', function (): void {
@@ -140,11 +149,12 @@ it('ne rend qu’une pastille quand un seul côté est saisi', function (): void
 
     $lignes = lignesDeCorps($user);
 
+    $cotes = cotesDeCorps($lignes[0]);
+
     expect($lignes)->toHaveCount(1)
-        ->and($lignes[0]['famille'])->toBe('Calf')
-        ->and($lignes[0]['cotes'])->toHaveCount(1)
-        ->and($lignes[0]['cotes'][0]['part'])->toBe('Calf R')
-        ->and($lignes[0]['cotes'][0]['cote'])->toBe('droite');
+        ->and($lignes[0]['famille'] ?? null)->toBe('Calf')
+        ->and($cotes)->toHaveCount(1)
+        ->and($cotes[0])->toMatchArray(['part' => 'Calf R', 'cote' => 'droite']);
 });
 
 it('garde l’unité, la date et l’écart de chaque côté', function (): void {
@@ -155,7 +165,7 @@ it('garde l’unité, la date et l’écart de chaque côté', function (): void
     ]);
     BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Thigh R', 'value' => 24, 'unit' => 'in', 'measured_at' => '2026-11-12']);
 
-    $cotes = lignesDeCorps($user)[0]['cotes'];
+    $cotes = cotesDeCorps(lignesDeCorps($user)[0]);
 
     expect($cotes[0])->toMatchArray(['unit' => 'cm', 'date' => '2026-03-03', 'current' => 60.0, 'diff' => 0.0])
         ->and($cotes[1])->toMatchArray(['unit' => 'in', 'date' => '2026-11-12', 'current' => 24.0, 'diff' => 0.5]);
@@ -177,7 +187,7 @@ it('ne mêle jamais une partie nommée « Biceps » ni une saisie libre à une f
 
     expect($lignes)->toHaveCount(4)
         ->and($simple)->not->toHaveKey('cotes')
-        ->and($famille['cotes'])->toHaveCount(1)
+        ->and($famille === null ? [] : cotesDeCorps($famille))->toHaveCount(1)
         ->and($libre)->toMatchArray(['label' => 'Cuisse gauche', 'current' => 60.0])
         ->and(nomsDesLignesDeCorps($lignes))->toContain('Poignet gauche');
 });
