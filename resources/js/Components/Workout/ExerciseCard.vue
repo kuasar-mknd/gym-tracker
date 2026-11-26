@@ -73,6 +73,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                 @click="emit('start-edit', exercise)"
                 class="accent-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
                 data-testid="edit-exercise-button-mobile"
+                :dusk="`swipe-edit-exercise-${exercise.id}`"
             >
                 <div class="flex flex-col items-center">
                     <GlassIcon name="edit" />
@@ -86,6 +87,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                 @click="emit('delete', exercise.id)"
                 class="danger-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
                 data-testid="delete-exercise-button-mobile"
+                :dusk="`swipe-delete-exercise-${exercise.id}`"
             >
                 <div class="flex flex-col items-center">
                     <GlassIcon name="delete" />
@@ -139,25 +141,12 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                 <!-- Cachés jusqu'au survol ou au focus sous une souris seulement :
                      une tablette ne survole pas (`souris:`, app.css, #2082). -->
                 <div
-                    class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 flex shrink-0 items-center gap-2 transition-opacity"
+                    class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 flex shrink-0 items-center gap-2 transition-opacity max-sm:hidden"
                 >
                     <GlassIconButton
                         icon="edit"
                         :label="`Modifier ${exercise.name}`"
                         ton="accent"
-                        class="sm:hidden"
-                        :dusk="`edit-exercise-btn-${exercise.id}`"
-                        :disabled="surUneCopie"
-                        :aria-describedby="raisonDUneEcriture"
-                        @click.stop="emit('start-edit', exercise)"
-                    />
-
-                    <!-- Desktop Buttons -->
-                    <GlassIconButton
-                        icon="edit"
-                        :label="`Modifier ${exercise.name}`"
-                        ton="accent"
-                        class="max-sm:hidden"
                         :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
                         :disabled="surUneCopie"
                         :aria-describedby="raisonDUneEcriture"

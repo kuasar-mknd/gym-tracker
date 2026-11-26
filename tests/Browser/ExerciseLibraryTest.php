@@ -17,6 +17,19 @@ class ExerciseLibraryTest extends DuskTestCase
     /**
      * Test the full lifecycle of exercise management in the library.
      */
+    /**
+     * WebDriver ne sait pas glisser : le focus clavier ouvre la rangée comme le
+     * geste (SwipeableRow). Il est redonné à chaque essai, la fermeture de la
+     * fenêtre de création pouvant le reprendre après coup.
+     */
+    private function glisserJusquA(Browser $browser, string $action): void
+    {
+        $browser->waitUsing(10, 250, fn (): bool => (bool) $browser->script(
+            "const action = document.querySelector(\"{$action}\"); action.focus();"
+            .' return getComputedStyle(action.parentElement).opacity === "1";'
+        )[0], "la rangée ne s'est pas ouverte pour {$action}");
+    }
+
     private function performExerciseLibraryLifecycle(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create([
@@ -92,8 +105,11 @@ class ExerciseLibraryTest extends DuskTestCase
             $exercise = Exercise::where('name', $newExerciseName)->firstOrFail();
             $updatedName = 'Updated Pull Up '.time().random_int(0, 999);
 
-            // Click the small edit button visible on mobile
-            $browser->clickWhenSettled("[dusk='edit-exercise-btn-{$exercise->id}']");
+            // Au doigt, la modification est derrière le glissement ; WebDriver ne sait pas glisser,
+            // mais le focus clavier ouvre la rangée exactement comme lui (SwipeableRow).
+            $actionDeModification = "[dusk='swipe-edit-exercise-{$exercise->id}']";
+            $this->glisserJusquA($browser, $actionDeModification);
+            $browser->clickWhenSettled($actionDeModification);
             $browser->waitFor('@edit-exercise-name', 10)
                 ->type('@edit-exercise-name', $updatedName)
                 ->click('@save-exercise-btn')
@@ -106,8 +122,10 @@ class ExerciseLibraryTest extends DuskTestCase
             );
 
             // 6. Delete Exercise
-            // Click the delete button revealed by script (simulating swipe result)
-            $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
+            // Même chemin que la modification : l'action de glissement, atteinte au focus.
+            $actionDeSuppression = "[dusk='swipe-delete-exercise-{$exercise->id}']";
+            $this->glisserJusquA($browser, $actionDeSuppression);
+            $browser->clickWhenSettled($actionDeSuppression);
 
             // La confirmation est un dialogue de l'application, plus la boite
             // native : Dusk clique un bouton au lieu de repondre au navigateur.
