@@ -20,7 +20,6 @@ const datasets = computed(() => [
         data: props.data.map((item) => item.volume),
         backgroundColor: jeton('accent-primary'),
         borderRadius: 6,
-        hoverBackgroundColor: jeton('accent-tertiary'),
     },
 ])
 </script>

@@ -24,7 +24,6 @@ const datasets = computed(() => [
         borderRadius: 8,
         barPercentage: 0.6,
         borderWidth: 0,
-        hoverBackgroundColor: jeton('accent-tertiary'),
     },
 ])
 

@@ -86,6 +86,7 @@ describe('MaxRepsChart fill', () => {
         })
 
         expect(createLinearGradient).toHaveBeenCalledWith(0, 0, 0, 200)
-        expect(stops[1][1]).toBe(jetonTransparent('accent-primary', 0))
+        expect(stops[0][1]).toBe(jetonTransparent('accent-tertiary', 0.2))
+        expect(stops[1][1]).toBe(jetonTransparent('accent-tertiary', 0))
     })
 })
