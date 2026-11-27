@@ -52,7 +52,7 @@ describe('MarqueDeLApplication', () => {
 
     /**
      * Sur le fond que teinte LiquidBackground, l'orange des barres ne rendait
-     * que 2,86:1 ; la tuile de l'icône lui rend ses 3,21 quel que soit le fond.
+     * que 2,47:1 ; la tuile de l'icône lui rend ses 3,21 quel que soit le fond.
      */
     it.each(['barre', 'page'])('pose le logo sur la tuile de l’icône, en %s', (disposition) => {
         expect(monter({ disposition }).get('svg').classes()).toContain('bg-logo-fond')

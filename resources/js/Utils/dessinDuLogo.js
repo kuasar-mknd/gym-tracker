@@ -55,7 +55,7 @@ export const DISPOSITIONS_DE_LA_MARQUE = {
 /**
  * La tuile du logo dans l'application, celle de son icône (public/icone.svg).
  *
- * Sans elle, l'orange des barres ne rendait que 2,86:1 sur le fond que teinte
+ * Sans elle, l'orange des barres ne rendait que 2,47:1 sur le fond que teinte
  * LiquidBackground au-dessus de la carte de connexion, sous les 3:1 d'un
  * graphique (WCAG 1.4.11) ; sur la tuile, il en rend 3,21 quel que soit le
  * fond. Son arrondi et sa marge intérieure, un cinquième et un dixième du
