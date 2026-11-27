@@ -59,8 +59,6 @@ class ReorganiserLesExercicesTest extends DuskTestCase
             // cartes avant d'envoyer le PATCH (mise a jour optimiste), et
             // l'attente aboutit sans rien savoir du serveur.
             $browser->keys('[dusk="reorder-line-0"]', '{ARROW_DOWN}')
-                // `textContent` rend le texte SOURCE : la majuscule vient de
-                // `uppercase`, une regle CSS, et ne s'y voit pas.
                 ->waitUntil("document.querySelectorAll('[data-line-id]')[1].textContent.includes('Alpha')", 15);
 
             // Celle-ci prouve l'ecriture : le PATCH api/v1/workouts/{id}/line-order

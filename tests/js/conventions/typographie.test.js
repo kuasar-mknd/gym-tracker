@@ -23,9 +23,8 @@ const COULEUR =
     /^(text-(text|accent|surface)-|text-transparent|bg-clip-text|bg-linear|from-|via-|to-|text-gradient|drop-shadow)/
 
 /**
- * `titre-ecran`, `titre-plat` et `etiquette` sont les rôles du verre : casse de
- * phrase, graisse 600. Les quatre premiers restent ceux des autres pages, que
- * des parcours Dusk lisent en capitales.
+ * `titre-ecran`, `titre-plat` et `etiquette` sont les trois rôles de la charte :
+ * casse de phrase, graisse 600.
  */
 it('ne compose un titre que par un rôle de la charte', () => {
     const fautifs = collectSourceFiles({ extensions: ['.vue'] }).flatMap((fichier) => {
