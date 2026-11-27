@@ -133,7 +133,7 @@ function suivre(souhaitee) {
 const estUnDoigt = (evenement) => evenement.pointerType === 'touch' || evenement.pointerType === 'pen'
 
 function relacherLaCapture() {
-    if (saisie?.verrou !== 'horizontal') {
+    if (saisie?.verrou !== 'horizontal' || !saisie.stylet) {
         return
     }
 
@@ -168,6 +168,7 @@ function auPointeurPose(evenement) {
         x0: evenement.clientX,
         y0: evenement.clientY,
         verrou: null,
+        stylet: evenement.pointerType === 'pen',
         origine: 0,
         xDeDepart: x,
         cranDeDepart: crans().includes(depart) ? depart : 0,
@@ -199,10 +200,12 @@ function auPointeurBouge(evenement) {
         saisie.xDeDepart = x
         aAvaler = 'glissement'
 
-        try {
-            contenu.value?.setPointerCapture?.(evenement.pointerId)
-        } catch {
-            // Un pointeur que le navigateur ne connaît pas (évènement synthétique) : le geste suit quand même.
+        if (saisie.stylet) {
+            try {
+                contenu.value?.setPointerCapture?.(evenement.pointerId)
+            } catch {
+                // Un pointeur que le navigateur ne connaît pas (évènement synthétique) : le geste suit quand même.
+            }
         }
     }
 
@@ -258,6 +261,52 @@ function auPointeurAnnule(evenement) {
     relacherLaCapture()
     saisie = null
     fermer()
+}
+
+/*
+ * Le doigt passe par les évènements de contact, non par ceux de pointeur : sur
+ * iOS, un champ de saisie reçoit un `pointercancel` dès que le navigateur prend
+ * le toucher pour le curseur, et la rangée n'avait plus de geste à suivre.
+ */
+function duContact(evenement) {
+    const contacts = Array.from(evenement.changedTouches ?? [])
+    const contact = saisie ? contacts.find((candidat) => candidat.identifier === saisie.id) : contacts[0]
+
+    return contact
+        ? {
+              pointerId: contact.identifier,
+              pointerType: 'touch',
+              clientX: contact.clientX,
+              clientY: contact.clientY,
+              timeStamp: evenement.timeStamp,
+          }
+        : null
+}
+
+const duStylet = (rappel) => (evenement) => {
+    if (evenement.pointerType === 'pen') {
+        rappel(evenement)
+    }
+}
+
+const duDoigt = (rappel) => (evenement) => {
+    const contact = duContact(evenement)
+
+    if (contact) {
+        rappel(contact)
+    }
+}
+
+const auContactPose = duDoigt(auPointeurPose)
+const auContactLeve = duDoigt(auPointeurLeve)
+const auContactAnnule = duDoigt(auPointeurAnnule)
+
+function auContactBouge(evenement) {
+    duDoigt(auPointeurBouge)(evenement)
+
+    if (saisie?.verrou === 'horizontal' && evenement.cancelable) {
+        evenement.preventDefault()
+    }
 }
 
 function auClicEnCapture(evenement) {
@@ -388,10 +437,14 @@ defineExpose({ close: fermer })
             ref="contenu"
             data-glissant
             class="relative z-10 touch-pan-y"
-            @pointerdown.passive="auPointeurPose"
-            @pointermove.passive="auPointeurBouge"
-            @pointerup.passive="auPointeurLeve"
-            @pointercancel.passive="auPointeurAnnule"
+            @touchstart.passive="auContactPose"
+            @touchmove="auContactBouge"
+            @touchend.passive="auContactLeve"
+            @touchcancel.passive="auContactAnnule"
+            @pointerdown.passive="duStylet(auPointeurPose)($event)"
+            @pointermove.passive="duStylet(auPointeurBouge)($event)"
+            @pointerup.passive="duStylet(auPointeurLeve)($event)"
+            @pointercancel.passive="duStylet(auPointeurAnnule)($event)"
             @click.capture="auClicEnCapture"
         >
             <slot />

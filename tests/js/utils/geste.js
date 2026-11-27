@@ -1,18 +1,32 @@
 /**
- * Un évènement de pointeur au doigt, daté par le test. `timeStamp` est en
+ * Un évènement de doigt (contact tactile) ou de pointeur (stylet, souris), daté par le test. `timeStamp` est en
  * lecture seule : le navigateur le pose, un test le redéfinit pour que la
  * vitesse du geste se lise sur l'horloge qu'il maîtrise.
  */
 export const evenementDeDoigt = (type, { x = 0, y = 10, horloge = 0, pointerType = 'touch', pointerId = 1 } = {}) => {
-    const evenement = new PointerEvent(type, {
-        pointerId,
-        pointerType,
-        clientX: x,
-        clientY: y,
-        isPrimary: true,
-        bubbles: true,
-        cancelable: true,
-    })
+    let evenement
+
+    if (pointerType === 'touch') {
+        const contact = { identifier: pointerId, clientX: x, clientY: y }
+        const fin = type === 'pointerup' || type === 'pointercancel'
+
+        evenement = new Event(type.replace('pointer', 'touch').replace('down', 'start').replace('up', 'end'), {
+            bubbles: true,
+            cancelable: true,
+        })
+        evenement.touches = fin ? [] : [contact]
+        evenement.changedTouches = [contact]
+    } else {
+        evenement = new PointerEvent(type, {
+            pointerId,
+            pointerType,
+            clientX: x,
+            clientY: y,
+            isPrimary: true,
+            bubbles: true,
+            cancelable: true,
+        })
+    }
 
     Object.defineProperty(evenement, 'timeStamp', { value: horloge })
 

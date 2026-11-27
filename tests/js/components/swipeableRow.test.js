@@ -550,7 +550,7 @@ describe('SwipeableRow, le geste', () => {
 
         contenu(wrapper).element.setPointerCapture = vi.fn()
         contenu(wrapper).element.releasePointerCapture = relache
-        const main = doigt(wrapper, 300)
+        const main = doigt(wrapper, 300, { pointerType: 'pen' })
 
         main.vers(289)
         await wrapper.setProps({ disabled: true })
@@ -565,7 +565,7 @@ describe('SwipeableRow, le geste', () => {
         const capture = vi.fn()
 
         contenu(wrapper).element.setPointerCapture = capture
-        const main = doigt(wrapper, 300)
+        const main = doigt(wrapper, 300, { pointerType: 'pen' })
 
         expect(capture).not.toHaveBeenCalled()
         main.vers(305)
@@ -574,6 +574,25 @@ describe('SwipeableRow, le geste', () => {
         expect(capture).toHaveBeenCalledWith(1)
 
         main.leve()
+        wrapper.unmount()
+    })
+
+    it('suit un doigt posé sur un champ, même si le navigateur y annule le pointeur', async () => {
+        const wrapper = mountRow({}, { default: '<input type="number" />' })
+        const champ = wrapper.find('input').element
+        const envoyer = (type, x) => champ.dispatchEvent(evenementDeDoigt(type, { x, y: 10, horloge }))
+
+        envoyer('pointerdown', 300)
+        horloge += 16
+        envoyer('pointermove', 289)
+        champ.dispatchEvent(new Event('pointercancel', { bubbles: true }))
+        horloge += 16
+        envoyer('pointermove', 200)
+        image()
+
+        expect(positionDe(wrapper)).toBeLessThan(0)
+
+        envoyer('pointerup', 200)
         wrapper.unmount()
     })
 
