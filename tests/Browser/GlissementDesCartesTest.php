@@ -169,9 +169,9 @@ class GlissementDesCartesTest extends DuskTestCase
     }
 
     /**
-     * Un doigt de pointeurs synthétiques (WebDriver ne sait pas glisser) : il
-     * prouve la boucle d'images, pas le chemin tactile du système, que seul le
-     * simulateur rejoue. Dusk force `prefers-reduced-motion` : pour mesurer le
+     * Un doigt d'évènements de contact synthétiques (WebDriver ne sait pas
+     * glisser) : il prouve la boucle d'images, pas le chemin tactile du système,
+     * que seul le simulateur rejoue. Dusk force `prefers-reduced-motion` : pour mesurer le
      * ressort, la page répond « non » à la question, le temps du geste.
      *
      * @return array{doigt: list<array{doigt: float, rangee: float}>, lache: float, apres: list<float>, ouverte: ?string}
@@ -191,23 +191,27 @@ class GlissementDesCartesTest extends DuskTestCase
                 const m = contenu.style.transform.match(/translateX\((-?[\d.]+)px\)/);
                 return m ? parseFloat(m[1]) : 0;
             };
-            const envoyer = (type, x) => contenu.dispatchEvent(new PointerEvent(type, {
-                pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: 400, bubbles: true, cancelable: true,
-            }));
+            const envoyer = (type, x) => {
+                const contact = new Touch({ identifier: 7, target: contenu, clientX: x, clientY: 400 });
+                const fin = type === 'touchend';
+                contenu.dispatchEvent(new TouchEvent(type, {
+                    touches: fin ? [] : [contact], changedTouches: [contact], bubbles: true, cancelable: true,
+                }));
+            };
             const image = () => new Promise((resolu) => requestAnimationFrame(resolu));
 
             (async () => {
                 const doigt = [];
                 const apres = [];
                 let x = 300;
-                envoyer('pointerdown', x);
+                envoyer('touchstart', x);
                 for (let pas = 0; pas < 10; pas += 1) {
                     x -= 8;
-                    envoyer('pointermove', x);
+                    envoyer('touchmove', x);
                     await image();
                     doigt.push({ doigt: x, rangee: position() });
                 }
-                envoyer('pointerup', x);
+                envoyer('touchend', x);
                 const lache = position();
                 let stable = 0;
                 let precedent = lache;
