@@ -68,6 +68,8 @@ class EchapDansLeFormulaireDeCreationTest extends DuskTestCase
 
             $this->assertIsArray($zoneVide, 'Le formulaire de création doit avoir une zone vide où poser le focus.');
 
+            $enEntier = static fn (mixed $decalage): int => is_int($decalage) || is_float($decalage) ? (int) round($decalage) : 0;
+
             // Relève où le clic tombe réellement, pour le prouver hors champ.
             $browser->script(<<<'JS'
                 window.__cliqueDuTest = null;
@@ -79,8 +81,8 @@ class EchapDansLeFormulaireDeCreationTest extends DuskTestCase
             $browser->driver->action()
                 ->moveToElement(
                     $browser->driver->findElement(WebDriverBy::cssSelector('dialog[open] form')),
-                    (int) round($zoneVide['dx']),
-                    (int) round($zoneVide['dy'])
+                    $enEntier($zoneVide['dx']),
+                    $enEntier($zoneVide['dy'])
                 )
                 ->click()
                 ->perform();
