@@ -119,4 +119,23 @@ describe('la coche d’avant, tant que le serveur n’a pas répondu', () => {
         expect(enFile.is_completed).toBe(true)
         expect(valeursDeRepli()).toEqual([])
     })
+
+    it('rétablit une coche sans relancer le repos, que la même coche posée au doigt relance (#2355)', async () => {
+        const { validation, apresValidation } = monter(() =>
+            Promise.resolve({ data: { data: { is_completed: true, personal_record: null, updated_at: 'now' } } }),
+        )
+        const retablie = { id: 4, _rowKey: 'row-4', is_completed: false }
+        const posee = { id: 5, _rowKey: 'row-5', is_completed: false }
+
+        await validation.retablirLaCoche(retablie)
+        await flushPromises()
+
+        expect(retablie.is_completed).toBe(true)
+        expect(apresValidation).not.toHaveBeenCalled()
+
+        await validation.toggleSetCompletion(posee, 90)
+
+        expect(apresValidation).toHaveBeenCalledTimes(1)
+        expect(apresValidation).toHaveBeenCalledWith(90, posee)
+    })
 })

@@ -52,6 +52,22 @@ describe('ToastsDuLayout — la suppression qu’on peut annuler (#2355)', () =>
         expect(toast.text()).toContain('Série supprimée')
     })
 
+    it('wears the design’s toast: thick glass, a 6 px state edge, and the same medium weight as the flash toasts', async () => {
+        const wrapper = monter()
+
+        proposerUneAnnulation(annonce())
+        await wrapper.vm.$nextTick()
+
+        const panneau = wrapper.get('[dusk="toast-suppression"] div')
+
+        expect(panneau.classes()).toEqual(
+            expect.arrayContaining(['verre-epais', 'border-l-6!', 'border-l-accent-state!']),
+        )
+        expect(panneau.classes()).not.toContain('glass-panel-light')
+        expect(panneau.get('p').classes()).toContain('font-medium')
+        expect(panneau.get('p').classes()).not.toContain('font-bold')
+    })
+
     it('offers a real button, reachable from the keyboard, that takes the deletion back', async () => {
         const wrapper = monter()
         const s = annonce()

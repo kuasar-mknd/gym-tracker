@@ -225,7 +225,7 @@ onUnmounted(() => {
                     @focusin="suspendre"
                     @focusout="reprendre"
                 >
-                    <p class="text-text-main flex-1 text-sm font-bold">
+                    <p class="text-text-main flex-1 text-sm font-medium">
                         {{ suppressionAnnulable.message }}
                     </p>
                     <GlassButton
