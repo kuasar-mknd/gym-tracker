@@ -41,16 +41,43 @@ describe('les pages secondaires', () => {
     })
 })
 
+/**
+ * Modèles et Calendrier sont des pages secondaires de Séances, mais sur
+ * téléphone elles reprennent la rangée d'Historique (le segment et la cloche) à
+ * la place de la flèche et du titre : la flèche n'y mènerait qu'à l'onglet d'à
+ * côté. Leur retour reste, mais sur bureau seulement (`retour-de-bureau-seul`),
+ * où l'en-tête n'a pas de segment. Calendar/Index garde donc `show-back` dans
+ * RETOURS ci-dessus : c'est le retour de bureau.
+ */
+describe('Modèles et Calendrier sur mobile', () => {
+    it.each(['Workouts/Templates/Index', 'Calendar/Index'])(
+        '%s met la rangée des séances à la place de la flèche, et garde le retour sur bureau',
+        (page) => {
+            const attributs = balise(page)
+            const source = readFileSync(`${jsRoot}/Pages/${page}.vue`, 'utf8')
+
+            expect(attributs).toMatch(/\sshow-back[\s=>]/)
+            expect(attributs).toMatch(/\sretour-de-bureau-seul[\s=>]/)
+            expect(attributs).toMatch(/\stitre-masque[\s=>]/)
+            expect(attributs).toContain('back-route="workouts.index"')
+            expect(source).toContain('<OngletsDesSeances actif=')
+            expect(source).not.toContain('<Cloche')
+        },
+    )
+})
+
 describe('Workouts/Index sur mobile', () => {
     const source = readFileSync(`${jsRoot}/Pages/Workouts/Index.vue`, 'utf8')
+    const rangee = readFileSync(`${jsRoot}/Components/Workout/OngletsDesSeances.vue`, 'utf8')
 
-    it('garde le démarrage et le segment Historique / Modèles / Calendrier hors du seul créneau de bureau', () => {
+    it('garde le démarrage sous la rangée des séances, qui ne se montre pas sur bureau', () => {
         const contenu = source.slice(source.indexOf('</template>', source.indexOf('<template #header>')))
 
-        expect(contenu).toContain('bureau:hidden')
+        expect(contenu).toContain('<OngletsDesSeances actif="historique">')
         expect(contenu).toContain('@click="createWorkout"')
-        expect(contenu).toContain("route('templates.index')")
-        expect(contenu).toContain("route('calendar.index')")
+        expect(rangee).toContain('bureau:hidden')
+        expect(rangee).toContain("route: 'templates.index'")
+        expect(rangee).toContain("route: 'calendar.index'")
     })
 })
 

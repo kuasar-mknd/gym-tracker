@@ -34,7 +34,7 @@ const mountPage = ({ year = 2026, month = 2, workouts = [], journals = [] } = {}
             // The "Aujourd'hui" button lives in #header-actions; a stub that
             // forwards only the default slot drops it, and every assertion
             // about it then passes for the wrong reason.
-            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot, OngletsDesSeances: passesSlot },
         },
     })
 

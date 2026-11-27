@@ -85,6 +85,16 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * Le retour ne se montre que sur bureau : sur téléphone, la page pose sa
+     * propre rangée d'onglets en haut (Modèles, Calendrier : `OngletsDesSeances`),
+     * qui tient lieu de flèche et de titre. Sert avec `titre-masque`, que le
+     * titre reste pour les lecteurs d'écran, et avec `show-back` pour le bureau.
+     */
+    retourDeBureauSeul: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 /*
@@ -102,7 +112,7 @@ const CLASSES_DU_RETOUR_DE_BUREAU =
  * hauteur de la barre d'état garde l'horloge lisible quand le contenu défile
  * dessous.
  */
-const clocheDansLaPage = computed(() => props.titreMasque && !props.showBack)
+const clocheDansLaPage = computed(() => props.titreMasque && (!props.showBack || props.retourDeBureauSeul))
 
 const LARGEURS = { large: 'max-w-7xl', rail: 'max-w-3xl bureau:max-w-270', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
@@ -347,7 +357,7 @@ onUnmounted(() => {
             ></div>
             <div class="flex min-w-0 items-center gap-4">
                 <Link
-                    v-if="showBack"
+                    v-if="showBack && !retourDeBureauSeul"
                     v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
                     class="verre-regulier text-text-muted hover:text-text-main rounded-capsule flex size-11 shrink-0 items-center justify-center transition-colors"

@@ -119,7 +119,12 @@ const library = [
  * prop and let the double-launch guard look enforced when it is not. `v-press`
  * is registered empty because it is tested on its own in vPress.test.js.
  */
-const stubs = { AuthenticatedLayout: layoutStub, GlassCard: passesSlot, Modal: passesSlot }
+const stubs = {
+    AuthenticatedLayout: layoutStub,
+    GlassCard: passesSlot,
+    Modal: passesSlot,
+    OngletsDesSeances: passesSlot,
+}
 
 /*
  * Read at mount time, never at import time: `globalThis.route` is only set in

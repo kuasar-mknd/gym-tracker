@@ -1,10 +1,10 @@
 <script setup>
-import Cloche from '@/Components/Navigation/Cloche.vue'
+import OngletsDesSeances from '@/Components/Workout/OngletsDesSeances.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, Link, useForm, router } from '@inertiajs/vue3'
+import { Head, useForm, router } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
@@ -144,33 +144,7 @@ const revenirSiLaPageEstVide = () => {
 
             <div class="space-y-6">
                 <!-- Les actions de l'en-tête de bureau, qui ne se montre qu'à partir de 1 024 px. -->
-                <div class="bureau:hidden space-y-3">
-                    <div class="flex items-center gap-2">
-                        <nav
-                            aria-label="Séances"
-                            class="border-glass-border bg-surface-card/50 flex min-w-0 flex-1 rounded-xl border p-1 text-xs font-bold"
-                        >
-                            <span
-                                aria-current="page"
-                                class="bg-text-main text-text-on-dark-accent min-h-touch flex flex-1 items-center justify-center rounded-lg px-1"
-                            >
-                                Historique
-                            </span>
-                            <Link
-                                :href="route('templates.index')"
-                                class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-1 focus-visible:ring-2 focus-visible:outline-none"
-                            >
-                                Modèles
-                            </Link>
-                            <Link
-                                :href="route('calendar.index')"
-                                class="text-text-muted min-h-touch focus-visible:ring-accent-primary flex flex-1 items-center justify-center rounded-lg px-1 focus-visible:ring-2 focus-visible:outline-none"
-                            >
-                                Calendrier
-                            </Link>
-                        </nav>
-                        <Cloche class="shrink-0" />
-                    </div>
+                <OngletsDesSeances actif="historique">
                     <GlassButton
                         v-if="!seanceEnCours && !compteNeuf"
                         variant="primary"
@@ -181,7 +155,7 @@ const revenirSiLaPageEstVide = () => {
                         <GlassIcon name="add" size="sm" class="mr-2" />
                         Démarrer une séance
                     </GlassButton>
-                </div>
+                </OngletsDesSeances>
 
                 <div class="stagger-2 animate-slide-up">
                     <h3 class="titre-plat bureau:block mb-3 hidden">Historique</h3>

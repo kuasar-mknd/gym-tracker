@@ -10,6 +10,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import OngletsDesSeances from '@/Components/Workout/OngletsDesSeances.vue'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
@@ -71,17 +72,7 @@ const {
 <template>
     <Head title="Modèles" />
 
-    <AuthenticatedLayout page-title="Modèles" show-back back-route="workouts.index">
-        <!--
-            « Nouveau modèle » est une navigation : `GlassButton` la rend en un
-            seul lien par `href`, jamais un bouton posé dans un `Link` (#2117).
-        -->
-        <template #header-actions>
-            <GlassButton :href="route('templates.create')" variant="primary" size="sm" aria-label="Nouveau modèle">
-                <GlassIcon name="add" size="xs" />
-            </GlassButton>
-        </template>
-
+    <AuthenticatedLayout page-title="Modèles" show-back retour-de-bureau-seul titre-masque back-route="workouts.index">
         <template #header>
             <div class="flex items-center justify-between">
                 <h1 class="titre-ecran">Modèles</h1>
@@ -93,6 +84,17 @@ const {
         </template>
 
         <div class="space-y-6">
+            <!--
+                Sur téléphone, la rangée d'onglets des séances prend la place de la flèche et du titre ;
+                « Nouveau modèle » est une navigation : un seul lien par `href`, jamais un bouton posé dans un `Link` (#2117).
+            -->
+            <OngletsDesSeances actif="modeles">
+                <GlassButton :href="route('templates.create')" variant="primary" class="w-full">
+                    <GlassIcon name="add" size="xs" class="mr-2" />
+                    Nouveau modèle
+                </GlassButton>
+            </OngletsDesSeances>
+
             <GlassEmptyState
                 v-if="templates.length === 0"
                 class="animate-slide-up"
