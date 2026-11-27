@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { valider } from '@/Utils/suppressionAnnulable'
 import { ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 
@@ -98,6 +99,8 @@ describe('l’ajout et le retrait d’une série', () => {
         deleteSet.mockRejectedValueOnce({ isOffline: false })
 
         series.removeSet(32)
+
+        valider()
         expect(ligne().sets.map((s) => s.id)).toEqual([31, 33])
         expect(oublierLesRafales).toHaveBeenCalledWith(32)
 
@@ -106,6 +109,7 @@ describe('l’ajout et le retrait d’une série', () => {
 
         deleteSet.mockRejectedValueOnce({ isOffline: true })
         series.removeSet(33)
+        valider()
         await flushPromises()
         expect(ligne().sets.map((s) => s.id)).toEqual([31, 32])
     })
@@ -121,7 +125,10 @@ describe('l’ajout et le retrait d’une série', () => {
         deleteSet.mockImplementation(() => new Promise((_resoudre, rejeter) => refus.push(rejeter)))
 
         series.removeSet(32)
+
+        valider()
         series.removeSet(33)
+        valider()
         expect(ligne().sets.map((s) => s.id)).toEqual([31, 34])
 
         refus[0]({ isOffline: false })
@@ -144,6 +151,8 @@ describe('l’ajout et le retrait d’une série', () => {
         deleteSet.mockImplementation(() => new Promise((_resoudre, rejeter) => (refuser = rejeter)))
 
         series.removeSet(32)
+
+        valider()
         remplacerLaLigne({ ...ligne(), sets: [{ id: 31 }, { id: 33 }] })
         refuser({ isOffline: false })
         await flushPromises()

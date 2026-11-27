@@ -52,10 +52,14 @@ export const useValidationDeSerie = ({
      */
     const completionsEnVol = new Set()
 
-    const toggleSetCompletion = (set, exerciseRestTime) => {
-        const newState = !set.is_completed
-        const previousState = set.is_completed
-
+    /**
+     * Écrit la coche `newState`, dans la file et sous le séquenceur de la coche.
+     *
+     * @param {{ rétablissement?: boolean }} [options] un rétablissement (#2355)
+     *   renvoie une coche déjà à l'écran : rien à basculer, pas de repos, et un
+     *   404 (la ligne a été retirée) n'a rien à signaler
+     */
+    const ecrireLaCoche = (set, newState, previousState, exerciseRestTime, { rétablissement = false } = {}) => {
         /**
          * Sequenced and queued, exactly as the value writes are.
          *
@@ -99,7 +103,7 @@ export const useValidationDeSerie = ({
 
         // Optimistic update — no router.reload
         set.is_completed = newState
-        if (newState) {
+        if (newState && !rétablissement) {
             apresValidation(exerciseRestTime, set)
         }
 
@@ -161,7 +165,10 @@ export const useValidationDeSerie = ({
                     }
 
                     set.is_completed = previousState
-                    reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
+
+                    if (!rétablissement || err.response?.status !== 404) {
+                        reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
+                    }
                 })
         }
 
@@ -170,5 +177,11 @@ export const useValidationDeSerie = ({
         return completionWrites.queue(writeKey, send).finally(() => completionsEnVol.delete(writeKey))
     }
 
-    return { completionsEnVol, toggleSetCompletion }
+    const toggleSetCompletion = (set, exerciseRestTime) =>
+        ecrireLaCoche(set, !set.is_completed, set.is_completed, exerciseRestTime)
+
+    /** La coche retirée d'une série en file, que le serveur a créée décochée : on la lui redit (#2355). */
+    const retablirLaCoche = (set) => ecrireLaCoche(set, true, false, undefined, { rétablissement: true })
+
+    return { completionsEnVol, toggleSetCompletion, retablirLaCoche }
 }

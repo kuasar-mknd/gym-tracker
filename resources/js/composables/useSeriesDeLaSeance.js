@@ -77,7 +77,7 @@ export const useSeriesDeLaSeance = ({
             oublierLEcritureNonConfirmee,
         })
 
-    const { completionsEnVol, toggleSetCompletion } = useValidationDeSerie({
+    const { completionsEnVol, toggleSetCompletion, retablirLaCoche } = useValidationDeSerie({
         patchSet,
         nextWrite,
         isLatestWrite,
@@ -88,26 +88,36 @@ export const useSeriesDeLaSeance = ({
         oublierLEcritureNonConfirmee,
     })
 
-    const { addSet, removeSet, oublierLesEcrituresDeLaLigne } = useAjoutEtRetraitDeSerie({
-        localWorkout,
-        pendingIds,
-        queuedLineIds,
-        nouvelIdTemporaire,
-        newRowKey,
-        rowKey,
-        fieldWrites,
-        deleteSet,
-        oublierLesRafales,
-        oublierLaSerie,
-        markUnsynced,
-        clearUnsynced,
-        reportSyncFailure,
-        bornesDUneSerie,
-    })
+    const { addSet, removeSet, oublierLesEcrituresDeLaLigne, validerLaSuppressionEnAttente } = useAjoutEtRetraitDeSerie(
+        {
+            localWorkout,
+            pendingIds,
+            queuedLineIds,
+            nouvelIdTemporaire,
+            newRowKey,
+            rowKey,
+            fieldWrites,
+            deleteSet,
+            retablirLaCoche,
+            oublierLesRafales,
+            oublierLaSerie,
+            markUnsynced,
+            clearUnsynced,
+            reportSyncFailure,
+            bornesDUneSerie,
+        },
+    )
+
+    /** Ce qui ne peut plus attendre part d'abord : la suppression en attente, puis les saisies. */
+    const viderLesEcritures = () => {
+        const suppression = validerLaSuppressionEnAttente()
+
+        return Promise.allSettled([suppression, flushAllPendingUpdates()])
+    }
 
     return {
         patchSet,
-        flushAllPendingUpdates,
+        flushAllPendingUpdates: viderLesEcritures,
         flushPendingUpdates,
         toggleSetCompletion,
         addSet,

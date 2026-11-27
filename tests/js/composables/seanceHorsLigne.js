@@ -323,6 +323,8 @@ export const monterLaSeance = async (
     const { useSeanceEtSaFile } = await import('@/composables/useSeanceEtSaFile')
     const { createWriteQueue, createWriteSequencer } = await import('@/Utils/writeOrdering')
     const { fusionnerLaSeance } = await import('@/Utils/fusionDeSeance')
+    const { valider: validerLaSuppression, annuler: annulerLaSuppression } =
+        await import('@/Utils/suppressionAnnulable')
 
     let page
 
@@ -331,8 +333,9 @@ export const monterLaSeance = async (
             // Comme la page : la séance du serveur, et par-dessus ce qui attend en file (#2048).
             const { localWorkout } = useSeanceEtSaFile({ seance, exercices })
             const identite = useIdentiteDesRangees()
+            const pageDuRapport = { props: {} }
             const rapport = useRapportDeSynchronisation({
-                page: { props: {} },
+                page: pageDuRapport,
                 exercices: () => exercices,
                 lignes: () => localWorkout.value.workout_lines,
             })
@@ -408,6 +411,15 @@ export const monterLaSeance = async (
                 ...rapport,
                 ...ordre,
                 ...series,
+                // Le délai pour annuler n'est pas ce que ces suites éprouvent : la suppression part aussitôt (#2355).
+                pageDuRapport,
+                retirerAvecDelai: series.removeSet,
+                validerLaSuppression,
+                annulerLaSuppression,
+                removeSet: (setId) => {
+                    series.removeSet(setId)
+                    validerLaSuppression()
+                },
                 ...lignes,
                 ...reglages,
                 rafraichir,

@@ -267,6 +267,256 @@ describe('une série créée hors ligne', () => {
         expect([...reseau.serveur.series.keys()]).toEqual([3])
     })
 
+    describe('avec le temps d’annuler la suppression (#2355)', () => {
+        it('garde sa création en file, coche comprise, tant qu’on peut annuler, et la crée au vidage si on annule', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            page.saisieTerminee(serie, 'weight', '200')
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+
+            const avant = fileDurable()
+
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+
+            expect(page.ligne().sets.map((s) => s.id)).toEqual([3])
+            expect(fileDurable()).toEqual([
+                expect.objectContaining({ data: { ...avant[0].data, is_completed: false } }),
+            ])
+
+            page.annulerLaSuppression()
+            await flushPromises()
+
+            expect(page.ligne().sets.map(({ weight, is_completed }) => [weight, is_completed])).toEqual([
+                [80, true],
+                [200, true],
+            ])
+            expect(fileDurable()).toEqual(avant)
+
+            await leReseauRevient(page)
+
+            expect(reseau.serveur.resume()).toEqual([
+                'post /api/v1/sets {"workout_line_id":1,"is_completed":true,"weight":200,"reps":5}',
+            ])
+            expect([...reseau.serveur.series.keys()].sort((a, b) => a - b)).toEqual([3, 100])
+        })
+
+        it('crée la série décochée quand le réseau revient avant l’échéance, puis la supprime', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+            await leReseauRevient(page)
+
+            expect(reseau.serveur.resume()[0]).toContain('"is_completed":false')
+
+            page.validerLaSuppression()
+            await flushPromises()
+
+            expect([...reseau.serveur.series.keys()]).toEqual([3])
+        })
+
+        it('rétablit la coche sur le serveur quand on annule après le retour du réseau', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+            await leReseauRevient(page)
+            page.annulerLaSuppression()
+            await vi.waitFor(() => expect(reseau.serveur.series.get(100)?.is_completed).toBe(true))
+
+            expect(page.ligne().sets.map(({ id, is_completed }) => [id, is_completed])).toEqual([
+                [3, true],
+                [100, true],
+            ])
+            expect([...reseau.serveur.series.values()].map((s) => [s.id, s.is_completed])).toEqual([
+                [3, true],
+                [100, true],
+            ])
+        })
+
+        it('montre la série décochée, comme le serveur, quand le rétablissement de la coche est refusé en ligne', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            await page.toggleSetCompletion(serie)
+            await flushPromises()
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+            await leReseauRevient(page)
+            reseau.serveur.imposer.push(async () => {
+                throw { response: { status: 500, data: {}, headers: {} } }
+            })
+            page.annulerLaSuppression()
+            await vi.waitFor(() => expect(page.ligne().sets.at(-1).is_completed).toBe(false))
+
+            expect(reseau.serveur.series.get(100).is_completed).toBe(false)
+        })
+
+        describe('quand le rétablissement de la coche est refusé en ligne', () => {
+            const annulerAvecUnRefus = async (page, serie, statut) => {
+                await page.toggleSetCompletion(serie)
+                await flushPromises()
+                page.retirerAvecDelai(serie.id)
+                await flushPromises()
+                await leReseauRevient(page)
+                reseau.serveur.imposer.push(async () => {
+                    throw { response: { status: statut, data: {}, headers: {} } }
+                })
+                page.annulerLaSuppression()
+            }
+
+            it('dit pourquoi sur une erreur du serveur', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+
+                await annulerAvecUnRefus(page, serie, 500)
+                await vi.waitFor(() =>
+                    expect(page.pageDuRapport.props.flash?.error).toBe('La série n’a pas pu être validée. Réessaie.'),
+                )
+
+                expect(page.ligne().sets.at(-1).is_completed).toBe(false)
+            })
+
+            it('ne dit rien sur un 404 : la ligne a été retirée', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+
+                await annulerAvecUnRefus(page, serie, 404)
+                await vi.waitFor(() => expect(page.ligne().sets.at(-1).is_completed).toBe(false))
+
+                expect(page.pageDuRapport.props.flash?.error ?? null).toBeNull()
+            })
+
+            const retablissementRetenu = async (page, serie, reponse) => {
+                await page.toggleSetCompletion(serie)
+                await flushPromises()
+                page.retirerAvecDelai(serie.id)
+                await flushPromises()
+                await leReseauRevient(page)
+
+                let lacher
+                const retenue = new Promise((resolve) => (lacher = resolve))
+                reseau.serveur.imposer.push(async (config) => {
+                    await retenue
+
+                    return reponse(config)
+                })
+                page.annulerLaSuppression()
+                await flushPromises()
+
+                return lacher
+            }
+
+            it('ne décoche pas l’écran quand la personne a coché depuis : sa coche l’emporte', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+                const lacher = await retablissementRetenu(page, serie, async () => {
+                    throw { response: { status: 500, data: {}, headers: {} } }
+                })
+
+                const decochee = page.toggleSetCompletion(serie)
+                const recochee = page.toggleSetCompletion(serie)
+                await flushPromises()
+                lacher()
+                await Promise.all([decochee, recochee])
+                await flushPromises()
+
+                expect(page.ligne().sets.at(-1).is_completed).toBe(true)
+                expect(page.pageDuRapport.props.flash?.error ?? null).toBeNull()
+                expect(reseau.serveur.series.get(100).is_completed).toBe(true)
+            })
+
+            it('fusionne la réponse du rétablissement dans la rangée : un record gagné par la coche s’affiche', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+                const lacher = await retablissementRetenu(page, serie, async (config) => {
+                    const reponse = await reseau.serveur.repondre(config)
+                    reponse.data.data.personal_record = { type: '1rm' }
+
+                    return reponse
+                })
+
+                lacher()
+                await flushPromises()
+
+                await vi.waitFor(() => expect(page.ligne().sets.at(-1).personal_record).toEqual({ type: '1rm' }))
+            })
+
+            it('envoie la coche de la personne après le rétablissement, jamais avant : serveur et écran concordent', async () => {
+                const page = await monterLaSeance(seance())
+                const serie = await ajouterHorsLigne(page)
+                const lacher = await retablissementRetenu(page, serie, (config) => reseau.serveur.repondre(config))
+
+                const decochee = page.toggleSetCompletion(serie)
+                await flushPromises()
+
+                expect(reseau.serveur.resume().some((requete) => requete.includes('"is_completed":false}'))).toBe(false)
+
+                lacher()
+                await decochee
+                await flushPromises()
+
+                expect(page.ligne().sets.at(-1).is_completed).toBe(false)
+                expect(reseau.serveur.series.get(100).is_completed).toBe(false)
+                const coches = reseau.serveur
+                    .resume()
+                    .filter((requete) => requete.startsWith('patch'))
+                    .map((requete) => requete.split(' ').pop())
+
+                expect(coches.at(-1)).toBe('{"is_completed":false}')
+                expect(coches.slice(0, -1).every((c) => c === '{"is_completed":true}')).toBe(true)
+            })
+        })
+
+        it('met la suppression d’une série du serveur en file durable quand la page part, et un rechargement ne la ramène pas', async () => {
+            const page = await monterLaSeance(seance())
+
+            page.retirerAvecDelai(3)
+            await flushPromises()
+            window.dispatchEvent(new Event('pagehide'))
+            await flushPromises()
+
+            expect(fileDurable()).toEqual([expect.objectContaining({ method: 'delete', url: '/api/v1/sets/3' })])
+            expect(reseau.serveur.resume()).toEqual([])
+
+            const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+            expect([...reseau.serveur.series.keys()]).toEqual([])
+            expect(rechargee.queue).toEqual([])
+        })
+
+        it('supprime du serveur ce que la file a créé quand le réseau revient avant l’échéance', async () => {
+            const page = await monterLaSeance(seance())
+            const serie = await ajouterHorsLigne(page)
+
+            page.retirerAvecDelai(serie.id)
+            await flushPromises()
+
+            await leReseauRevient(page)
+
+            expect(reseau.serveur.series.has(100)).toBe(true)
+            expect(page.ligne().sets.map((s) => s.id)).toEqual([3])
+
+            page.validerLaSuppression()
+            await flushPromises()
+
+            expect(reseau.serveur.resume().map((requete) => requete.split(' {')[0])).toEqual([
+                'post /api/v1/sets',
+                'delete /api/v1/sets/100',
+            ])
+            expect([...reseau.serveur.series.keys()]).toEqual([3])
+        })
+    })
+
     it('est supprimée du serveur quand on la retire pendant que sa création vole', async () => {
         const page = await monterLaSeance(seance())
         const serie = await ajouterHorsLigne(page)

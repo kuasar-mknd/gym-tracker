@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { valider } from '@/Utils/suppressionAnnulable'
 import { ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 
@@ -322,6 +323,8 @@ describe('retirer une série', () => {
         )
 
         series.removeSet(9)
+
+        valider()
         expect(ligne().sets.map((s) => s.id)).toEqual([8, 10])
         expect(brouillons.oublierLaSerie).toHaveBeenCalledWith(9)
 

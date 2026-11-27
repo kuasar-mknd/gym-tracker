@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
+import { valider } from '@/Utils/suppressionAnnulable'
 import { mount, flushPromises } from '@vue/test-utils'
 
 const post = vi.fn()
@@ -538,6 +539,8 @@ describe('Workouts/Show — drafts of edits still in flight', () => {
         expect(localStorage.getItem('draft_set_42')).not.toBeNull()
 
         wrapper.vm.removeSet(42)
+
+        valider()
         await flushPromises()
 
         expect(localStorage.getItem('draft_set_42')).toBeNull()

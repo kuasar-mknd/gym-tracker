@@ -1,4 +1,5 @@
 import { isTemporaryId } from '@/Utils/pendingIds'
+import { estEnAttenteDeSuppression } from '@/Utils/suppressionAnnulable'
 
 /**
  * Rebuilds from the server's copy without discarding what it has not heard of.
@@ -36,6 +37,9 @@ export const fusionnerLaSeance = (server, local, { estNonSynchronisee, validatio
 
     merged.workout_lines.forEach((line) => {
         if (!Array.isArray(line.sets)) line.sets = []
+
+        // Retirée de l'écran, pas encore supprimée : le serveur la rend encore, l'écran non (#2355).
+        line.sets = line.sets.filter((set) => !estEnAttenteDeSuppression(set))
 
         const localLine = localLines.find((candidate) => candidate.id === line.id)
 
