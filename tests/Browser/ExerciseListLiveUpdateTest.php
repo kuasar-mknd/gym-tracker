@@ -22,16 +22,15 @@ use Tests\DuskTestCase;
  * trip through the back button.
  *
  * Two details are load-bearing. The name is matched against textContent rather
- * than with waitForText, because the card styles it uppercase and Selenium's
- * getText() returns rendered text — a plain match fails on the casing instead
- * of on the bug. And the viewport is a phone, because the create button on a
+ * than with waitForText, because Selenium's getText() returns rendered text,
+ * so a clipped name would fail on the clipping instead of on the bug. And the viewport is a phone, because the create button on a
  * desktop viewport is a different element.
  */
 class ExerciseListLiveUpdateTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
-    /** Matches against textContent so that CSS casing cannot decide the result. */
+    /** Matches against textContent so that CSS clipping cannot decide the result. */
     private function domContains(string $needle): string
     {
         return 'document.body.textContent.includes('.json_encode($needle).')';
