@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import { EVENEMENT_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { annuler, reprendre, suppressionAnnulable, suspendre } from '@/Utils/suppressionAnnulable'
 
 /**
  * Les toasts d'un layout : le succès et l'erreur que la page porte dans
@@ -17,6 +18,22 @@ import { EVENEMENT_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
  */
 
 const page = usePage()
+
+const racine = ref(null)
+
+/** Un toucher émule un survol qui ne finit jamais : seule la souris suspend le compte à rebours. */
+const surLEntreeDuPointeur = (evenement) => {
+    if (evenement.pointerType === 'mouse') {
+        suspendre()
+    }
+}
+
+/** Le retrait venait du clavier : la corbeille a disparu avec la rangée, « Annuler la suppression » prend le focus. */
+watch(suppressionAnnulable, (suppression) => {
+    if (suppression?.auClavier) {
+        nextTick(() => racine.value?.querySelector('[dusk="annuler-la-suppression"]')?.focus())
+    }
+})
 
 const toasts = {
     success: { icon: 'check_circle', delay: 5000, id: null },
@@ -133,8 +150,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div>
-        <div v-for="(cfg, type) in toasts" :key="type">
+    <div
+        id="colonne-des-toasts"
+        ref="racine"
+        class="z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80"
+    >
+        <div v-for="(cfg, type) in toasts" :key="type" class="contents">
             <Transition
                 enter-active-class="transition ease-out duration-300"
                 enter-from-class="opacity-0 -translate-y-4"
@@ -145,7 +166,7 @@ onUnmounted(() => {
             >
                 <div
                     v-if="page.props.flash?.[type]"
-                    class="z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80"
+                    class="mb-3"
                     role="alert"
                     :aria-live="type === 'error' ? 'assertive' : 'polite'"
                 >
@@ -184,6 +205,38 @@ onUnmounted(() => {
                             @click="page.props.flash[type] = null"
                         />
                     </div>
+                </div>
+            </Transition>
+        </div>
+        <div class="contents" role="status" aria-live="polite" dusk="toast-suppression">
+            <Transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="opacity-0 -translate-y-4"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-4"
+            >
+                <div
+                    v-if="suppressionAnnulable"
+                    class="verre-epais border-l-accent-state! mb-3 flex items-center gap-3 rounded-2xl border-l-6! p-4 backdrop-blur-xl"
+                    @pointerenter="surLEntreeDuPointeur"
+                    @pointerleave="reprendre"
+                    @focusin="suspendre"
+                    @focusout="reprendre"
+                >
+                    <p class="text-text-main flex-1 text-sm font-bold">
+                        {{ suppressionAnnulable.message }}
+                    </p>
+                    <GlassButton
+                        variant="secondary"
+                        size="sm"
+                        dusk="annuler-la-suppression"
+                        aria-label="Annuler la suppression"
+                        @click="annuler"
+                    >
+                        Annuler
+                    </GlassButton>
                 </div>
             </Transition>
         </div>
