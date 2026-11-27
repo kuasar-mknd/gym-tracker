@@ -609,7 +609,7 @@ describe('ouverture d’une page', () => {
     })
 
     it('ne remet rien à waitUntil quand le navigateur n’a rien préchargé', () => {
-        expect(demander(navigation('/stats')).waitUntil).not.toHaveBeenCalled()
+        expect(demander(navigation('/goals')).waitUntil).not.toHaveBeenCalled()
     })
 
     /*

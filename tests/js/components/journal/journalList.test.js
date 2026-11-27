@@ -4,12 +4,6 @@ import { mount } from '@vue/test-utils'
 import JournalList from '@/Components/Journal/JournalList.vue'
 import { poserLeFuseau } from '../../utils/fuseauDeLAppareil'
 
-const moods = [
-    { value: 1, label: '😞 Terrible' },
-    { value: 3, label: '😐 Correct' },
-    { value: 5, label: '🤩 Excellent' },
-]
-
 const entry = (overrides = {}) => ({
     id: 1,
     date: '2026-07-31',
@@ -26,7 +20,7 @@ const entry = (overrides = {}) => ({
 
 const mountList = (journalsByMonth, props = {}) =>
     mount(JournalList, {
-        props: { journalsByMonth, moods, ...props },
+        props: { journalsByMonth, ...props },
         global: { directives: { press: {} } },
     })
 
@@ -78,26 +72,23 @@ describe('JournalList — grouping', () => {
 })
 
 describe('JournalList — what each entry shows', () => {
-    it('shows the mood as its emoji, not as its whole label', () => {
+    it('shows the mood as its score out of five', () => {
         const wrapper = mountList({ 'juillet 2026': [entry({ mood_score: 5 })] })
 
-        expect(card(wrapper).text()).toContain('🤩')
-        expect(card(wrapper).text()).not.toContain('Excellent')
+        expect(card(wrapper).text()).toContain('Humeur 5/5')
     })
 
-    it('leaves out the mood block entirely when the entry recorded none', () => {
-        const wrapper = mountList({ 'juillet 2026': [entry({ mood_score: null })] })
-
-        // Not merely "renders empty": an empty mood slot still takes its width
-        // in the flex row and reads as an unlabelled element.
-        expect(wrapper.find('[title="Humeur"]').exists()).toBe(false)
-    })
-
-    /** The page owns the moods list; a score it no longer contains must not throw. */
-    it('survives a mood score the page has no label for', () => {
+    /** The score is shown as it is stored: the page no longer hands down a list of labels. */
+    it('shows any stored mood score without a label list', () => {
         const wrapper = mountList({ 'juillet 2026': [entry({ mood_score: 4 })] })
 
-        expect(wrapper.find('[title="Humeur"]').text()).toBe('')
+        expect(card(wrapper).text()).toContain('Humeur 4/5')
+    })
+
+    it('leaves out the mood entirely when the entry recorded none', () => {
+        const wrapper = mountList({ 'juillet 2026': [entry({ mood_score: null })] })
+
+        expect(card(wrapper).text()).not.toContain('Humeur')
     })
 
     /**
@@ -120,12 +111,12 @@ describe('JournalList — what each entry shows', () => {
 
         const text = card(wrapper).text()
 
-        expect(text).toContain('💤 4/5')
-        expect(text).toContain('🥗 Diète: 3/5')
-        expect(text).toContain('⚡ Stress: 7/10')
-        expect(text).toContain('🔋 Énergie: 8/10')
-        expect(text).toContain('🔥 Motivation: 9/10')
-        expect(text).toContain('🏋️ Intensité: 6/10')
+        expect(text).toContain('Sommeil 4/5')
+        expect(text).toContain('Diète 3/5')
+        expect(text).toContain('Stress 7/10')
+        expect(text).toContain('Énergie 8/10')
+        expect(text).toContain('Motivation 9/10')
+        expect(text).toContain('Intensité 6/10')
     })
 
     it('leaves out the badges the entry did not record', () => {

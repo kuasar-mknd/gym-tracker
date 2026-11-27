@@ -6,7 +6,6 @@ namespace App\Services\Stats;
 
 use App\DTOs\Stats\MonthlyVolumePoint;
 use App\DTOs\Stats\VolumeComparison;
-use App\DTOs\Stats\VolumeHistoryPoint;
 use App\DTOs\Stats\VolumeTrendPoint;
 use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
@@ -141,59 +140,6 @@ final class VolumeStatsService
     }
 
     /**
-     * Le volume des dernières séances terminées, une par point, de la plus
-     * ancienne à la plus récente.
-     *
-     * Les vingt DERNIÈRES (comme l'historique des durées, qui lit pourtant les séances faites : celui-ci lit les séances terminées, ended_at seul, et compte les échauffements dans le volume) :
-     * le tri croissant suivi de la limite rendait les vingt premières du
-     * compte, et le graphique ne bougeait plus après la vingtième séance
-     * (#1957).
-     *
-     * @param  User  $user  L'utilisateur concerné.
-     * @param  int  $limit  Le nombre de séances au plus.
-     * @return array<int, VolumeHistoryPoint>
-     */
-    public function getVolumeHistory(User $user, int $limit = 20): array
-    {
-        return Cache::remember(
-            ClesDeStats::seances($user, "volume_history.{$limit}"),
-            now()->addMinutes(30),
-            function () use ($user, $limit): array {
-                /*
-                 * Meme raison que dans `getVolumeTrend` : le `toBase()` qui
-                 * etait ici portait sur une requete bornee par `limit($limit)`,
-                 * donc il n'evitait l'hydratation que de `$limit` lignes, pour
-                 * deux entrees de baseline PHPStan. Le début vient avec son
-                 * décalage (#2159), comme dans `getVolumeTrend`.
-                 */
-                $workouts = $user->workouts()
-                    ->whereNotNull('ended_at')
-                    ->select(['id', 'started_at', 'started_at_offset', 'name', 'workout_volume'])
-                    ->latest('started_at')
-                    ->latest('id')
-                    ->limit($limit)
-                    ->get()
-                    ->reverse();
-
-                $historique = [];
-                foreach ($workouts as $row) {
-                    $historique[] = new VolumeHistoryPoint(
-                        $row->started_at->format('d/m'),
-                        $row->workout_volume,
-                        // Le meme repli que WorkoutStatsService:45. Sans lui,
-                        // une seance sans nom sortait sous une etiquette VIDE
-                        // ici, et sous « Séance » la — memes donnees, deux
-                        // reponses.
-                        $row->name ?? __('Workout'),
-                    );
-                }
-
-                return $historique;
-            }
-        );
-    }
-
-    /**
      * Le volume du mois en cours contre celui du mois précédent.
      *
      * Le mois précédent se compte depuis le premier du mois courant, jamais
@@ -229,7 +175,19 @@ final class VolumeStatsService
     }
 
     /**
-     * Le volume de la semaine en cours contre celui de la semaine précédente.
+     * Le volume de la semaine en cours contre celui de la semaine précédente
+     * sur la même durée écoulée : la semaine en cours va du lundi 00:00 au
+     * dimanche soir, face au lundi précédent à 00:00 jusqu'au même jour et à
+     * la même heure que maintenant.
+     *
+     * `sessions_count` compte les séances faites de la semaine en cours
+     * (`User::seancesFaites()` : terminées, avec une série de travail
+     * cochée), là où le volume somme toutes les séances.
+     *
+     * La semaine précédente entière, face à une semaine à moitié écoulée,
+     * annonçait « −100 % » le lundi matin. La variation reste nulle sans
+     * séance cette semaine : il n'y a rien à comparer. Le total s'arrête aux
+     * mêmes bornes que les sept barres de la carte (#2033).
      *
      * Les deux semaines et la clef se tirent d'une seule lecture de l'horloge,
      * comme le mois dans `getMonthlyVolumeComparison` : avec une lecture par
@@ -249,13 +207,15 @@ final class VolumeStatsService
         $weekKey = $debutDeSemaine->format('Y-W');
 
         $comparison = Cache::remember(
-            ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}"),
+            ClesDeStats::seances($user, "weekly_volume_to_date.{$weekKey}"),
             $maintenant->copy()->addMinutes(10),
             fn (): array => $this->calculateComparison(
                 $user,
                 $debutDeSemaine,
                 $semainePrecedente,
-                $semainePrecedente->copy()->endOfWeek()
+                $maintenant->copy()->subWeek(),
+                $debutDeSemaine->copy()->endOfWeek(),
+                compterLesSeances: true,
             )
         );
 
@@ -263,7 +223,8 @@ final class VolumeStatsService
             $comparison['current_volume'],
             $comparison['previous_volume'],
             $comparison['difference'],
-            $comparison['percentage'],
+            $comparison['sessions_count'] > 0 ? $comparison['percentage'] : null,
+            $comparison['sessions_count'],
         );
     }
 
@@ -336,10 +297,15 @@ final class VolumeStatsService
      * @param  Carbon  $currentStart  Le début de la période courante.
      * @param  Carbon  $prevStart  Le début de la période précédente.
      * @param  Carbon  $prevEnd  La fin de la période précédente.
-     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null} Le pourcentage est nul quand il n'y a rien à comparer.
+     * @param  Carbon|null  $currentEnd  La fin de la période courante ; à défaut, elle n'a pas de borne.
+     * @param  bool  $compterLesSeances  Lire aussi les séances faites de la période courante (`User::seancesFaites()`), par une requête à part ; sinon `sessions_count` vaut 0.
+     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null, sessions_count: int} Le pourcentage est nul quand il n'y a rien à comparer.
      */
-    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd): array
+    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd, ?Carbon $currentEnd = null, bool $compterLesSeances = false): array
     {
+        $dansLaPeriodeCourante = $currentEnd === null ? 'started_at >= ?' : 'started_at >= ? AND started_at <= ?';
+        $bornesCourantes = $currentEnd === null ? [$currentStart] : [$currentStart, $currentEnd];
+
         // Les deux sommes tiennent dans une seule requête, par agrégation
         // conditionnelle : les deux périodes se suivent, donc une seule plage
         // les couvre.
@@ -353,14 +319,20 @@ final class VolumeStatsService
         // appelants passent $prevEnd, et l'ont toujours passe : la branche etait
         // inatteignable, et le commentaire qui la disait « conserver exactement le
         // comportement d'origine » protegeait du code que personne n'executait.
-        $query->selectRaw('
-            SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
+        $query->selectRaw("
+            SUM(CASE WHEN {$dansLaPeriodeCourante} THEN workout_volume ELSE 0 END) as current_volume,
             SUM(CASE WHEN started_at <= ? THEN workout_volume ELSE 0 END) as previous_volume
-        ', [$currentStart, $prevEnd]);
+        ", [...$bornesCourantes, $prevEnd]);
 
         /** @var \stdClass|null $stats */
         $stats = $query->first();
 
+        $sessionsCount = $compterLesSeances
+            ? $user->seancesFaites()
+                ->where('workouts.started_at', '>=', $currentStart)
+                ->when($currentEnd !== null, fn ($requete) => $requete->where('workouts.started_at', '<=', $currentEnd))
+                ->count()
+            : 0;
         $currentVolume = is_numeric($stats?->current_volume) ? (float) $stats->current_volume : 0.0;
         $previousVolume = is_numeric($stats?->previous_volume) ? (float) $stats->previous_volume : 0.0;
 
@@ -386,6 +358,7 @@ final class VolumeStatsService
             'previous_volume' => $previousVolume,
             'difference' => $diff,
             'percentage' => $percentage,
+            'sessions_count' => $sessionsCount,
         ];
     }
 }

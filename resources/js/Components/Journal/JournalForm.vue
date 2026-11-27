@@ -36,7 +36,7 @@ const emit = defineEmits(['close', 'submit'])
 <template>
     <GlassCard class="animate-slide-up">
         <div class="mb-4 flex items-center justify-between">
-            <h3 class="titre-carte">
+            <h3 class="titre-plat">
                 {{ editingJournal ? "Modifier l'entrée" : 'Nouvelle entrée' }}
             </h3>
             <GlassIconButton v-press icon="close" label="Fermer le formulaire" @click="emit('close')" />
@@ -46,7 +46,7 @@ const emit = defineEmits(['close', 'submit'])
             <GlassInput v-model="form.date" type="date" label="Date" :error="form.errors.date" required />
 
             <div>
-                <label id="mood-label" class="text-text-muted mb-1 block text-sm font-medium">Humeur</label>
+                <label id="mood-label" class="text-text-muted mb-1 block text-sm font-medium">Humeur (1-5)</label>
                 <div class="flex gap-2" role="radiogroup" aria-labelledby="mood-label">
                     <button
                         v-for="mood in moods"
@@ -56,16 +56,16 @@ const emit = defineEmits(['close', 'submit'])
                         @click="form.mood_score = mood.value"
                         role="radio"
                         :aria-checked="form.mood_score === mood.value"
-                        :aria-label="mood.label"
+                        :aria-label="`${mood.value}, ${mood.label}`"
                         :title="mood.label"
                         :class="[
-                            'focus-visible:ring-accent-primary border-surface-card/20 flex-1 rounded-2xl border p-2 text-center text-sm backdrop-blur-md transition duration-300 focus-visible:ring-2 focus-visible:outline-none',
+                            'focus-visible:ring-accent-primary border-surface-card/20 min-h-touch flex-1 rounded-2xl border p-2 text-center text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
                             form.mood_score === mood.value
-                                ? 'accent-fill border-transparent shadow-lg'
+                                ? 'accent-fill border-transparent'
                                 : 'text-text-muted bg-surface-card/10 hover:bg-surface-card/20',
                         ]"
                     >
-                        <div class="text-xl" aria-hidden="true">{{ mood.label.split(' ')[0] }}</div>
+                        <span aria-hidden="true">{{ mood.value }}</span>
                     </button>
                 </div>
                 <div v-if="form.errors.mood_score" class="text-accent-danger-deep mt-1 text-xs">

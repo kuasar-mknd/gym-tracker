@@ -57,9 +57,6 @@ class TemplateEditingTest extends DuskTestCase
             // which is where WebDriver aims. Measured, not guessed: the
             // interception names a material-symbols span, and after this scroll
             // elementFromPoint at the same centre returns the submit button.
-            // Not waitForText afterwards: the card's heading is text-transform
-            // uppercase and Selenium reports the transformed string, so the name
-            // is asserted against the database instead.
             $browser->clickWhenSettled('button[type="submit"]')
                 ->waitForLocation('/templates', 15)
                 ->waitFor("@edit-template-{$template->id}", 15);

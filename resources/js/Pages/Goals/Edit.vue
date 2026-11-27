@@ -44,26 +44,23 @@ const cancel = () => {
 <template>
     <Head title="Modifier l'objectif" />
 
-    <AuthenticatedLayout page-title="Modifier l'objectif">
+    <AuthenticatedLayout show-back back-route="goals.index" page-title="Modifier l'objectif" retour-propre>
         <template #header>
-            <div>
-                <h1 class="titre-section">Modifier l'objectif</h1>
-                <p class="text-text-muted text-sm">Ajuste ta cible, son échéance ou son intitulé.</p>
-            </div>
+            <h1 class="titre-ecran">Modifier l'objectif</h1>
         </template>
 
         <div>
             <div class="mx-auto max-w-3xl space-y-6 sm:px-6 lg:px-8">
                 <Link
                     :href="route('goals.index')"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch inline-flex items-center gap-1 rounded-xl text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch bureau:inline-flex hidden items-center gap-1 rounded-xl text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <GlassIcon name="arrow_back" size="sm" />
                     Retour aux objectifs
                 </Link>
 
                 <GlassCard class="p-6">
-                    <h3 class="titre-carte mb-6">{{ goal.title }}</h3>
+                    <h3 class="titre-plat mb-6">{{ goal.title }}</h3>
 
                     <GoalForm
                         :form="form"

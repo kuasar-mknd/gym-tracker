@@ -15,15 +15,19 @@
  * le `start_url` ; la séance en cours et les trois dernières séances closes
  * visitées ; la liste des séances, page 1 sans filtre ; la liste des modèles,
  * pour en lancer un sans réseau (#2049, extension écrite de la décision 2) ;
- * la bibliothèque ; les menus « Plus » (le profil et les outils) ; le
+ * la bibliothèque ; la racine de Progrès, sans une seule mesure (#2434, lot
+ * 4a ; décision du propriétaire du 2026-11-19, qui étend la liste du
+ * 2026-10-12) ; le profil et les outils ; le
  * minuteur d'intervalles, les disques, le 1RM et l'échauffement. Jamais une
  * page de santé, de journal, de notifications, d'objectifs, de compléments,
  * le profil à modifier, un formulaire de création ou d'édition, ni une page
  * d'invité :
  * `LesPagesPriveesNeSontJamaisGardeesTest` (tests/Feature/Conventions) le
  * tient, et `PagesGardeesTest` compare chaque chemin à la route qu'il nomme.
- * Ce qu'une page gardée montre de ces pages-là (le dernier poids et les
- * objectifs de l'accueil) ne va pas non plus dans sa copie
+ * Ce qu'une page gardée montre de ces pages-là (les
+ * objectifs de l'accueil, le poids, la variation et la masse grasse de
+ * Progrès, avec le groupe différé qui porte aussi leurs historiques) ne va
+ * pas non plus dans sa copie
  * (`PROPS_JAMAIS_GARDEES`).
  *
  * Chaque entrée tient sur une ligne, sous la forme
@@ -42,7 +46,7 @@
  * `tests/Feature/HorsLigne/contrat-des-pages-gardees.json` pour cette version :
  * une forme qui change sans que la version monte fait échouer la suite.
  */
-export const VERSION_DU_CONTRAT = 3
+export const VERSION_DU_CONTRAT = 7
 
 /**
  * Le volume que les copies d'un compte occupent au plus, chiffrées : 1,5 Mo.
@@ -88,13 +92,13 @@ export const PAGES_GARDEES = geler([
     { composant: 'Tools/PlateCalculator', route: 'plates.index', chemin: '/plates' },
     { composant: 'Tools/OneRepMax', route: 'tools.1rm', chemin: '/tools/1rm' },
     { composant: 'Tools/WarmupCalculator', route: 'tools.warmup', chemin: '/tools/warmup' },
+    { composant: 'Stats/Index', route: 'stats.index', chemin: '/stats' },
 ])
 
 /**
  * Les props qu'une page gardée porte et qu'aucune copie ne garde : la liste
  * « Jamais gardées » de l'issue écarte les mesures et les objectifs, que
- * l'accueil montre aussi (le dernier poids, tiré des mesures, et les objectifs
- * en cours, objectifs de mesure compris). Le magasin les retire avant de
+ * l'accueil montre aussi (les objectifs en cours, objectifs de mesure compris). Le magasin les retire avant de
  * chiffrer (`copiesHorsLigne.js`), à l'écriture d'une réponse complète comme
  * d'une réponse partielle, et ne les reprend jamais d'une copie précédente ;
  * une copie servie (partie E) les montrera indisponibles hors ligne.
@@ -106,7 +110,8 @@ export const PAGES_GARDEES = geler([
  * `Tests\Support\PagesGardees` lit et refuse sous toute autre.
  */
 export const PROPS_JAMAIS_GARDEES = Object.freeze({
-    Dashboard: Object.freeze(['latestWeight', 'activeGoals']),
+    Dashboard: Object.freeze(['activeGoals']),
+    'Stats/Index': Object.freeze(['latestWeight', 'weightChange', 'bodyFat', 'deferredData']),
 })
 
 /**

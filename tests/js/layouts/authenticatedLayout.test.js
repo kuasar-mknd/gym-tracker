@@ -26,6 +26,7 @@ vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
 import { titresExposes } from '../conventions/exposition'
+import { deposerLeRepos, effacerLeRepos, reposDuCompte } from '@/Utils/reposEnCours'
 import { PAGE_INDISPONIBLE, RESEAU_LENT, annoncerSansReseau, retirerLAnnonce } from '@/Utils/visitesHorsLigne'
 import { chargerSyncService, horodatageRecent, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
@@ -59,7 +60,7 @@ const stubs = {
     NavLink: { props: ['href', 'active'], template: '<a :href="href" :data-active="String(active)"><slot /></a>' },
     DropdownLink: { props: ['href'], template: '<a :href="href"><slot /></a>' },
     Dropdown: { template: '<div><slot name="trigger" :open="false" /><slot name="content" /></div>' },
-    ActiveWorkoutBanner: { name: 'ActiveWorkoutBanner', props: ['workout'], template: '<div />' },
+    ActiveWorkoutBanner: { name: 'ActiveWorkoutBanner', props: ['workout', 'repos'], template: '<div />' },
     // La question d'avant la déconnexion a ses propres tests (questionDeDeconnexion.test.js).
     QuestionDeDeconnexion: true,
 }
@@ -165,6 +166,8 @@ describe('la largeur du contenu', () => {
     })
 
     it.each([
+        ['rail', 'bureau:max-w-270'],
+        ['rail', 'max-w-3xl'],
         ['moyenne', 'max-w-3xl'],
         ['etroite', 'max-w-2xl'],
     ])('resserre la page à %s', (largeur, classe) => {
@@ -400,7 +403,7 @@ describe('AuthenticatedLayout — sans réseau', () => {
         expect(await dismissalTimes(wrapper, [PAGE_INDISPONIBLE])).toEqual({ [PAGE_INDISPONIBLE]: 8000 })
     })
 
-    it('garde « Le réseau ne répond pas » tant que la visite attend, et « Annuler » l’arrête', async () => {
+    it('garde « Réseau lent. Réessaie dans un instant. » tant que la visite attend, et « Annuler » l’arrête', async () => {
         vi.useFakeTimers()
         const annuler = vi.fn()
         const wrapper = mountLayout()
@@ -556,9 +559,9 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
     })
 
     it('laisse l’en-tête de page porter le titre de bureau', () => {
-        const wrapper = mountLayout({ props: { pageTitle: 'Mes Séances' }, slots: { header: '<h1>Mes Séances</h1>' } })
+        const wrapper = mountLayout({ props: { pageTitle: 'Séances' }, slots: { header: '<h1>Séances</h1>' } })
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mes Séances'], bureau: ['Mes Séances'] })
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Séances'], bureau: ['Séances'] })
     })
 
     it('s’efface devant le titre de bureau que la page pose dans son contenu', () => {
@@ -568,6 +571,41 @@ describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', (
         })
 
         expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mon Évolution'], bureau: ['Mon Évolution'] })
+    })
+
+    /*
+     * L'Accueil et le Profil ne montrent pas leur titre : une salutation, une
+     * carte d'identité en tient lieu. Le `<h1>` reste pour les lecteurs
+     * d'écran, à chaque largeur, et l'en-tête garde la cloche.
+     */
+    it('masque le titre de l’en-tête mobile sans le retirer : un h1 par largeur, la cloche laissée à la page', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Accueil', titreMasque: true } })
+        const [mobile] = wrapper.findAll('h1')
+
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Accueil'], bureau: ['Accueil'] })
+        expect(mobile.classes()).toContain('sr-only')
+        expect(wrapper.get('header').findAll('a[href="/resolved/notifications.index"]')).toHaveLength(0)
+    })
+
+    it('ne masque pas le titre sans titre-masque', () => {
+        const [mobile] = mountLayout({ props: { pageTitle: 'Séances' } }).findAll('h1')
+
+        expect(mobile.classes()).not.toContain('sr-only')
+    })
+
+    /**
+     * Le titre plat de l'en-tête mobile perd un cran au-delà de douze
+     * caractères, et sous 21 rem pour les autres : à vingt-huit pixels, un
+     * titre de treize caractères (l'ancien « Mes objectifs ») dépassait sa boîte
+     * à 375 px (#2434). « Raccourcis clavier » en a dix-huit.
+     */
+    it('réduit le titre plat de l’en-tête mobile au-delà de douze caractères et sous 21 rem', () => {
+        const [court] = mountLayout({ props: { pageTitle: 'Corps' } }).findAll('h1')
+        const [long] = mountLayout({ props: { pageTitle: 'Raccourcis clavier' } }).findAll('h1')
+
+        expect(court.classes()).toEqual(expect.arrayContaining(['titre-ecran', 'max-[21rem]:titre-plat']))
+        expect(long.classes()).toContain('titre-plat')
+        expect(long.classes()).not.toContain('titre-ecran')
     })
 
     it('ne pose aucun titre sans page-title, la page portant le sien', () => {
@@ -584,6 +622,75 @@ describe('AuthenticatedLayout — the session in progress', () => {
 
         expect(banner.exists()).toBe(true)
         expect(banner.props('workout')).toEqual(active)
+    })
+
+    /*
+     * L'accessoire est unique : il porte le `dusk`, le repos et l'annonce de sa
+     * fin. Sur l'Accueil et sur Séances, une grande carte s'y ajoutait ; elle
+     * est partie, et la page ne monte jamais deux exemplaires.
+     */
+    it.each(['dashboard', 'workouts.index', 'stats.index', 'profile.index'])(
+        'monte un seul accessoire de séance sur %s, fixé au-dessus de la barre sous 1 024 px',
+        (onPage) => {
+            const wrapper = mountLayout({ onPage, auth: { user: user({ active_workout: active }) } })
+
+            expect(wrapper.findAllComponents({ name: 'ActiveWorkoutBanner' })).toHaveLength(1)
+
+            const classes = wrapper.getComponent({ name: 'ActiveWorkoutBanner' }).element.parentElement.className
+
+            expect(classes).toContain('fixed')
+            expect(classes).toContain('au-dessus-du-menu')
+            expect(classes).toContain('bureau:static')
+            expect(wrapper.get('main').classes()).toContain('pb-main-safe-accessoire')
+        },
+    )
+
+    it('garde le bas de la page ordinaire sans séance en cours', () => {
+        const wrapper = mountLayout({ auth: { user: user() } })
+
+        expect(wrapper.get('main').classes()).toContain('pb-main-safe')
+        expect(wrapper.get('main').classes()).not.toContain('pb-main-safe-accessoire')
+    })
+
+    /*
+     * Le repos laissé par la page de séance (#2434) ne se montre que sur le
+     * bandeau de la séance qui l'a déposé : une autre séance en cours, ou
+     * aucune, l'efface au lieu de l'annoncer.
+     */
+    describe('le repos laissé par la page de séance', () => {
+        const repos = (seance) => ({
+            duree: 90,
+            echeance: Date.now() + 60_000,
+            restantEnPause: null,
+            adresse: '/workouts/7',
+            seance,
+            intitule: 'Push A',
+            compte: 1,
+        })
+
+        afterEach(effacerLeRepos)
+
+        it('le passe au bandeau de la séance qui l’a déposé', () => {
+            deposerLeRepos(repos(7))
+            const wrapper = mountLayout({ auth: { user: user({ id: 1, active_workout: active }) } })
+
+            expect(wrapper.findComponent({ name: 'ActiveWorkoutBanner' }).props('repos')).toMatchObject({ seance: 7 })
+        })
+
+        it('ne le passe pas au bandeau d’une autre séance, et l’efface', () => {
+            deposerLeRepos(repos(3))
+            const wrapper = mountLayout({ auth: { user: user({ id: 1, active_workout: active }) } })
+
+            expect(wrapper.findComponent({ name: 'ActiveWorkoutBanner' }).props('repos') ?? null).toBeNull()
+            expect(reposDuCompte(1)).toBeNull()
+        })
+
+        it('l’efface quand plus aucune séance n’est en cours (séance supprimée)', () => {
+            deposerLeRepos(repos(7))
+            mountLayout({ auth: { user: user({ id: 1, active_workout: null }) } })
+
+            expect(reposDuCompte(1)).toBeNull()
+        })
     })
 
     /** On the session's own page the banner links to where the user already is. */
@@ -624,6 +731,8 @@ describe('AuthenticatedLayout — the session in progress', () => {
  */
 describe('AuthenticatedLayout — une copie hors ligne', () => {
     it('montre le bandeau de la copie en tête du contenu, avant la page', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date(2026, 10, 20, 8, 0))
         const wrapper = mountLayout()
 
         expect(wrapper.find('[dusk="bandeau-hors-ligne"]').exists()).toBe(false)
@@ -635,7 +744,8 @@ describe('AuthenticatedLayout — une copie hors ligne', () => {
         const bandeau = main.get('[dusk="bandeau-hors-ligne"]')
         const contenu = main.get('[data-testid="page-content"]')
 
-        expect(bandeau.text()).toContain('Hors ligne · copie du lun. 12 oct. 2026 à 18:04')
+        expect(bandeau.get('[dusk="bandeau-hors-ligne-titre"]').text()).toBe('Hors ligne')
+        expect(bandeau.get('[dusk="bandeau-hors-ligne-date"]').text()).toBe('Copie du 12 oct. à 18:04')
         expect(bandeau.element.compareDocumentPosition(contenu.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
 })
@@ -953,19 +1063,119 @@ describe('AuthenticatedLayout — the frame around the page', () => {
     })
 
     /*
-     * Le hub de profil se rejoint depuis le menu.
-     *
-     * « Profil » pointait sur `profile.edit`, la page de modification.
-     * `profile.index`, qui liste toutes les sections, n'etait atteignable sur
-     * ordinateur qu'en tapant l'adresse — la barre du bas y menait deja sur
-     * mobile, mais elle n'existe pas ici (#1314).
+     * Le hub de profil se rejoint par l'onglet « Profil » de la barre de bureau
+     * (lot 8, #2434), les mêmes quatre onglets que la barre du bas : le menu du
+     * compte ne le répète plus, et garde les réglages à un clic. Avant, le
+     * menu portait « Profil », et la barre de bureau six entrées d'avant la
+     * refonte (Calendrier, Stats, Exercices, Outils) que le mobile n'a plus.
      */
-    it('mène au hub de profil, et garde les réglages à un clic', () => {
+    it('mène au hub de profil par son onglet, et garde les réglages à un clic', () => {
         const wrapper = mountLayout()
         const parHref = wrapper.findAll('a').map((a) => [a.text(), a.attributes('href')])
 
-        expect(parHref).toContainEqual(['person Profil', '/resolved/profile.index'])
+        expect(parHref).toContainEqual(['Profil', '/resolved/profile.index'])
         expect(parHref).toContainEqual(['settings Paramètres', '/resolved/profile.edit'])
+        expect(parHref).not.toContainEqual(['person Profil', '/resolved/profile.index'])
+    })
+
+    it('montre les quatre onglets de la barre du bas, dans le même ordre', () => {
+        const wrapper = mountLayout()
+
+        expect(wrapper.findAll('a[data-active]').map((a) => [a.text(), a.attributes('href')])).toEqual([
+            ['Accueil', '/resolved/dashboard'],
+            ['Séances', '/resolved/workouts.index'],
+            ['Progrès', '/resolved/stats.index'],
+            ['Profil', '/resolved/profile.index'],
+        ])
+    })
+
+    it.each([
+        ['dashboard', 'Accueil'],
+        ['workouts.index', 'Séances'],
+        ['calendar.index', 'Séances'],
+        ['templates.index', 'Séances'],
+        ['stats.index', 'Progrès'],
+        ['corps.index', 'Progrès'],
+        ['records.index', 'Progrès'],
+        ['body-measurements.index', 'Progrès'],
+        ['body-parts.show', 'Progrès'],
+        ['exercises.show', 'Progrès'],
+        ['goals.index', 'Progrès'],
+        ['achievements.index', 'Progrès'],
+        ['profile.index', 'Profil'],
+        ['tools.index', 'Profil'],
+        ['plates.index', 'Profil'],
+        ['habits.index', 'Profil'],
+    ])('allume l’onglet « %s » → %s sur bureau, un seul à la fois', (laPage, onglet) => {
+        const wrapper = mountLayout({ onPage: laPage })
+        const allumes = wrapper.findAll('a[data-active="true"]').map((a) => a.text())
+
+        expect(allumes).toEqual([onglet])
+    })
+
+    /*
+     * Les pages secondaires ont leur retour sur bureau (lot 8, #2434) : le
+     * bouton rond de l'en-tête mobile n'y existe pas, et un onglet ne ramène
+     * qu'à la racine de sa famille.
+     */
+    it('pose un retour de bureau sur une page secondaire, dans l’en-tête de page quand elle en a un', () => {
+        const sansEntete = mountLayout({ props: { showBack: true, backRoute: 'stats.index', pageTitle: 'Corps' } })
+
+        expect(sansEntete.findAll('[dusk="retour-de-bureau"]')).toHaveLength(1)
+        expect(sansEntete.get('[dusk="retour-de-bureau"]').attributes('href')).toBe('/resolved/stats.index')
+        expect(sansEntete.get('[dusk="retour-de-bureau"]').text()).toBe('arrow_back Retour')
+
+        const avecEntete = mountLayout({
+            props: { showBack: true, backRoute: 'stats.index', pageTitle: 'Corps' },
+            slots: { header: '<h1>Corps</h1>' },
+        })
+
+        expect(avecEntete.findAll('[dusk="retour-de-bureau"]')).toHaveLength(1)
+        expect(avecEntete.get('header.bureau\\:block [dusk="retour-de-bureau"]').exists()).toBe(true)
+    })
+
+    it('n’ajoute pas son retour quand la page porte déjà le sien', () => {
+        const wrapper = mountLayout({
+            props: { showBack: true, backRoute: 'tools.index', pageTitle: 'Outils', retourPropre: true },
+            slots: { header: '<h1>Outils</h1>' },
+        })
+
+        expect(wrapper.find('[dusk="retour-de-bureau"]').exists()).toBe(false)
+    })
+
+    /*
+     * Modèles et Calendrier (`retour-de-bureau-seul`) : sur téléphone, la page
+     * pose sa rangée d'onglets, qui tient lieu de flèche, de titre visible et de
+     * cloche d'en-tête ; sur bureau, le retour est celui des autres pages secondaires.
+     */
+    it('ne montre sur téléphone ni flèche ni cloche d’en-tête avec retour-de-bureau-seul, mais garde le retour de bureau', () => {
+        const wrapper = mountLayout({
+            props: {
+                showBack: true,
+                retourDeBureauSeul: true,
+                titreMasque: true,
+                backRoute: 'workouts.index',
+                pageTitle: 'Calendrier',
+            },
+        })
+
+        expect(wrapper.find('[dusk="entete-mobile"] [aria-label="Retour"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="entete-mobile"] a[href="/resolved/notifications.index"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="entete-mobile"] h1').classes()).toContain('sr-only')
+        expect(wrapper.findAll('[dusk="retour-de-bureau"]')).toHaveLength(1)
+        expect(wrapper.get('[dusk="retour-de-bureau"]').attributes('href')).toBe('/resolved/workouts.index')
+    })
+
+    it('ne pose pas de retour de bureau sur une page racine', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Accueil' } })
+
+        expect(wrapper.find('[dusk="retour-de-bureau"]').exists()).toBe(false)
+    })
+
+    it('n’allume aucun onglet sur les notifications, comme la barre du bas', () => {
+        const wrapper = mountLayout({ onPage: 'notifications.index' })
+
+        expect(wrapper.findAll('a[data-active="true"]')).toHaveLength(0)
     })
 
     it('lights the desktop tab of the section being viewed', () => {

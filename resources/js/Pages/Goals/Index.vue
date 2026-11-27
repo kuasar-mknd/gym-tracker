@@ -97,9 +97,9 @@ const goalDistribution = computed(() => {
 </script>
 
 <template>
-    <Head title="Mes Objectifs" />
+    <Head title="Objectifs" />
 
-    <AuthenticatedLayout page-title="Mes Objectifs">
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Objectifs">
         <!-- The #header slot is desktop-only (hidden bureau:block in the layout), so the
              create action has to be mirrored here or it is unreachable on phones. -->
         <template #header-actions>
@@ -116,16 +116,13 @@ const goalDistribution = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="titre-section">Mes Objectifs 🎯</h1>
-                    <p class="text-text-muted text-sm">Fixe tes cibles et dépasse tes limites.</p>
-                </div>
+                <h1 class="titre-ecran">Objectifs</h1>
                 <GlassButton
                     :variant="showCreateForm ? 'secondary' : 'primary'"
                     dusk="create-goal-btn-desktop"
                     @click="showCreateForm = !showCreateForm"
                 >
-                    {{ showCreateForm ? 'Annuler' : 'Nouvel Objectif' }}
+                    {{ showCreateForm ? 'Annuler' : 'Nouvel objectif' }}
                 </GlassButton>
             </div>
         </template>
@@ -136,8 +133,8 @@ const goalDistribution = computed(() => {
                 <div v-if="goalDistribution.length > 0" class="animate-slide-up">
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="titre-carte">Répartition</h3>
-                            <p class="text-text-muted text-xs font-semibold">Type d'objectifs</p>
+                            <h3 class="titre-plat">Répartition</h3>
+                            <p class="etiquette">Type d'objectifs</p>
                         </div>
                         <GoalTypeChart :data="goalDistribution" />
                     </GlassCard>
@@ -154,7 +151,7 @@ const goalDistribution = computed(() => {
                 >
                     <div v-if="showCreateForm">
                         <GlassCard class="p-6">
-                            <h3 class="titre-carte mb-6">Nouvel Objectif</h3>
+                            <h3 class="titre-plat mb-6">Nouvel objectif</h3>
                             <div dusk="goal-create-form">
                                 <GoalForm
                                     :form="form"
@@ -172,8 +169,8 @@ const goalDistribution = computed(() => {
 
                 <!-- Active Goals -->
                 <div class="space-y-4">
-                    <h3 class="titre-carte flex items-center gap-2">
-                        En cours ⚡
+                    <h3 class="titre-plat flex items-center gap-2">
+                        En cours
                         <span class="text-text-muted text-xs font-normal">({{ activeGoals.length }})</span>
                     </h3>
 
@@ -195,8 +192,8 @@ const goalDistribution = computed(() => {
 
                 <!-- Completed Goals -->
                 <div v-if="completedGoals.length > 0" class="space-y-4 opacity-70">
-                    <h3 class="titre-carte flex items-center gap-2">
-                        Accomplis 🏆
+                    <h3 class="titre-plat flex items-center gap-2">
+                        Accomplis
                         <span class="text-text-muted text-xs font-normal">({{ completedGoals.length }})</span>
                     </h3>
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -218,7 +215,7 @@ const goalDistribution = computed(() => {
             @close="closeDeletion"
         >
             <div class="p-6">
-                <h2 id="delete-goal-title" class="titre-carte">Supprimer cet objectif ?</h2>
+                <h2 id="delete-goal-title" class="titre-plat">Supprimer cet objectif ?</h2>
                 <p class="text-text-muted mt-2 text-sm">
                     « {{ goalPendingDeletion?.title }} » sera définitivement effacé, avec sa progression.
                 </p>

@@ -121,7 +121,7 @@ const decritPar = computed(
 <template>
     <div class="space-y-2">
         <div class="flex items-baseline justify-between">
-            <label :for="id" class="sur-titre text-text-main" :class="{ 'sr-only': hideLabel }">{{ label }}</label>
+            <label :for="id" class="etiquette" :class="{ 'sr-only': hideLabel }">{{ label }}</label>
             <span
                 v-if="compteur"
                 :id="`${id}-compteur`"
@@ -145,7 +145,7 @@ const decritPar = computed(
             :class="{ 'border-accent-danger focus-visible:ring-accent-danger': error }"
             @input="emit('update:modelValue', $event.target.value)"
         />
-        <p v-if="error" :id="`${id}-erreur`" class="text-accent-danger-deep text-xs font-bold" role="alert">
+        <p v-if="error" :id="`${id}-erreur`" class="text-accent-danger-deep text-xs font-medium" role="alert">
             {{ error }}
         </p>
     </div>

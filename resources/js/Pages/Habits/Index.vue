@@ -107,7 +107,7 @@ const getProgressPercent = (habit) => {
 <template>
     <Head title="Habitudes" />
 
-    <AuthenticatedLayout page-title="Habitudes">
+    <AuthenticatedLayout show-back back-route="profile.index" page-title="Habitudes">
         <template #header-actions>
             <GlassButton
                 variant="primary"
@@ -122,7 +122,7 @@ const getProgressPercent = (habit) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h1 class="titre-carte">Habitudes</h1>
+                <h1 class="titre-ecran">Habitudes</h1>
                 <GlassButton variant="primary" @click="openAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -139,14 +139,14 @@ const getProgressPercent = (habit) => {
 
                 <template #fallback>
                     <div class="space-y-6">
-                        <GlassCard class="animate-pulse">
+                        <GlassCard>
                             <div class="mb-4">
                                 <GlassSkeleton width="120px" height="1.5rem" class="mb-2" />
                                 <GlassSkeleton width="80px" height="0.75rem" />
                             </div>
                             <GlassSkeleton width="100%" height="200px" class="rounded-xl" />
                         </GlassCard>
-                        <GlassCard class="animate-pulse">
+                        <GlassCard>
                             <div class="mb-4">
                                 <GlassSkeleton width="120px" height="1.5rem" class="mb-2" />
                                 <GlassSkeleton width="150px" height="0.75rem" />
@@ -163,8 +163,8 @@ const getProgressPercent = (habit) => {
                         class="animate-slide-up"
                     >
                         <div class="mb-4">
-                            <h3 class="titre-carte">Régularité</h3>
-                            <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
+                            <h3 class="titre-plat">Régularité</h3>
+                            <p class="etiquette">30 derniers jours</p>
                         </div>
                         <HabitConsistencyChart :data="stats.consistencyData" />
                     </GlassCard>
@@ -175,8 +175,8 @@ const getProgressPercent = (habit) => {
                         class="stagger-2 animate-slide-up"
                     >
                         <div class="mb-4">
-                            <h3 class="titre-carte">Constance</h3>
-                            <p class="text-text-muted text-xs font-semibold">Habitudes complétées (30 jours)</p>
+                            <h3 class="titre-plat">Constance</h3>
+                            <p class="etiquette">Habitudes complétées (30 jours)</p>
                         </div>
                         <HabitHistoryChart :data="stats.history" />
                     </GlassCard>
@@ -202,7 +202,7 @@ const getProgressPercent = (habit) => {
                             class="border-border flex flex-col items-center justify-center border-l p-2 text-center"
                             :class="{ 'bg-accent-primary/5': day.is_today }"
                         >
-                            <div class="text-text-muted text-2xs uppercase">{{ day.day_short || day.day }}</div>
+                            <div class="text-text-muted text-2xs">{{ day.day_short || day.day }}</div>
                             <div
                                 class="text-sm font-bold"
                                 :class="day.is_today ? 'text-accent-primary-deep' : 'text-text-main'"
@@ -217,7 +217,7 @@ const getProgressPercent = (habit) => {
             <!-- Habits List -->
             <GlassEmptyState
                 v-if="habits.length === 0"
-                icon="✅"
+                icon="task_alt"
                 color="green"
                 title="Aucune habitude"
                 description="Commence par créer une habitude à suivre."
@@ -250,7 +250,7 @@ const getProgressPercent = (habit) => {
                                     <GlassIcon :name="habit.icon" />
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <h3 class="titre-carte truncate">{{ habit.name }}</h3>
+                                    <h3 class="titre-plat truncate">{{ habit.name }}</h3>
                                     <div class="flex items-center gap-2">
                                         <div class="bg-surface-sunken h-1.5 w-16 overflow-hidden rounded-full">
                                             <div
@@ -308,7 +308,7 @@ const getProgressPercent = (habit) => {
                                 class="focus-visible:ring-accent-primary flex size-11 shrink-0 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 :class="[
                                     isCompleted(habit, day.date)
-                                        ? `${habit.color} text-text-on-dark-accent shadow-md`
+                                        ? `${habit.color} text-text-on-dark-accent`
                                         : 'bg-surface-sunken text-text-muted hover:bg-surface-sunken',
                                 ]"
                             >

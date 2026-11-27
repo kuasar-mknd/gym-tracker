@@ -13,8 +13,6 @@ vi.mock('vue-chartjs', async () => (await import('../chartRecorder.js')).chartRe
  * Chart.js appelle le rappel avec un contexte : on lui en passe un qui porte la
  * valeur survolée, sous la forme que chaque carte lit (`parsed.y` ou `raw`).
  */
-const anneau = (n) => ({ raw: n, datasetIndex: 0, chart: { _metasets: [{ total: 4 }] } })
-
 const cartes = [
     {
         nom: 'WorkoutFrequencyChart',
@@ -28,27 +26,6 @@ const cartes = [
         trace: 'Bar',
         data: [{ date: '01/07', sets: 1 }],
         contexte: (n) => ({ parsed: { y: n } }),
-        attendus: ['1 série', '2 séries'],
-    },
-    {
-        nom: 'RecentWorkoutsExercisesChart',
-        trace: 'Bar',
-        data: [{ started_at: '2026-07-05T10:00:00Z', workout_lines_count: 1 }],
-        contexte: (n) => ({ parsed: { y: n } }),
-        attendus: ['1 exercice', '2 exercices'],
-    },
-    {
-        nom: 'TimeOfDayChart',
-        trace: 'Doughnut',
-        data: [{ label: 'Matin', count: 1 }],
-        contexte: anneau,
-        attendus: [' 1 séance (25%)', ' 2 séances (50%)'],
-    },
-    {
-        nom: 'WeightDistributionChart',
-        trace: 'Bar',
-        data: [{ label: '60', count: 1 }],
-        contexte: (n) => ({ raw: n }),
         attendus: ['1 série', '2 séries'],
     },
     {
@@ -71,20 +48,6 @@ const cartes = [
         data: [{ date: '01/07', count: 1 }],
         contexte: (n) => ({ raw: n }),
         attendus: ['1 dose', '2 doses'],
-    },
-    {
-        nom: 'TotalRepsChart',
-        trace: 'Bar',
-        data: [{ date: '01/07', reps: 1 }],
-        contexte: (n) => ({ parsed: { y: n } }),
-        attendus: ['1 rep', '2 reps'],
-    },
-    {
-        nom: 'RecentWorkoutsTimelineChart',
-        trace: 'Line',
-        data: [{ started_at: '2026-07-05T10:00:00Z', ended_at: '2026-07-05T10:01:00Z', name: 'Jambes' }],
-        contexte: (n) => ({ parsed: { y: n } }),
-        attendus: ['1 minute', '2 minutes'],
     },
     {
         nom: 'WeightRepsScatterChart',

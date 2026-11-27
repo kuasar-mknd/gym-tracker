@@ -53,7 +53,7 @@ vi.mock('@/Layouts/AuthenticatedLayout.vue', async () => {
                     rendre('div', [
                         slots.header?.(),
                         slots['header-actions']?.(),
-                        slots.default?.(),
+                        slots.default?.({ seanceEnCours: null }),
                         rendre(ToastsDuLayout),
                     ]),
         },
@@ -65,10 +65,6 @@ vi.mock('@/Layouts/AuthenticatedLayout.vue', async () => {
  * chargeraient Chart.js. `defineAsyncComponent` ne prend `default` que d'un
  * module qui se dit module (`__esModule`).
  */
-vi.mock('@/Components/Stats/WorkoutHistoryTimelineChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'WorkoutHistoryTimelineChart', render: () => null },
-}))
 vi.mock('@/Components/Stats/WorkoutFrequencyChart.vue', () => ({
     __esModule: true,
     default: { name: 'WorkoutFrequencyChart', render: () => null },
@@ -80,14 +76,6 @@ vi.mock('@/Components/Stats/WorkoutsPerMonthChart.vue', () => ({
 vi.mock('@/Components/Stats/MonthlyVolumeChart.vue', () => ({
     __esModule: true,
     default: { name: 'MonthlyVolumeChart', render: () => null },
-}))
-vi.mock('@/Components/Stats/WorkoutDurationChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'WorkoutDurationChart', render: () => null },
-}))
-vi.mock('@/Components/Stats/VolumePerWorkoutChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'VolumePerWorkoutChart', render: () => null },
 }))
 vi.mock('@/Components/Stats/ExerciseCategoryChart.vue', () => ({
     __esModule: true,
@@ -276,7 +264,6 @@ const PAGES = [
         props: (ids = [1, 2, 3, 4]) => ({
             errors: {},
             workouts: { data: ids.map(seance), total: ids.length, current_page: 1, last_page: 1 },
-            totalExercises: 0,
         }),
         lignes: () =>
             [...document.querySelectorAll('[dusk^="delete-workout-"]')].map((bouton) =>
@@ -566,20 +553,20 @@ describe('Stats/Index : la période choisie', () => {
         async (_cas, echouer) => {
             await ouvrirLaPage('Stats/Index', '/stats', { errors: {}, exercises: [], selectedPeriod: '30j' })
 
-            await choisir('1 AN')
-            expect(periodeRetenue()).toEqual(['1 AN'])
+            await choisir('1 an')
+            expect(periodeRetenue()).toEqual(['1 an'])
 
             echouer(requetes[0])
             await attendreLesVisites()
 
-            expect(periodeRetenue()).toEqual(['30 JOURS'])
+            expect(periodeRetenue()).toEqual(['30 jours'])
         },
     )
 
     it('reste sur la nouvelle quand le serveur l’a rendue', async () => {
         await ouvrirLaPage('Stats/Index', '/stats', { errors: {}, exercises: [], selectedPeriod: '30j' })
 
-        await choisir('1 AN')
+        await choisir('1 an')
         requetes[0].repondre(
             reponseInertia({
                 component: 'Stats/Index',
@@ -590,7 +577,7 @@ describe('Stats/Index : la période choisie', () => {
         )
         await attendreLesVisites()
 
-        expect(periodeRetenue()).toEqual(['1 AN'])
+        expect(periodeRetenue()).toEqual(['1 an'])
     })
 })
 

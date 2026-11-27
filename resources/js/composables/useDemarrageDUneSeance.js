@@ -381,6 +381,7 @@ export const useDemarrageDUneSeance = () => {
         const modele = estUnModele(modeleDemande) ? modeleDemande : null
 
         demarrageEnCours.value = true
+        triggerHaptic('toggle')
 
         /** La visite de la séance créée rend elle-même le verrou, à sa fin. */
         let rendreLeVerrou = true

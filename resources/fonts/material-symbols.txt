@@ -17,7 +17,6 @@ apps
 arrow_back
 arrow_downward
 arrow_forward
-arrow_forward_ios
 arrow_upward
 assignment_add
 autorenew
@@ -35,7 +34,6 @@ chevron_left
 chevron_right
 close
 cloud_off
-dashboard
 delete
 drag_indicator
 directions_run
@@ -43,7 +41,6 @@ edit
 emoji_events
 error
 event_busy
-exercise
 expand_more
 fitness_center
 flag
@@ -54,13 +51,11 @@ history
 install_mobile
 inventory_2
 keyboard
-library_books
 local_cafe
 local_drink
 local_fire_department
 logout
 medication
-menu
 menu_book
 military_tech
 monitor_heart
@@ -71,7 +66,6 @@ notifications
 notifications_off
 pause
 person
-person_edit
 pie_chart
 play_arrow
 play_circle
@@ -88,14 +82,12 @@ self_improvement
 settings
 show_chart
 spa
-star
 stars
 straighten
 task_alt
 timer
 timer_off
 touch_app
-tour
 trending_down
 trending_flat
 trending_up

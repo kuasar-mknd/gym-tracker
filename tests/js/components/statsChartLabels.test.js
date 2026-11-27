@@ -20,11 +20,9 @@ vi.mock('vue-chartjs', () => {
 const { volumeTooltipCallback } = await import('@/Components/Stats/chartConfig')
 const BodyPartDiffChart = (await import('@/Components/Stats/BodyPartDiffChart.vue')).default
 const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue')).default
-const RecentWorkoutsExercisesChart = (await import('@/Components/Stats/RecentWorkoutsExercisesChart.vue')).default
 const ExerciseCategoryChart = (await import('@/Components/Stats/ExerciseCategoryChart.vue')).default
 const DurationHistoryChart = (await import('@/Components/Stats/DurationHistoryChart.vue')).default
 const SetsPerSessionChart = (await import('@/Components/Stats/SetsPerSessionChart.vue')).default
-const VolumePerWorkoutChart = (await import('@/Components/Stats/VolumePerWorkoutChart.vue')).default
 
 const tooltipOf = (wrapper, name) => wrapper.findComponent({ name }).props('options').plugins.tooltip
 
@@ -48,25 +46,6 @@ describe('volumeTooltipCallback', () => {
 
     it('leaves a gap in the series unlabelled instead of reading "null kg"', () => {
         expect(callback('Volume', null)).toBe('Volume: ')
-    })
-})
-
-describe('VolumePerWorkoutChart tooltip', () => {
-    const wrapper = mount(VolumePerWorkoutChart, { props: { data: [{ date: '01/07', volume: 8250 }] } })
-
-    it('formats a hovered bar through the shared volume formatter', () => {
-        // Spreading commonTooltipOptions must not shadow the callbacks, and the
-        // dataset label must be the one the callback prefixes with.
-        const label = tooltipOf(wrapper, 'Bar').callbacks.label({
-            dataset: { label: 'Volume' },
-            parsed: { y: 8250 },
-        })
-
-        expect(label).toBe("Volume: 8'250 kg")
-    })
-
-    it('keeps the shared tooltip chrome alongside its own callbacks', () => {
-        expect(tooltipOf(wrapper, 'Bar').cornerRadius).toBe(12)
     })
 })
 
@@ -114,16 +93,6 @@ describe('BodyFatLineChart tooltip', () => {
         const wrapper = mount(BodyFatLineChart, { props: { data: [{ date: '01/07', body_fat: 18.4 }] } })
 
         expect(tooltipOf(wrapper, 'Line').callbacks.label({ parsed: { y: 18.4 } })).toBe('18.4 %')
-    })
-})
-
-describe('RecentWorkoutsExercisesChart tooltip', () => {
-    it('names the unit of what the bar counts', () => {
-        const wrapper = mount(RecentWorkoutsExercisesChart, {
-            props: { data: [{ started_at: '2026-07-05T10:00:00Z', workout_lines_count: 5 }] },
-        })
-
-        expect(tooltipOf(wrapper, 'Bar').callbacks.label({ parsed: { y: 5 } })).toBe('5 exercices')
     })
 })
 

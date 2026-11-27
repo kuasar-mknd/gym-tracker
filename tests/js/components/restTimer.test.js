@@ -10,7 +10,13 @@ import { dansUnGeste, installerLaSortieWebKit, retirerLaSortieWebKit, sorties } 
 const mountTimer = (props = {}) =>
     mount(RestTimer, {
         props: { duration: 90, autoStart: false, ...props },
-        global: { directives: { press: {} }, stubs: { GlassButton: { template: '<button><slot /></button>' } } },
+        global: {
+            directives: { press: {} },
+            stubs: {
+                GlassButton: { template: '<button><slot /></button>' },
+                Modal: { template: '<div><slot /></div>' },
+            },
+        },
     })
 
 const bar = (wrapper) => wrapper.find('[role="progressbar"]')
@@ -20,8 +26,7 @@ const clock = (wrapper) => wrapper.find('[role="timer"]').text()
 
 const button = (wrapper, dusk) => wrapper.find(`[dusk="${dusk}"]`)
 
-const toggleButton = (wrapper) =>
-    wrapper.findAll('button').find((b) => ['Pause', 'Démarrer le minuteur'].includes(b.attributes('aria-label')))
+const toggleButton = (wrapper) => wrapper.find('[dusk="toggle-rest-timer"]')
 
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())
@@ -107,7 +112,13 @@ describe('RestTimer countdown', () => {
     it('démarre au montage quand la page ne lui dit rien', async () => {
         const wrapper = mount(RestTimer, {
             props: { duration: 90 },
-            global: { directives: { press: {} }, stubs: { GlassButton: { template: '<button><slot /></button>' } } },
+            global: {
+                directives: { press: {} },
+                stubs: {
+                    GlassButton: { template: '<button><slot /></button>' },
+                    Modal: { template: '<div><slot /></div>' },
+                },
+            },
         })
 
         expect(vi.getTimerCount()).toBe(1)
@@ -189,22 +200,11 @@ describe('RestTimer countdown', () => {
 
         await wrapper.setProps({ duration: 60 })
 
-        expect(wrapper.get('[role="status"]').text()).toBe('Repos en cours')
+        expect(wrapper.get('[role="status"]').text()).toBe('')
         expect(clock(wrapper)).toBe('1:00')
         expect(toggleButton(wrapper).exists()).toBe(true)
         vi.advanceTimersByTime(10000)
         expect(wrapper.emitted('close')).toBeUndefined()
-    })
-
-    it('does not close a second time once the card is closed by hand during the end notice', async () => {
-        const wrapper = mountTimer({ duration: 3, autoStart: true })
-        vi.advanceTimersByTime(3000)
-        await wrapper.vm.$nextTick()
-
-        await wrapper.get('[dusk="close-timer-x"]').trigger('click')
-        vi.advanceTimersByTime(10000)
-
-        expect(wrapper.emitted('close')).toHaveLength(1)
     })
 
     it('finishes early when the rest is skipped', async () => {
@@ -228,20 +228,22 @@ describe('RestTimer countdown', () => {
         expect(wrapper.emitted('close')).toHaveLength(1)
     })
 
-    it('closes without claiming the rest was completed', async () => {
-        const wrapper = mountTimer({ duration: 90, autoStart: true })
+    it('suit l’échéance d’un repos repris, et non les secondes arrondies, au retour au premier plan', async () => {
+        const wrapper = mountTimer({
+            duration: 90,
+            autoStart: true,
+            secondesRestantes: 5,
+            echeance: Date.now() + 4_200,
+        })
 
-        await button(wrapper, 'close-timer-x').trigger('click')
+        vi.setSystemTime(Date.now() + 4_500)
+        document.dispatchEvent(new Event('visibilitychange'))
+        await wrapper.vm.$nextTick()
 
-        expect(wrapper.emitted('close')).toHaveLength(1)
-        expect(wrapper.get('[role="status"]').text()).toBe('Repos en cours')
-
-        // Closing also stops the countdown; a hidden timer must not fire.
-        vi.advanceTimersByTime(120000)
-        expect(wrapper.get('[role="status"]').text()).toBe('Repos en cours')
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos terminé')
     })
 
-    it('retire Pause et Passer à la fin naturelle du repos, et garde « Fermer »', async () => {
+    it('retire la bascule et Passer à la fin naturelle du repos', async () => {
         const wrapper = mountTimer({ duration: 3, autoStart: true })
         expect(toggleButton(wrapper).exists()).toBe(true)
         expect(button(wrapper, 'skip-rest-timer').exists()).toBe(true)
@@ -249,9 +251,8 @@ describe('RestTimer countdown', () => {
         vi.advanceTimersByTime(3000)
         await wrapper.vm.$nextTick()
 
-        expect(toggleButton(wrapper)).toBeUndefined()
+        expect(toggleButton(wrapper).exists()).toBe(false)
         expect(button(wrapper, 'skip-rest-timer').exists()).toBe(false)
-        expect(button(wrapper, 'close-timer-x').exists()).toBe(true)
     })
 
     describe('le focus, quand Pause et Passer disparaissent', () => {
@@ -261,7 +262,7 @@ describe('RestTimer countdown', () => {
             wrapper = mount(RestTimer, {
                 props: { duration: 3, autoStart: true },
                 attachTo: document.body,
-                global: { directives: { press: {} } },
+                global: { directives: { press: {} }, stubs: { Modal: { template: '<div><slot /></div>' } } },
             })
 
             return wrapper
@@ -272,7 +273,7 @@ describe('RestTimer countdown', () => {
         it.each([
             ['Pause', (cible) => toggleButton(cible).element],
             ['Passer', (cible) => button(cible, 'skip-rest-timer').element],
-        ])('passe de « %s » à « Fermer le minuteur »', async (_nom, boutonFocalise) => {
+        ])('passe de « %s » à l’interrupteur de la feuille', async (_nom, boutonFocalise) => {
             monterAttache()
             boutonFocalise(wrapper).focus()
             expect(document.activeElement).toBe(boutonFocalise(wrapper))
@@ -281,7 +282,7 @@ describe('RestTimer countdown', () => {
             await wrapper.vm.$nextTick()
             await wrapper.vm.$nextTick()
 
-            expect(document.activeElement).toBe(button(wrapper, 'close-timer-x').element)
+            expect(document.activeElement).toBe(wrapper.get('[dusk="auto-rest-timer-feuille"] [role="switch"]').element)
         })
 
         describe('à la fermeture de la carte, que la page démonte', () => {
@@ -297,11 +298,6 @@ describe('RestTimer countdown', () => {
             afterEach(() => principal.remove())
 
             it.each([
-                [
-                    '« Fermer »',
-                    (cible) => button(cible, 'close-timer-x'),
-                    (cible) => button(cible, 'close-timer-x').trigger('click'),
-                ],
                 [
                     '« Passer »',
                     (cible) => button(cible, 'skip-rest-timer'),
@@ -336,7 +332,7 @@ describe('RestTimer countdown', () => {
                 monterAttache()
                 champ.focus()
 
-                await button(wrapper, 'close-timer-x').trigger('click')
+                await button(wrapper, 'skip-rest-timer').trigger('click')
 
                 expect(document.activeElement).toBe(champ)
                 champ.remove()
@@ -482,63 +478,36 @@ describe('le bip de fin, minuteur monté seul (#2112)', () => {
     })
 })
 
-/**
- * L'icône de la bascule (#2122). Le dessin de « Pause », écrit à la main,
- * fermait son second trait par `h4` au lieu de `h-4` : la barre droite se
- * remplissait de 18 à 22 au lieu de 14 à 18, à deux unités du bord, et le
- * pictogramme était décentré de deux unités sur un bouton qu'on touche à chaque
- * repos. La bascule rend désormais les ligatures de la police d'icônes, `pause`
- * et `play_arrow`, comme le minuteur d'intervalles et la barre du bas, à la
- * taille du dessin qu'elles remplacent (20 px, `sm`) ; le bouton se nomme
- * lui-même, l'icône reste décorative.
- */
-describe('l’icône de la bascule (#2122)', () => {
-    const icone = (wrapper) => toggleButton(wrapper).find('.material-symbols-outlined')
+describe('la feuille du repos', () => {
+    it('dit la série qui suit quand la page la donne', () => {
+        const wrapper = mountTimer({ ensuite: 'Ensuite, série 3 sur 4' })
 
-    it('montre la ligature « pause » pendant le décompte, décorative, à 20 px, sans dessin à la main', async () => {
-        const wrapper = mountTimer({ duration: 90, autoStart: true })
-        // Le départ automatique se fait au montage : le bouton se redessine au tour suivant.
-        await wrapper.vm.$nextTick()
-
-        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Pause')
-        expect(icone(wrapper).exists()).toBe(true)
-        expect(icone(wrapper).text()).toBe('pause')
-        expect(icone(wrapper).attributes('aria-hidden')).toBe('true')
-        expect(icone(wrapper).classes()).toContain('text-xl')
-        expect(toggleButton(wrapper).find('svg').exists()).toBe(false)
+        expect(wrapper.get('[dusk="rest-timer-ensuite"]').text()).toBe('Ensuite, série 3 sur 4')
     })
 
-    it('montre la ligature « play_arrow » à l’arrêt, puis « pause » une fois reparti', async () => {
-        const wrapper = mountTimer({ duration: 90, autoStart: false })
+    it('ne dit rien de la suite sans elle', () => {
+        expect(mountTimer().find('[dusk="rest-timer-ensuite"]').exists()).toBe(false)
+    })
 
-        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Démarrer le minuteur')
-        expect(icone(wrapper).text()).toBe('play_arrow')
-        expect(icone(wrapper).classes()).toContain('text-xl')
-        expect(toggleButton(wrapper).find('svg').exists()).toBe(false)
+    it('met en pause depuis la feuille, et le dit', async () => {
+        const wrapper = mountTimer({ duration: 90, autoStart: true })
 
         await toggleButton(wrapper).trigger('click')
 
-        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Pause')
-        expect(icone(wrapper).text()).toBe('pause')
-    })
-})
+        expect(wrapper.get('[role="status"]').text()).toBe('Repos en pause')
+        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Reprendre le repos')
 
-describe('le démarrage automatique', () => {
-    it('annonce le basculement sans rien écrire lui-même', async () => {
-        const wrapper = mountTimer({ duration: 90, autoRestTimer: true })
+        await toggleButton(wrapper).trigger('click')
 
-        await wrapper.find('[dusk="auto-rest-timer"] button[role="switch"]').trigger('click')
-
-        expect(wrapper.emitted('update:autoRestTimer')).toEqual([[false]])
+        expect(wrapper.get('[role="status"]').text()).toBe('')
+        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Mettre le repos en pause')
     })
 
-    it('reflète le réglage reçu plutôt qu un état interne', async () => {
-        const wrapper = mountTimer({ duration: 90, autoRestTimer: false })
+    it('règle le démarrage automatique depuis la feuille', async () => {
+        const wrapper = mountTimer({ reposAutomatique: true })
 
-        expect(wrapper.find('[dusk="auto-rest-timer"] button[role="switch"]').attributes('aria-checked')).toBe('false')
+        await wrapper.get('[dusk="auto-rest-timer-feuille"] [role="switch"]').trigger('click')
 
-        await wrapper.setProps({ autoRestTimer: true })
-
-        expect(wrapper.find('[dusk="auto-rest-timer"] button[role="switch"]').attributes('aria-checked')).toBe('true')
+        expect(wrapper.emitted('update:reposAutomatique')).toEqual([[false]])
     })
 })

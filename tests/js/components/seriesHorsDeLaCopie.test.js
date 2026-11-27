@@ -47,6 +47,7 @@ describe('SeriesHorsDeLaCopie', () => {
 
         expect(note.exists()).toBe(true)
         expect(note.attributes('role')).toBe('status')
+        expect(note.classes()).toEqual(expect.arrayContaining(['bg-surface-card', 'border-accent-warning/60']))
         expect(note.get('span:last-child').text().replace(/\s+/g, ' ')).toBe(
             "Des séries enregistrées après 18:20 n'apparaissent pas ici : elles sont bien enregistrées.",
         )

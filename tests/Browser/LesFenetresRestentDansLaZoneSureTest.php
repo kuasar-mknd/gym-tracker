@@ -76,7 +76,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
      */
     private const string LIRE_LES_EN_TETES = <<<'JS'
         const affiche = (element) => element !== null && getComputedStyle(element).display !== 'none';
-        const barres = [...document.querySelectorAll('nav.z-nav, header.z-collant, nav.glass-nav')].filter(affiche);
+        const barres = [...document.querySelectorAll('nav.z-nav, [dusk="entete-mobile"], nav.glass-nav')].filter(affiche);
         const commandes = barres
             .flatMap((barre) => [...barre.querySelectorAll('a, button')])
             .map((commande) => ({ commande, cadre: commande.getBoundingClientRect() }))
@@ -94,7 +94,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
         const contenu = document.querySelector('#main-content > div:last-child').getBoundingClientRect();
         return {
             barreDeBureau: affiche(document.querySelector('nav.z-nav')),
-            enteteMobile: affiche(document.querySelector('header.z-collant')),
+            enteteMobile: affiche(document.querySelector('[dusk="entete-mobile"]')),
             barreDuBas: affiche(document.querySelector('nav.glass-nav')),
             titres: [...document.querySelectorAll('h1')].filter((titre) => titre.getClientRects().length > 0).length,
             largeur: innerWidth,
@@ -130,27 +130,31 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
                 'Le titre « Ajouter un exercice » se lit sous la barre d’état.'
             );
 
+            /*
+             * Le tiroir est collé au bas de l'écran, son verre passant derrière
+             * l'indicateur d'accueil (maquette de navigation) : c'est son contenu, la
+             * liste (jusqu'à son dernier exercice), qui reste au-dessus de l'indicateur, et la marge du haut est de 24 px.
+             */
             $basDeLaZoneSure = $fenetre['hauteur'] - $marges['bas'];
+
+            $dernierBas = $browser->script(<<<'JS'
+                const liste = document.querySelector('[dusk="liste-des-exercices"]');
+                liste.scrollTop = liste.scrollHeight;
+                const lignes = liste.querySelectorAll('[dusk^="select-exercise-"]');
+                return lignes[lignes.length - 1].getBoundingClientRect().bottom;
+                JS)[0];
 
             $this->assertLessThanOrEqual(
                 $basDeLaZoneSure,
-                $fenetre['panneauBas'],
-                'Le bas de la fenêtre reste au-dessus de l’indicateur d’accueil.'
+                $dernierBas,
+                'Au bout de la liste, le dernier exercice reste au-dessus de l’indicateur d’accueil.'
             );
 
-            /*
-             * Une longue liste remplit la zone sûre : la fenêtre garde la même
-             * marge au-dessus et au-dessous d'elle, au lieu d'un grand vide en bas.
-             */
             $margeAuDessus = $fenetre['panneauHaut'] - $marges['haut'];
-            $margeAuDessous = $basDeLaZoneSure - $fenetre['panneauBas'];
+            $margeAuDessous = $fenetre['hauteur'] - $fenetre['panneauBas'];
 
-            $this->assertEqualsWithDelta(
-                $margeAuDessus,
-                $margeAuDessous,
-                1.0,
-                sprintf('La fenêtre laisse %.0f px au-dessus d’elle et %.0f px au-dessous.', $margeAuDessus, $margeAuDessous)
-            );
+            $this->assertEqualsWithDelta(24.0, $margeAuDessus, 1.0, sprintf('Le tiroir laisse %.0f px sous la barre d’état.', $margeAuDessus));
+            $this->assertEqualsWithDelta(0.0, $margeAuDessous, 1.0, sprintf('Le tiroir laisse %.0f px sous lui, il doit toucher le bord de l’écran.', $margeAuDessous));
 
             /** @var array{listeDefile: bool, fenetreDefile: bool} $defilement */
             $defilement = $browser->script(<<<'JS'
@@ -245,10 +249,9 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $this->verifierLEnTeteEnPaysage($browser, $marges, 'la séance');
 
             /*
-             * Le formulaire de création dépasse la hauteur permise en paysage. Il
-             * ne se plie pas comme la liste : la fenêtre défile, et son bouton
-             * garde au bas la marge de la fenêtre. Plié, il débordait dans cette
-             * marge et l'arrondi du panneau rognait le bouton.
+             * Le formulaire de création peut dépasser la hauteur permise en paysage :
+             * il défile en lui-même, la fenêtre reste en place, et son bouton garde
+             * au bas la marge de la fenêtre. L'arrondi du panneau ne le rogne pas.
              */
             $browser->type('#search-workout-exercise', 'Exercice absent de la bibliothèque')
                 ->waitFor('@quick-create-exercise', 15)
@@ -259,15 +262,17 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             /** @var array{fenetreDefile: bool, margeSousLeBouton: float} $creation */
             $creation = $browser->script(<<<'JS'
                 const panneau = document.querySelector('dialog[open] .glass-modal');
+                const formulaire = panneau.querySelector('form');
+                formulaire.scrollTop = formulaire.scrollHeight;
                 panneau.scrollTop = panneau.scrollHeight;
                 return {
-                    fenetreDefile: panneau.scrollHeight > panneau.clientHeight,
+                    fenetreDefile: panneau.scrollHeight > panneau.clientHeight + 1,
                     margeSousLeBouton: panneau.getBoundingClientRect().bottom
                         - panneau.querySelector('button[type="submit"]').getBoundingClientRect().bottom,
                 };
                 JS)[0];
 
-            $this->assertTrue($creation['fenetreDefile'], 'En paysage, le formulaire de création fait défiler la fenêtre.');
+            $this->assertFalse($creation['fenetreDefile'], 'En paysage, le formulaire de création défile en lui-même : la fenêtre reste en place.');
             $this->assertGreaterThanOrEqual(
                 24.0,
                 $creation['margeSousLeBouton'],

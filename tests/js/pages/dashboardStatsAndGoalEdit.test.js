@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 
-vi.mock('@/Components/Stats/ActiveGoalsChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'ActiveGoalsChart', props: ['data'], template: '<div />' },
-}))
 import { mount as monterVraiment, flushPromises } from '@vue/test-utils'
+import { inject, ref } from 'vue'
+import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 
 /*
  * Chaque page montée ici est démontée à la fin du test qui l'a montée.
@@ -128,7 +126,12 @@ import { installerLInvitationDInstallation } from '@/composables/useInvitationDI
 import GoalsEdit from '@/Pages/Goals/Edit.vue'
 import StatsIndex from '@/Pages/Stats/Index.vue'
 import { layoutStub, passesSlot } from './pageStubs'
-import { ref } from 'vue'
+
+/** Le layout donne à la page la séance en cours de l'appareil, que le test fournit par injection. */
+const layoutAvecSeance = {
+    setup: () => ({ seanceEnCours: inject(CLE_DE_LA_SEANCE_EN_COURS, ref(null)) }),
+    template: '<div><slot :seance-en-cours="seanceEnCours" /></div>',
+}
 
 beforeAll(() => {
     globalThis.route = (name, params) => (params === undefined ? `/${name}` : `/${name}/${JSON.stringify(params)}`)
@@ -154,24 +157,26 @@ beforeEach(() => {
 const recording = (name, props) => ({ name, props, template: '<div />' })
 
 describe('Dashboard', () => {
-    const quickActions = recording('QuickActions', ['processing'])
-    const recentActivity = recording('RecentActivity', ['recentWorkouts', 'processing'])
+    const quickActions = recording('QuickActions', ['processing', 'sansDemarrage'])
+    const recentActivity = recording('RecentActivity', ['recentWorkouts'])
     const goalsSummary = recording('GoalsSummary', ['activeGoals', 'indisponible'])
-    const activeGoalsChart = recording('ActiveGoalsChart', ['data'])
 
-    const mountDashboard = (props = {}) =>
+    const uneSeance = { id: 3, started_at: '2026-02-10T14:30:00Z', ended_at: '2026-02-10T15:15:00Z' }
+
+    /** Un compte qui a déjà de quoi remplir les cartes : au moins une séance. */
+    const mountDashboard = (props = {}, provide = {}) =>
         mount(Dashboard, {
-            props,
+            props: { recentWorkouts: [uneSeance], ...props },
             global: {
+                provide,
                 directives: { press: {} },
                 mocks: { route: globalThis.route, $page: { props: { auth: { user: { name: 'Sam' } } } } },
                 stubs: {
-                    AuthenticatedLayout: layoutStub,
+                    AuthenticatedLayout: layoutAvecSeance,
                     GlassCard: passesSlot,
                     QuickActions: quickActions,
                     RecentActivity: recentActivity,
                     GoalsSummary: goalsSummary,
-                    ActiveGoalsChart: activeGoalsChart,
                 },
             },
         })
@@ -199,104 +204,85 @@ describe('Dashboard', () => {
         expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
     })
 
-    it('accepte la demande de démarrage des deux endroits qui la proposent', () => {
+    it('signale à la tuile que la séance est en train de démarrer', async () => {
         const wrapper = mountDashboard()
+        const processing = () => wrapper.findComponent({ name: 'QuickActions' }).props('processing')
 
-        wrapper.findComponent({ name: 'RecentActivity' }).vm.$emit('startWorkout')
-
-        // The empty state inside RecentActivity offers the same button; wired to
-        // nothing it is a button that visibly does not work.
-        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
-    })
-
-    it('signale aux deux boutons que la séance est en train de démarrer', async () => {
-        const wrapper = mountDashboard()
-        const processingOf = (name) => wrapper.findComponent({ name }).props('processing')
-
-        expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([false, false])
+        expect(processing()).toBe(false)
 
         wrapper.findComponent({ name: 'QuickActions' }).vm.$emit('startWorkout')
         await nextTick()
 
         // Read while the start is still open: checked afterwards, a button
         // that was never told anything reads exactly like one that was.
-        expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([true, true])
+        expect(processing()).toBe(true)
 
         demarrage.enCours.value = false
         await nextTick()
 
-        expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([false, false])
+        expect(processing()).toBe(false)
     })
 
-    it('montre des squelettes tant que les statistiques n’ont pas atterri', () => {
+    it('montre un seul squelette, celui de « Cette semaine », tant que les statistiques n’ont pas atterri', () => {
         const wrapper = mountDashboard()
 
-        // Three placeholders, not one: the fallback stands in for two side-by-side
-        // cards and the strip underneath them, so a single skeleton leaves the
-        // page jumping when the real content arrives.
-        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(3)
+        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(1)
+        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).exists()).toBe(false)
     })
 
-    it('remplace les squelettes par les sections une fois les statistiques arrivées', () => {
+    it('remplace le squelette par « Cette semaine » une fois les statistiques arrivées', () => {
+        deferredHasLanded = true
+
+        const stats = { current_week_volume: 1200, percentage: 12, sessions_count: 2 }
+        const trend = [{ date: '2026-02-09', day_label: 'Lun', volume: 1200 }]
+        const wrapper = mountDashboard({ analyticalStats: { weeklyVolume: { stats, trend } } })
+
+        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
+        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).props('weeklyVolumeStats')).toEqual(stats)
+        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).props('weeklyVolumeTrend')).toEqual(trend)
+    })
+
+    it('ne monte plus les répartitions de durée et d’heure, ni les graphiques des séances récentes', () => {
         deferredHasLanded = true
 
         const wrapper = mountDashboard({
-            analyticalStats: {
-                weeklyVolume: { stats: { current_week_volume: 1200, percentage: 12 }, trend: [{ week: 'S1' }] },
-                workoutDistributions: { duration: [{ range: '60-90', count: 3 }], time_of_day: [{ hour: 18 }] },
-            },
+            analyticalStats: { weeklyVolume: { stats: { current_week_volume: 0 }, trend: [] } },
         })
 
-        // Each section fed from its own branch: reading them all out of the same
-        // one leaves three populated cards showing the same thing.
-        expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
-        expect(wrapper.findComponent({ name: 'WeeklyVolumeSection' }).props('weeklyVolumeTrend')).toEqual([
-            { week: 'S1' },
-        ])
-        expect(wrapper.findComponent({ name: 'DurationSection' }).props('durationDistribution')).toEqual([
-            { range: '60-90', count: 3 },
-        ])
-        expect(wrapper.findComponent({ name: 'TimeOfDaySection' }).props('timeOfDayDistribution')).toEqual([
-            { hour: 18 },
-        ])
+        for (const nom of ['DurationSection', 'TimeOfDaySection', 'RecentVolumeSection', 'RecentExercisesSection']) {
+            expect(wrapper.findComponent({ name: nom }).exists()).toBe(false)
+        }
+
+        expect(wrapper.find('canvas').exists()).toBe(false)
     })
 
     /*
-     * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
-     * objectifs (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent,
-     * plutôt que de disparaître comme pour un compte qui n'a rien noté.
+     * Une copie hors ligne de l'accueil ne garde pas les objectifs (#2048,
+     * `PROPS_JAMAIS_GARDEES`) : leur carte le dit, plutôt que de disparaître
+     * comme pour un compte qui n'en a pas. Le dernier poids a quitté l'accueil.
      */
-    it('sur une copie hors ligne, dit le dernier poids et les objectifs indisponibles', () => {
+    it('sur une copie hors ligne, dit les objectifs indisponibles, et ne parle plus du dernier poids', () => {
         pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }
         const wrapper = mountDashboard()
 
-        expect(wrapper.get('[dusk="dashboard-latest-weight-indisponible"]').text()).toContain(
-            'Dernier poids indisponible hors ligne',
-        )
         expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('indisponible')).toBe(true)
+        expect(wrapper.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('Dernier poids')
     })
 
     // Sans la marque d'une copie, une prop absente ne dit rien d'un réseau absent.
-    it('sur une page que le serveur a rendue, un compte qui n’a rien noté ne voit rien d’indisponible', () => {
+    it('sur une page que le serveur a rendue, un compte sans objectif ne voit rien d’indisponible', () => {
         pageDInertia.props = { errors: {} }
-        const wrapper = mountDashboard({ latestWeight: null, activeGoals: [] })
+        const wrapper = mountDashboard({ activeGoals: [] })
 
-        expect(wrapper.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
         expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('indisponible')).toBe(false)
     })
 
-    it('ne dessine la progression des objectifs que s’il y en a', () => {
-        const goals = [{ id: 1, title: 'Squat 100', progress_pct: 40 }]
-        const none = mountDashboard({ activeGoals: [] })
-        const one = mountDashboard({ activeGoals: goals })
+    it('ne dessine plus de graphique des objectifs ni de durée récente', () => {
+        const wrapper = mountDashboard({ activeGoals: [{ id: 1, title: 'Squat 100', progress_pct: 40 }] })
 
-        // An empty chart under a "Progression des Objectifs" heading is worse
-        // than no chart: it reads as no progress rather than no goal. So the
-        // heading is checked *and* the series behind it — the heading alone is
-        // satisfied by exactly the empty chart this test exists to forbid.
-        expect(none.text()).not.toContain('Progression des Objectifs')
-        expect(one.text()).toContain('Progression des Objectifs')
-        expect(one.findComponent({ name: 'ActiveGoalsChart' }).props('data')).toEqual(goals)
+        expect(wrapper.text()).not.toContain('Progression des objectifs')
+        expect(wrapper.text()).not.toContain('Durée récente')
     })
 
     it('passe les objectifs au récapitulatif qui les résume', () => {
@@ -307,12 +293,82 @@ describe('Dashboard', () => {
         expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('activeGoals')).toEqual(goals)
     })
 
-    it('passe les séances récentes à la liste d’activité', () => {
+    it('passe les séances récentes à la liste des dernières séances', () => {
         const workouts = [{ id: 3, started_at: '2026-02-10T14:30:00Z' }]
 
         const wrapper = mountDashboard({ recentWorkouts: workouts })
 
         expect(wrapper.findComponent({ name: 'RecentActivity' }).props('recentWorkouts')).toEqual(workouts)
+    })
+
+    describe('sur un compte neuf, sans aucune séance', () => {
+        const monterUnCompteNeuf = () => mountDashboard({ recentWorkouts: [], recentPRs: [], activeGoals: [] })
+
+        it('dit « Pas encore de séance » dans un seul état vide, à la place des cartes', () => {
+            const wrapper = monterUnCompteNeuf()
+            const vides = wrapper.findAllComponents({ name: 'GlassEmptyState' })
+
+            expect(vides).toHaveLength(1)
+            expect(vides[0].text()).toContain('Pas encore de séance')
+            expect(vides[0].text()).toContain("Tes chiffres s'affichent ici après la première.")
+            expect(vides[0].text()).toContain('Démarrer une séance')
+
+            for (const nom of ['WeeklyVolumeSection', 'RecentActivity', 'GoalsSummary', 'RecentPRs']) {
+                expect(wrapper.findComponent({ name: nom }).exists()).toBe(false)
+            }
+
+            expect(wrapper.findAllComponents({ name: 'GlassSkeleton' })).toHaveLength(0)
+        })
+
+        it('garde l’en-tête « Bon retour » et les actions rapides sans la tuile Démarrer, donc un seul bouton Démarrer', () => {
+            const wrapper = monterUnCompteNeuf()
+            const actions = wrapper.findComponent({ name: 'QuickActions' })
+
+            expect(wrapper.get('[dusk="dashboard-welcome"]').text()).toBe('Bon retour')
+            expect(actions.exists()).toBe(true)
+            expect(actions.props('sansDemarrage')).toBe(true)
+            expect(wrapper.findAll('[dusk="start-workout-button"]')).toHaveLength(1)
+            expect(wrapper.findAll('#start-workout-button')).toHaveLength(0)
+        })
+
+        it('sur une copie hors ligne, garde le bouton de l’état vide actif et démarre la séance', async () => {
+            pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }
+            const wrapper = monterUnCompteNeuf()
+            const bouton = wrapper.getComponent({ name: 'GlassEmptyState' }).getComponent({ name: 'GlassButton' })
+
+            expect(bouton.attributes('disabled')).toBeUndefined()
+
+            await bouton.trigger('click')
+
+            expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+        })
+
+        it('démarre la séance par le bouton de l’état vide, et le dit occupé pendant le démarrage', async () => {
+            const wrapper = monterUnCompteNeuf()
+            const bouton = wrapper.getComponent({ name: 'GlassEmptyState' }).getComponent({ name: 'GlassButton' })
+
+            expect(bouton.props('loading')).toBe(false)
+
+            await bouton.trigger('click')
+
+            expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+            expect(bouton.props('loading')).toBe(true)
+        })
+
+        it('ne montre pas non plus l’état vide quand une séance démarrée hors ligne attend dans la file', () => {
+            const wrapper = mountDashboard(
+                { recentWorkouts: [], recentPRs: [], activeGoals: [] },
+                { [CLE_DE_LA_SEANCE_EN_COURS]: ref({ id: null, cle: 'abc' }) },
+            )
+
+            expect(wrapper.findComponent({ name: 'GlassEmptyState' }).exists()).toBe(false)
+        })
+
+        it('ne montre plus l’état vide dès la première séance', () => {
+            const wrapper = mountDashboard({ recentWorkouts: [uneSeance] })
+
+            expect(wrapper.findComponent({ name: 'GlassEmptyState' }).exists()).toBe(false)
+        })
     })
 
     describe('les invitations de l’accueil', () => {
@@ -341,12 +397,11 @@ describe('Dashboard', () => {
                         $page: { props: { auth: { user: { name: 'Sam' } } }, flash },
                     },
                     stubs: {
-                        AuthenticatedLayout: layoutStub,
+                        AuthenticatedLayout: layoutAvecSeance,
                         GlassCard: passesSlot,
                         QuickActions: quickActions,
                         RecentActivity: recentActivity,
                         GoalsSummary: goalsSummary,
-                        ActiveGoalsChart: activeGoalsChart,
                         InvitationDInstallation: installation,
                         InvitationAuxNotifications: recording('InvitationAuxNotifications', [
                             'uneAutreInvitationPasseAvant',
@@ -410,17 +465,24 @@ describe('Dashboard', () => {
 
 describe('Stats/Index', () => {
     const cards = {
-        WeightEvolutionCard: recording('WeightEvolutionCard', ['latestWeight', 'weightChange', 'weightHistory']),
+        MonthlyVolumeCard: recording('MonthlyVolumeCard', ['monthlyComparison']),
         VolumeTrendCard: recording('VolumeTrendCard', ['volumeTrend', 'currentPeriod']),
+        MuscleDistributionCard: recording('MuscleDistributionCard', ['muscleDistribution']),
+        DurationHistoryCard: recording('DurationHistoryCard', ['durationHistory']),
+        RegulariteCard: recording('RegulariteCard', ['regularite']),
     }
 
-    const mountStats = (props = {}) =>
+    const mountStats = (props = {}, provide = {}) =>
         mount(StatsIndex, {
-            props: { exercises: [], ...props },
+            props,
             global: {
+                provide,
                 directives: { press: {} },
-                mocks: { route: globalThis.route },
-                stubs: { AuthenticatedLayout: layoutStub, ...cards },
+                mocks: {
+                    route: globalThis.route,
+                    $page: { props: { auth: { user: { unread_notifications_count: 0 } } } },
+                },
+                stubs: { AuthenticatedLayout: layoutAvecSeance, ...cards },
             },
         })
 
@@ -433,19 +495,19 @@ describe('Stats/Index', () => {
             .map((button) => button.text())
 
     it('retient la période choisie sur le serveur', () => {
-        expect(pressedPeriod(mountStats({ selectedPeriod: '90j' }))).toEqual(['3 MOIS'])
+        expect(pressedPeriod(mountStats({ selectedPeriod: '90j' }))).toEqual(['3 mois'])
     })
 
     it('retombe sur trente jours quand le serveur n’a rien choisi', () => {
         // Not just "something is selected": with no default the whole strip
         // renders unpressed and the page silently shows an unlabelled period.
-        expect(pressedPeriod(mountStats())).toEqual(['30 JOURS'])
+        expect(pressedPeriod(mountStats())).toEqual(['30 jours'])
     })
 
     it('recharge la page sur la période demandée sans la faire sauter', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '1 AN').trigger('click')
+        await periodButton(wrapper, '1 an').trigger('click')
 
         expect(routerVisit.mock.calls[0][0]).toBe('/stats.index')
         expect(routerVisit.mock.calls[0][1]).toMatchObject({
@@ -458,12 +520,12 @@ describe('Stats/Index', () => {
     it('déplace la sélection tout de suite, sans attendre le serveur', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '7 JOURS').trigger('click')
+        await periodButton(wrapper, '7 jours').trigger('click')
 
         // preserveState keeps the component alive across the visit, so a page
         // that only read the prop would leave the old button pressed until the
         // response came back.
-        expect(pressedPeriod(wrapper)).toEqual(['7 JOURS'])
+        expect(pressedPeriod(wrapper)).toEqual(['7 jours'])
         expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).props('currentPeriod')).toBe('7j')
     })
 
@@ -476,49 +538,262 @@ describe('Stats/Index', () => {
     it('revient à la période de la page quand la visite finit sans succès', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '7 JOURS').trigger('click')
+        await periodButton(wrapper, '7 jours').trigger('click')
         routerVisit.mock.calls[0][1].onFinish()
         await nextTick()
 
-        expect(pressedPeriod(wrapper)).toEqual(['30 JOURS'])
+        expect(pressedPeriod(wrapper)).toEqual(['30 jours'])
     })
 
     it('garde la période demandée quand la visite réussit, même après une demande interrompue', async () => {
         const wrapper = mountStats({ selectedPeriod: '30j' })
 
-        await periodButton(wrapper, '7 JOURS').trigger('click')
-        await periodButton(wrapper, '1 AN').trigger('click')
+        await periodButton(wrapper, '7 jours').trigger('click')
+        await periodButton(wrapper, '1 an').trigger('click')
         // La première, interrompue par la seconde, finit sans succès.
         routerVisit.mock.calls[0][1].onFinish()
         routerVisit.mock.calls[1][1].onSuccess()
         routerVisit.mock.calls[1][1].onFinish()
         await nextTick()
 
-        expect(pressedPeriod(wrapper)).toEqual(['1 AN'])
+        expect(pressedPeriod(wrapper)).toEqual(['1 an'])
+    })
+
+    /*
+     * Sur une copie hors ligne (#2434, lot 4a), aucune carte n'a de quoi se
+     * remplir, et les contrôles de la page demandent le réseau : `/stats?period=…`
+     * n'est jamais gardée, la courbe d'un exercice est une requête. Une phrase,
+     * et ce qui s'ouvre sans réseau.
+     */
+    describe('servie depuis une copie hors ligne', () => {
+        beforeEach(() => {
+            pageDInertia.props = { horsLigne: { copieDu: 1_700_000_000_000, raison: 'reseau' } }
+        })
+
+        it('dit une seule fois que les mesures reviennent avec le réseau, sans carte', () => {
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('[data-indisponible-hors-ligne]')).toHaveLength(1)
+            expect(wrapper.get('[data-indisponible-hors-ligne]').text()).toContain(
+                'Tes chiffres reviennent avec le réseau.',
+            )
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'RegulariteCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(false)
+        })
+
+        it('ne propose pas de période, qui mènerait à « Hors ligne »', () => {
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('button').filter((bouton) => bouton.text().includes('JOURS'))).toEqual([])
+            expect(wrapper.findComponent({ name: 'GlassSegmented' }).exists()).toBe(false)
+            expect(routerVisit).not.toHaveBeenCalled()
+        })
+
+        it('laisse la seule tuile qui s’ouvre sans réseau : Exercices, vers la bibliothèque', () => {
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+            const tuiles = wrapper.findAll('[dusk="tuiles-d-acces"] a')
+
+            expect(tuiles.map((lien) => lien.attributes('href'))).toEqual(['/exercises.index'])
+            expect(tuiles[0].get('.titre-plat').text()).toBe('Exercices')
+        })
+
+        it('ne propose pas Corps, dont les mesures ne sont pas gardées', () => {
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).not.toContain('/corps.index')
+        })
+
+        it('ne propose pas Records, qui demande le réseau', () => {
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('a').map((lien) => lien.attributes('href'))).not.toContain('/records.index')
+            expect(wrapper.text()).not.toContain('Charge max')
+        })
+
+        it('remontre les cartes et le choix de période quand la page n’est plus une copie', () => {
+            pageDInertia.props = {}
+            const wrapper = mountStats({ selectedPeriod: '30j' })
+
+            expect(wrapper.findAll('[data-indisponible-hors-ligne]')).toHaveLength(0)
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(true)
+            expect(pressedPeriod(wrapper)).toEqual(['30 jours'])
+        })
+    })
+
+    describe('les tuiles d’accès', () => {
+        const tuiles = (wrapper) => wrapper.findAll('[dusk="tuiles-d-acces"] a')
+
+        it('viennent dans l’ordre Records, Exercices, Corps, Objectifs, Badges, chacune vers sa page', () => {
+            const wrapper = mountStats()
+
+            expect(tuiles(wrapper).map((lien) => [lien.get('.titre-plat').text(), lien.attributes('href')])).toEqual([
+                ['Records', '/records.index'],
+                ['Exercices', '/exercises.index'],
+                ['Corps', '/corps.index'],
+                ['Objectifs', '/goals.index'],
+                ['Badges', '/achievements.index'],
+            ])
+            expect(tuiles(wrapper).map((lien) => lien.get('.material-symbols-outlined').text())).toEqual([
+                'emoji_events',
+                'fitness_center',
+                'accessibility_new',
+                'flag',
+                'military_tech',
+            ])
+        })
+
+        it('mettent Records pleine largeur et les autres deux par ligne, sans chiffre ni donnée', () => {
+            const wrapper = mountStats({
+                deferredData: { performance: { monthlyComparison: { current_volume: 5000 } } },
+            })
+            const liens = tuiles(wrapper)
+
+            expect(liens[0].classes()).toContain('col-span-2')
+            liens.slice(1).forEach((lien) => expect(lien.classes()).not.toContain('col-span-2'))
+            expect(wrapper.get('[dusk="tuiles-d-acces"]').classes()).toContain('grid-cols-2')
+            liens.forEach((lien) => expect(lien.text()).not.toMatch(/\d/))
+        })
+
+        it('tiennent au moins 44 pt de haut', () => {
+            const wrapper = mountStats()
+
+            tuiles(wrapper).forEach((lien) => expect(lien.get('.min-h-22').exists()).toBe(true))
+        })
+
+        it('viennent sous le héros, avant la régularité et la période', () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: false } })
+            const apres = (premier, second) =>
+                Boolean(premier.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+            const heros = wrapper.findComponent({ name: 'MonthlyVolumeCard' }).element
+            const nav = wrapper.get('[dusk="tuiles-d-acces"]').element
+
+            expect(apres(heros, nav)).toBe(true)
+            expect(apres(nav, wrapper.findComponent({ name: 'RegulariteCard' }).element)).toBe(true)
+            expect(apres(nav, wrapper.get('section').element)).toBe(true)
+        })
+    })
+
+    it('mène à Records, avant Corps', () => {
+        const wrapper = mountStats()
+        const liens = wrapper.findAll('a').map((lien) => lien.attributes('href'))
+
+        expect(liens).toContain('/records.index')
+        expect(liens.indexOf('/records.index')).toBeLessThan(liens.indexOf('/corps.index'))
+    })
+
+    it('ne montre plus les quatre tuiles de chiffres ni la courbe d’un exercice', () => {
+        const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: false, performance: {} } })
+
+        expect(wrapper.findComponent({ name: 'SummaryStatsGrid' }).exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('vs mois')
+    })
+
+    it('rassemble le choix de période et ses deux seules cartes sous « Sur la période », avant la durée', () => {
+        const wrapper = mountStats({ selectedPeriod: '90j', deferredData: { aucuneSeanceFaite: false } })
+        const section = wrapper.get('section')
+
+        expect(section.get('h2').text()).toBe('Sur la période')
+        expect(section.findAllComponents({ name: 'GlassSegmented' })).toHaveLength(1)
+        expect(section.findComponent({ name: 'VolumeTrendCard' }).props('currentPeriod')).toBe('90j')
+        expect(section.findComponent({ name: 'MuscleDistributionCard' }).exists()).toBe(true)
+        expect(section.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(false)
+        expect(wrapper.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(true)
+        expect(wrapper.findComponent({ name: 'RegulariteCard' }).exists()).toBe(true)
+    })
+
+    describe('un compte neuf', () => {
+        it('montre un seul état vide à la place du héros, de la régularité, de la période et de la durée', () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: true } })
+
+            expect(wrapper.text()).toContain('Pas encore de séance')
+            expect(wrapper.text()).toContain('Tes chiffres apparaissent après la première.')
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'RegulariteCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'MuscleDistributionCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'DurationHistoryCard' }).exists()).toBe(false)
+            expect(wrapper.findComponent({ name: 'GlassSegmented' }).exists()).toBe(false)
+        })
+
+        it('garde les tuiles d’accès', () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: true } })
+
+            expect(wrapper.findAll('[dusk="tuiles-d-acces"] a')).toHaveLength(5)
+        })
+
+        it('démarre une séance par le démarrage commun', async () => {
+            const wrapper = mountStats({ deferredData: { aucuneSeanceFaite: true } })
+
+            await wrapper.get('[dusk="start-workout-button"]').trigger('click')
+
+            expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+        })
+
+        it('ne propose pas de démarrer quand une séance est déjà ouverte, et garde son texte', () => {
+            const wrapper = mountStats(
+                { deferredData: { aucuneSeanceFaite: true } },
+                { [CLE_DE_LA_SEANCE_EN_COURS]: ref({ id: 3, cle: 'abc' }) },
+            )
+
+            expect(wrapper.text()).toContain('Pas encore de séance')
+            expect(wrapper.text()).toContain('Tes chiffres apparaissent après la première.')
+            expect(wrapper.find('[dusk="start-workout-button"]').exists()).toBe(false)
+        })
+
+        it('ne se décide que sur le booléen du serveur, jamais sur une série mensuelle vide', () => {
+            const wrapper = mountStats({
+                deferredData: {
+                    aucuneSeanceFaite: false,
+                    regularite: { monthly_frequency: [{ month: '2026-05', count: 0 }] },
+                },
+            })
+
+            expect(wrapper.text()).not.toContain('Pas encore de séance')
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(true)
+        })
+
+        it('ne s’affiche pas tant que la prop différée n’est pas arrivée', () => {
+            const wrapper = mountStats()
+
+            expect(wrapper.text()).not.toContain('Pas encore de séance')
+            expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).exists()).toBe(true)
+        })
+    })
+
+    it('ne monte aucune carte de poids ni de masse grasse', () => {
+        const wrapper = mountStats({ deferredData: { performance: {} } })
+
+        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).exists()).toBe(false)
+        expect(wrapper.findComponent({ name: 'BodyFatCard' }).exists()).toBe(false)
     })
 
     it('survit à des données différées encore absentes', () => {
-        const wrapper = mountStats({ latestWeight: '75.50', weightChange: -1.2 })
+        const wrapper = mountStats()
 
         // Every card is fed through `deferredData?.…`; one missing guard and the
         // first render of the page throws before anything is drawn.
-        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).props('weightHistory')).toBeUndefined()
-        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).props('latestWeight')).toBe('75.50')
+        expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).props('monthlyComparison')).toBeUndefined()
+        expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).props('volumeTrend')).toBeUndefined()
     })
 
     it('va chercher chaque série dans la bonne branche des données différées', () => {
         const wrapper = mountStats({
             deferredData: {
-                body: { weightHistory: [{ date: '2026-02-01', weight: 75 }] },
-                performance: { volumeTrend: [{ date: '2026-02-01', volume: 1000 }] },
+                performance: {
+                    monthlyComparison: { current_volume: 5000, percentage: 4 },
+                    volumeTrend: [{ date: '2026-02-01', volume: 1000 }],
+                },
             },
         })
 
-        // Paired card by card: reading both series out of the same branch would
+        // Paired card by card: reading both series out of the same key would
         // hand one card the other's data and still look populated.
-        expect(wrapper.findComponent({ name: 'WeightEvolutionCard' }).props('weightHistory')).toEqual([
-            { date: '2026-02-01', weight: 75 },
-        ])
+        expect(wrapper.findComponent({ name: 'MonthlyVolumeCard' }).props('monthlyComparison')).toEqual({
+            current_volume: 5000,
+            percentage: 4,
+        })
         expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).props('volumeTrend')).toEqual([
             { date: '2026-02-01', volume: 1000 },
         ])
@@ -613,6 +888,16 @@ describe('Goals/Edit', () => {
         wrapper.findComponent({ name: 'GoalForm' }).vm.$emit('cancel')
 
         expect(routerGet.mock.calls[0][0]).toBe('/goals.index')
+    })
+
+    it('ne pose son lien de retour que sur bureau : le téléphone a la flèche de l’en-tête, et deux retours se doublent', () => {
+        const classes = mountEdit()
+            .findAll('a')
+            .find((lien) => lien.text().includes('Retour aux objectifs'))
+            .classes()
+
+        expect(classes).toContain('hidden')
+        expect(classes).toContain('bureau:inline-flex')
     })
 
     it('rappelle de quel objectif il s’agit', () => {

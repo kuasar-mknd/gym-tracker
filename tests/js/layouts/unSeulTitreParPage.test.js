@@ -39,6 +39,7 @@ const route = (nom) => (nom === undefined ? { current: () => false } : `/${nom}`
 globalThis.route = route
 
 const OneRepMax = (await import('@/Pages/Tools/OneRepMax.vue')).default
+const ProfilIndex = (await import('@/Pages/Profile/Index.vue')).default
 const Raccourcis = (await import('@/Pages/Raccourcis.vue')).default
 const SupplementsIndex = (await import('@/Pages/Supplements/Index.vue')).default
 const ToolsIndex = (await import('@/Pages/Tools/Index.vue')).default
@@ -74,22 +75,40 @@ describe('un seul h1 par page, sur téléphone comme sur bureau (#2120)', () => 
     it('les raccourcis : l’en-tête mobile, puis le titre que le layout pose pour les lecteurs d’écran', async () => {
         const wrapper = await monter(Raccourcis)
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Raccourcis'], bureau: ['Raccourcis'] })
+        expect(titresExposes(wrapper.element)).toEqual({
+            telephone: ['Raccourcis clavier'],
+            bureau: ['Raccourcis clavier'],
+        })
         expect(wrapper.findAll('h1').at(-1).classes()).toContain('sr-only')
     })
 
     it('les compléments : l’en-tête mobile, puis le titre que la page pose sur bureau', async () => {
         const wrapper = await monter(SupplementsIndex, { supplements: [], usageHistory: [] })
 
-        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Compléments'], bureau: ['Mes Compléments'] })
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Compléments'], bureau: ['Compléments'] })
+    })
+
+    /*
+     * Le profil ne montre pas son titre : sa carte d'identité en tient lieu. Le
+     * `<h1>` reste, masqué aux yeux, à chaque largeur (`titre-masque`).
+     */
+    it('le profil : un h1 masqué à chaque largeur, la carte d’identité devant les yeux', async () => {
+        const wrapper = await monter(ProfilIndex)
+
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Profil'], bureau: ['Profil'] })
+        expect(wrapper.findAll('h1').map((titre) => titre.classes())).toEqual([
+            expect.arrayContaining(['sr-only']),
+            expect.arrayContaining(['sr-only']),
+        ])
+        expect(wrapper.find('h2').text()).toBe('Samuel')
     })
 
     it('un calculateur : son propre titre, à toute largeur', async () => {
         const wrapper = await monter(OneRepMax, { history: [] })
 
         expect(titresExposes(wrapper.element)).toEqual({
-            telephone: ['Calculatrice 1RM'],
-            bureau: ['Calculatrice 1RM'],
+            telephone: ['Calculateur 1RM'],
+            bureau: ['Calculateur 1RM'],
         })
     })
 })

@@ -8,7 +8,7 @@ import { collectSourceFiles, filesMatching, jsRoot } from './sourceFiles'
  * droit d'entrer que par un morceau séparé, chargé quand un graphique est
  * réellement affiché — ce que fait `defineAsyncComponent`.
  *
- * Le tableau de bord tirait `ActiveGoalsChart` en import direct, seul parmi ses
+ * Le tableau de bord tirait un de ses graphiques en import direct, seul parmi ses
  * neuf graphiques. La première page après connexion payait donc la bibliothèque
  * entière, et rien ne le disait : le patron était partout ailleurs respecté.
  */

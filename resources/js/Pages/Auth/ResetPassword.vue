@@ -60,15 +60,14 @@ const submit = () => {
         <Head title="Réinitialiser le mot de passe" />
 
         <div class="mb-6 text-center">
-            <h2 class="titre-section">Nouveau mot de passe</h2>
-            <p class="text-text-muted mt-1">Choisis un nouveau mot de passe sécurisé</p>
+            <h2 class="titre-ecran">Nouveau mot de passe</h2>
         </div>
 
         <div v-if="refus" class="mb-4" data-testid="lien-refuse">
             <InputError id="lien-refuse" :message="refus" />
             <Link
                 :href="route('password.request')"
-                class="text-accent-primary-deep hover:text-accent-tertiary-deep mt-2 inline-block text-sm font-semibold transition-colors"
+                class="text-accent-primary-deep mt-2 inline-block text-sm font-medium hover:underline"
             >
                 Demander un nouveau lien
             </Link>

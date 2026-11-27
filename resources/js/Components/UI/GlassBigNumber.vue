@@ -85,7 +85,7 @@ const reste = computed(() => {
 
 <template>
     <div>
-        <label :for="champId" class="font-display-label text-text-muted mb-2 block">{{ label }}</label>
+        <label :for="champId" class="etiquette mb-2 block">{{ label }}</label>
 
         <div class="relative">
             <input
@@ -94,14 +94,14 @@ const reste = computed(() => {
                 type="number"
                 :inputmode="modeDeSaisie"
                 :value="modelValue"
-                class="font-display text-text-main placeholder-text-muted/50 focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-3 text-center text-2xl font-black tabular-nums backdrop-blur-md transition outline-none focus:ring-2"
+                class="font-display text-text-main placeholder-text-muted/50 focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-3 text-center text-2xl font-semibold tabular-nums transition outline-none focus:ring-2"
                 :class="{ 'pr-11': unite }"
                 @input="emit('update:modelValue', enNombre($event.target.value))"
             />
 
             <span
                 v-if="unite"
-                class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
+                class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-medium"
                 aria-hidden="true"
             >
                 {{ unite }}

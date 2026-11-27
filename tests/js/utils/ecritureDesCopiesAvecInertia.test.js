@@ -219,7 +219,7 @@ describe('une réponse complète du réseau', () => {
     })
 
     it('ne garde pas une page hors de la liste blanche, ni un autre composant à une adresse gardée', async () => {
-        await recevoir(pageDe({ component: 'Stats/Index', url: '/stats' }))
+        await recevoir(pageDe({ component: 'Goals/Index', url: '/goals' }))
         await recevoir(pageDe({ component: 'Journal/Index', url: '/dashboard' }))
 
         expect(copiesRangees().size).toBe(0)

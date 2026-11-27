@@ -18,8 +18,8 @@ use Tests\Support\ParcoursHorsLigne;
  * déconnexion en est exemptée : arrêtée sur une copie montrée pour lenteur,
  * elle laisserait la session ouverte à la personne suivante. Le premier
  * parcours le joue sur un réseau lent (sept secondes par requête, par les
- * outils de Chrome) : « Plus » s'ouvre au bout de cinq secondes depuis sa
- * copie, sous « Le réseau ne répond pas », et « Se déconnecter » part de là
+ * outils de Chrome) : le Profil s'ouvre au bout de cinq secondes depuis sa
+ * copie, sous « Réseau lent », et « Se déconnecter » part de là
  * et aboutit. Le second la joue sans réseau, sur la copie que la coquille
  * démarre à froid : la déconnexion n'a pas lieu, le dit, et les copies sont
  * pourtant effacées, avant l'envoi (décision 6 du propriétaire) ; le réseau
@@ -58,12 +58,12 @@ class DeconnexionHorsLigneTest extends DuskTestCase
             try {
                 $this->reglerLeReseau($outils, false, self::LATENCE_DU_RESEAU_LENT_MS);
 
-                // « Plus » ne répond pas à temps : sa copie s'ouvre au bout de cinq secondes.
+                // Le Profil ne répond pas à temps : sa copie s'ouvre au bout de cinq secondes.
                 $browser->disableAnimations()
                     ->clickWhenSettled('[dusk="nav-profile"]')
                     ->waitForLocation('/profile', 15)
                     ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
-                    ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Le réseau ne répond pas · copie du ')")
+                    ->assertScript($this->leBandeauDit('Réseau lent'))
                     ->waitFor('[data-testid="logout-button"]', 15);
 
                 // « Se déconnecter » part de la copie, et aboutit sur la page de connexion.
@@ -101,7 +101,7 @@ class DeconnexionHorsLigneTest extends DuskTestCase
             $outils = $this->outilsDuNavigateur($browser);
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $empreinte): void {
-                // « Plus », ouvert à froid : la coquille démarre l'application sur sa copie.
+                // Le Profil, ouvert à froid : la coquille démarre l'application sur sa copie.
                 $this->attendreLaCoquilleServieA($browser->visit('/profile'), '/profile')
                     ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
                     ->disableAnimations()

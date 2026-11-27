@@ -114,7 +114,14 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
                     "JSON.parse(localStorage.getItem('offline_sync_queue') || '[]').some((entree) => String(entree.url).endsWith('/api/v1/workouts/finish'))",
                     15,
                     'la fin de la séance n’est pas entrée en file',
-                )->waitUntilMissing('dialog[open]', 15);
+                );
+
+                // Sans réseau, le bilan dit où est la fin (#2434) : ni records ni « Reprendre » ; « Fermer » laisse sur la séance.
+                $browser->waitFor('dialog[open] [dusk="bilan-de-fin-sur-l-appareil"]', 15)
+                    ->assertSeeIn('[dusk="bilan-de-fin-sur-l-appareil"]', 'Enregistrée sur cet appareil')
+                    ->assertMissing('[dusk="bilan-de-fin-reprendre"]')
+                    ->clickWhenSettled('[dusk="bilan-de-fin-fermer"]')
+                    ->waitUntilMissing('dialog[open]', 15);
 
                 $file = $this->laFile($browser);
                 $this->assertSame(
@@ -299,16 +306,16 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
     }
 
     /**
-     * Le bouton « Séance » de la barre du bas, sans réseau : la séance en
+     * Le bouton « Démarrer une séance » de l'Accueil, sans réseau (la barre du bas n'a plus de bouton central) : la séance en
      * attente s'ouvre, et rien ne dit qu'il faut le réseau.
      *
      * @return string la clé que l'appareil a tirée
      */
     private function demarrerSansReseau(Browser $browser): string
     {
-        $browser->waitFor('button.glass-nav-fab', 15)
-            ->assertAttribute('button.glass-nav-fab', 'aria-label', 'Séance')
-            ->script("document.querySelector('button.glass-nav-fab').click();");
+        $browser->waitFor('[dusk="start-workout-button"]', 15)
+            ->assertMissing('button.glass-nav-fab')
+            ->script("document.querySelector('[dusk=\"start-workout-button\"]').click();");
 
         $browser->waitUntil(
             "location.pathname.startsWith('/workouts/en-attente/') && document.querySelector('[dusk=\"add-first-exercise\"]') !== null",

@@ -107,8 +107,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // Wait for all cards to be present and stabilize
             $browser->waitFor('@exercise-card-4', 25)
                 ->waitForServerIds()
-                ->assertSee('BRAND NEW EXERCISE')
-                ->assertSee('RECOMMENDER EX');
+                ->assertSee('Brand New Exercise')
+                ->assertSee('Recommender Ex');
 
             // 4. Fill Strength set
             $html = $browser->script('return document.body.innerHTML;')[0];
@@ -190,8 +190,9 @@ class WorkoutSessionE2ETest extends DuskTestCase
              * perform, but focusing the action opens the row, which is exactly
              * what SwipeableRow does so the gesture is not the only way in.
              *
-             * Focus comes before waitFor: the action rests at opacity 0, so it
-             * is present long before it is visible.
+             * Focus comes before waitFor: the action rests at zero width, so it
+             * is present long before it is visible, and the spring is still
+             * settling when it first is: the click waits for it to stop.
              */
             $browser->script(
                 "document.querySelector('[dusk=\"swipe-remove-set-0-1\"]').scrollIntoView({block: 'center'});"
@@ -199,7 +200,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             );
 
             $browser->waitFor('@swipe-remove-set-0-1', 10)
-                ->click('@swipe-remove-set-0-1')
+                ->clickWhenSettled('[dusk="swipe-remove-set-0-1"]')
                 ->waitUntilMissing('@weight-input-0-1', 15);
 
             // 6d. Modify workout settings
@@ -209,7 +210,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->type('@workout-name-input', 'Workout Updated')
                 ->click('@save-settings-button')
                 ->waitUntilMissing('[role="dialog"]', 15)
-                ->waitForText('WORKOUT UPDATED', 15);
+                ->waitForText('Workout Updated', 15);
 
             // 6e. Delete Cardio exercise (Index 1)
             $browser->script("document.querySelector('[dusk=\"remove-line-1\"]').scrollIntoView({block: 'center'});");
@@ -223,7 +224,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitUntilMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]", 15);
 
             $browser->within('@exercise-list', function (Browser $list) use ($cardioLineId): void {
-                $list->assertDontSee('CARDIO EX');
+                $list->assertDontSee('Cardio Ex');
                 $list->assertMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]");
             });
 
@@ -320,7 +321,9 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             $browser->waitFor('@pr-trophy-0-0', 15);
 
-            $browser->waitFor('[dusk="skip-rest-timer"]', 20)
+            $browser->waitFor('[dusk="rest-timer"]', 20)
+                ->click('[dusk="rest-timer"]')
+                ->waitFor('[dusk="skip-rest-timer"]', 10)
                 ->click('[dusk="skip-rest-timer"]')
                 ->waitUntilMissing('[dusk="rest-timer"]', 15);
 
@@ -334,7 +337,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             $browser->visit('/dashboard')
                 ->waitFor('#dashboard-header', 30)
-                ->assertSee('RETOUR')
+                ->assertSee('Bon retour')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('workout-failure-'.$sizeMacro);

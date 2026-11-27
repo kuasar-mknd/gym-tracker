@@ -9,8 +9,8 @@ const mountState = (props = {}, slots = {}) =>
         global: { directives: { press: {} } },
     })
 
-/** The blurred disc sitting behind the icon; its colour is the only thing on it. */
-const glowOf = (wrapper) => wrapper.get('.blur-3xl')
+/** L'icône de la carte : sa couleur est la seule chose que la prop `color` règle. */
+const iconeDe = (wrapper) => wrapper.get('.material-symbols-outlined')
 
 const iconSpans = (wrapper) => wrapper.findAll('.h-20 span')
 
@@ -18,13 +18,14 @@ describe('GlassEmptyState', () => {
     /**
      * Dix-sept écrans écrivaient leur propre « Aucun… » parce que la carte
      * complète était trop lourde à l'intérieur d'une carte déjà titrée : la
-     * taille `ligne` rend le même état sans carte, sans halo ni gros titre.
+     * taille `ligne` rend le même état sans carte ni gros titre. Ni l'une ni
+     * l'autre ne pose plus de halo flou derrière l'icône.
      */
     it('tient dans une carte déjà titrée, sans en dessiner une seconde', () => {
         const carte = mountState()
         const ligne = mountState({ taille: 'ligne' })
 
-        expect(carte.findAll('.blur-3xl')).toHaveLength(1)
+        expect(carte.findAll('.blur-3xl')).toHaveLength(0)
         expect(ligne.findAll('.blur-3xl')).toHaveLength(0)
         expect(carte.findAll('h3')).toHaveLength(1)
         expect(ligne.findAll('h3')).toHaveLength(0)
@@ -66,20 +67,24 @@ describe('GlassEmptyState', () => {
      * The colour prop feeds two places: a validator that decides what is legal,
      * and a palette map that turns it into a class. They are separate
      * declarations, so a colour can be accepted and then resolve to nothing —
-     * which is not a visible failure, only a glow that quietly disappears.
+     * which is not a visible failure, only an icon that quietly loses its colour.
      */
     const candidates = ['orange', 'violet', 'pink', 'cyan', 'green', 'red', 'blue', 'slate']
     const accepted = candidates.filter((color) => GlassEmptyState.props.color.validator(color))
 
-    it('gives every colour it accepts a glow to go with it', () => {
+    it('no longer offers cyan, which meant a state and is gone from the charter', () => {
+        expect(GlassEmptyState.props.color.validator('cyan')).toBe(false)
+    })
+
+    it('gives every colour it accepts an icon colour to go with it', () => {
         expect(accepted.length).toBeGreaterThan(0)
 
         for (const color of accepted) {
-            const classes = glowOf(mountState({ color })).classes()
+            const classes = iconeDe(mountState({ color, icon: 'search_off' })).classes()
 
             expect(
-                classes.some((klass) => klass.startsWith('bg-')),
-                `no glow class for "${color}"`,
+                classes.some((klass) => klass.startsWith('text-accent-')),
+                `no icon colour for "${color}"`,
             ).toBe(true)
         }
     })
@@ -88,10 +93,10 @@ describe('GlassEmptyState', () => {
      * The other direction of the same invariant. `accepted` is derived from the
      * validator, so asserting the validator rejects everything else is true by
      * construction and proves nothing; what can actually drift is a colour
-     * gaining a glow in the palette map while the validator still turns it away
+     * gaining a colour in the palette map while the validator still turns it away
      * — a colour that works, warns in the console, and is refused on review.
      */
-    it('has no glow waiting for a colour it refuses', () => {
+    it('has no icon colour waiting for a colour it refuses', () => {
         const rejected = candidates.filter((color) => !accepted.includes(color))
 
         expect(rejected.length).toBeGreaterThan(0)
@@ -107,11 +112,11 @@ describe('GlassEmptyState', () => {
 
         try {
             for (const color of rejected) {
-                const classes = glowOf(mountState({ color })).classes()
+                const classes = iconeDe(mountState({ color, icon: 'search_off' })).classes()
 
                 expect(
-                    classes.some((klass) => klass.startsWith('bg-')),
-                    `"${color}" is refused by the validator but has a glow`,
+                    classes.some((klass) => klass.startsWith('text-accent-')),
+                    `"${color}" is refused by the validator but has an icon colour`,
                 ).toBe(false)
             }
         } finally {
@@ -189,7 +194,6 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
         ['orange', 'text-accent-primary-deep'],
         ['violet', 'text-accent-tertiary-deep'],
         ['pink', 'text-accent-secondary-deep'],
-        ['cyan', 'text-accent-info-deep'],
         ['green', 'text-accent-state-deep'],
     ])('peint l’icône de %s avec %s', (color, expected) => {
         const wrapper = mountState({ icon: 'search_off', color })
@@ -207,7 +211,7 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
      * faut regarder le fichier, pas le rendu.
      *
      * Mesuré dans le CSS généré, avant correctif : `text-accent-primary-deep`,
-     * `text-accent-tertiary-deep`, `text-accent-secondary-deep` et `text-accent-info-deep` étaient bien
+     * `text-accent-tertiary-deep`, et `text-accent-secondary-deep` étaient bien
      * présents — non pas grâce à ce composant, mais parce que d'autres les
      * écrivent en toutes lettres. `text-accent-state-deep`, que personne d'autre
      * n'emploie, était absent : `color="green"` peignait donc l'icône avec une
@@ -227,7 +231,6 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
             'text-accent-primary-deep',
             'text-accent-tertiary-deep',
             'text-accent-secondary-deep',
-            'text-accent-info-deep',
             'text-accent-state-deep',
         ]) {
             expect(source).toContain(expected)

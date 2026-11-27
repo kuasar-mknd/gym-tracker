@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { reactive } from 'vue'
 
@@ -34,16 +34,28 @@ const { ID_DE_LA_RAISON_DES_ECRITURES, RAISON_DES_ECRITURES_SUR_UNE_COPIE } =
 /** Le lundi 12 octobre 2026 à 18:04, à l'heure de l'appareil. */
 const LUNDI_18_04 = new Date(2026, 9, 12, 18, 4).getTime()
 
+/** Le jour où la page s'ouvre : l'année s'écrit quand la copie n'est pas de celle-là. */
+const AUJOURD_HUI = new Date(2026, 10, 20, 8, 0)
+
 const monter = () => mount(BandeauHorsLigne, { global: { directives: { press: {} } } })
 
 const servir = (marque) => {
     page.props = { errors: {}, horsLigne: marque }
 }
 
+const etat = (bandeau) => bandeau.get('[dusk="bandeau-hors-ligne-titre"]').text()
+const dateDeLaCopie = (bandeau) => bandeau.get('[dusk="bandeau-hors-ligne-date"]').text()
+
 beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(AUJOURD_HUI)
     page.props = { errors: {} }
     enRechargement.valeur.value = false
     reessayer.mockClear()
+})
+
+afterEach(() => {
+    vi.useRealTimers()
 })
 
 describe('BandeauHorsLigne', () => {
@@ -51,26 +63,32 @@ describe('BandeauHorsLigne', () => {
         expect(monter().find('[dusk="bandeau-hors-ligne"]').exists()).toBe(false)
     })
 
-    it('dit qu’il n’y a pas de réseau, date la copie, et prévient que ce qui a changé n’y est pas', () => {
+    it('dit qu’il n’y a pas de réseau et date la copie, sans rien dire de plus', () => {
         servir({ copieDu: LUNDI_18_04, raison: 'reseau', datesDesProps: {} })
         const bandeau = monter()
         const region = bandeau.get('[role="status"]')
 
-        expect(bandeau.get('[dusk="bandeau-hors-ligne-titre"]').text()).toBe(
-            'Hors ligne · copie du lun. 12 oct. 2026 à 18:04',
-        )
-        expect(region.text()).toContain("Ce qui a changé depuis n'apparaît pas ici.")
+        expect(etat(bandeau)).toBe('Hors ligne')
+        expect(dateDeLaCopie(bandeau)).toBe('Copie du 12 oct. à 18:04')
+        expect(region.text()).toBe('cloud_offHors ligneCopie du 12 oct. à 18:04 Réessayer')
         expect(region.attributes('aria-live')).toBe('polite')
-        expect(region.classes()).toContain('info-fill')
+        expect(region.classes()).toContain('bg-surface-card')
+        expect(region.classes()).toContain('border-accent-warning/60')
         expect(region.text()).toContain('cloud_off')
     })
 
-    it('dit que le réseau ne répond pas quand la copie est servie pour lenteur', () => {
+    it('dit que le réseau est lent quand la copie est servie faute de réponse', () => {
         servir({ copieDu: LUNDI_18_04, raison: 'lent', datesDesProps: {} })
+        const bandeau = monter()
 
-        expect(monter().get('[dusk="bandeau-hors-ligne-titre"]').text()).toBe(
-            'Le réseau ne répond pas · copie du lun. 12 oct. 2026 à 18:04',
-        )
+        expect(etat(bandeau)).toBe('Réseau lent')
+        expect(dateDeLaCopie(bandeau)).toBe('Copie du 12 oct. à 18:04')
+    })
+
+    it('ajoute l’année à la date d’une copie qui n’est pas de l’année courante', () => {
+        servir({ copieDu: new Date(2025, 11, 31, 23, 59).getTime(), raison: 'reseau', datesDesProps: {} })
+
+        expect(dateDeLaCopie(monter())).toBe('Copie du 31 déc. 2025 à 23:59')
     })
 
     /*
@@ -85,17 +103,16 @@ describe('BandeauHorsLigne', () => {
             datesDesProps: { workout: LUNDI_18_04 + 36 * 60_000, exercises: LUNDI_18_04 },
         })
 
-        expect(monter().get('[dusk="bandeau-hors-ligne-titre"]').text()).toBe(
-            'Hors ligne · copie du lun. 12 oct. 2026 à 18:40',
-        )
+        expect(dateDeLaCopie(monter())).toBe('Copie du 12 oct. à 18:40')
     })
 
     it('ne montre pas de date qui ne se lit pas', () => {
         servir({ copieDu: 'hier', raison: 'reseau' })
 
-        expect(monter().get('[dusk="bandeau-hors-ligne-titre"]').text()).toBe(
-            "Hors ligne · copie gardée sur l'appareil",
-        )
+        const bandeau = monter()
+
+        expect(etat(bandeau)).toBe('Hors ligne')
+        expect(dateDeLaCopie(bandeau)).toBe("Copie de l'appareil")
     })
 
     it('« Réessayer » recharge la page, et attend la fin du rechargement', async () => {

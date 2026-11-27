@@ -83,6 +83,12 @@ class WorkoutController extends Controller
      * surgir sur une page au hasard ; la page qui termine en direct la passe
      * elle-même à l'accueil.
      *
+     * Le bilan de fin (#2434) lit aussi dans `meta` si « Reprendre » est encore
+     * permis (`WorkoutPolicy::reopen()`) : une fin choisie, d'une séance oubliée,
+     * tombe hors du délai de réouverture. Ses records de poids ne sont pas ici :
+     * le bilan les lit à l'ouverture (`workouts.records`), pour que la fin, que la
+     * file hors ligne rejoue, ne paie pas cette lecture.
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException Si la séance n'est pas celle du compte.
      */
     public function finish(WorkoutFinishRequest $request, TerminerLaSeanceAction $terminer): WorkoutResource
@@ -92,7 +98,11 @@ class WorkoutController extends Controller
         $seance = $terminer->terminerCelleDuCompte($this->user(), $request->integer('workout_id'), $request->ageDuGeste(), $request->finChoisie(), $request->instantLu());
 
         return new WorkoutResource($seance)->additional([
-            'meta' => ['proposer_les_notifications' => $this->user()->doitRecevoirLInvitationAuxNotifications()],
+            'meta' => [
+                'proposer_les_notifications' => $this->user()->doitRecevoirLInvitationAuxNotifications(),
+                'peut_reprendre' => $this->user()->can('reopen', [$seance, $request->instantLu()]),
+                'reprise_jusqu_a' => $seance->ended_at?->copy()->addMinutes(Workout::DELAI_DE_REOUVERTURE_MINUTES)->toIso8601String(),
+            ],
         ]);
     }
 

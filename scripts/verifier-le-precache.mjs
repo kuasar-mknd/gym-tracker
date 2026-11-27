@@ -19,7 +19,11 @@ import { readFileSync, statSync } from 'node:fs'
  * morceau du cœur de Vue, et le relevé des temps (#2206) 7 Kio à l'entrée et
  * un demi à sa feuille de style ; chacun passait seul sous le plafond, pas
  * les deux. Le plafond passe à 915 Kio, la marge de 18 Kio de la relève du
- * 2026-10-19, au-dessus de la mesure. Un motif élargi, ou une
+ * 2026-10-19, au-dessus de la mesure. Le 2026-11-27, 65 entrées et 898 Kio
+ * sur la branche du design : Progrès (`Stats/Index`) devient une page gardée
+ * (#2434, lot 4a), donc un point de départ de la fermeture, et son morceau
+ * est la seule entrée de plus ; les autres morceaux se remplacent un pour un
+ * et la taille baisse de 16 Kio : le plafond de Kio ne bouge pas. Un motif élargi, ou une
  * fermeture qui suivrait l'entrée jusqu'à chaque page, referait grossir
  * l'installation sans que rien ne le dise.
  *
@@ -31,7 +35,7 @@ import { readFileSync, statSync } from 'node:fs'
  * worker, le font échouer aussi. La CI lance ce script deux fois : sur la
  * construction, puis sur les actifs que les tests PHP téléchargent.
  */
-const MAX_ENTREES = 64
+const MAX_ENTREES = 65
 const MAX_KIO = 915
 
 /**

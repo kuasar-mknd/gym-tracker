@@ -41,7 +41,7 @@ class LoginTest extends DuskTestCase
                     $browser->click('[data-testid="login-button"]')
                         ->waitForLocation('/dashboard', 15)
                         ->waitFor('#main-content', 15)
-                        ->assertSee('RETOUR')
+                        ->assertSee('Bon retour')
                         ->assertNoConsoleExceptions();
 
                     // Log out to reset state for the next iteration

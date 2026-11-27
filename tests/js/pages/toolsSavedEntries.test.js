@@ -259,19 +259,19 @@ describe('the Wilks entry form', () => {
     it('records the unit that was picked and shows which one is on', async () => {
         const wrapper = await mountPage(WilksCalculator, { history: [] })
 
-        expect(pressed(wrapper, 'KG')).toEqual(['true'])
+        expect(pressed(wrapper, 'kg')).toEqual(['true'])
 
         await wrapper
             .findAll('button')
-            .find((button) => button.text() === 'LBS')
+            .find((button) => button.text() === 'lbs')
             .trigger('click')
 
         expect(form.unit).toBe('lbs')
         // Both halves: the unit reaches the payload, and the pair of buttons
         // agrees on which one is selected. A toggle that sets the value but
         // never moves its highlight leaves the user reading the wrong scale.
-        expect(pressed(wrapper, 'LBS')).toEqual(['true'])
-        expect(pressed(wrapper, 'KG')).toEqual(['false'])
+        expect(pressed(wrapper, 'lbs')).toEqual(['true'])
+        expect(pressed(wrapper, 'kg')).toEqual(['false'])
     })
 
     it('records the sex that was picked and shows which one is on', async () => {

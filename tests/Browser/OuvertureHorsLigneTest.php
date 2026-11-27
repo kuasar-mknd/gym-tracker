@@ -87,9 +87,10 @@ class OuvertureHorsLigneTest extends DuskTestCase
             $this->reglerLeReseau($outils, true);
 
             /*
-             * Les textes se lisent dans le DOM : `titre-carte` et `glass-button`
-             * les passent en majuscules, et WebDriver rend le texte transformé,
-             * contre lequel une absence se vérifierait aussi à tort.
+             * Les textes se lisent dans le DOM : les pages hors ligne n'ont
+             * plus de capitales, mais un rôle qui en met (`titre-page`) revient
+             * vite, et WebDriver rend le texte transformé, contre lequel une
+             * absence se vérifierait aussi à tort.
              */
             $texteDe = $this->texteDe(...);
             $absentDeLaPage = fn (string $texte): string => '!'.$this->laPageDit($texte);
@@ -160,7 +161,7 @@ class OuvertureHorsLigneTest extends DuskTestCase
                 $this->sansReseauNiConstruction($browser, $outils, function () use ($browser): void {
                     $this->attendreLaCoquilleServieA($browser->visit('/dashboard'), '/dashboard')
                         ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
-                        ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
+                        ->assertScript($this->leBandeauDit('Hors ligne'))
                         // Le logo tracé dans la barre, à sa taille.
                         ->assertScript("(() => { const logo = document.querySelector('nav a svg'); return logo !== null && logo.getBoundingClientRect().width > 0 && logo.querySelectorAll('path').length > 0; })()")
                         ->waitUntil(

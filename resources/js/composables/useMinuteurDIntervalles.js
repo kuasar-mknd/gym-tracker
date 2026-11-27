@@ -379,7 +379,7 @@ export function useMinuteurDIntervalles() {
     const phaseColor = computed(() => {
         switch (phase.value) {
             case 'warmup':
-                return 'text-accent-info-deep'
+                return 'text-accent-tertiary-deep'
             case 'work':
                 return 'text-accent-primary-deep'
             case 'rest':
@@ -392,7 +392,7 @@ export function useMinuteurDIntervalles() {
     const phaseBg = computed(() => {
         switch (phase.value) {
             case 'warmup':
-                return 'bg-accent-info/10 border-accent-info/20'
+                return 'bg-accent-tertiary/10 border-accent-tertiary/20'
             case 'work':
                 return 'bg-accent-primary/10 border-accent-primary/20'
             case 'rest':
@@ -405,15 +405,15 @@ export function useMinuteurDIntervalles() {
     const phaseLabel = computed(() => {
         switch (phase.value) {
             case 'warmup':
-                return 'ÉCHAUFFEMENT'
+                return 'Échauffement'
             case 'work':
-                return 'TRAVAIL'
+                return 'Travail'
             case 'rest':
-                return 'REPOS'
+                return 'Repos'
             case 'finished':
-                return 'TERMINÉ'
+                return 'Terminé'
             default:
-                return 'PRÊT'
+                return 'Prêt'
         }
     })
 

@@ -28,7 +28,7 @@ use Tests\Support\ParcoursHorsLigne;
  * worker, lui, sert ses caches sans latence (la coquille, le precache).
  *
  * Depuis la séance ouverte, Séances s'ouvre au bout de cinq secondes depuis
- * sa copie, sous « Le réseau ne répond pas » (`visitesHorsLigne.js`), sans le
+ * sa copie, sous « Réseau lent » (`visitesHorsLigne.js`), sans le
  * toast de la lenteur. Une ouverture de l'accueil attend huit secondes la
  * réponse, puis le worker sert la coquille marquée `data-raison="delai"`,
  * qui démarre l'application sur la copie de l'accueil
@@ -110,8 +110,8 @@ class ReseauLentTest extends DuskTestCase
                     ->waitFor('[dusk="bandeau-hors-ligne"]', 15);
                 $duree = microtime(true) - $depart;
 
-                $browser->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Le réseau ne répond pas · copie du ')")
-                    ->assertScript($this->texteDe('header h1'), 'Mes Séances');
+                $browser->assertScript($this->leBandeauDit('Réseau lent'))
+                    ->assertScript($this->texteDe('header h1'), 'Séances');
                 $this->assertGreaterThanOrEqual(5.0, $duree, 'la copie est arrivée avant les cinq secondes');
                 // La copie a pris la place du toast de la lenteur, qui ne vient qu'au bout de huit secondes.
                 $this->assertSame([], $this->messagesSansReseau($browser));
@@ -123,7 +123,7 @@ class ReseauLentTest extends DuskTestCase
                 $duree = microtime(true) - $depart;
 
                 $browser->waitFor('[dusk="bandeau-hors-ligne"]', 15)
-                    ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Le réseau ne répond pas · copie du ')")
+                    ->assertScript($this->leBandeauDit('Réseau lent'))
                     ->assertScript($this->texteDe('header h1'), 'Accueil');
                 $this->assertGreaterThanOrEqual(8.0, $duree, 'la coquille est arrivée avant les huit secondes');
 

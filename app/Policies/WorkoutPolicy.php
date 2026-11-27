@@ -48,6 +48,25 @@ final class WorkoutPolicy
         return $utilisateurConnecte->can('Update:Workout');
     }
 
+    /**
+     * Rouvrir une séance terminée (#2434, « Reprendre » du bilan) : celle du
+     * compte, close depuis moins de `Workout::DELAI_DE_REOUVERTURE_MINUTES`.
+     * Une séance d'historique ne se rouvre pas, et `update()` reste réservé à
+     * une séance ouverte.
+     */
+    public function reopen(AuthUser $utilisateurConnecte, Workout $workout, ?\Carbon\CarbonInterface $maintenant = null): bool
+    {
+        if (! $utilisateurConnecte instanceof \App\Models\User) {
+            return false;
+        }
+
+        $maintenant ??= now();
+
+        return $utilisateurConnecte->id === $workout->user_id
+            && $workout->ended_at !== null
+            && $workout->ended_at->greaterThanOrEqualTo($maintenant->copy()->subMinutes(Workout::DELAI_DE_REOUVERTURE_MINUTES));
+    }
+
     public function delete(AuthUser $utilisateurConnecte, Workout $workout): bool
     {
         if ($utilisateurConnecte instanceof \App\Models\User) {

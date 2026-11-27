@@ -84,8 +84,6 @@ function faireEcrireLesStatistiquesDe(User $user): void
         $tableauDeBord->performanceOverview($user, $jours);
         $volume->getVolumeTrend($user, $jours);
     }
-    $volume->getVolumeHistory($user, 20);
-    $volume->getVolumeHistory($user, 30);
     $seances->getDurationHistory($user, 20);
     $seances->getDurationHistory($user, 30);
     $volume->getWeeklyVolumeComparison($user);

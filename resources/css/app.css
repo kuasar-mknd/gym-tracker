@@ -111,7 +111,7 @@
      * La meme surface, plus dense. Trois vues ecrivaient `bg-glass-strong`, une
      * classe que rien ne declarait : le navigateur n'applique alors RIEN, et le
      * survol de ces cartes ne faisait rien du tout. Le jeton existait pourtant,
-     * sous le nom `--glass-bg-strong` du bloc historique, que Tailwind ne lit
+     * sous le nom `--glass-bg-strong` d'un ancien bloc (`verre-epais` lit ce jeton), que Tailwind ne lit
      * pas pour fabriquer des utilitaires.
      */
     --color-surface-glass-strong: rgb(from var(--color-surface-card) r g b / 0.85);
@@ -275,41 +275,6 @@
     --color-accent-warning-deep: #8a6803;
 
     /*
-     * --- La seance en cours ---------------------------------------------
-     *
-     * Le bandeau du tableau de bord, et lui seul. Un degrade vert-emeraude vers
-     * cyan, qui n'appartient a aucune autre famille : ce n'est ni un accent —
-     * il ne demande rien — ni une categorie. C'est une identite, celle d'une
-     * seance ouverte.
-     *
-     * Il portait `emerald-500`, `teal-500` et `cyan-500` de Tailwind. La
-     * conversion vers la charte les a envoyes sur `accent-state` et
-     * `accent-info`, les jetons VIFS, bien plus clairs : le texte blanc y est
-     * passe de 2,5:1 a 1,2:1, et pas un mot du bandeau ne se lisait. C'est le
-     * piege de ce genre de table — remplacer une nuance par un role change la
-     * luminosite, pas seulement le nom.
-     *
-     * Ce sont les trois tons d'ORIGINE, a l'identique.
-     *
-     * Ils ont d'abord ete assombris ici pour que le blanc y tienne 4,5:1 —
-     * mesure, le blanc n'y rend que 2,5:1. Sam a demande les couleurs d'avant,
-     * et les a redemandees : c'est donc une decision assumee, pas un oubli.
-     *
-     * Ce qui la rend defendable : ce bandeau ne porte aucune information qu'on
-     * ne retrouve ailleurs. Il annonce une seance ouverte, l'annonce aussi par
-     * sa pastille « En cours », et mene a la page qui porte le detail. Le seuil
-     * AA protege la lecture d'un contenu ; il s'agit ici d'une banniere de
-     * navigation, et personne n'y lit longtemps.
-     *
-     * Si un jour on veut les deux, la reponse n'est pas d'assombrir ces trois
-     * tons : c'est de poser un voile sombre sous le texte, qui laisse le degrade
-     * intact la ou il se voit et donne au mot le fond qu'il lui faut.
-     */
-    --color-session-from: #10b981;
-    --color-session-via: #14b8a6;
-    --color-session-to: #06b6d4;
-
-    /*
      * --- Tendance ------------------------------------------------------
      *
      * Une direction, pas un jugement. `comparison > 0 ? trend-up : trend-down`
@@ -441,17 +406,25 @@
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;
 
-    /* Arrondis par rôle : md détail dans une carte, lg petit contrôle, xl contrôle et champ, 2xl tuile et modale, 3xl carte, full pilule. */
+    /* Arrondis par rôle : md détail dans une carte, lg petit contrôle, xl contrôle et champ, 2xl tuile et modale, 3xl grande carte, full pilule. Le verre a ses propres rôles, plus bas. */
     --radius: 0.5rem;
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
     --radius-2xl: 2rem;
     --radius-3xl: 2.5rem;
 
-    /* Le sur-titre : la plus petite taille de la charte, en capitales espacées. */
+    /*
+     * Les rayons concentriques du verre, par rôle : l'icône contenue (14 px)
+     * épouse la carte qui la porte (28 px) à 14 px de marge, la capsule est
+     * pleine. Un composant nomme le rôle (`rounded-carte`), jamais la valeur.
+     */
+    --radius-carte: 1.75rem;
+    --radius-icone: 0.875rem;
+    --radius-capsule: 9999px;
+
+    /* La plus petite taille de la charte. */
     --text-2xs: 0.625rem;
     --text-2xs--line-height: 0.875rem;
-    --tracking-sur-titre: 0.2em;
 
     --spacing-touch: 44px;
     --spacing-nav: 70px;
@@ -459,9 +432,6 @@
     --animate-fade-in: fade-in 0.3s ease-out;
     --animate-slide-up: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --animate-scale-in: scale-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --animate-pulse-slow: pulse 3s ease-in-out infinite;
-    --animate-pulse-glow: pulse-glow 8s infinite alternate;
-    --animate-liquid-pulse: liquid-pulse 2s infinite;
 
     /*
      * Note sur `rgb(from … r g b / alpha)`, employe 63 fois ci-dessous.
@@ -479,81 +449,6 @@
      * C'est une decision, pas un oubli. Le jour ou une cible sera declaree, ce
      * commentaire dit quoi verifier.
      */
-
-    /*
-     * Les ombres DERIVENT de leur accent, elles ne le recopient pas.
-     *
-     * `rgb(from <couleur> r g b / alpha)` reprend les canaux du jeton et n'en
-     * change que l'opacite. Ecrites en `rgba()` litteral, ces douze lignes
-     * etaient douze copies a la main — et deux avaient deja diverge sans que
-     * rien ne puisse le signaler : `--shadow-neon-blue` portait `0, 240, 255`
-     * pour un cyan qui vaut `#00e5ff`, `--shadow-neon-pink` portait
-     * `255, 0, 153` pour un rose qui vaut `#ff0080`. Deux couleurs sous un seul
-     * nom, exactement la panne que cette charte existe pour supprimer.
-     */
-    --shadow-glow-orange:
-        0 0 20px rgb(from var(--color-accent-primary) r g b / 0.25),
-        0 10px 40px rgb(from var(--color-accent-primary) r g b / 0.15);
-    --shadow-glow-violet:
-        0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.25),
-        0 10px 40px rgb(from var(--color-accent-tertiary) r g b / 0.15);
-    --shadow-glow-pink:
-        0 0 20px rgb(from var(--color-accent-secondary) r g b / 0.25),
-        0 10px 40px rgb(from var(--color-accent-secondary) r g b / 0.15);
-    --shadow-glow-cyan: 0 0 20px rgb(from var(--color-accent-info) r g b / 0.4);
-    --shadow-glow-magenta: 0 0 20px rgb(from var(--color-category-core) r g b / 0.4);
-    --shadow-neon: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
-    --shadow-neon-blue: 0 10px 30px rgb(from var(--color-accent-info) r g b / 0.4);
-    --shadow-neon-pink: 0 10px 30px rgb(from var(--color-accent-secondary) r g b / 0.4);
-    --shadow-glass-inset: inset 0 0 20px rgb(from var(--color-surface-card) r g b / 0.8);
-    --shadow-glass-out: 0 8px 32px rgb(from var(--color-accent-tertiary) r g b / 0.1);
-    --shadow-glass-card: 0 8px 32px 0 rgb(from var(--color-shadow-ambient) r g b / 0.07);
-    --shadow-plate-shadow: 2px 0 4px rgb(from var(--color-shadow-cast) r g b / 0.2);
-    --shadow-glow-primary-soft: 0 0 15px rgb(from var(--color-accent-primary) r g b / 0.3);
-    --shadow-glow-primary-sharp: 0 0 8px rgb(from var(--color-accent-primary) r g b / 0.5);
-    --shadow-glow-secondary-soft: 0 0 15px rgb(from var(--color-accent-secondary) r g b / 0.3);
-    --shadow-glow-tertiary-sharp: 0 0 4px rgb(from var(--color-accent-tertiary) r g b / 0.8);
-    --shadow-glow-state-sharp: 0 0 4px rgb(from var(--color-accent-state) r g b / 0.8);
-    --shadow-glow-card: 0 0 15px rgb(from var(--color-surface-card) r g b / 0.1);
-    --drop-shadow-glow-primary: 0 0 8px rgb(from var(--color-accent-primary) r g b / 0.5);
-
-    /*
-     * Les degrades ne portent plus d'hexadecimal : ils citent les jetons.
-     *
-     * Ils restent des surfaces DECORATIVES. Aucun texte ne s'ecrit dessus, et
-     * c'est demontre plutot que promis : sur `gradient-main`, du blanc echoue de
-     * 0 a 50 % et de l'encre echoue de 75 a 100 %. Aucune des deux ne traverse.
-     * C'est ce qui a fait retirer le degrade des boutons.
-     */
-    --background-image-gradient-main: linear-gradient(
-        135deg,
-        var(--color-accent-primary) 0%,
-        var(--color-accent-secondary) 50%,
-        var(--color-accent-tertiary) 100%
-    );
-    --background-image-gradient-orange-violet: linear-gradient(
-        135deg,
-        var(--color-accent-primary) 0%,
-        var(--color-accent-tertiary) 100%
-    );
-    /*
-     * Il porte « magenta » dans son nom, alors il doit en contenir.
-     *
-     * Il a un temps pointe vers `category-core`, qui valait un magenta au moment
-     * de la conversion — et qui est devenu BLEU dans le meme lot, parce que ce
-     * jeton-la se confondait avec le rose des epaules. Le degrade est alors
-     * passe de cyan-magenta a cyan-bleu, soit presque plus de degrade du tout,
-     * sous un nom devenu faux.
-     *
-     * La lecon : un degrade DECORATIF ne doit pas emprunter un jeton dont le
-     * role est ailleurs. Une couleur de categorie change quand les categories
-     * doivent se distinguer, ce qui n'a rien a voir avec ce titre.
-     */
-    --background-image-gradient-cyan-magenta: linear-gradient(
-        135deg,
-        var(--color-accent-info) 0%,
-        var(--color-accent-secondary) 100%
-    );
 
     @keyframes fade-in {
         from {
@@ -581,27 +476,6 @@
         to {
             opacity: 1;
             transform: scale(1);
-        }
-    }
-    @keyframes pulse-glow {
-        0% {
-            opacity: 0.5;
-            transform: scale(1);
-        }
-        100% {
-            opacity: 0.8;
-            transform: scale(1.1);
-        }
-    }
-    @keyframes liquid-pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0.7);
-        }
-        70% {
-            box-shadow: 0 0 0 15px rgb(from var(--color-accent-state) r g b / 0);
-        }
-        100% {
-            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0);
         }
     }
 }
@@ -682,56 +556,33 @@
 }
 
 /*
- * Les trois tailles de titre, et rien d'autre.
- *
- * Les `h1`–`h3` du dépôt portaient 28 combinaisons de classes : le titre d'une
- * carte était tantôt en capitales italiques, tantôt en casse de phrase, selon
- * l'écran (#1783). Un rôle par taille, la couleur reste à l'appelant quand elle
- * dit quelque chose.
+ * Les rôles typographiques : le titre d'un écran et celui d'une carte, en casse
+ * de phrase et graisse 600, et la petite étiquette en gris qui le précède. Un
+ * titre en choisit un, et n'écrit plus sa typographie (#1783).
  */
-@utility titre-page {
+@utility titre-plat {
     font-family: var(--font-display);
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    /* Les tailles sont écrites : seules les valeurs déclarées dans @theme static sortent en variables. */
-    font-size: 1.875rem;
+    font-weight: 600;
+    font-size: 1.25rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--color-text-main);
+}
+
+@utility titre-ecran {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.75rem;
     line-height: 1;
-    letter-spacing: -0.05em;
-    color: var(--color-text-main);
-
-    @variant sm {
-        font-size: 2.25rem;
-    }
-}
-
-@utility titre-section {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    font-size: 1.5rem;
-    line-height: 2rem;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.01em;
     color: var(--color-text-main);
 }
 
-@utility titre-carte {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-    color: var(--color-text-main);
-}
-
-@utility sur-titre {
-    font-size: var(--text-2xs);
-    line-height: var(--text-2xs--line-height);
-    font-weight: 900;
-    letter-spacing: var(--tracking-sur-titre);
-    text-transform: uppercase;
+@utility etiquette {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
 }
 
 /* La cascade d'apparition : six pas de 50 ms, au lieu d'un délai inline par élément. */
@@ -800,7 +651,6 @@
     left: -200px;
     filter: blur(60px);
     z-index: 0;
-    animation: pulse-glow 8s infinite alternate;
     pointer-events: none;
 }
 
@@ -810,46 +660,62 @@
     height: 600px;
     background: radial-gradient(
         circle,
-        rgb(from var(--color-accent-tertiary) r g b / 0.15) 0%,
+        rgb(from var(--color-accent-tertiary) r g b / 0.12) 0%,
         rgb(from var(--color-surface-card) r g b / 0) 70%
     );
     bottom: -150px;
     right: -200px;
     filter: blur(60px);
     z-index: 0;
-    animation: pulse-glow 10s infinite alternate-reverse;
     pointer-events: none;
 }
 
-@utility glass-panel-light {
-    /* ===== GLASS PANELS ===== */
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 8px 32px rgb(from var(--color-shadow-ambient) r g b / 0.05);
+/*
+ * Les trois matériaux du verre, et rien d'autre : fin, régulier, épais. Un
+ * composant nomme un matériau (`verre-regulier`) et jamais un flou, une opacité
+ * ou une ombre ; le portage Swift reprend les mêmes noms pour `Material`.
+ *
+ * Même recette pour les trois : un fond translucide du jeton `surface-card`,
+ * un flou saturé, un liseré, le reflet d'un bord haut et l'ombre bleu-nuit du
+ * jeton `shadow-ambient`. Ils ne diffèrent que par l'opacité et le flou.
+ *
+ * - fin : une surface secondaire, que le fond doit laisser voir ;
+ * - régulier : la carte, posée dans le flux ;
+ * - épais : ce qui flotte par-dessus du contenu (barre, menu) et doit rester
+ *   lisible (#1314) : à 10 % de blanc, un menu était un fantôme.
+ */
+@utility verre-fin {
+    background: var(--verre-fin-fond);
+    backdrop-filter: blur(var(--verre-fin-flou)) saturate(var(--verre-saturation));
+    -webkit-backdrop-filter: blur(var(--verre-fin-flou)) saturate(var(--verre-saturation));
+    border: 1px solid var(--verre-lisere);
+    box-shadow: var(--verre-reflet), var(--verre-ombre);
+}
+
+@utility verre-regulier {
+    background: var(--color-surface-glass);
+    backdrop-filter: blur(var(--verre-regulier-flou)) saturate(var(--verre-saturation));
+    -webkit-backdrop-filter: blur(var(--verre-regulier-flou)) saturate(var(--verre-saturation));
+    border: 1px solid var(--verre-lisere);
+    box-shadow: var(--verre-reflet), var(--verre-ombre);
+}
+
+@utility verre-epais {
+    background: var(--fond-du-verre-epais, var(--color-surface-glass-strong));
+    backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
+    -webkit-backdrop-filter: blur(var(--verre-epais-flou)) saturate(var(--verre-saturation));
+    border: 1px solid var(--verre-lisere);
+    box-shadow: var(--verre-reflet), var(--verre-ombre-flottante);
 }
 
 /*
- * Une surface flottante qui doit rester lisible.
- *
- * `--glass-bg-strong` existait dans les deux themes depuis toujours et
- * n'avait aucun consommateur. C'est pourtant le jeton exact pour ce cas :
- * un panneau pose PAR-DESSUS du contenu, ou la transparence de
- * `glass-panel-light` ne joue plus le role de profondeur mais efface le
- * texte. Le menu utilisateur etait a 10 % de blanc — un fantome sur le
- * fond clair de l'application (#1314).
- *
- * L'ombre est plus marquee que celle de `glass-panel-light` : c'est elle
- * qui detache le panneau de ce qu'il recouvre, la ou une carte posee dans
- * le flux n'a rien a detacher.
+ * Une surface d'accent posée sur le verre (la tuile « Démarrer », le bouton
+ * central) : opaque, avec le liseré, le reflet de bord haut et l'ombre du verre,
+ * sans halo coloré. `accent-fill` pose son fond et son texte.
  */
-@utility glass-panel-strong {
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.14);
+@utility verre-plein {
+    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.3);
+    box-shadow: var(--verre-reflet), var(--verre-ombre);
 }
 
 /*
@@ -886,7 +752,7 @@
      * l'autre, illisibles. C'est le defaut filme.
      *
      * `!important` parce que la carte pose son propre fond de verre par
-     * `glass-panel-light` : a specificite egale, c'est l'ordre qui tranche, et
+     * `verre-regulier` : a specificite egale, c'est l'ordre qui tranche, et
      * il ne nous est pas favorable. Sans lui la regle ne change rien a l'ecran,
      * et aucun test ne le verrait.
      *
@@ -926,39 +792,7 @@
     opacity: 0;
 }
 
-@utility iridescent-card {
-    /* Iridescent Border Card */
-    position: relative;
-    background: rgb(from var(--color-surface-card) r g b / 0.9);
-    border-radius: 1.5rem;
-    z-index: 1;
-
-    &::before {
-        content: '';
-        position: absolute;
-        inset: -2px;
-        border-radius: 1.6rem;
-        background: linear-gradient(
-            135deg,
-            var(--color-accent-info),
-            var(--color-accent-secondary),
-            var(--color-accent-state),
-            var(--color-accent-info)
-        );
-        z-index: -1;
-        opacity: 0.6;
-        filter: blur(1px);
-        transition: all 0.3s ease;
-    }
-
-    &:hover::before {
-        opacity: 1;
-        filter: blur(4px);
-    }
-}
-
 @utility glass-button {
-    /* ===== GLASS BUTTONS ===== */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -966,24 +800,24 @@
     min-height: var(--touch-min);
     padding: 0.75rem 1.5rem;
     background: rgb(from var(--color-surface-card) r g b / 0.8);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--backdrop-blur-glass));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur-glass));
     border: 1px solid rgb(from var(--color-surface-card) r g b / 0.9);
     border-radius: 1rem;
-    font-family: 'Archivo', sans-serif;
-    font-weight: 800;
-    font-style: italic;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
+    font-family: var(--font-sans);
+    font-weight: 500;
     color: var(--color-text-main);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+        background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.05);
 
     &:hover {
-        transform: translateY(-2px);
         box-shadow: 0 6px 20px rgb(from var(--color-shadow-cast) r g b / 0.1);
     }
 
@@ -1003,14 +837,12 @@
  * l'application (44 occurrences).
  *
  * Le vert d'etat avec de l'encre rend 15,19:1 — le meilleur contraste de toute
- * la palette. La variante `neon` existait deja dans ce fichier, exactement ainsi,
- * et n'etait employee nulle part.
+ * la palette.
  *
  * Le degrade n'est pas retire de l'application : il reste partout ou aucun texte
  * ne se pose dessus — le bouton `+` de la barre (une icone y tient les 3:1
  * demandes pour du non-texte), les en-tetes du tableau de bord, les cartes
- * d'objectif, les cases a cocher, et le logo, ou `text-gradient` colore le texte
- * lui-meme au lieu de se poser derriere.
+ * d'objectif et les cases a cocher.
  */
 /*
  * Une surface d'accent et le texte qui va dessus, indissociables.
@@ -1164,12 +996,6 @@
     color: var(--color-text-on-dark-accent);
 }
 
-/* Violet, 6,02:1 : assez sombre pour le blanc sans etre retouche. */
-@utility tertiary-fill {
-    background: var(--color-accent-tertiary);
-    color: var(--color-text-on-dark-accent);
-}
-
 /* Danger, 6,47:1. C'est `deep` qui remplit, jamais le `#ef4444` de fond. */
 @utility danger-fill {
     background: var(--color-accent-danger-deep);
@@ -1182,64 +1008,10 @@
     color: var(--color-text-on-accent);
 }
 
-/* Cyan, 11,61:1 en encre. */
-@utility info-fill {
-    background: var(--color-accent-info);
-    color: var(--color-text-on-accent);
-}
-
 @utility glass-button-primary {
     background: var(--color-accent-state);
     border: none;
     color: var(--color-text-on-accent);
-    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.35);
-
-    &:hover {
-        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.5);
-    }
-}
-
-@utility glass-button-neon {
-    background: var(--color-accent-state);
-    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.2);
-    color: var(--color-text-on-accent);
-    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
-
-    &:hover {
-        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.6);
-    }
-}
-
-@utility glass-button-gradient-border {
-    /* Gradient Border Button */
-    position: relative;
-    background: var(--color-surface-card);
-    border: none;
-    padding: 2px;
-    border-radius: 1rem;
-
-    &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 1rem;
-        padding: 2px;
-        background: var(--background-image-gradient-main);
-
-        /*
-         * Les deux `#fff` ci-dessous ne sont PAS des couleurs : c'est un
-         * masque, et un masque ne lit que l'opacite. `#fff` y veut dire
-         * « opaque », pas « blanc ». Les remplacer par un jeton de surface
-         * marcherait tant que ce jeton reste clair, et effacerait la bordure le
-         * jour ou il cesserait de l'etre — une panne d'autant plus penible que
-         * la cause serait a l'autre bout du fichier.
-         */
-        -webkit-mask:
-            linear-gradient(#fff 0 0) content-box,
-            linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-    }
 }
 
 @utility glass-input {
@@ -1255,7 +1027,9 @@
     color: var(--color-text-main);
     font-size: 1rem;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
     outline: none;
     box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.03);
 
@@ -1275,121 +1049,137 @@
         box-shadow:
             0 0 0 4px rgb(from var(--color-accent-primary) r g b / 0.1),
             0 8px 20px rgb(from var(--color-shadow-cast) r g b / 0.08);
-        transform: scale(1.02);
     }
 }
 
 @utility glass-nav {
-    /* ===== FLOATING BOTTOM NAV ===== */
+    /* La capsule flottante : verre épais, plus dense et plus flou, pour que le contenu qui défile dessous ne se lise pas à travers. */
     position: fixed;
     bottom: calc(1rem + var(--safe-area-bottom));
     left: calc(1rem + var(--safe-area-left));
     right: calc(1rem + var(--safe-area-right));
-    background: rgb(from var(--color-surface-card) r g b / 0.9);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.5);
-    border-radius: 1rem;
-    padding: 0.5rem 0.75rem;
+    background: rgb(from var(--color-surface-card) r g b / 0.96);
+    backdrop-filter: blur(var(--verre-nav-flou)) saturate(var(--verre-saturation));
+    -webkit-backdrop-filter: blur(var(--verre-nav-flou)) saturate(var(--verre-saturation));
+    border: 1px solid var(--verre-lisere);
+    border-radius: var(--radius-capsule);
+    padding: 0.375rem;
+    min-height: var(--hauteur-du-menu);
     display: flex;
-    justify-content: space-around;
+    gap: 0.25rem;
     align-items: center;
-    box-shadow: 0 10px 40px rgb(from var(--color-text-muted) r g b / 0.2);
+    box-shadow: var(--verre-reflet), var(--verre-ombre-flottante);
     z-index: 50;
     transition:
         transform 0.3s ease,
         bottom 0.3s ease;
+
+    @media (width <= 20rem) {
+        padding: 0.25rem;
+        gap: 0;
+    }
 }
 
+/*
+ * Un bouton de la barre d'outils de la séance (#2434), sur téléphone : une
+ * capsule de 48 px en casse de phrase, sans ombre (ni portée ni colorée : le
+ * verre qui la porte a la sienne). Sur bureau, le bouton garde le sien : la
+ * barre y disparaît, et ses boutons rejoignent la colonne.
+ */
+@utility bouton-de-barre {
+    &.glass-button {
+        @media not (width >= 64rem) {
+            min-height: 3rem;
+            padding-inline: 0.5rem;
+            border-radius: var(--radius-capsule);
+            font-size: 0.875rem;
+            box-shadow: none;
+
+            &:hover {
+                box-shadow: none;
+            }
+        }
+    }
+}
+
+/*
+ * Un bouton du bilan de fin de séance (#2434), à toute largeur : une capsule
+ * en casse de phrase, sans ombre. L'action principale est `variant="accent"`,
+ * l'orange de la maquette.
+ */
+@utility bouton-de-bilan {
+    &.glass-button {
+        min-height: 3rem;
+        border-radius: var(--radius-capsule);
+        font-size: 0.875rem;
+        box-shadow: none;
+
+        &:hover {
+            box-shadow: none;
+        }
+    }
+}
+
+/*
+ * L'onglet : une capsule de 56 px de haut, de largeur égale à ses voisines
+ * (#2434). L'onglet actif est la capsule entière, pas un disque de 56 px : le
+ * libellé n'a plus à tenir dans un cercle. Sur un téléphone de 320 px, la barre
+ * (288 px) passe à 10 px de libellé, 4 px de remplissage et une icône de 20 px,
+ * pour que le bas du texte reste à plus de 9 px de la courbe.
+ */
 @utility glass-nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
-    padding: 0.5rem;
+    gap: 0;
+    flex: 1;
+    min-width: 0;
+    height: 3.5rem;
+    padding: 0 0 0.25rem;
+    border-radius: var(--radius-capsule);
     color: var(--color-text-muted);
-    transition: all 0.2s ease;
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
 
+    /* L'icône occupe sa propre hauteur : la ligne de la police de symboles la portait à 1,33 fois, et le libellé descendait contre la courbe. */
+    & > .material-symbols-outlined {
+        font-size: 1.25rem;
+        line-height: 1;
+        height: 1.25rem;
+    }
+
+    @media (width <= 20rem) {
+        font-size: 0.625rem;
+
+        & > .material-symbols-outlined {
+            font-size: 1.125rem;
+            height: 1.125rem;
+        }
+    }
+
     &:hover {
-        color: var(--color-accent-tertiary);
+        color: var(--color-text-main);
     }
 
     &.active {
-        color: var(--color-accent-primary);
-    }
-
-    &.active::after {
-        content: '';
-        width: 4px;
-        height: 4px;
-        background: var(--color-accent-primary);
-        border-radius: 50%;
-        box-shadow: 0 0 6px var(--color-accent-primary);
+        color: var(--color-accent-primary-deep);
+        background: var(--color-surface-glass-strong);
+        box-shadow:
+            var(--verre-reflet),
+            0 2px 8px rgb(from var(--color-shadow-ambient) r g b / 0.12);
     }
 }
 
 @utility active {
     &.glass-nav-item {
-        color: var(--color-accent-primary);
-    }
-
-    &.glass-nav-item::after {
-        content: '';
-        width: 4px;
-        height: 4px;
-        background: var(--color-accent-primary);
-        border-radius: 50%;
-        box-shadow: 0 0 6px var(--color-accent-primary);
-    }
-}
-
-@utility glass-nav-fab {
-    position: relative;
-    top: -1.25rem;
-    width: 4.5rem;
-    height: 4.5rem;
-    background: var(--background-image-gradient-main);
-    border: 4px solid var(--color-surface-card);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-on-dark-accent);
-    box-shadow: 0 10px 30px rgb(from var(--color-accent-primary) r g b / 0.4);
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-    &:hover {
-        transform: scale(1.05);
-    }
-}
-
-@utility streak-badge {
-    /* ===== STREAK BADGE ===== */
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: rgb(from var(--color-surface-card) r g b / 0.8);
-    border: 1px solid var(--color-surface-card);
-    border-radius: 9999px;
-    box-shadow: 0 4px 15px rgb(from var(--color-accent-tertiary) r g b / 0.1);
-
-    &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 9999px;
-        background: linear-gradient(
-            135deg,
-            rgb(from var(--color-accent-primary) r g b / 0.1),
-            rgb(from var(--color-accent-tertiary) r g b / 0.1)
-        );
-        filter: blur(10px);
-        opacity: 0.3;
-        z-index: -1;
+        color: var(--color-accent-primary-deep);
     }
 }
 
@@ -1403,15 +1193,17 @@
     z-index: 50;
 }
 
+@utility voile-de-feuille {
+    /* Le voile d'un tiroir ou d'une feuille : plus léger que `glass-overlay`, sans flou, pour que la page reste lisible derrière le verre (maquette de navigation). */
+    position: fixed;
+    inset: 0;
+    background: rgb(from var(--color-shadow-cast) r g b / 0.3);
+    z-index: 50;
+}
+
 @utility glass-modal {
-    background: rgb(from var(--color-surface-card) r g b / 0.95);
-    backdrop-filter: blur(var(--glass-blur-strong));
-    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
-    border: 1px solid var(--glass-border);
-    border-radius: 2rem;
     /* Sa hauteur se borne dans Modal.vue, par `hauteur-sure-*` : la zone sûre, pas 85vh (#2043). */
     overflow-y: auto;
-    box-shadow: 0 25px 50px rgb(from var(--color-shadow-cast) r g b / 0.15);
 }
 
 @utility glass-skeleton {
@@ -1433,28 +1225,8 @@
     align-items: center;
     padding: 0.25rem 0.75rem;
     font-size: 0.625rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-weight: 600;
     border-radius: 0.5rem;
-}
-
-/*
- * Les badges d'etat : un fond FRANC et son texte, pas un lavis.
- *
- * `success` a porte pendant un moment `background` et `color` sur le MEME
- * jeton — un rectangle vert fonce uni, dans lequel le mot « Fait » etait
- * invisible. L'original etait un lavis vert pale sous un texte vert fonce, et
- * une table de conversion mecanique a envoye les deux valeurs sur le meme role.
- *
- * Il aurait de toute facon fallu y revenir : `trend-up` est un vert ASSOMBRI
- * pour se lire en texte, et l'employer en fond donnait une pastille terne au
- * milieu d'une interface neon. Une seance terminee, dans cette charte, c'est le
- * vert d'etat — le vif — avec de l'encre par-dessus, a 15,19:1.
- */
-@utility glass-badge-success {
-    background: var(--color-accent-state);
-    color: var(--color-text-on-accent);
 }
 
 /*
@@ -1479,29 +1251,6 @@
     color: var(--color-accent-primary-deep);
 }
 
-@utility text-gradient {
-    /* Text gradient utility */
-    background: var(--background-image-gradient-main);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-@utility text-gradient-cyan-magenta {
-    background: var(--background-image-gradient-cyan-magenta);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-@utility font-display-label {
-    font-family: 'Archivo', sans-serif;
-    font-weight: 900;
-    font-size: 0.625rem;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-}
-
 @utility pt-main-safe {
     /* Additive utilities for main content areas */
     padding-top: calc(1.5rem + var(--safe-area-top));
@@ -1511,8 +1260,32 @@
     padding-bottom: calc(9rem + var(--safe-area-bottom));
 }
 
-@utility pb-main-safe-repos {
-    padding-bottom: calc(22rem + var(--safe-area-bottom));
+/* Le bas de la page avec l'accessoire de séance (64 px) au-dessus de la barre : `pb-main-safe` plus de quoi le franchir. */
+@utility pb-main-safe-accessoire {
+    padding-bottom: calc(13.25rem + var(--safe-area-bottom));
+}
+
+/*
+ * La page de séance en cours sur bureau : la liste et, à sa droite, le rail
+ * des actions (288 px, `ActionsDeLaSeance`). Les bandeaux prennent les deux colonnes.
+ * Le bas de page (`pb-main-safe`) passe sous la liste, et la grille mord sur
+ * celui de `<main>` : un rail collant ne descend pas sous la zone de sa grille,
+ * et sur une fenêtre basse il remontait sous la barre en fin de page.
+ */
+@utility rail-de-bureau {
+    padding-bottom: calc(9rem + var(--safe-area-bottom));
+
+    @variant bureau {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 18rem;
+        column-gap: 1.5rem;
+        padding-bottom: 0;
+        margin-bottom: calc(-9rem - var(--safe-area-bottom));
+
+        & > [dusk='exercise-list'] {
+            padding-bottom: calc(9rem + var(--safe-area-bottom));
+        }
+    }
 }
 
 /*
@@ -1544,11 +1317,28 @@
     padding-top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
     padding-bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
 }
+/*
+ * Le bas du contenu d'un tiroir ou d'une feuille : la marge voulue plus la zone
+ * sûre du bas. Le verre passe derrière l'indicateur d'accueil et c'est le
+ * contenu qui s'en écarte, en défilant jusqu'au bord comme sur iOS. À partir de
+ * `sm`, la fenêtre centrée a déjà sa marge.
+ */
+@utility pb-feuille-* {
+    padding-bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
+
+    @media (width >= 40rem) {
+        padding-bottom: calc(var(--spacing) * --value(integer));
+    }
+}
 @utility top-sure-* {
     top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
 }
 @utility bottom-sure-* {
     bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
+}
+/* Posé sur le menu du bas, à 6 px : la barre d'outils de la séance et l'accessoire. */
+@utility au-dessus-du-menu {
+    bottom: calc(var(--safe-area-bottom) + 1rem + var(--hauteur-du-menu) + 0.375rem);
 }
 @utility left-sure-* {
     left: calc(var(--spacing) * --value(integer) + var(--safe-area-left));
@@ -1571,15 +1361,60 @@
 }
 
 /*
+ * Le tiroir et la feuille (`Modal position="tiroir"` et `"feuille"`) flottent à
+ * 8 px des bords latéraux, collé au bas de l'écran (ses coins du bas en sortent), le verre passant derrière l'indicateur d'accueil,
+ * comme dans la maquette de navigation. La fenêtre garde ses marges sûres
+ * (`px-sure-4 py-sure-6`) : le panneau les déborde (`marge-de-feuille`) et
+ * laisse à son contenu (`pb-feuille-*`) la zone sûre du bas, pour qu'il reste au-dessus
+ * de l'indicateur en défilant jusqu'au bord. Hauteur sur téléphone : l'écran moins la barre d'état et 1,5 rem
+ * (24 px au-dessus du panneau) ; à partir de `sm`, la fenêtre centrée plafonne
+ * à 44 rem. `hauteur-tiroir` fixe la hauteur, `hauteur-max-tiroir` la borne.
+ */
+@utility fond-de-feuille {
+    /* Le verre d'une feuille : la page presque opaque, pour ne pas tirer au gris du voile qui la précède. */
+    --fond-du-verre-epais: rgb(from var(--color-surface-page) r g b / 0.95);
+}
+
+@utility marge-de-feuille {
+    margin-inline: -0.5rem;
+    margin-bottom: calc(var(--safe-area-bottom) * -1 - 1.5rem);
+
+    @media (width >= 40rem) {
+        margin-inline: 0;
+        margin-bottom: 0;
+    }
+}
+
+@utility hauteur-tiroir {
+    height: calc(100vh - var(--safe-area-top) - 1.5rem);
+    height: calc(100dvh - var(--safe-area-top) - 1.5rem);
+
+    @media (width >= 40rem) {
+        height: min(44rem, calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem));
+        height: min(44rem, calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem));
+    }
+}
+
+@utility hauteur-max-tiroir {
+    max-height: calc(100vh - var(--safe-area-top) - 1.5rem);
+    max-height: calc(100dvh - var(--safe-area-top) - 1.5rem);
+
+    @media (width >= 40rem) {
+        max-height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
+        max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 3rem);
+    }
+}
+
+/*
  * Ce qui colle sous l'en-tête de l'application : le titre d'un mois du journal,
- * la ligne des jours des habitudes. L'en-tête mobile mesure 77 px sous la barre
- * d'état (16 + 44 + 16, et 1 de bordure), la barre de bureau 65 (64 + 1), et
+ * la ligne des jours des habitudes. L'en-tête mobile mesure 76 px sous la barre
+ * d'état (16 + 44 + 16, sans bordure), la barre de bureau 65 (64 + 1), et
  * l'une remplace l'autre à `bureau`. Collé plus haut, l'élément mordait sur
  * l'en-tête ; plus bas, il laissait voir entre les deux le contenu qui défile
  * (#2043).
  */
 @utility top-sous-entete {
-    top: calc(var(--spacing) * 19 + 1px + var(--safe-area-top));
+    top: calc(var(--spacing) * 19 + var(--safe-area-top));
 
     @variant bureau {
         top: calc(var(--spacing) * 16 + 1px + var(--safe-area-top));
@@ -1596,15 +1431,6 @@
     }
 }
 
-@utility glow-orange {
-    /* Glow effects */
-    box-shadow: 0 0 20px rgb(from var(--color-accent-primary) r g b / 0.4);
-}
-
-@utility glow-violet {
-    box-shadow: 0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.4);
-}
-
 /* ===================================
    LIQUID GLASS LIGHT DESIGN SYSTEM
    Mobile-First Gym Tracker UI (Rework 2026)
@@ -1612,12 +1438,19 @@
 
 @layer base {
     :root {
-        /* New Light Theme Glass Effects */
-        --glass-bg: rgb(from var(--color-surface-card) r g b / 0.65);
-        --glass-bg-strong: rgb(from var(--color-surface-card) r g b / 0.85);
-        --glass-border: rgb(from var(--color-surface-card) r g b / 0.8);
-        --glass-blur: 20px;
-        --glass-blur-strong: 24px;
+        /* Les matériaux du verre : lus par `verre-fin`, `verre-regulier`, `verre-epais` et `glass-nav`. */
+        --verre-fin-fond: rgb(from var(--color-surface-card) r g b / 0.42);
+        --verre-fin-flou: 16px;
+        --verre-regulier-flou: var(--backdrop-blur-glass);
+        --verre-epais-flou: var(--backdrop-blur-glass-strong);
+        --verre-nav-flou: 36px;
+        --verre-saturation: 1.6;
+        --verre-lisere: rgb(from var(--color-border) r g b / 0.5);
+        --verre-reflet:
+            inset 0 1px 0 rgb(from var(--color-surface-card) r g b / 0.85),
+            inset 0 0 0 0.5px rgb(from var(--color-surface-card) r g b / 0.25);
+        --verre-ombre: 0 8px 24px rgb(from var(--color-shadow-ambient) r g b / 0.12);
+        --verre-ombre-flottante: 0 12px 32px rgb(from var(--color-shadow-ambient) r g b / 0.18);
 
         /* Spacing for mobile touch */
         --touch-min: 44px;
@@ -1630,6 +1463,15 @@
         --safe-area-top: env(safe-area-inset-top, 0px);
         --safe-area-left: env(safe-area-inset-left, 0px);
         --safe-area-right: env(safe-area-inset-right, 0px);
+
+        /* La hauteur du menu du bas (#2434) : ce qui flotte au-dessus s'y pose, 6 px plus haut, à toute largeur. */
+        --hauteur-du-menu: 4.375rem;
+    }
+
+    @media (width <= 20rem) {
+        :root {
+            --hauteur-du-menu: 4.125rem;
+        }
     }
 
     /*
@@ -1703,26 +1545,6 @@
 }
 
 @layer components {
-    @keyframes pulse-glow {
-        0% {
-            opacity: 0.5;
-            transform: scale(1);
-        }
-        100% {
-            opacity: 0.8;
-            transform: scale(1.1);
-        }
-    }
-
-    @keyframes stripe-move {
-        from {
-            background-position: 0 0;
-        }
-        to {
-            background-position: 20px 0;
-        }
-    }
-
     @keyframes skeleton-pulse {
         0% {
             background-position: 200% 0;

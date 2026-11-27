@@ -77,6 +77,19 @@ class BodyPartMeasurement extends BaseMeasurement
     ];
 
     /**
+     * Les parties qui se mesurent des deux côtés. La liste est fermée : une
+     * saisie libre (« Cuisse gauche ») n'y entre jamais.
+     *
+     * @var array<string, array{libelle: string, gauche: string, droite: string}>
+     */
+    public const array PAIRES = [
+        'Biceps' => ['libelle' => 'Biceps', 'gauche' => 'Biceps L', 'droite' => 'Biceps R'],
+        'Forearm' => ['libelle' => 'Avant-bras', 'gauche' => 'Forearm L', 'droite' => 'Forearm R'],
+        'Thigh' => ['libelle' => 'Cuisse', 'gauche' => 'Thigh L', 'droite' => 'Thigh R'],
+        'Calf' => ['libelle' => 'Mollet', 'gauche' => 'Calf L', 'droite' => 'Calf R'],
+    ];
+
+    /**
      * La valeur dans l'unité demandée : la saisie accepte le centimètre et le
      * pouce, et deux relevés ne se comparent que dans la même.
      */

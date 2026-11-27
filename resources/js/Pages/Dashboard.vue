@@ -2,55 +2,50 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Deferred } from '@inertiajs/vue3'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
-import GlassCard from '@/Components/UI/GlassCard.vue'
 import QuickActions from '@/Components/Dashboard/QuickActions.vue'
 import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
-import DurationSection from '@/Components/Dashboard/DurationSection.vue'
-import TimeOfDaySection from '@/Components/Dashboard/TimeOfDaySection.vue'
-import RecentVolumeSection from '@/Components/Dashboard/RecentVolumeSection.vue'
-import RecentExercisesSection from '@/Components/Dashboard/RecentExercisesSection.vue'
-import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDurationSection.vue'
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
 import { ref } from 'vue'
-import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
-const ActiveGoalsChart = graphiqueAsynchrone(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
-
 /**
  * Dashboard - Command Center
  * Pure composition page using specialized sub-components.
  */
-defineProps({
-    // String as well as Number: the column is a decimal cast, so it serialises
-    // as "75.50". Declared Number only, every dashboard render logged a failed
-    // prop type check.
-    latestWeight: { type: [Number, String], default: null },
+const props = defineProps({
     recentWorkouts: { type: Array, default: () => [] },
     recentPRs: { type: Array, default: () => [] },
     activeGoals: { type: Array, default: () => [] },
 
-    // ⚡ Bolt: Consolidated deferred props
+    // Consolidated deferred props
     analyticalStats: {
         type: Object,
         default: () => ({
-            weeklyVolume: { stats: { current_week_volume: 0, percentage: 0 }, trend: [] },
-            workoutDistributions: { duration: [], time_of_day: [] },
+            weeklyVolume: { stats: { current_week_volume: 0, percentage: null, sessions_count: 0 }, trend: [] },
         }),
     },
 })
 
 /**
- * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
- * objectifs, tirés des mesures et des objectifs qu'aucune copie ne garde
- * (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent.
+ * Un compte neuf : aucune séance du tout, donc aucune carte à remplir. Une séance
+ * démarrée hors ligne, encore dans la file, en est une : le layout la donne (il
+ * la tient, la page est son parent et ne peut pas l'injecter), sans quoi l'état
+ * vide garderait un bouton « Démarrer » que les actions rapides ne proposent plus.
+ */
+const estUnCompteNeuf = (seanceEnCours) => props.recentWorkouts.length === 0 && (seanceEnCours ?? null) === null
+
+/**
+ * Une copie hors ligne de l'accueil ne garde pas les objectifs, qu'aucune copie
+ * ne garde (#2048, `PROPS_JAMAIS_GARDEES`) : leur carte le dit.
  */
 const { indisponibleSurLaCopie } = useCopieHorsLigne()
 
@@ -67,15 +62,15 @@ const installationProposee = ref(false)
 <template>
     <Head title="Accueil" />
 
-    <AuthenticatedLayout page-title="Accueil">
+    <AuthenticatedLayout v-slot="{ seanceEnCours }" page-title="Accueil" titre-masque largeur="moyenne">
         <div class="space-y-6">
-            <DashboardHeader
-                :user="$page.props.auth.user"
-                :latest-weight="latestWeight"
-                :poids-indisponible="indisponibleSurLaCopie('latestWeight')"
-            />
+            <DashboardHeader :user="$page.props.auth.user" />
 
-            <QuickActions :processing="demarrageEnCours" @start-workout="startWorkout" />
+            <QuickActions
+                :processing="demarrageEnCours"
+                :sans-demarrage="estUnCompteNeuf(seanceEnCours)"
+                @start-workout="startWorkout"
+            />
 
             <InvitationDInstallation @visibilite="installationProposee = $event" />
 
@@ -85,62 +80,46 @@ const installationProposee = ref(false)
                 :une-autre-invitation-passe-avant="installationProposee"
             />
 
-            <Deferred data="analyticalStats">
-                <template #rescue>
-                    <IndisponibleHorsLigne />
+            <GlassEmptyState
+                v-if="estUnCompteNeuf(seanceEnCours)"
+                icon="fitness_center"
+                title="Pas encore de séance"
+                description="Tes chiffres s'affichent ici après la première."
+            >
+                <template #action>
+                    <GlassButton
+                        variant="primary"
+                        dusk="start-workout-button"
+                        :loading="demarrageEnCours"
+                        @click="startWorkout()"
+                    >
+                        Démarrer une séance
+                    </GlassButton>
                 </template>
+            </GlassEmptyState>
 
-                <template #fallback>
-                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                        <GlassSkeleton class="h-64 w-full" />
-                        <GlassSkeleton class="h-64 w-full" />
-                    </div>
-                    <GlassSkeleton class="mt-4 h-64 w-full" />
-                </template>
+            <template v-else>
+                <Deferred data="analyticalStats">
+                    <template #rescue>
+                        <IndisponibleHorsLigne />
+                    </template>
 
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <template #fallback>
+                        <GlassSkeleton class="h-56 w-full" />
+                    </template>
+
                     <WeeklyVolumeSection
                         :weekly-volume-stats="analyticalStats?.weeklyVolume?.stats"
                         :weekly-volume-trend="analyticalStats?.weeklyVolume?.trend"
                     />
+                </Deferred>
 
-                    <DurationSection :duration-distribution="analyticalStats?.workoutDistributions?.duration" />
-                </div>
+                <RecentActivity :recent-workouts="recentWorkouts" />
 
-                <TimeOfDaySection :time-of-day-distribution="analyticalStats?.workoutDistributions?.time_of_day" />
-            </Deferred>
+                <GoalsSummary :active-goals="activeGoals" :indisponible="indisponibleSurLaCopie('activeGoals')" />
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <RecentVolumeSection :recent-workouts="recentWorkouts" />
-                <RecentExercisesSection :recent-workouts="recentWorkouts" />
-                <RecentWorkoutDurationSection :recent-workouts="recentWorkouts" />
-            </div>
-
-            <RecentActivity
-                :recent-workouts="recentWorkouts"
-                :processing="demarrageEnCours"
-                @start-workout="startWorkout"
-            />
-
-            <GoalsSummary :active-goals="activeGoals" :indisponible="indisponibleSurLaCopie('activeGoals')" />
-
-            <GlassCard
-                v-if="activeGoals && activeGoals.length > 0"
-                as="section"
-                class="stagger-6 animate-slide-up relative overflow-hidden"
-            >
-                <div class="relative z-10 mb-6">
-                    <h3 class="text-accent-primary-deep sur-titre mb-1">Visualisation</h3>
-                    <p class="font-display text-text-main text-2xl font-black uppercase italic">
-                        Progression des Objectifs
-                    </p>
-                </div>
-                <div class="relative -mx-2 mt-2 h-48 w-auto">
-                    <ActiveGoalsChart :data="activeGoals" />
-                </div>
-            </GlassCard>
-
-            <RecentPRs :recent-p-rs="recentPRs" />
+                <RecentPRs :recent-p-rs="recentPRs" />
+            </template>
         </div>
     </AuthenticatedLayout>
 </template>

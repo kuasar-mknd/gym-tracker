@@ -139,12 +139,12 @@ describe('les variantes de bouton', () => {
      * `+` of the library and the `+` of the supplements — and both looked
      * nothing like their own desktop twin sitting two lines below.
      *
-     * Only `bg-gradient-main` and the `glass-button-*` utilities are banned
+     * Only `bg-gradient-main` and the `glass-button-primary` utility are banned
      * here. The accent FILLS are not: a selected filter chip legitimately wears
      * one, and it is not a button in this sense.
      */
     it("n'autorise personne à repeindre un bouton à la main", () => {
-        const marqueDeposee = /\b(?:bg-gradient-main|glass-button-(?:primary|neon|gradient-border|secondary|danger))\b/
+        const marqueDeposee = /\b(?:bg-gradient-main|glass-button-primary)\b/
 
         const copies = collectSourceFiles()
             .filter((fichier) => !fichier.endsWith('GlassButton.vue'))

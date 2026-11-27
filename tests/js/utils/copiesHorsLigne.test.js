@@ -1162,12 +1162,11 @@ describe('les réponses partielles et les props différées', () => {
 })
 
 describe('les props qu’aucune copie ne garde', () => {
-    /** L'accueil tel que le serveur le rend : le dernier poids et les objectifs en cours y sont. */
-    const accueilAvecMesuresEtObjectifs = () =>
+    /** L'accueil tel que le serveur le rend : les objectifs en cours y sont. */
+    const accueilAvecObjectifs = () =>
         pageDe({
             deferredProps: { default: ['analyticalStats'] },
             props: {
-                latestWeight: '78.40',
                 activeGoals: [{ id: 3, title: 'Tour de taille à 80 cm', type: 'measurement', unit: 'cm' }],
                 recentWorkouts: [{ name: 'Jambes du mardi' }],
             },
@@ -1211,25 +1210,25 @@ describe('les props qu’aucune copie ne garde', () => {
         )
     }
 
-    it('ne range ni le dernier poids ni les objectifs de l’accueil, même chiffrés', async () => {
+    it('ne range pas les objectifs de l’accueil, même chiffrés', async () => {
         const onglet = ouvrirUnOnglet()
 
         poserLeTemoin(cleAuHasard())
         poserLeTitulaire(7)
 
-        expect(await onglet.ecrireUneCopie(accueilAvecMesuresEtObjectifs())).toBe('ecrite')
+        expect(await onglet.ecrireUneCopie(accueilAvecObjectifs())).toBe('ecrite')
 
         const lue = await onglet.lireUneCopie('/dashboard')
 
         expect(Object.keys(lue.page.props).sort()).toEqual(['auth', 'errors', 'recentWorkouts'])
         expect(Object.keys(lue.datesDesProps).sort()).toEqual(['auth', 'errors', 'recentWorkouts'])
         expect(lue.page.props.recentWorkouts).toEqual([{ name: 'Jambes du mardi' }])
-        expect(JSON.stringify(lue)).not.toMatch(/78\.40|Tour de taille|latestWeight|activeGoals/)
+        expect(JSON.stringify(lue)).not.toMatch(/Tour de taille|activeGoals/)
     })
 
     it('ne les verse pas d’une réponse partielle, qui garde le reste', async () => {
         const onglet = ouvrirUnOnglet()
-        const accueil = accueilAvecMesuresEtObjectifs()
+        const accueil = accueilAvecObjectifs()
 
         poserLeTemoin(cleAuHasard())
         poserLeTitulaire(7)
@@ -1237,14 +1236,58 @@ describe('les props qu’aucune copie ne garde', () => {
 
         const partielle = { ...accueil, props: { ...accueil.props, analyticalStats: { weeklyVolume: 1200 } } }
 
-        expect(await onglet.completerUneCopie(partielle, ['latestWeight', 'activeGoals'])).toBe('sans-props')
+        expect(await onglet.completerUneCopie(partielle, ['activeGoals'])).toBe('sans-props')
         expect(await onglet.completerUneCopie(partielle, ['activeGoals', 'analyticalStats'])).toBe('ecrite')
 
         const lue = await onglet.lireUneCopie('/dashboard')
 
         expect(lue.page.props.analyticalStats).toEqual({ weeklyVolume: 1200 })
-        expect(lue.page.props).not.toHaveProperty('latestWeight')
         expect(lue.page.props).not.toHaveProperty('activeGoals')
+    })
+
+    /** Progrès tel que le serveur le rend : la pesée, la variation, la masse grasse, et le groupe différé qui porte leurs historiques. */
+    const progresAvecMesures = () =>
+        pageDe({
+            url: '/stats',
+            component: 'Stats/Index',
+            deferredProps: { default: ['deferredData'] },
+            props: {
+                latestWeight: '78.40',
+                weightChange: -1.3,
+                bodyFat: 17.8,
+                exercises: [{ id: 4, name: 'Développé couché' }],
+                selectedPeriod: '30j',
+            },
+        })
+
+    it('ne range de Progrès ni la pesée, ni la variation, ni la masse grasse, ni leurs historiques, par aucune des deux écritures', async () => {
+        const onglet = ouvrirUnOnglet()
+        const progres = progresAvecMesures()
+        const differee = {
+            body: { weightHistory: [{ date: '2026-11-01', weight: 79.7 }], bodyFatHistory: [] },
+            performance: {},
+        }
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+
+        expect(await onglet.ecrireUneCopie(progres)).toBe('ecrite')
+
+        const partielle = { ...progres, props: { ...progres.props, deferredData: differee } }
+
+        expect(await onglet.completerUneCopie(partielle, ['deferredData'])).toBe('sans-props')
+        expect(await onglet.completerUneCopie(partielle, ['latestWeight', 'weightChange', 'bodyFat'])).toBe(
+            'sans-props',
+        )
+
+        const lue = await onglet.lireUneCopie('/stats')
+
+        expect(Object.keys(lue.page.props).sort()).toEqual(['auth', 'errors', 'exercises', 'selectedPeriod'])
+        expect(Object.keys(lue.datesDesProps).sort()).toEqual(['auth', 'errors', 'exercises', 'selectedPeriod'])
+        expect(JSON.stringify(lue.page.props)).not.toMatch(
+            /78\.40|79\.7|17\.8|latestWeight|weightChange|bodyFat|weightHistory/,
+        )
+        expect(lue.page.props).not.toHaveProperty('deferredData')
     })
 
     it('ne les reprend jamais d’une copie qui les portait encore, ni comme props différées', async () => {
@@ -1257,7 +1300,6 @@ describe('les props qu’aucune copie ne garde', () => {
         await onglet.ecrireUneCopie(accueil)
         await reecrireLaCopie(cle, '/dashboard', (contenu) => {
             contenu.page.props.activeGoals = [{ title: 'Tour de taille à 80 cm' }]
-            contenu.page.props.latestWeight = '78.40'
             contenu.page.props.analyticalStats = { weeklyVolume: 900 }
         })
 
@@ -1272,7 +1314,7 @@ describe('les props qu’aucune copie ne garde', () => {
         expect(recrite.page.props).not.toHaveProperty('activeGoals')
 
         await reecrireLaCopie(cle, '/dashboard', (contenu) => {
-            contenu.page.props.latestWeight = '78.40'
+            contenu.page.props.activeGoals = [{ title: 'Tour de taille à 80 cm' }]
         })
         instant += 60_000
 
@@ -1282,7 +1324,7 @@ describe('les props qu’aucune copie ne garde', () => {
                 ['analyticalStats'],
             ),
         ).toBe('ecrite')
-        expect((await onglet.lireUneCopie('/dashboard')).page.props).not.toHaveProperty('latestWeight')
+        expect((await onglet.lireUneCopie('/dashboard')).page.props).not.toHaveProperty('activeGoals')
     })
 })
 

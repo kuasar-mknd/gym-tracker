@@ -248,6 +248,7 @@ const PLEIN_ECRAN = [
 /** Les utilitaires de la feuille qui couvrent tout l'écran, pour la même raison. */
 const UTILITAIRES_PLEIN_ECRAN = {
     'glass-overlay': 'le voile flouté derrière une fenêtre',
+    'voile-de-feuille': 'le voile léger derrière un tiroir ou une feuille',
 }
 
 /**
@@ -594,7 +595,8 @@ describe('les zones sûres', () => {
     })
 
     it('ne borne aucune fenêtre de la feuille par la hauteur de l’écran', () => {
-        const bornes = UTILITAIRES.filter(({ nom }) => !nom.startsWith('hauteur-sure-'))
+        // `hauteur-max-tiroir` compte la zone sûre du haut et la déborde en bas à dessein (`marge-de-feuille`).
+        const bornes = UTILITAIRES.filter(({ nom }) => !nom.startsWith('hauteur-sure-') && nom !== 'hauteur-max-tiroir')
             .filter(({ corps }) => /max-height:[^;]*\b\d+(?:d|s|l)?vh\b/.test(corps))
             .map(({ nom }) => nom)
 
@@ -715,28 +717,24 @@ const basculesDeLaSource = (source, vue = true) =>
  */
 const BASCULES_DE_MISE_EN_PAGE = [
     {
-        fichier: 'resources/js/Components/Journal/JournalList.vue',
-        bascule: 'sm:hidden',
+        fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
+        bascule: 'max-sm:hidden',
         nombre: 1,
-        raison: 'l’humeur d’une entrée, dans la colonne de la date tant que celle-ci est une ligne',
-    },
-    {
-        fichier: 'resources/js/Components/Journal/JournalList.vue',
-        bascule: 'hidden sm:block',
-        nombre: 1,
-        raison: 'la même humeur, à côté des étiquettes quand la colonne de la date passe à gauche',
+        raison:
+            'les boutons « Modifier » et « Supprimer » de la souris ; au doigt, seul le glissement les révèle (#2506) ; ' +
+            '`max-sm:hidden` et non `hidden sm:flex`, que le `flex` du groupe battait',
     },
     {
         fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
         bascule: 'sm:hidden',
         nombre: 1,
-        raison: 'le bouton « Modifier » d’un exercice au doigt, qui supprime d’un glissement',
+        raison: 'le chevron qui laisse deviner le glissement, au doigt seulement : dès sm les boutons de la souris sont là, et il ne désigne plus rien',
     },
     {
-        fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
-        bascule: 'hidden sm:inline-flex',
-        nombre: 2,
-        raison: '« Modifier » et « Supprimer » côte à côte dès sm, à la place du précédent',
+        fichier: 'resources/js/Components/UI/Modal.vue',
+        bascule: 'sm:hidden',
+        nombre: 1,
+        raison: 'la poignée du tiroir, qui ne sert qu’au doigt : dès sm la fenêtre est centrée, sans glissement',
     },
     {
         fichier: 'resources/js/Components/Workout/RangeeDeSerie.vue',
@@ -937,7 +935,7 @@ describe('la garde des zones sûres', () => {
         'z-modale px-sure-4 py-sure-6 sm:px-sure-0 fixed inset-0',
         'sticky top-0 pt-sure-4 pb-4',
         'z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80',
-        'titre-carte top-sous-entete sticky z-10',
+        'titre-plat top-sous-entete sticky z-10',
         'fixed bottom-sure-36 left-sure-4 right-sure-4 inset-ring-2',
         'fixed left-1/2 top-sure-4 -translate-x-1/2',
         'fixed',

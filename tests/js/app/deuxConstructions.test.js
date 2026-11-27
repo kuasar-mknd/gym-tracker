@@ -63,19 +63,19 @@ const fichierDeLaPage = (nom, hachage) =>
  */
 const construction = (hachage) => {
     const pages = pointsDeDepartDuPrecache().slice(1)
-    const statistiques = `${DOSSIER_DES_PAGES}Stats/Index.vue`
+    const objectifs = `${DOSSIER_DES_PAGES}Goals/Index.vue`
     const manifeste = {
         [ENTREE_DE_L_APPLICATION]: {
             file: `assets/main-${hachage}.js`,
             isEntry: true,
             css: [`assets/main-${hachage}.css`],
             imports: ['_vue-core-Commun.js'],
-            dynamicImports: [...pages, statistiques, `_SyncService-${hachage}.js`],
+            dynamicImports: [...pages, objectifs, `_SyncService-${hachage}.js`],
         },
         '_vue-core-Commun.js': { file: 'assets/vue-core-Commun.js' },
         [`_SyncService-${hachage}.js`]: { file: `assets/SyncService-${hachage}.js` },
         [`_BaseChart-${hachage}.js`]: { file: `assets/BaseChart-${hachage}.js` },
-        [statistiques]: { file: fichierDeLaPage(statistiques, hachage) },
+        [objectifs]: { file: fichierDeLaPage(objectifs, hachage) },
     }
 
     for (const page of pages) {
@@ -283,7 +283,7 @@ describe('une page restée sur la construction précédente', () => {
 
         expect(misDeCote).not.toContain(premiere.fichier('assets/WeeklyVolumeChart-Un.js'))
         expect(misDeCote).not.toContain(premiere.fichier('assets/BaseChart-Un.js'))
-        expect(misDeCote).not.toContain(premiere.page('Stats/Index'))
+        expect(misDeCote).not.toContain(premiere.page('Goals/Index'))
         expect(misDeCote).not.toContain(`${ORIGINE}/build/hors-ligne.html`)
     })
 })

@@ -1,8 +1,9 @@
-import { getCurrentInstance, onMounted, onUnmounted, ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, onUnmounted, ref } from 'vue'
 import { router, useForm, usePage } from '@inertiajs/vue3'
 import { attendreAuPlus } from '@/Utils/attendreAuPlus'
 import { estUneCopie } from '@/Utils/copiesServies'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
+import { http } from '@/Utils/http'
 import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
 import { FIN_NON_ENREGISTREE } from '@/Utils/seanceEnAttente'
 import { estUneFinDeSeance } from '@/Utils/seanceEtFile'
@@ -91,6 +92,19 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
     /** La fin est partie, au serveur ou dans la file : elle ne s'abandonne plus. */
     let cloturePartie = false
 
+    /**
+     * Le bilan de fin (#2434), ouvert sur la page de la séance une fois close :
+     * null tant qu'il n'y en a pas. `enAttente` : la fin attend la file, sans
+     * records ni réouverture. Sinon, les records de poids et la limite de
+     * « Reprendre » que la réponse du serveur donne.
+     *
+     * @type {import('vue').Ref<null|{enAttente: boolean, records: Array<{exercice: string, valeur: number}>, peutReprendre: boolean, repriseJusqua: string|null, proposer: boolean}>}
+     */
+    const bilanDeFin = ref(null)
+
+    /** La réouverture est partie : un second appui n'en lance pas une autre. */
+    const repriseEnCours = ref(false)
+
     const finishWorkout = () => {
         ecrituresEnAttente.value = 0
         showFinishModal.value = true
@@ -129,35 +143,171 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
         localWorkout.value.ended_at = fin
         localWorkout.value._finEnAttente = queueId
         showFinishModal.value = false
+        bilanDeFin.value = { enAttente: true, records: [], peutReprendre: false, repriseJusqua: null, proposer: false }
         triggerHaptic('success')
     }
 
     /**
-     * Le serveur a clos la séance : l'accueil, et l'invitation aux
-     * notifications quand la réponse le dit. Une donnée flash posée par la
-     * page (`router.flash`), qu'Inertia ne range jamais dans l'historique :
-     * Retour puis Avance ne la remontrent pas, et l'API, que la file rejoue,
-     * n'en pose aucune dans la session.
+     * Le serveur a clos la séance : le bilan s'ouvre sur sa page (#2434), avec
+     * ses records et la limite de « Reprendre » (`meta` de la réponse), et
+     * « Fermer » mène à l'accueil (`fermerLeBilan`). L'invitation aux
+     * notifications se garde pour lui : une donnée flash posée par la page
+     * (`router.flash`), qu'Inertia ne range jamais dans l'historique : Retour
+     * puis Avance ne la remontrent pas, et l'API, que la file rejoue, n'en pose
+     * aucune dans la session.
      *
      * @param {object|undefined} reponse
      * @param {string} fin l'heure de la fin : celle du geste, ou l'heure choisie
      */
     const apresLaFin = (reponse, fin) => {
+        const meta = reponse?.data?.meta ?? {}
+
         localWorkout.value.ended_at = reponse?.data?.data?.ended_at ?? fin
         delete localWorkout.value._finEnAttente
         showFinishModal.value = false
+        bilanDeFin.value = {
+            enAttente: false,
+            records: [],
+            peutReprendre: meta.peut_reprendre === true,
+            repriseJusqua: meta.reprise_jusqu_a ?? null,
+            proposer: meta.proposer_les_notifications === true,
+        }
         triggerHaptic('success')
+        void chargerLesRecords(bilanDeFin.value, reponse?.data?.data?.id ?? idReelDeLaSeance())
+    }
 
-        const proposer = reponse?.data?.meta?.proposer_les_notifications === true
+    /**
+     * Les records de poids de la séance, lus une fois le bilan ouvert (#2434) :
+     * une lecture à part (`workouts.records`), hors de la réponse de la fin, que
+     * la file hors ligne rejoue aussi. Un échec ne dit rien : le bilan se passe de
+     * records. Un bilan refermé, ou remplacé entre-temps, n'en reçoit pas.
+     *
+     * @param {object} bilan Le bilan ouvert, tel qu'`apresLaFin` l'a posé.
+     * @param {number|string|null} seance
+     */
+    const chargerLesRecords = async (bilan, seance) => {
+        if (seance === null || seance === undefined) {
+            return
+        }
+
+        try {
+            const reponse = await http({ method: 'get', url: route('workouts.records', { workout: seance }) })
+
+            if (bilanDeFin.value === bilan && Array.isArray(reponse.data?.records)) {
+                bilanDeFin.value = { ...bilan, records: reponse.data.records }
+            }
+        } catch {
+            // Sans records, le bilan reste complet : durée, volume, séries.
+        }
+    }
+
+    /**
+     * « Fermer » : un bilan en file se referme sur la séance, que l'accueil
+     * n'a peut-être pas en copie ; un bilan du serveur mène à l'accueil, avec
+     * l'invitation aux notifications quand la réponse la portait.
+     */
+    const fermerLeBilan = () => {
+        const bilan = bilanDeFin.value
+
+        if (bilan === null || repriseEnCours.value) {
+            return
+        }
+
+        if (bilan.enAttente) {
+            bilanDeFin.value = null
+
+            return
+        }
 
         router.visit(route('dashboard'), {
             onSuccess: () => {
-                if (proposer) {
+                if (bilan.proposer) {
                     router.flash('proposerLesNotifications', true)
                 }
             },
+            onFinish: () => (bilanDeFin.value = null),
         })
     }
+
+    /** Le délai que le serveur a donné est passé : « Reprendre » disparaît, il refuserait. */
+    const retirerLaRepriseSiPerimee = (bilan) => {
+        if (bilan.repriseJusqua === null || Date.now() <= new Date(bilan.repriseJusqua).getTime()) {
+            return false
+        }
+
+        bilan.peutReprendre = false
+        bilan.reprisePerimee = true
+
+        return true
+    }
+
+    /**
+     * « Reprendre » : le serveur rouvre la séance (`workouts.reopen`, quinze
+     * minutes après la fin) et la page se redemande à lui, séance ouverte. Passé
+     * le délai que le serveur a donné, le bouton disparaît sans l'appeler : il
+     * refuserait. Rien ne se joue hors ligne : sans réseau, le bilan n'offre pas
+     * « Reprendre ».
+     */
+    const reprendreLaSeance = () => {
+        const bilan = bilanDeFin.value
+        const realWorkoutId = idReelDeLaSeance()
+
+        if (
+            bilan === null ||
+            bilan.enAttente ||
+            !bilan.peutReprendre ||
+            repriseEnCours.value ||
+            realWorkoutId === null
+        ) {
+            return
+        }
+
+        if (retirerLaRepriseSiPerimee(bilan)) {
+            return
+        }
+
+        repriseEnCours.value = true
+        router.post(
+            route('workouts.reopen', { workout: realWorkoutId }),
+            {},
+            {
+                preserveScroll: true,
+                // Une autre séance déjà ouverte reçoit la personne à sa place : sa page repart de zéro.
+                preserveState: false,
+                onSuccess: () => (bilanDeFin.value = null),
+                onHttpException: (reponse) => retirerLaRepriseRefusee(reponse?.status),
+                onError: (erreurs) => retirerLaRepriseRefusee(Object.keys(erreurs ?? {}).length > 0 ? 422 : null),
+                onFinish: () => (repriseEnCours.value = false),
+            },
+        )
+    }
+
+    /**
+     * Le serveur refuse la reprise (403 : le délai est passé, ou l'horloge de
+     * l'appareil retardait ; 422) : « Reprendre » disparaît du bilan, qui en dit
+     * la raison en une phrase, au lieu de la page d'erreur brute. Un autre échec
+     * garde sa réponse ordinaire.
+     *
+     * @returns {boolean|void} Faux garde l'erreur loin de la page d'erreur d'Inertia.
+     */
+    const retirerLaRepriseRefusee = (statut) => {
+        if (![403, 422].includes(statut) || bilanDeFin.value === null) {
+            return
+        }
+
+        bilanDeFin.value = { ...bilanDeFin.value, peutReprendre: false, reprisePerimee: true }
+
+        return false
+    }
+
+    /** Ce que `BilanDeFinDeSeance` reçoit : son état, la séance close, et ses deux gestes. */
+    const liaisonDuBilan = computed(() => ({
+        bilan: bilanDeFin.value,
+        seance: localWorkout.value,
+        enCours: repriseEnCours.value,
+        onFermer: fermerLeBilan,
+        onReprendre: reprendreLaSeance,
+    }))
 
     /**
      * « Terminer » (#2049) : l'heure du geste, prise au « Confirmer » avant
@@ -360,6 +510,11 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
 
         delete localWorkout.value._finEnAttente
 
+        // « Enregistrée sur cet appareil » n'est plus vrai : la fin est partie, ou refusée (#2434).
+        if (bilanDeFin.value?.enAttente) {
+            bilanDeFin.value = null
+        }
+
         if (event.type === 'sync:replayed') {
             localWorkout.value.ended_at = detail.data?.ended_at ?? localWorkout.value.ended_at
 
@@ -431,6 +586,11 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
         finishWorkout,
         annulerLaCloture,
         confirmFinishWorkout,
+        bilanDeFin,
+        repriseEnCours,
+        liaisonDuBilan,
+        fermerLeBilan,
+        reprendreLaSeance,
         showSettingsModal,
         settingsForm,
         updateSettings,

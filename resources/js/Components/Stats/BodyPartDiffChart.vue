@@ -1,5 +1,5 @@
 <script setup>
-import { jeton, jetonTransparent } from '@/Utils/couleurs'
+import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
 import { grille } from './chartConfig'
@@ -22,24 +22,7 @@ const datasets = computed(() => [
     {
         label: 'Différence',
         data: differences.value.map((item) => item.diff),
-        backgroundColor: (context) => {
-            const value = context.raw
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-
-            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            if (value > 0) {
-                // Green/Cyan for growth
-                gradient.addColorStop(0, jeton('trend-up'))
-                gradient.addColorStop(1, jetonTransparent('trend-up', 0.55))
-            } else {
-                // Red/Orange for decrease
-                gradient.addColorStop(0, jeton('trend-down'))
-                gradient.addColorStop(1, jetonTransparent('trend-down', 0.55))
-            }
-            return gradient
-        },
+        backgroundColor: (context) => (context.raw > 0 ? jeton('trend-up') : jeton('trend-down')),
         borderRadius: 6,
         borderSkipped: false,
     },
@@ -70,8 +53,6 @@ const axeX = { grid: { display: true, ...grille() } }
         :datasets="datasets"
         hauteur="h-64"
         index-axis="y"
-        lueur="shadow-cast"
-        :lueur-opacite="0.05"
         :infobulle="infobulle"
         :axe-x="axeX"
         :axe-y="{ grid: { display: false } }"

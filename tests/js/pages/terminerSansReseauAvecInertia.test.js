@@ -105,6 +105,14 @@ it('met la fin en file derrière les séries, à l’heure du geste, montre la s
     await cliquer('[dusk="confirm-finish-button"]')
     await vi.waitUntil(() => fileDurable().length === 3)
     vi.useRealTimers()
+    // Le bilan dit où la fin est : sur l'appareil. Ni records ni « Reprendre » sans réseau (#2434).
+    await vi.waitUntil(() => present('dialog[open] [dusk="bilan-de-fin"]'))
+    expect(document.querySelector('[dusk="bilan-de-fin-sur-l-appareil"]').textContent.trim()).toBe(
+        'Enregistrée sur cet appareil',
+    )
+    expect(present('[dusk="bilan-de-fin-reprendre"]')).toBe(false)
+    expect(present('[dusk="bilan-de-fin-records"]')).toBe(false)
+    await cliquer('[dusk="bilan-de-fin-fermer"]')
     await vi.waitUntil(() => !present('dialog[open]'))
 
     const [premiere, seconde, fin] = fileDurable()

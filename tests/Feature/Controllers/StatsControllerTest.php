@@ -20,15 +20,15 @@ test('authenticated user can view stats dashboard', function (): void {
         ->assertInertia(
             fn (Assert $page): Assert => $page
                 ->component('Stats/Index')
-                ->has('latestWeight')
-                ->has('weightChange')
-                ->has('bodyFat')
-                ->has('exercises')
+                ->missing('latestWeight')
+                ->missing('weightChange')
+                ->missing('bodyFat')
+                ->missing('exercises')
                 ->has('selectedPeriod')
         );
 });
 
-test('stats dashboard loads deferred performance and body stats props', function (): void {
+test('stats dashboard loads deferred performance props and no body stats', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -40,8 +40,33 @@ test('stats dashboard loads deferred performance and body stats props', function
                 ->loadDeferredProps(
                     fn (Assert $page): Assert => $page
                         ->has('deferredData.performance')
-                        ->has('deferredData.body')
+                        ->missing('deferredData.body')
                 )
+        );
+});
+
+test('stats dashboard sert le signal du compte neuf dans la prop différée, jamais en prop racine', function (): void {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertInertia(
+            fn (Assert $page): Assert => $page
+                ->component('Stats/Index')
+                ->missing('aucuneSeanceFaite')
+                ->loadDeferredProps(
+                    fn (Assert $differees): Assert => $differees->where('deferredData.aucuneSeanceFaite', true)
+                )
+        );
+
+    \App\Models\Workout::withoutEvents(fn () => \App\Models\Workout::factory()->faite()->create(['user_id' => $user->id]));
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertInertia(
+            fn (Assert $page): Assert => $page->loadDeferredProps(
+                fn (Assert $differees): Assert => $differees->where('deferredData.aucuneSeanceFaite', false)
+            )
         );
 });
 
@@ -114,39 +139,13 @@ test('une période en chaîne se lit comme avant, période inconnue comprise', f
     'zéro, une chaîne que PHP tient pour fausse' => ['period=0', '0', 30],
 ]);
 
-test('authenticated user can fetch progress for their exercise', function (): void {
+test('la courbe du 1RM n’a plus de route de statistiques : la fiche de l’exercice la porte', function (): void {
     $user = User::factory()->create();
     $exercise = \App\Models\Exercise::factory()->create(['user_id' => $user->id]);
 
-    actingAs($user)
-        ->get(route('stats.exercise', $exercise))
-        ->assertStatus(200)
-        ->assertJsonStructure(['progress']);
-});
-
-test('unauthenticated user cannot fetch exercise progress', function (): void {
-    $exercise = \App\Models\Exercise::factory()->create();
-
-    get(route('stats.exercise', $exercise))
-        ->assertRedirect(route('login'));
-});
-
-test('user gets 404 for non-existent exercise progress', function (): void {
-    $user = User::factory()->create();
+    expect(\Illuminate\Support\Facades\Route::has('stats.exercise'))->toBeFalse();
 
     actingAs($user)
-        ->get(route('stats.exercise', 9999))
-        ->assertStatus(404);
-});
-
-test('user cannot fetch progress for another users exercise', function (): void {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-    $exercise = \App\Models\Exercise::factory()->create(['user_id' => $otherUser->id]);
-
-    actingAs($user)
-        ->get(route('stats.exercise', $exercise))
-        ->assertNotFound()
-        // Un 404 qui rendrait quand meme la progression serait pire qu'un 403.
-        ->assertDontSee('progress');
+        ->get('/stats/exercise/'.$exercise->id)
+        ->assertNotFound();
 });

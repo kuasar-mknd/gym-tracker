@@ -266,7 +266,7 @@ describe('ce que le filet laisse passer', () => {
 })
 
 describe('un réseau qui ne répond pas', () => {
-    it('au bout de huit secondes, « Le réseau ne répond pas », et « Annuler » arrête la visite', async () => {
+    it('au bout de huit secondes, « Réseau lent. Réessaie dans un instant. », et « Annuler » arrête la visite', async () => {
         vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
         reseau.mode = 'muet'
         let annulee = false
@@ -280,6 +280,7 @@ describe('un réseau qui ne répond pas', () => {
 
         await vi.advanceTimersByTimeAsync(1)
 
+        expect(RESEAU_LENT).toBe('Réseau lent. Réessaie dans un instant.')
         expect(annonces).toEqual([{ message: RESEAU_LENT, annuler: expect.any(Function) }])
 
         annonces[0].annuler()

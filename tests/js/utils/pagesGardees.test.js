@@ -125,7 +125,7 @@ describe('une clé de la liste, sans composant', () => {
     })
 
     it.each([
-        ['une autre page', '/stats'],
+        ['une autre page', '/goals'],
         ['une page de modification', '/workouts/12/edit'],
         ['un identifiant qui n’en est pas un', '/workouts/0'],
         // Une séance démarrée sans réseau (#2049) : construite depuis la file, jamais copiée.
@@ -154,21 +154,38 @@ describe('la séance en cours', () => {
 })
 
 describe('les props qu’aucune copie ne garde', () => {
-    it('écartent le dernier poids et les objectifs de l’accueil, et rien d’autre', () => {
-        expect(propJamaisGardee('Dashboard', 'latestWeight')).toBe(true)
+    it('écartent les objectifs de l’accueil, et rien d’autre', () => {
+        expect(propJamaisGardee('Dashboard', 'latestWeight')).toBe(false)
         expect(propJamaisGardee('Dashboard', 'activeGoals')).toBe(true)
         expect(propJamaisGardee('Dashboard', 'recentWorkouts')).toBe(false)
         expect(propJamaisGardee('Workouts/Show', 'latestWeight')).toBe(false)
         expect(
             propsGardables('Dashboard', {
                 auth: { user: { id: 7 } },
-                latestWeight: '78.40',
                 activeGoals: [],
                 recentPRs: [],
             }),
         ).toEqual({ auth: { user: { id: 7 } }, recentPRs: [] })
         expect(propsGardables('Tools/Index', { latestWeight: '78.40' })).toEqual({ latestWeight: '78.40' })
         expect(propsGardables('Dashboard', undefined)).toEqual({})
+    })
+
+    it('écartent de Progrès la pesée, la variation, la masse grasse et le groupe différé qui porte leurs historiques', () => {
+        for (const nom of ['latestWeight', 'weightChange', 'bodyFat', 'deferredData']) {
+            expect(propJamaisGardee('Stats/Index', nom)).toBe(true)
+        }
+
+        expect(
+            propsGardables('Stats/Index', {
+                auth: { user: { id: 7 } },
+                latestWeight: '78.40',
+                weightChange: -1.3,
+                bodyFat: 17.8,
+                deferredData: { body: { weightHistory: [{ weight: 79.7 }] }, performance: { volumeTrend: [] } },
+                exercises: [{ id: 4 }],
+                selectedPeriod: '30j',
+            }),
+        ).toEqual({ auth: { user: { id: 7 } }, exercises: [{ id: 4 }], selectedPeriod: '30j' })
     })
 
     it('ne lisent pas un composant comme une clé héritée', () => {

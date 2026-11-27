@@ -5,6 +5,7 @@ import { h, reactive } from 'vue'
 import { chargerSyncService, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 import { suivreLesPagesMontees } from '../pages/pagesMontees'
 import { MODELE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const inertia = vi.hoisted(() => ({
     router: { visit: vi.fn(), push: vi.fn(), replace: vi.fn() },
@@ -202,6 +203,38 @@ describe('le verrou de l’onglet', () => {
         expect(serveur.requetes.filter((requete) => requete.url === '/api/v1/workouts')).toHaveLength(1)
         expect(inertia.router.visit).toHaveBeenCalledTimes(1)
         expect(inertia.router.visit).toHaveBeenCalledWith('/workouts/42', expect.any(Object))
+    })
+})
+
+/*
+ * Le retour haptique du bouton central (`triggerHaptic('toggle')`, parti avec lui
+ * en #2434) est passé au démarrage commun : il répond à l'appui qui démarre, une
+ * fois, et pas à l'appui que le verrou refuse.
+ */
+describe('le retour haptique du démarrage', () => {
+    it('répond une fois à l’appui qui démarre, et pas à celui que le verrou refuse', async () => {
+        vi.mocked(triggerHaptic).mockClear()
+        const { noterQueLeServeurRepond } = await import('@/composables/useEtatDuReseau')
+        noterQueLeServeurRepond()
+        serveur.reponses.push(() => new Promise(() => {}))
+
+        let demarrage
+        pages.retenir(
+            mount({
+                setup() {
+                    demarrage = module.useDemarrageDUneSeance()
+
+                    return () => h('div')
+                },
+            }),
+        )
+
+        demarrage.demarrer()
+        await flushPromises()
+        await demarrage.demarrer()
+
+        expect(triggerHaptic).toHaveBeenCalledTimes(1)
+        expect(triggerHaptic).toHaveBeenCalledWith('toggle')
     })
 })
 

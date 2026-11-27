@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Actions\Dashboard;
 
 use App\Models\User;
-use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\VolumeStatsService;
-use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,14 +18,10 @@ use Illuminate\Support\Carbon;
 final class FetchDashboardDataAction
 {
     /**
-     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  Les dernières mesures corporelles.
      * @param  \App\Services\Stats\VolumeStatsService  $volumeStats  Tendance et comparaison du volume hebdomadaire.
-     * @param  \App\Services\Stats\WorkoutStatsService  $workoutStats  Répartitions des séances.
      */
     public function __construct(
-        protected BodyStatsService $bodyStats,
-        protected VolumeStatsService $volumeStats,
-        protected WorkoutStatsService $workoutStats
+        protected VolumeStatsService $volumeStats
     ) {
     }
 
@@ -43,7 +37,6 @@ final class FetchDashboardDataAction
      * dépend, lue par le service (`.ai/rules/horloge.md`).
      *
      * @return array{
-     *     latestWeight: \Closure(): (float|string|null),
      *     recentWorkouts: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
      *     recentPRs: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
      *     activeGoals: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
@@ -52,11 +45,6 @@ final class FetchDashboardDataAction
     public function chiffresImmediats(User $user): array
     {
         return [
-            // `workoutsCount` et `thisWeekCount` sont partis : rien ne les
-            // lisait, et ils coûtaient deux requêtes à chaque ouverture. Les
-            // mesures passent par le cache : sinon la base est lue à chaque
-            // ouverture du tableau de bord.
-            'latestWeight' => fn (): float|string|null => $this->bodyStats->getLatestBodyMetrics($user)->latest_weight ?? null,
             'recentWorkouts' => fn (): \Illuminate\Database\Eloquent\Collection => $this->getRecentWorkouts($user),
             'recentPRs' => fn (): \Illuminate\Database\Eloquent\Collection => $this->getRecentPRs($user),
             'activeGoals' => fn (): \Illuminate\Database\Eloquent\Collection => $this->getActiveGoals($user),
@@ -64,16 +52,17 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * La carte hebdomadaire : le total de la semaine, sa comparaison à la
-     * précédente et la courbe de ses sept jours.
+     * La carte hebdomadaire : le total de la semaine, le nombre de ses séances,
+     * sa comparaison à la précédente à la même date et la courbe de ses sept
+     * jours.
      *
-     * Les trois se tirent d'une seule lecture de l'horloge : le total et la
+     * Tout se tire d'une seule lecture de l'horloge : le total et la
      * courbe lisaient chacun l'heure, et quand lundi commençait entre les
      * deux, la carte annonçait le total de la semaine qui s'achevait au-dessus
      * de la courbe, vide, de celle qui commençait (#2033).
      *
      * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge.
-     * @return array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
+     * @return array{stats: array{current_week_volume: float, percentage: float|null, sessions_count: int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
      */
     public function getWeeklyVolumeData(User $user, ?Carbon $maintenant = null): array
     {
@@ -84,16 +73,15 @@ final class FetchDashboardDataAction
             'stats' => [
                 'current_week_volume' => $stats->current_volume,
                 'percentage' => $stats->percentage,
+                'sessions_count' => $stats->sessions_count ?? 0,
             ],
             'trend' => $this->volumeStats->getWeeklyVolumeTrend($user, $maintenant),
         ];
     }
 
     /**
-     * Les analyses du tableau de bord, réunies en une seule prop différée.
-     *
-     * Séparées, elles faisaient deux requêtes XHR et occupaient deux clefs de
-     * cache ; ensemble, une seule.
+     * Les analyses du tableau de bord, réunies en une seule prop différée : la
+     * carte de la semaine, seule analyse que l'accueil garde.
      *
      * La clef porte la semaine de la carte hebdomadaire qu'elle garde, tirée du
      * même instant que la carte : sans elle, le lundi juste après minuit
@@ -102,8 +90,7 @@ final class FetchDashboardDataAction
      * la veille avant que le mois n'entre dans les clefs mensuelles (#1955).
      *
      * @return array{
-     *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>},
-     *     workoutDistributions: array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
+     *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|null, sessions_count: int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
      * }
      */
     public function getAnalyticalStats(User $user): array
@@ -111,21 +98,12 @@ final class FetchDashboardDataAction
         $maintenant = now();
 
         return \Illuminate\Support\Facades\Cache::remember(
-            ClesDeStats::seances($user, 'dashboard_analytical.'.$maintenant->copy()->startOfWeek()->format('Y-W')),
+            ClesDeStats::seances($user, 'dashboard_weekly_card.'.$maintenant->copy()->startOfWeek()->format('Y-W')),
             $maintenant->copy()->addMinutes(10),
             fn (): array => [
                 'weeklyVolume' => $this->getWeeklyVolumeData($user, $maintenant),
-                'workoutDistributions' => $this->repartitionsDesSeances($user),
             ]
         );
-    }
-
-    /**
-     * @return array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
-     */
-    public function repartitionsDesSeances(User $user): array
-    {
-        return $this->workoutStats->repartitionsDesSeances($user, 90);
     }
 
     /**

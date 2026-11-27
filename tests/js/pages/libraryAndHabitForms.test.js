@@ -405,7 +405,7 @@ describe('the habit form', () => {
         await byLabel(wrapper, 'Ajouter une habitude').trigger('click')
 
         expect(wrapper.find('.modal').exists()).toBe(true)
-        expect(wrapper.find('#habit-form-title').text()).toBe('Nouvelle Habitude')
+        expect(wrapper.find('#habit-form-title').text()).toBe('Nouvelle habitude')
     })
 
     it('opens from the invitation shown to a user with no habits', async () => {
@@ -414,7 +414,7 @@ describe('the habit form', () => {
         expect(wrapper.text()).toContain('Aucune habitude')
         await byText(wrapper, 'Créer ma première habitude').trigger('click')
 
-        expect(wrapper.find('#habit-form-title').text()).toBe('Nouvelle Habitude')
+        expect(wrapper.find('#habit-form-title').text()).toBe('Nouvelle habitude')
     })
 
     it('opens on an existing habit under a different title', async () => {

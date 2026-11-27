@@ -71,11 +71,12 @@ Pour s'ouvrir plus tard sans réseau, l'application garde sur l'appareil une cop
 
 | Copiées | Jamais copiées |
 | --- | --- |
-| l'accueil ; la séance en cours et les trois dernières séances closes visitées ; la liste des séances ; la liste des modèles, avec de quoi lancer chacun sans réseau ; la bibliothèque d'exercices ; le profil ; les outils ; le minuteur d'intervalles ; les disques ; le 1RM ; l'échauffement | le journal, les mesures, la santé, les habitudes, les compléments, les notifications, les objectifs ; tout formulaire ; toute page d'invité |
+| l'accueil ; la séance en cours et les trois dernières séances closes visitées ; la liste des séances ; la liste des modèles, avec de quoi lancer chacun sans réseau ; la bibliothèque d'exercices ; la racine de Progrès, sans une seule mesure ; le profil ; les outils ; le minuteur d'intervalles ; les disques ; le 1RM ; l'échauffement | le journal, les mesures, la santé, les habitudes, les compléments, les notifications, les objectifs ; tout formulaire ; toute page d'invité |
 
 Deux précisions :
 
-- La copie de l'accueil ne garde ni le dernier poids ni les objectifs en cours qu'il affiche.
+- La copie de l'accueil ne garde pas les objectifs en cours qu'il affiche.
+- La copie de Progrès ne garde ni le poids, ni sa variation, ni la masse grasse, ni les historiques : hors ligne, la page dit que les mesures reviennent avec le réseau.
 - Aucune copie ne garde le message qu'une page affiche après un enregistrement.
 
 ### Où et comment elles sont gardées
@@ -125,8 +126,8 @@ Une réponse arrivée avant les cinq secondes passe toujours devant la copie.
 
 Ce que la personne voit :
 
-- **Un bandeau** date la copie (« Hors ligne · copie du … »), avec « Réessayer ».
-- **Ce que la copie n'a pas** (le dernier poids, les objectifs, les graphiques, ce que la page charge après elle) est dit indisponible hors ligne.
+- **Un bandeau** dit l'état (« Hors ligne », ou « Réseau lent ») et date la copie (« Copie du 20 nov. à 05:02 »), avec « Réessayer ».
+- **Ce que la copie n'a pas** (les objectifs, les graphiques, ce que la page charge après elle) est dit indisponible hors ligne.
 - **Les boutons qui enregistreraient** se désactivent et disent pourquoi. Rien ne part d'une copie, sauf la déconnexion et ce qui passe par la file : démarrer ou terminer une séance, et lancer un modèle tel que la copie le montre.
 - **La séance** garde ses modifications en file, comme avant.
 - **Un lien vers une autre page** laisse la page en place et dit qu'elle n'est pas disponible sans réseau.

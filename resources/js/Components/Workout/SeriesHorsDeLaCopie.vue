@@ -45,10 +45,10 @@ const copieDepassee = computed(() => {
     <p
         v-if="copieDepassee !== null"
         role="status"
-        class="info-fill mb-4 flex items-start gap-2 rounded-xl p-3 text-sm font-medium"
+        class="bg-surface-card border-accent-warning/60 text-text-main mb-4 flex items-start gap-2 rounded-xl border p-3 text-sm font-medium"
         dusk="series-hors-de-la-copie"
     >
-        <GlassIcon name="task_alt" size="sm" class="shrink-0" />
+        <GlassIcon name="task_alt" size="sm" class="text-accent-warning-deep shrink-0" />
         <span>
             Des séries enregistrées après {{ heureCourte(new Date(copieDepassee)) }} n'apparaissent pas ici : elles sont
             bien enregistrées.

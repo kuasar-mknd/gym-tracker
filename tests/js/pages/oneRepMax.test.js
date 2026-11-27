@@ -114,4 +114,16 @@ describe('the one-rep-max table', () => {
 
         expect(rows(wrapper)).toHaveLength(0)
     })
+
+    it('scrolls sideways on a narrow screen instead of cutting its last column off', async () => {
+        const wrapper = mountPage()
+
+        await enter(wrapper, 100, 5)
+
+        const conteneur = wrapper.get('table').element.parentElement
+
+        expect(conteneur.className).toContain('overflow-x-auto')
+        expect(conteneur.className).not.toContain('overflow-hidden')
+        expect(conteneur.getAttribute('tabindex')).toBe('0')
+    })
 })

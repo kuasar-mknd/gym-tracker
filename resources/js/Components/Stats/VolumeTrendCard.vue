@@ -25,9 +25,9 @@ const totalVolume = computed(() => {
 <template>
     <!-- Volume Trend Chart -->
     <GlassCard class="stagger-3 animate-slide-up">
-        <div class="mb-4 flex items-center justify-between">
-            <div>
-                <h3 class="titre-carte">Évolution du Volume</h3>
+        <div class="mb-4 flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <h3 class="titre-plat">Évolution du volume</h3>
                 <p class="text-text-muted text-xs font-semibold">
                     {{
                         currentPeriod === '7j'
@@ -41,16 +41,16 @@ const totalVolume = computed(() => {
                     derniers jours
                 </p>
             </div>
-            <div class="text-right">
-                <div class="text-text-muted text-xs font-black tracking-wider uppercase">Total</div>
-                <div class="font-display text-accent-primary-deep text-2xl font-black">
+            <div class="shrink-0 text-right whitespace-nowrap">
+                <div class="etiquette">Total</div>
+                <div class="font-display text-accent-primary-deep text-2xl font-semibold">
                     {{ totalVolume === null ? '—' : nombre(totalVolume, 0) }}
                     <span v-if="totalVolume !== null" class="text-text-muted text-sm">kg</span>
                 </div>
             </div>
         </div>
         <div class="h-48">
-            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+            <Deferred data="deferredData">
                 <template #rescue>
                     <IndisponibleHorsLigne />
                 </template>

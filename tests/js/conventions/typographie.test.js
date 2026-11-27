@@ -6,10 +6,10 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
 /**
  * Les titres avaient 28 combinaisons de classes, et le même rôle — le titre
  * d'une carte — s'écrivait tantôt en capitales italiques, tantôt en casse de
- * phrase, d'un écran à l'autre (#1783). La charte porte trois tailles, plus le
- * sur-titre : un titre en choisit une, et n'écrit plus sa typographie.
+ * phrase, d'un écran à l'autre (#1783). La charte porte trois rôles : un titre
+ * en choisit un, et n'écrit plus sa typographie.
  */
-const ROLES = ['titre-page', 'titre-section', 'titre-carte', 'sur-titre']
+const ROLES = ['titre-ecran', 'titre-plat', 'etiquette']
 
 /**
  * Ce qui place ou colore, par opposition à ce qui compose. `sr-only` cache aux
@@ -22,6 +22,10 @@ const MISE_EN_PAGE =
 const COULEUR =
     /^(text-(text|accent|surface)-|text-transparent|bg-clip-text|bg-linear|from-|via-|to-|text-gradient|drop-shadow)/
 
+/**
+ * `titre-ecran`, `titre-plat` et `etiquette` sont les trois rôles de la charte :
+ * casse de phrase, graisse 600.
+ */
 it('ne compose un titre que par un rôle de la charte', () => {
     const fautifs = collectSourceFiles({ extensions: ['.vue'] }).flatMap((fichier) => {
         const source = readFileSync(fichier, 'utf8')
@@ -44,7 +48,26 @@ it('ne compose un titre que par un rôle de la charte', () => {
             )
     })
 
-    expect(fautifs, `un titre porte titre-page, titre-section, titre-carte ou sur-titre, et rien d'autre`).toEqual([])
+    expect(
+        fautifs,
+        `un titre porte un rôle de la charte (titre-ecran, titre-plat, etiquette), et rien d'autre`,
+    ).toEqual([])
+})
+
+/**
+ * Les anciens rôles en capitales italiques ont disparu d'app.css : leur nom ne
+ * revient dans aucune source de resources/js.
+ */
+it('ne réemploie aucun des anciens rôles de titre', () => {
+    const fautifs = collectSourceFiles({ extensions: ['.vue', '.js'] })
+        .filter((fichier) =>
+            /\b(?:titre-page|titre-section|titre-carte|sur-titre|font-display-label)\b/.test(
+                readFileSync(fichier, 'utf8'),
+            ),
+        )
+        .map((fichier) => fichier.replace(jsRoot, 'resources/js'))
+
+    expect(fautifs).toEqual([])
 })
 
 /**

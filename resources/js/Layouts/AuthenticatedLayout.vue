@@ -6,6 +6,7 @@ import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import BandeauHorsLigne from '@/Components/UI/BandeauHorsLigne.vue'
@@ -13,17 +14,20 @@ import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
 import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, provide, watch } from 'vue'
+import { CLE_DE_LA_SEANCE_EN_COURS } from '@/Utils/cleDeLaSeanceEnCours'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
+import { oublierLeReposDUneAutreSeance, reposAMontrer } from '@/Utils/reposEnCours'
+import { ONGLETS, ongletDeLaRoute } from '@/Utils/ongletsDeLaBarre'
 import { useSeanceEnCoursDeLAppareil } from '@/composables/useSeanceEnCoursDeLAppareil'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { messageDesEcrituresAbandonnees, reprendreLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
 import { SESSION_FINIE_DANS_UN_AUTRE_ONGLET } from '@/Utils/ecrituresEffaceesALaDeconnexion'
 
-defineProps({
+const props = defineProps({
     pageTitle: {
         type: String,
         default: '',
@@ -51,7 +55,7 @@ defineProps({
     largeur: {
         type: String,
         default: 'large',
-        validator: (valeur) => ['large', 'moyenne', 'etroite'].includes(valeur),
+        validator: (valeur) => ['large', 'rail', 'moyenne', 'etroite'].includes(valeur),
     },
     /**
      * La page pose elle-même son `<h1>` de bureau dans son contenu (les
@@ -62,18 +66,69 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * Le titre de l'en-tête mobile ne se voit pas : une salutation, une carte
+     * d'identité, un titre de page ou la rangée des séances en tient lieu (les
+     * quatre racines : Accueil, Séances, Progrès, Profil ; et, avec
+     * `retour-de-bureau-seul`, Modèles et Calendrier). Le `<h1>` reste, pour les
+     * lecteurs d'écran, et l'en-tête garde la cloche des notifications.
+     */
+    titreMasque: {
+        type: Boolean,
+        default: false,
+    },
+    /**
+     * La page pose déjà son retour dans son en-tête de bureau (les outils, la
+     * fiche d'un exercice, le jeûne, la modification d'un objectif) : le
+     * layout n'ajoute pas le sien, qui le doublerait (lot 8, #2434).
+     */
+    retourPropre: {
+        type: Boolean,
+        default: false,
+    },
+    /**
+     * Le retour ne se montre que sur bureau : sur téléphone, la page pose sa
+     * propre rangée d'onglets en haut (Modèles, Calendrier : `OngletsDesSeances`),
+     * qui tient lieu de flèche et de titre. Sert avec `titre-masque`, que le
+     * titre reste pour les lecteurs d'écran, et avec `show-back` pour le bureau.
+     */
+    retourDeBureauSeul: {
+        type: Boolean,
+        default: false,
+    },
 })
 
-const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
+/*
+ * Le retour des pages secondaires sur bureau : le bouton rond de l'en-tête mobile
+ * n'y existe pas (`bureau:hidden`), et les quatre onglets ne ramènent qu'à la
+ * racine de leur famille, pas à la page d'où l'on vient.
+ */
+const CLASSES_DU_RETOUR_DE_BUREAU =
+    'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none'
+
+/*
+ * Les quatre racines (Accueil, Séances, Progrès, Profil), et Modèles et
+ * Calendrier avec `retour-de-bureau-seul`, n'ont pas de titre visible sur
+ * téléphone : la cloche y est dans la page, dans la première
+ * carte (`Cloche`), sans barre qui lui réserve une rangée. Une bande de la
+ * hauteur de la barre d'état garde l'horloge lisible quand le contenu défile
+ * dessous.
+ */
+const clocheDansLaPage = computed(() => props.titreMasque && (!props.showBack || props.retourDeBureauSeul))
+
+const LARGEURS = { large: 'max-w-7xl', rail: 'max-w-3xl bureau:max-w-270', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
 // `?` ouvre la liste des raccourcis, d'où qu'on soit — le seul moyen de la
-// découvrir sans passer par « Plus ».
+// découvrir sans passer par le Profil.
 useRaccourciClavier(
     (evenement) => evenement.key === '?',
     () => router.visit(route('shortcuts.index')),
 )
 
 const page = usePage()
+
+const retourDeBureau = computed(() => props.showBack && !props.retourPropre)
+const hrefDuRetour = computed(() => (props.backRoute ? route(props.backRoute) : 'javascript:history.back()'))
 
 /*
  * La séance en cours sur l'appareil : celle du serveur, ou celle qu'une
@@ -82,9 +137,17 @@ const page = usePage()
  * que `route().current('workouts.show')` ne nomme pas.
  */
 const { seanceEnCours: activeWorkout, ouvrir: ouvrirLaSeanceEnCours } = useSeanceEnCoursDeLAppareil({ page })
+// L'accueil masque « Démarrer » d'après la même séance que celle qu'« Reprendre » rouvre.
+provide(CLE_DE_LA_SEANCE_EN_COURS, activeWorkout)
+// L'onglet de bureau allumé : les mêmes quatre que la barre du bas, par la même table (`ongletsDeLaBarre.js`).
+const ongletAllume = () => ongletDeLaRoute(route().current())?.cle ?? null
 const isWorkoutShow = computed(() => page.component === 'Workouts/Show')
-// La grande bannière n'a sa place que là où la séance est le sujet ; ailleurs, une ligne.
-const banniereCompacte = computed(() => !route().current('dashboard') && !route().current('workouts.index'))
+// Le repos que la page de CETTE séance a laissé en partant (#2434) : le bandeau le montre à la place de la durée.
+const reposLaisse = computed(() => reposAMontrer(page.props.auth?.user?.id, activeWorkout.value))
+// Celui d'une autre séance (supprimée, ou quittée sans clôture), ou sans séance en cours : il ne reviendrait pas.
+watch(activeWorkout, (seance) => oublierLeReposDUneAutreSeance(page.props.auth?.user?.id, seance), { immediate: true })
+// L'accessoire de la séance en cours : sur toutes les pages sauf la séance elle-même, qui a sa barre d'outils.
+const accessoireDeSeance = computed(() => activeWorkout.value !== null && !isWorkoutShow.value)
 
 /*
  * L'abonnement push du navigateur rejoint le serveur à l'ouverture de
@@ -191,6 +254,7 @@ onUnmounted(() => {
             faisait déborder le bouton du compte hors de la barre.
         -->
         <nav
+            aria-label="Navigation de bureau"
             class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b backdrop-blur-xl"
         >
             <div class="px-sure-8 mx-auto max-w-7xl">
@@ -204,25 +268,14 @@ onUnmounted(() => {
                         </div>
 
                         <!-- Desktop Navigation Links -->
-                        <div class="bureau:flex ms-8 hidden space-x-1">
-                            <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
-                                Accueil
-                            </NavLink>
-                            <NavLink :href="route('workouts.index')" :active="route().current('workouts.*')">
-                                Séances
-                            </NavLink>
-                            <NavLink :href="route('calendar.index')" :active="route().current('calendar.*')">
-                                Calendrier
-                            </NavLink>
-                            <NavLink :href="route('stats.index')" :active="route().current('stats.*')"> Stats </NavLink>
-                            <NavLink :href="route('exercises.index')" :active="route().current('exercises.*')">
-                                Exercices
-                            </NavLink>
+                        <div class="bureau:flex ms-8 hidden space-x-1" dusk="onglets-de-bureau">
                             <NavLink
-                                :href="route('tools.index')"
-                                :active="route().current('tools.*') || route().current('plates.*')"
+                                v-for="onglet in ONGLETS"
+                                :key="onglet.cle"
+                                :href="route(onglet.route)"
+                                :active="ongletAllume() === onglet.cle"
                             >
-                                Outils
+                                {{ onglet.nom }}
                             </NavLink>
                         </div>
                     </div>
@@ -231,7 +284,7 @@ onUnmounted(() => {
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-accent-primary-deep border-surface-card bg-surface-card/60 hover:bg-surface-card relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition hover:shadow-md"
+                            class="verre-regulier text-text-muted hover:text-text-main rounded-capsule relative flex size-11 shrink-0 items-center justify-center transition"
                             :aria-label="
                                 $page.props.auth.user.unread_notifications_count > 0
                                     ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -241,7 +294,7 @@ onUnmounted(() => {
                             <GlassIcon name="notifications" />
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
-                                class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
+                                class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-semibold"
                             >
                                 {{ $page.props.auth.user.unread_notifications_count }}
                             </span>
@@ -258,7 +311,7 @@ onUnmounted(() => {
                                         class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex max-w-full items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
-                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black"
+                                            class="bg-surface-glass-strong text-text-main flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
                                         >
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
@@ -268,10 +321,6 @@ onUnmounted(() => {
                                 </template>
 
                                 <template #content>
-                                    <DropdownLink :href="route('profile.index')">
-                                        <GlassIcon name="person" size="sm" class="mr-2" />
-                                        Profil
-                                    </DropdownLink>
                                     <DropdownLink :href="route('profile.edit')">
                                         <GlassIcon name="settings" size="sm" class="mr-2" />
                                         Paramètres
@@ -295,46 +344,46 @@ onUnmounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/80 border-surface-card/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between border-b pb-4 backdrop-blur-xl"
+            dusk="entete-mobile"
+            class="bureau:hidden"
+            :class="
+                clocheDansLaPage
+                    ? 'contents'
+                    : 'bg-surface-page/40 z-collant px-sure-5 pt-sure-4 sticky top-0 flex items-center justify-between pb-4 backdrop-blur-xl'
+            "
         >
+            <div
+                v-if="clocheDansLaPage"
+                class="bg-surface-page/40 z-collant bureau:hidden left-sure-0 right-sure-0 pt-sure-0 pointer-events-none fixed top-0 h-(--safe-area-top) backdrop-blur-xl"
+                aria-hidden="true"
+            ></div>
             <div class="flex min-w-0 items-center gap-4">
                 <Link
-                    v-if="showBack"
+                    v-if="showBack && !retourDeBureauSeul"
                     v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
-                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="verre-regulier text-text-muted hover:text-text-main rounded-capsule flex size-11 shrink-0 items-center justify-center transition-colors"
                     aria-label="Retour"
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
                 <h1
                     v-if="pageTitle"
-                    class="titre-carte truncate"
-                    :class="pageTitle.length > 12 ? 'text-xl' : 'text-2xl'"
+                    class="truncate"
+                    :class="
+                        titreMasque
+                            ? 'sr-only'
+                            : pageTitle.length > 12
+                              ? 'titre-plat'
+                              : 'titre-ecran max-[21rem]:titre-plat'
+                    "
                 >
                     {{ pageTitle }}
                 </h1>
             </div>
 
-            <div class="flex items-center gap-2">
-                <Link
-                    v-press
-                    :href="route('notifications.index')"
-                    class="text-text-muted border-surface-card bg-surface-card/60 relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition"
-                    :aria-label="
-                        $page.props.auth.user.unread_notifications_count > 0
-                            ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
-                            : 'Notifications'
-                    "
-                >
-                    <GlassIcon name="notifications" />
-                    <span
-                        v-if="$page.props.auth.user.unread_notifications_count > 0"
-                        class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
-                    >
-                        {{ $page.props.auth.user.unread_notifications_count }}
-                    </span>
-                </Link>
+            <div v-if="!clocheDansLaPage" class="flex items-center gap-2">
+                <Cloche />
                 <slot name="header-actions" />
             </div>
         </header>
@@ -345,6 +394,15 @@ onUnmounted(() => {
             class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 bureau:block hidden border-b"
         >
             <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto py-6" :class="LARGEURS[largeur]">
+                <Link
+                    v-if="retourDeBureau"
+                    :href="hrefDuRetour"
+                    :class="CLASSES_DU_RETOUR_DE_BUREAU"
+                    dusk="retour-de-bureau"
+                >
+                    <GlassIcon name="arrow_back" size="sm" />
+                    Retour
+                </Link>
                 <slot name="header" />
             </div>
         </header>
@@ -354,7 +412,10 @@ onUnmounted(() => {
             id="main-content"
             tabindex="-1"
             class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6 focus:outline-none"
-            :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
+            :class="[
+                { 'pt-main-safe sm:pt-main-safe': (!pageTitle && !showBack) || clocheDansLaPage },
+                accessoireDeSeance ? 'pb-main-safe-accessoire bureau:pb-main-safe' : 'pb-main-safe',
+            ]"
         >
             <!--
                 Le titre de niveau 1 du bureau (#2120). Celui de l'en-tête mobile
@@ -375,15 +436,32 @@ onUnmounted(() => {
                 page en cacherait le haut (#2048).
             -->
             <div class="mx-auto" :class="LARGEURS[largeur]">
+                <Link
+                    v-if="retourDeBureau && !$slots.header"
+                    :href="hrefDuRetour"
+                    :class="CLASSES_DU_RETOUR_DE_BUREAU"
+                    dusk="retour-de-bureau"
+                >
+                    <GlassIcon name="arrow_back" size="sm" />
+                    Retour
+                </Link>
                 <BandeauHorsLigne />
             </div>
 
-            <div v-if="activeWorkout && !isWorkoutShow" class="mx-auto mb-6" :class="LARGEURS[largeur]">
-                <ActiveWorkoutBanner
-                    :workout="activeWorkout"
-                    :compact="banniereCompacte"
-                    @ouvrir="ouvrirLaSeanceEnCours"
-                />
+            <!--
+                L'accessoire de séance (#2434) : fixé au-dessus de la barre du
+                bas sous 1 024 px, dans le flux de la page sur bureau, où il
+                n'y a pas de barre. Un seul exemplaire, que la page en cours
+                soit l'Accueil, les séances ou une autre.
+            -->
+            <div v-if="accessoireDeSeance" class="bureau:mb-6 mx-auto" :class="LARGEURS[largeur]">
+                <div class="au-dessus-du-menu left-sure-4 right-sure-4 z-flottant bureau:static bureau:max-w-xl fixed">
+                    <ActiveWorkoutBanner
+                        :workout="activeWorkout"
+                        :repos="reposLaisse"
+                        @ouvrir="ouvrirLaSeanceEnCours"
+                    />
+                </div>
             </div>
 
             <!--
@@ -398,7 +476,7 @@ onUnmounted(() => {
                 réponse, son animation d'entrée et le focus du bouton compris.
             -->
             <div class="mx-auto" :class="LARGEURS[largeur]">
-                <slot />
+                <slot :seance-en-cours="activeWorkout" />
             </div>
         </main>
 

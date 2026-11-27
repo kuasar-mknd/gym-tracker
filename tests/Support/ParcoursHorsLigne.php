@@ -43,8 +43,9 @@ use PHPUnit\Framework\Assert;
  * le vérifie : sans elle, le serveur local répondrait avant le délai du
  * worker). Le worker, lui, sert ses caches sans latence.
  *
- * Les textes se lisent dans le DOM (`texteDe()`) : `titre-carte` et
- * `glass-button` passent en majuscules, et WebDriver rend le texte transformé.
+ * Les textes se lisent dans le DOM (`texteDe()`) : les pages hors ligne
+ * n'ont plus de capitales, mais WebDriver rend le texte transformé si un rôle
+ * qui en met y revient.
  */
 trait ParcoursHorsLigne
 {
@@ -414,6 +415,17 @@ trait ParcoursHorsLigne
     private function texteDe(string $selecteur): string
     {
         return 'document.querySelector('.json_encode($selecteur, JSON_THROW_ON_ERROR).').textContent.trim()';
+    }
+
+    /**
+     * Si le bandeau d'une copie dit cet état (« Hors ligne », « Réseau lent »)
+     * et date la copie (« Copie du … »).
+     */
+    private function leBandeauDit(string $etat): string
+    {
+        return '(() => { const titre = document.querySelector(\'[dusk="bandeau-hors-ligne-titre"]\'); const date = document.querySelector(\'[dusk="bandeau-hors-ligne-date"]\'); return titre !== null && date !== null && titre.textContent.trim() === '
+            .json_encode($etat, JSON_THROW_ON_ERROR)
+            .' && date.textContent.trim().startsWith(\'Copie du \'); })()';
     }
 
     /**

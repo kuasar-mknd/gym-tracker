@@ -1,3 +1,4 @@
+import ChampsDUnExercice from '@/Components/Exercises/ChampsDUnExercice.vue'
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
@@ -141,7 +142,6 @@ import { abandonner, annuler, DELAI_POUR_ANNULER_MS, suppressionAnnulable, valid
 /** Les fins de séance parties par l'API (#2049) : la charge et les options de chaque envoi. */
 const finsEnvoyees = () =>
     patch.mock.calls.filter(([url]) => url === '/api.v1.workouts.finish').map(([, ...reste]) => reste)
-import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
 const modale = (wrapper) => wrapper.findComponent(AjoutDExerciceModal).vm
@@ -203,7 +203,12 @@ const passesSlot = { template: '<div><slot /></div>' }
 const LayoutStub = { name: 'LayoutStub', template: '<div><slot name="header-actions" /><slot /></div>' }
 /** The delete behind a swipe is a named slot, and it is a real control. */
 const SwipeStub = { name: 'SwipeStub', template: '<div><slot name="action-right" /><slot /></div>' }
-const ModalStub = { name: 'ModalStub', template: '<div><slot /></div>' }
+/** Comme le vrai `Modal` : fermé, il ne rend rien (deux questions montent sur la page, le retrait et l'abandon). */
+const ModalStub = {
+    name: 'ModalStub',
+    props: { show: { type: Boolean, default: false } },
+    template: '<div v-if="show"><slot /></div>',
+}
 /** A real <button>, so `@click` lands as a native listener and the slot renders. */
 const ButtonStub = { name: 'ButtonStub', template: '<button><slot /></button>' }
 const FieldStub = { name: 'FieldStub', template: '<div />' }
@@ -223,11 +228,16 @@ const IconButtonStub = {
     emits: ['click'],
     template: '<button type="button" :aria-label="label" :disabled="disabled" @click="$emit(\'click\')" />',
 }
-const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
+const SettingsModalStub = {
+    name: 'SettingsModalStub',
+    props: ['reposAutomatique'],
+    emits: ['update:reposAutomatique'],
+    template: '<div />',
+}
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
 const RestTimerStub = {
     name: 'RestTimerStub',
-    props: ['duration', 'autoRestTimer', 'reglageDesactive', 'raisonDuReglage'],
+    props: ['duration', 'ensuite'],
     template: '<div />',
 }
 
@@ -238,7 +248,7 @@ const RestTimerStub = {
  */
 const pages = suivreLesPagesMontees()
 
-const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDIO, TIMED]) => {
+const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDIO, TIMED], layout = LayoutStub) => {
     const wrapper = mount(WorkoutShow, {
         props: { workout: JSON.parse(JSON.stringify(workout)), exercises },
         shallow: true,
@@ -246,11 +256,12 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
             directives: { press: {} },
             mocks: { route: (...args) => globalThis.route(...args) },
             stubs: {
-                AuthenticatedLayout: LayoutStub,
+                AuthenticatedLayout: layout,
                 GlassCard: passesSlot,
                 SwipeableRow: SwipeStub,
                 Modal: ModalStub,
                 AjoutDExerciceModal,
+                ChampsDUnExercice,
                 RangeeDeSerie,
                 CarteDExercice,
                 ConfirmDialog,
@@ -446,9 +457,8 @@ describe('Workouts/Show — a background write the server refuses says so', () =
     })
 
     /**
-     * Sans ce bouton, couper le démarrage automatique était irréversible depuis
-     * l'interface : plus rien n'ouvrait le minuteur, et l'interrupteur qui le
-     * rallume vit DANS le minuteur.
+     * Le démarrage automatique se règle dans les paramètres, mais « Repos »
+     * ouvre le minuteur à la demande, réglage coupé ou non.
      */
     it('opens the timer on demand even when auto-start is off', async () => {
         pageStub.props.auth.user.auto_rest_timer = false
@@ -467,37 +477,17 @@ describe('Workouts/Show — a background write the server refuses says so', () =
             // Le temps de repos du COMPTE, pas celui de l'exercice : le geste
             // n'est attaché à aucune série.
             expect(timer.props('duration')).toBe(120)
-            expect(timer.props('autoRestTimer')).toBe(false)
         } finally {
             pageStub.props.auth.user.auto_rest_timer = true
         }
     })
 
-    it("garde « Terminer » au-dessus de la carte du repos tant qu'elle est affichée (#2312)", async () => {
-        const wrapper = await mountPage()
-        const contenu = () => wrapper.get('[dusk="exercise-list"]').element.parentElement
-
-        expect(contenu().classList.contains('pb-main-safe')).toBe(true)
-        expect(contenu().classList.contains('pb-main-safe-repos')).toBe(false)
-
-        await click(wrapper, 'open-rest-timer')
-
-        expect(contenu().classList.contains('pb-main-safe-repos')).toBe(true)
-        expect(contenu().classList.contains('pb-main-safe')).toBe(false)
-
-        wrapper.findComponent(RestTimerStub).vm.$emit('close')
-        await flushPromises()
-
-        expect(contenu().classList.contains('pb-main-safe')).toBe(true)
-    })
-
     /*
-     * Sur une copie hors ligne, le réglage du repos ne partirait pas (#2048,
-     * partie E) : la page le dit au minuteur, qui désactive son interrupteur ;
-     * le minuteur, lui, tourne, et « Terminer » reste : la fin passe par la
-     * file hors ligne (#2049).
+     * Sur une copie hors ligne, le minuteur tourne et « Terminer » reste : la
+     * fin passe par la file hors ligne (#2049). Le réglage, lui, se désactive
+     * dans les paramètres de la séance.
      */
-    it('sur une copie hors ligne, ouvre le minuteur sans laisser changer son réglage', async () => {
+    it('sur une copie hors ligne, ouvre le minuteur et garde « Terminer »', async () => {
         pageStub.props.horsLigne = { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }
 
         try {
@@ -505,22 +495,11 @@ describe('Workouts/Show — a background write the server refuses says so', () =
 
             await click(wrapper, 'open-rest-timer')
 
-            const timer = wrapper.findComponent(RestTimerStub)
-
-            expect(timer.exists()).toBe(true)
-            expect(timer.props('reglageDesactive')).toBe(true)
-            expect(timer.props('raisonDuReglage')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+            expect(wrapper.findComponent(RestTimerStub).exists()).toBe(true)
             expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
         } finally {
             delete pageStub.props.horsLigne
         }
-
-        const servie = await mountPage()
-
-        await click(servie, 'open-rest-timer')
-
-        expect(servie.findComponent(RestTimerStub).props('reglageDesactive')).toBe(false)
-        expect(servie.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
     })
 
     /**
@@ -546,7 +525,7 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         const wrapper = await mountPage()
 
         await click(wrapper, 'complete-set-0-0')
-        await emitOn(wrapper, RestTimerStub, 'update:autoRestTimer', false)
+        await emitOn(wrapper, SettingsModalStub, 'update:reposAutomatique', false)
 
         expect(routerPatch).toHaveBeenCalledWith(
             expect.stringContaining('profile.rest-timer.update'),
@@ -597,9 +576,9 @@ describe('Workouts/Show — removing an exercise', () => {
 
         await click(wrapper, 'remove-line-0')
 
-        // The confirmation is the second modal on the page; the first is the
-        // exercise picker.
-        wrapper.findAllComponents(ModalStub)[1].vm.$emit('close')
+        // The removal question is the third modal on the page: the abandon
+        // question under the toolbar comes first, then the exercise picker.
+        wrapper.findAllComponents(ModalStub)[2].vm.$emit('close')
         await flushPromises()
 
         expect(wrapper.vm.retraitDemande).toBe(false)
@@ -713,10 +692,10 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         wrapper.vm.showAddExercise = true
         await wrapper.vm.$nextTick()
 
-        // A search that matches narrows the list rather than offering a creation.
+        // La ligne de création est toujours là ; une recherche qui trouve réduit la liste.
         await search(wrapper, 'développé')
         expect(wrapper.findAll('[dusk^="select-exercise-"]')).toHaveLength(1)
-        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(true)
 
         await search(wrapper, 'Rowing')
         expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(true)
@@ -746,7 +725,7 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
 
         expect(url).toBe('/exercises')
         expect(request.headers['X-CSRF-TOKEN']).toBe('tok-42')
-        expect(JSON.parse(request.body)).toEqual({ name: 'Rowing', type: 'strength', category: 'Pectoraux' })
+        expect(JSON.parse(request.body)).toEqual({ name: 'Rowing', type: 'strength', category: '' })
 
         expect(modale(wrapper).showCreateForm).toBe(false)
         expect(modale(wrapper).createExerciseForm.processing).toBe(false)
@@ -843,7 +822,7 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         const wrapper = await mountPage()
 
         await openCreateForm(wrapper)
-        await wrapper.find('button[aria-label="Retour"]').trigger('click')
+        await wrapper.find('button[aria-label="Retour à la liste"]').trigger('click')
 
         expect(modale(wrapper).showCreateForm).toBe(false)
         expect(wrapper.find('#search-workout-exercise').exists()).toBe(true)
@@ -853,7 +832,8 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         const wrapper = await mountPage()
 
         await openCreateForm(wrapper)
-        await emitOn(wrapper, ModalStub, 'close')
+        wrapper.findComponent(AjoutDExerciceModal).findComponent(ModalStub).vm.$emit('close')
+        await flushPromises()
 
         expect(wrapper.vm.showAddExercise).toBe(false)
         expect(modale(wrapper).showCreateForm).toBe(false)
@@ -867,6 +847,26 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
  * modal in the way.
  */
 describe('Workouts/Show — the session’s own settings', () => {
+    /*
+     * Sur bureau, l'en-tête mobile (nom de la séance, réglages) n'existe pas :
+     * la page pose les siens dans l'emplacement `header`, que le layout montre
+     * à partir de 1 024 px (lot 8, #2434). Sans lui, la séance n'avait ni titre
+     * visible ni accès aux réglages.
+     */
+    it('porte le nom de la séance et ses réglages dans l’en-tête de bureau', async () => {
+        const wrapper = await mountPage(strengthWorkout, [STRENGTH, CARDIO, TIMED], {
+            name: 'LayoutDeBureauStub',
+            template: '<div><div data-testid="bureau"><slot name="header" /></div><slot /></div>',
+        })
+        const entete = wrapper.get('[data-testid="bureau"]')
+
+        expect(entete.get('h1').text()).toBe(wrapper.vm.localWorkout.name || 'Séance')
+
+        await click(wrapper, 'workout-settings-button-desktop')
+
+        expect(wrapper.vm.showSettingsModal).toBe(true)
+    })
+
     it('sends a changed start time back as UTC after the form held it in local time', async () => {
         const wrapper = await mountPage()
 
@@ -968,6 +968,12 @@ describe('Workouts/Show — the session’s own settings', () => {
         expect(routerPatch).not.toHaveBeenCalled()
         expect(wrapper.vm.showFinishModal).toBe(false)
         expect(haptics.triggerHaptic).toHaveBeenCalledWith('success')
+        // Le bilan s'ouvre sur la page (#2434) ; « Fermer » mène à l'accueil.
+        expect(router.visit).not.toHaveBeenCalled()
+        expect(wrapper.vm.liaisonDuBilan.bilan).toMatchObject({ enAttente: false })
+
+        wrapper.vm.liaisonDuBilan.onFermer()
+
         expect(router.visit).toHaveBeenCalledWith('/dashboard', expect.any(Object))
     })
 
@@ -1037,6 +1043,42 @@ describe('Workouts/Show — reaching the exercise picker', () => {
         expect(wrapper.vm.showAddExercise).toBe(true)
     })
 
+    /*
+     * Sans le bouton central, une séance sans exercice n'a de chemin vers sa fin
+     * que par la barre d'outils : la page la monte même vide, avec `vide`, que
+     * `ActionsDeLaSeance` traduit en Exercice et Terminer seulement
+     * (`barreDOutilsDeLaSeance.test.js`).
+     */
+    it('mounts the toolbar on an empty session, told it is empty, and not on a read-only one', async () => {
+        const vide = await mountPage(session())
+
+        expect(vide.findComponent(ActionsDeLaSeance).exists()).toBe(true)
+        expect(vide.findComponent(ActionsDeLaSeance).props('vide')).toBe(true)
+
+        const remplie = await mountPage()
+
+        expect(remplie.findComponent(ActionsDeLaSeance).props('vide')).toBe(false)
+
+        const terminee = await mountPage(session({ ended_at: '2026-07-29T09:00:00.000000Z' }))
+
+        expect(terminee.findComponent(ActionsDeLaSeance).exists()).toBe(false)
+    })
+
+    /*
+     * « Abandonner » est dans la barre : la page lui donne la séance à supprimer,
+     * et seule la séance vide le montre. Une séance close n'a plus de barre.
+     */
+    it('lets an empty session be abandoned, and only an empty one', async () => {
+        const vide = await mountPage(session())
+
+        expect(vide.findComponent(ActionsDeLaSeance).props('idDeLaSeance')).toBe(1)
+        expect(vide.find('[dusk="abandonner-la-seance"]').exists()).toBe(true)
+
+        const remplie = await mountPage()
+
+        expect(remplie.find('[dusk="abandonner-la-seance"]').exists()).toBe(false)
+    })
+
     it('opens from under a session that already has exercises', async () => {
         const wrapper = await mountPage()
 
@@ -1045,15 +1087,25 @@ describe('Workouts/Show — reaching the exercise picker', () => {
         expect(wrapper.vm.showAddExercise).toBe(true)
     })
 
-    it('opens when the layout’s floating button asks it to', async () => {
+    it('opens when the toolbar asks it to', async () => {
         const wrapper = await mountPage()
 
         expect(wrapper.vm.showAddExercise).toBe(false)
 
-        window.dispatchEvent(new CustomEvent('open-add-exercise'))
+        wrapper.findComponent(ActionsDeLaSeance).vm.$emit('ajouter-un-exercice')
         await flushPromises()
 
         expect(wrapper.vm.showAddExercise).toBe(true)
+    })
+
+    /** Le bouton central de la barre du bas, seul émetteur de l'évènement, n'existe plus : la page ne l'écoute plus. */
+    it('no longer listens for the central button’s window event', async () => {
+        const wrapper = await mountPage()
+
+        window.dispatchEvent(new CustomEvent('open-add-exercise'))
+        await flushPromises()
+
+        expect(wrapper.vm.showAddExercise).toBe(false)
     })
 
     it('ignores an exercise that is not in the picker', async () => {

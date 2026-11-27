@@ -28,9 +28,21 @@ const bibliotheque = [
 const monter = (props = {}, Modale = AjoutDExerciceModal) =>
     mount(Modale, {
         props: { show: true, exercises: bibliotheque, ...props },
-        global: { stubs: { Modal: { template: '<div><slot /></div>', props: ['show'] } } },
+        global: {
+            stubs: {
+                Modal: {
+                    name: 'Modal',
+                    template: '<div><slot /></div>',
+                    props: ['show', 'closeable'],
+                    emits: ['close'],
+                },
+            },
+        },
         attachTo: document.body,
     })
+
+/** Les noms des exercices proposés, sans l'icône de la ligne. */
+const noms = (wrapper) => wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.get('span').text())
 
 beforeEach(() => {
     localStorage.clear()
@@ -45,16 +57,74 @@ afterEach(() => {
     poserLaPage(null)
 })
 
+describe('le tiroir « Ajouter un exercice »', () => {
+    it('propose « Créer » en première ligne même quand la recherche trouve des exercices (#tiroir)', async () => {
+        const wrapper = monter()
+
+        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer un exercice')
+
+        await wrapper.get('#search-workout-exercise').setValue('dév')
+
+        expect(noms(wrapper)).toEqual(['Développé couché'])
+        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer « dév »')
+
+        await wrapper.get('[dusk="quick-create-exercise"]').trigger('click')
+
+        expect(wrapper.vm.showCreateForm).toBe(true)
+        expect(wrapper.vm.createExerciseForm.name).toBe('dév')
+    })
+
+    it('groupe les exercices par catégorie, dans l’ordre de la charte', () => {
+        const wrapper = monter({
+            exercises: [
+                { id: 3, name: 'Tractions', category: 'Dos' },
+                { id: 2, name: 'Squat', category: 'Jambes' },
+                { id: 1, name: 'Développé couché', category: 'Pectoraux' },
+                { id: 4, name: 'Pompes', category: 'Pectoraux' },
+                { id: 5, name: 'Planche', category: null },
+            ],
+        })
+
+        expect(wrapper.findAll('section[aria-label]').map((groupe) => groupe.attributes('aria-label'))).toEqual([
+            'Pectoraux',
+            'Dos',
+            'Jambes',
+            'Autres',
+        ])
+        expect(noms(wrapper)).toEqual(['Développé couché', 'Pompes', 'Tractions', 'Squat', 'Planche'])
+    })
+
+    it('filtre par pastille de catégorie, et crée dans la catégorie retenue', async () => {
+        const wrapper = monter()
+
+        await wrapper.get('[dusk="categorie-Jambes"]').trigger('click')
+
+        expect(noms(wrapper)).toEqual(['Squat'])
+
+        await wrapper.get('[dusk="quick-create-exercise"]').trigger('click')
+
+        expect(wrapper.vm.createExerciseForm.category).toBe('Jambes')
+    })
+
+    it('se ferme par son bouton « Fermer » et remet la catégorie à « Tous »', async () => {
+        const wrapper = monter()
+
+        await wrapper.get('[dusk="categorie-Jambes"]').trigger('click')
+        await wrapper.get('[dusk="fermer-ajout-exercice"]').trigger('click')
+
+        expect(wrapper.emitted('close')).toHaveLength(1)
+        expect(wrapper.vm.categorie).toBe('all')
+    })
+})
+
 describe('choisir un exercice', () => {
     it('trouve un exercice sans tenir compte des accents ni de la casse', async () => {
         const wrapper = monter()
 
         await wrapper.get('#search-workout-exercise').setValue('DEVELOPPE')
 
-        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual([
-            'Développé couchéPectoraux',
-        ])
-        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(false)
+        expect(noms(wrapper)).toEqual(['Développé couché'])
+        expect(wrapper.find('[dusk="quick-create-exercise"]').exists()).toBe(true)
 
         await wrapper.get('#search-workout-exercise').setValue('développé')
 
@@ -94,7 +164,7 @@ describe('choisir un exercice', () => {
 
         await wrapper.get('#search-workout-exercise').setValue('  Squat bulgare ')
 
-        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer "Squat bulgare"')
+        expect(wrapper.get('[dusk="quick-create-exercise"]').text()).toContain('Créer « Squat bulgare »')
 
         await wrapper.get('[dusk="quick-create-exercise"]').trigger('click')
 
@@ -110,7 +180,7 @@ describe('choisir un exercice', () => {
 
         await wrapper.get('#search-workout-exercise').setValue('squ')
 
-        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual(['SquatJambes'])
+        expect(noms(wrapper)).toEqual(['Squat'])
         expect(JSON.parse(localStorage.getItem('gymtracker_add_exercise_search'))).toMatchObject({ texte: 'squ' })
         wrapper.unmount()
 
@@ -169,7 +239,7 @@ describe('choisir un exercice', () => {
         const wrapper = monter()
         await wrapper.get('#search-workout-exercise').setValue('squ')
 
-        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual(['SquatJambes'])
+        expect(noms(wrapper)).toEqual(['Squat'])
         wrapper.unmount()
     })
 
@@ -315,6 +385,90 @@ describe('créer un exercice sur le champ', () => {
         spy.mockRejectedValue(new Error('hors ligne'))
         await wrapper.vm.createAndAddExercise()
         expect(wrapper.vm.createExerciseForm.errors.name).toBe('Connexion impossible. Vérifie ta connexion réseau.')
+        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+        wrapper.unmount()
+    })
+
+    it('n’envoie qu’une création à la fois', async () => {
+        const spy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
+        const wrapper = monter()
+
+        wrapper.vm.createAndAddExercise()
+        await wrapper.vm.createAndAddExercise()
+
+        expect(spy).toHaveBeenCalledTimes(1)
+        wrapper.unmount()
+    })
+
+    it('n’ajoute pas à la séance un exercice créé après le retour à la liste', async () => {
+        let repondre
+        vi.spyOn(globalThis, 'fetch').mockReturnValue(
+            new Promise((resolu) => {
+                repondre = () => resolu({ ok: true, json: async () => ({ exercise: { id: 9, name: 'Rowing' } }) })
+            }),
+        )
+        const wrapper = monter()
+
+        wrapper.vm.showCreateForm = true
+        await wrapper.vm.$nextTick()
+        wrapper.vm.createAndAddExercise()
+        await wrapper.get('button[aria-label="Retour à la liste"]').trigger('click')
+        repondre()
+        await flushPromises()
+
+        expect(wrapper.emitted('created')).toHaveLength(1)
+        expect(wrapper.emitted('add')).toBeUndefined()
+        wrapper.unmount()
+    })
+
+    it('demande le nom, et Échap dans le formulaire revient à la liste, et le fond ferme le tiroir', async () => {
+        const wrapper = monter()
+
+        wrapper.vm.showCreateForm = true
+        await wrapper.vm.$nextTick()
+        expect(wrapper.get('[dusk="new-exercise-name"]').attributes('required')).toBeDefined()
+
+        // La demande native d'annulation, d'où que parte Échap : la refuser garde le dialogue ouvert.
+        const echap = new Event('cancel', { cancelable: true })
+
+        wrapper.findComponent({ name: 'Modal' }).vm.$emit('annuler', echap)
+        await wrapper.vm.$nextTick()
+
+        expect(echap.defaultPrevented).toBe(true)
+
+        expect(wrapper.vm.showCreateForm).toBe(false)
+        // Le fond et la poignée, eux, ferment le tiroir depuis le formulaire.
+        wrapper.vm.showCreateForm = true
+        wrapper.findComponent({ name: 'Modal' }).vm.$emit('close')
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.emitted('close')).toHaveLength(1)
+        expect(wrapper.vm.showCreateForm).toBe(false)
+        wrapper.unmount()
+    })
+
+    it('ne montre pas l’échec tardif d’une création quittée, et rend le bouton à la réponse', async () => {
+        let echouer
+        vi.spyOn(globalThis, 'fetch').mockReturnValue(
+            new Promise((_, rejet) => {
+                echouer = () => rejet(new Error('réseau'))
+            }),
+        )
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        const wrapper = monter()
+
+        wrapper.vm.showCreateForm = true
+        await wrapper.vm.$nextTick()
+        wrapper.vm.createAndAddExercise()
+        await wrapper.get('button[aria-label="Retour à la liste"]').trigger('click')
+
+        // Un seul envoi à la fois : le bouton attend la réponse en vol, qu'on soit revenu à la liste ou non.
+        expect(wrapper.vm.createExerciseForm.processing).toBe(true)
+
+        echouer()
+        await flushPromises()
+
+        expect(wrapper.vm.createExerciseForm.errors.name).toBeUndefined()
         expect(wrapper.vm.createExerciseForm.processing).toBe(false)
         wrapper.unmount()
     })

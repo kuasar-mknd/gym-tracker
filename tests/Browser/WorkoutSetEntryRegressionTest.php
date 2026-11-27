@@ -390,12 +390,15 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
 
             $this->delayFirst($browser, 'patch', '/\/sets\/\d+/');
 
-            $browser->type('@weight-input-0-0', '100')
-                ->click('#main-content')
+            // The field is blurred by script: a click on the middle of #main-content now
+            // falls on the « Modèle » action, which saves a template, and clickAtPoint is a
+            // script click that would leave the focus where it is.
+            $browser->type('@weight-input-0-0', '100');
+            $browser->driver->executeScript('document.activeElement.blur()');
+            $browser->waitUntil('window.__requeteRetenue === true', 10)
                 // The debounce has fired: this write is on the wire, held by delayFirst.
-                ->waitUntil('window.__requeteRetenue === true', 10)
-                ->type('@weight-input-0-0', '110')
-                ->click('#main-content');
+                ->type('@weight-input-0-0', '110');
+            $browser->driver->executeScript('document.activeElement.blur()');
 
             // Wait for the correction to have overtaken the value it replaces —
             // exactly what is asserted below — instead of a duration sized to hope.

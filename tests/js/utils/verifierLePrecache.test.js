@@ -83,15 +83,15 @@ describe('la vérification du precache', () => {
     })
 
     it('refuse un precache qui dépasse la coquille', () => {
-        const urls = Array.from({ length: 65 }, (_, i) => `/build/assets/morceau-${i}.js`)
+        const urls = Array.from({ length: 66 }, (_, i) => `/build/assets/morceau-${i}.js`)
         const resultat = verifier(urls, Object.fromEntries(urls.map((url) => [url.slice(1), 'x'])))
 
         expect(resultat.status).toBe(1)
         expect(resultat.stderr).toContain('dépasse la coquille')
     })
 
-    it('accepte la coquille et la fermeture des pages de la salle, jusqu’à soixante-quatre entrées', () => {
-        const urls = Array.from({ length: 64 }, (_, i) => `/build/assets/morceau-${i}.js`)
+    it('accepte la coquille et la fermeture des pages de la salle, jusqu’à soixante-cinq entrées', () => {
+        const urls = Array.from({ length: 65 }, (_, i) => `/build/assets/morceau-${i}.js`)
         const resultat = verifier(urls, Object.fromEntries(urls.map((url) => [url.slice(1), 'x'])))
 
         expect(resultat.stderr).toBe('')

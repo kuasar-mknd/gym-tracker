@@ -20,23 +20,23 @@ const datasets = computed(() => [
         tension: 0.4,
         // Une séance sans série validée n'a pas de point (null) : la courbe passe outre.
         spanGaps: true,
-        borderColor: jeton('accent-info'), // Cyan
+        borderColor: jeton('accent-tertiary'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart
             if (!chartArea) return null
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            gradient.addColorStop(0, jetonTransparent('accent-info', 0.2)) // Cyan with opacity
-            gradient.addColorStop(1, jetonTransparent('accent-tertiary', 0)) // Violet transparent
+            gradient.addColorStop(0, jetonTransparent('accent-tertiary', 0.2))
+            gradient.addColorStop(1, jetonTransparent('accent-tertiary', 0))
             return gradient
         },
         borderWidth: 3,
         pointRadius: 3,
         pointBackgroundColor: jeton('surface-card'),
-        pointBorderColor: jeton('accent-info'),
+        pointBorderColor: jeton('accent-tertiary'),
         pointBorderWidth: 2,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: jeton('accent-info'),
+        pointHoverBackgroundColor: jeton('accent-tertiary'),
         pointHoverBorderColor: jeton('surface-card'),
         pointHoverBorderWidth: 2,
     },
@@ -51,7 +51,7 @@ const datasets = computed(() => [
         :labels="labels"
         :datasets="datasets"
         hauteur="h-full"
-        :infobulle="{ accent: 'accent-info' }"
+        :infobulle="{ accent: 'accent-tertiary' }"
         :axe-y="{ ticks: { precision: 0 } }"
     />
 </template>

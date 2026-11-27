@@ -72,8 +72,13 @@ it('ne laisse aucun utilitaire de la charte sans lecteur', function (): void {
      * forment un jeu ou l'on choisit, et il serait absurde d'exiger que les
      * huit categories soient toutes employees pour que la huitieme ait le droit
      * d'exister.
+     *
+     * `bottom-sure-` en est une : la famille des zones sures (`top-`, `left-`,
+     * `right-`, `bottom-sure-`) tient ses quatre cotes, et la garde des zones
+     * sures (tests/js/conventions/zonesSures.test.js) exige le cote bas meme
+     * quand aucune fenetre ne s'y pose.
      */
-    $familles = ['category-fill-', 'plate-fill-'];
+    $familles = ['category-fill-', 'plate-fill-', 'bottom-sure-'];
 
     $employes = utilitairesEmployes();
 

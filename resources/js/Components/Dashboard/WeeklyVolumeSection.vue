@@ -1,77 +1,99 @@
 <script setup>
 import { computed } from 'vue'
-import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { nombre } from '@/Utils/nombre'
-import { variation } from '@/Utils/nombre'
-import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
-
-const WeeklyVolumeChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
+import GlassCard from '@/Components/UI/GlassCard.vue'
+import { compte, nombre, variation } from '@/Utils/nombre'
 
 const props = defineProps({
-    weeklyVolumeStats: { type: Object, required: true },
-    weeklyVolumeTrend: { type: Array, required: true },
+    weeklyVolumeStats: { type: Object, default: () => ({}) },
+    weeklyVolumeTrend: { type: Array, default: () => [] },
 })
 
+const INITIALES_DES_JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+const NOMS_DES_JOURS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+
+const volumeDeLaSemaine = computed(() => props.weeklyVolumeStats?.current_week_volume ?? 0)
+const nombreDeSeances = computed(() => props.weeklyVolumeStats?.sessions_count ?? 0)
+
 /**
- * La variation a afficher, ou null s'il n'y en a pas.
- *
- * `undefined` et `null` sont ramenes au meme cas : le premier arrive quand la
- * prop n'a pas la cle du tout, le second quand le serveur dit explicitement
- * qu'il n'y a rien a comparer. Les distinguer ici ne servirait a rien — dans les
- * deux cas il n'y a pas de comparaison a montrer.
+ * L'écart à la même date, ou null : sans séance cette semaine, ou sans rien à
+ * comparer sur la même durée de la semaine passée, il n'y a pas d'écart à dire.
  */
-const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
+const ecart = computed(() => {
+    const pourcentage = props.weeklyVolumeStats?.percentage ?? null
+
+    return nombreDeSeances.value === 0 ? null : pourcentage
+})
+
+const jourCourant = () => {
+    const maintenant = new Date()
+    const mois = String(maintenant.getMonth() + 1).padStart(2, '0')
+    const jour = String(maintenant.getDate()).padStart(2, '0')
+
+    return `${maintenant.getFullYear()}-${mois}-${jour}`
+}
+
+const barres = computed(() => {
+    const aujourdhui = jourCourant()
+    const plusHaut = Math.max(0, ...props.weeklyVolumeTrend.map((point) => point.volume))
+
+    return props.weeklyVolumeTrend.map((point, index) => ({
+        cle: point.date,
+        initiale: INITIALES_DES_JOURS[index],
+        nom: NOMS_DES_JOURS[index],
+        volume: point.volume,
+        hauteur: plusHaut > 0 && point.volume > 0 ? Math.max((point.volume / plusHaut) * 100, 6) : 0,
+        estAujourdhui: point.date === aujourdhui,
+    }))
+})
+
+const resume = computed(() => barres.value.map((barre) => `${barre.nom} ${nombre(barre.volume, 0)} kg`).join(', '))
 </script>
 
 <template>
-    <section
-        class="stagger-3 animate-slide-up border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-6 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
-    >
-        <div class="relative z-10 mb-6 flex items-start justify-between">
-            <div>
-                <h3 class="text-accent-primary-deep sur-titre mb-1">Aperçu</h3>
-                <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Hebdo</p>
-            </div>
-            <div class="text-right">
-                <p
-                    class="from-accent-primary to-accent-tertiary font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
-                >
-                    {{ nombre(weeklyVolumeStats?.current_week_volume ?? 0, 0) }}
-                </p>
-                <!--
-                    Trois situations, et non deux.
+    <GlassCard class="stagger-3 animate-slide-up" dusk="dashboard-semaine">
+        <h3 class="titre-plat">Cette semaine</h3>
 
-                    La condition n'ecartait que la valeur 0, donc une comparaison
-                    absente — `undefined` — passait le test et la ligne s'affichait
-                    avec un pourcentage vide. Et une variation nulle, elle, etait
-                    cachee alors qu'elle a un sens : le volume n'a pas bouge.
+        <p class="text-text-main mt-3 text-3xl leading-none font-medium tabular-nums" dusk="dashboard-semaine-volume">
+            {{ nombre(volumeDeLaSemaine, 0) }} <span class="text-text-muted text-base font-normal">kg</span>
+        </p>
 
-                    Les deux cas etaient inverses. Le serveur envoie desormais null
-                    quand il n'y a rien a comparer, ce qui les separe (#1388).
-                -->
-                <p
-                    v-if="comparison !== null"
-                    :class="[
-                        'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
-                        comparison > 0 ? 'text-trend-up' : comparison < 0 ? 'text-trend-down' : 'text-text-muted',
-                    ]"
+        <p class="text-text-muted mt-2 text-sm tabular-nums" dusk="dashboard-semaine-resume">
+            {{ compte(nombreDeSeances, 'séance', 'séances')
+            }}<template v-if="ecart !== null">
+                ·
+                <span
+                    dusk="dashboard-semaine-ecart"
+                    :class="ecart > 0 ? 'text-trend-up' : ecart < 0 ? 'text-trend-down' : 'text-text-muted'"
                 >
-                    <GlassIcon
-                        :name="comparison > 0 ? 'trending_up' : comparison < 0 ? 'trending_down' : 'trending_flat'"
-                        size="xs"
-                        class="font-bold"
-                    />
-                    <template v-if="comparison === 0">Stable vs sem. passée</template>
-                    <template v-else>{{ variation(comparison, '%') }} vs sem. passée</template>
-                </p>
+                    {{ ecart === 0 ? 'Stable' : variation(ecart, '%') }} à ce jour
+                </span></template
+            >
+        </p>
+
+        <div
+            v-if="barres.length > 0"
+            class="mt-5 grid grid-cols-7 gap-2"
+            role="img"
+            :aria-label="`Volume de chaque jour de la semaine : ${resume}`"
+        >
+            <div v-for="barre in barres" :key="barre.cle" class="flex flex-col items-center gap-1.5" aria-hidden="true">
+                <div class="flex h-20 w-full items-end justify-center">
+                    <div
+                        class="w-full max-w-6 rounded-full"
+                        :class="barre.estAujourdhui ? 'bg-text-main' : 'bg-text-main/25'"
+                        :style="{ height: barre.hauteur > 0 ? `${barre.hauteur}%` : '4px' }"
+                        :data-volume="barre.volume"
+                    ></div>
+                </div>
+                <span
+                    class="text-xs tabular-nums"
+                    :class="barre.estAujourdhui ? 'text-text-main font-semibold' : 'text-text-muted'"
+                    data-jour
+                    :data-aujourdhui="barre.estAujourdhui ? 'oui' : null"
+                >
+                    {{ barre.initiale }}
+                </span>
             </div>
         </div>
-
-        <!-- Weekly Volume Chart -->
-        <div class="relative -mx-2 mt-2 h-48 w-auto">
-            <WeeklyVolumeChart v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0" :data="weeklyVolumeTrend" />
-            <GlassEmptyState v-else taille="ligne" icon="bar_chart" title="Pas de données cette semaine" />
-        </div>
-    </section>
+    </GlassCard>
 </template>

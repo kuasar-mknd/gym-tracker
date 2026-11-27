@@ -171,7 +171,7 @@ it('compte les instructions SQL de l’accueil chargé en entier', function (): 
 
     // La page complète, rendue par le gabarit, sans la prop différée.
     expect((string) $reponse->getContent())->toContain('data-page="app"')
-        ->and(count($instructions))->toBe(9, accueilBudgetMessage('L’accueil chargé en entier', $instructions));
+        ->and(count($instructions))->toBe(8, accueilBudgetMessage('L’accueil chargé en entier', $instructions));
 });
 
 it('compte à part les instructions SQL de sa prop différée', function (): void {
@@ -192,6 +192,10 @@ it('compte à part les instructions SQL de sa prop différée', function (): voi
     // plus le compte des non-lus, le dernier badge ni la séance en cours.
     // Trois depuis que les chiffres immédiats sont des fermetures (étape 3a) :
     // elle ne relit plus la pesée, les séances, les records ni les objectifs.
+    // Trois depuis la structure B (#2434) : la comparaison à la même date, le
+    // compte des séances faites, à part, et les sept jours de la semaine ; les
+    // répartitions de durée et d'heure, que plus aucune carte ne montre, ont
+    // perdu leur requête.
     expect($reponse->json('props.analyticalStats'))->toBeArray()
         ->and(count($instructions))->toBe(3, accueilBudgetMessage('La prop différée de l’accueil', $instructions));
 });
@@ -218,6 +222,6 @@ it('ne rejoue pas les chiffres immédiats dans la requête de la prop différée
         fn (): TestResponse => accueilBudgetDemanderLaPropDifferee($compte, $version)->assertOk(),
     );
 
-    expect($chiffresImmediats)->toHaveCount(6)
+    expect($chiffresImmediats)->toHaveCount(5)
         ->and(array_values(array_intersect($chiffresImmediats, $propDifferee)))->toBe([]);
 });

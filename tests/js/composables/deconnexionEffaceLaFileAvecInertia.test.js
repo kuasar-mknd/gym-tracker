@@ -175,6 +175,7 @@ beforeAll(async () => {
     SyncService = (await import('@/Utils/SyncService')).default
     const { installerLesVisitesHorsLigne } = await import('@/Utils/visitesHorsLigne')
     const { seDeconnecter } = await import('@/composables/useDeconnexion')
+    const { useDemarrageDUneSeance } = await import('@/composables/useDemarrageDUneSeance')
     const { default: AuthenticatedLayout } = await import('@/Layouts/AuthenticatedLayout.vue')
     const { default: GuestLayout } = await import('@/Layouts/GuestLayout.vue')
     const { default: VerifyEmail } = await import('@/Pages/Auth/VerifyEmail.vue')
@@ -183,17 +184,26 @@ beforeAll(async () => {
     installerLesVisitesHorsLigne({ routeur })
 
     const pages = {
-        // Le bouton du profil, tel que `Pages/Profile/Index.vue` le pose.
+        /*
+         * Le bouton du profil, tel que `Pages/Profile/Index.vue` le pose, et un
+         * « Démarrer » : la barre du bas n'a plus de bouton central, et c'est le
+         * démarrage commun (`useDemarrageDUneSeance`) que l'Accueil appelle.
+         */
         Profil: {
-            render: () =>
-                h(AuthenticatedLayout, null, () => [
-                    h('p', { id: 'contenu' }, 'Profil'),
-                    h(
-                        'button',
-                        { type: 'button', 'data-testid': 'logout-button', onClick: seDeconnecter },
-                        'Déconnexion',
-                    ),
-                ]),
+            setup() {
+                const { demarrer } = useDemarrageDUneSeance()
+
+                return () =>
+                    h(AuthenticatedLayout, null, () => [
+                        h('p', { id: 'contenu' }, 'Profil'),
+                        h('button', { type: 'button', 'data-testid': 'start-workout', onClick: demarrer }, 'Démarrer'),
+                        h(
+                            'button',
+                            { type: 'button', 'data-testid': 'logout-button', onClick: seDeconnecter },
+                            'Déconnexion',
+                        ),
+                    ])
+            },
         },
         // La carte du profil qui supprime le compte, telle que `Pages/Profile/Index.vue` la pose.
         Suppression: { render: () => h(AuthenticatedLayout, null, () => h(DeleteUserForm)) },
@@ -414,8 +424,8 @@ describe('se déconnecter avec des écritures en attente', () => {
      * l'appareil pour le compte suivant.
      */
     it('compte la séance démarrée sans réseau et ce qui l’attend, et « Se déconnecter quand même » l’efface', async () => {
-        // Le bouton central de la barre du bas, sans réponse du serveur : la séance s'ouvre depuis la file.
-        document.querySelector('nav[aria-label="Navigation principale"] button').click()
+        // Le démarrage commun, sans réponse du serveur : la séance s'ouvre depuis la file.
+        document.querySelector('[data-testid="start-workout"]').click()
         await vi.waitUntil(() => contenu()?.startsWith('Séance temp-q'))
 
         const [creation] = fileStockee()

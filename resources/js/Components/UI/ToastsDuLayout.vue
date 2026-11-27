@@ -36,13 +36,13 @@ watch(suppressionAnnulable, (suppression) => {
 })
 
 const toasts = {
-    success: { icon: 'check_circle', color: 'emerald', delay: 5000, id: null },
-    error: { icon: 'error', color: 'red', delay: 8000, id: null },
+    success: { icon: 'check_circle', delay: 5000, id: null },
+    error: { icon: 'error', delay: 8000, id: null },
 }
 
 /**
  * Le bouton que porte le toast d'erreur, avec le message auquel il appartient :
- * « Annuler » sous « Le réseau ne répond pas » (#2048). Un autre message le
+ * « Annuler » sous « Réseau lent » (#2048). Un autre message le
  * fait disparaître, puisqu'il ne lui appartient pas.
  */
 const actionDuToast = ref(null)
@@ -172,8 +172,8 @@ onUnmounted(() => {
                 >
                     <div
                         :class="[
-                            'glass-panel-light flex items-center gap-3 rounded-2xl border-l-[6px] p-4 shadow-lg backdrop-blur-xl',
-                            type === 'success' ? 'border-l-accent-state' : 'border-l-accent-danger',
+                            'verre-epais flex items-center gap-3 rounded-2xl border-l-6! p-4 backdrop-blur-xl',
+                            type === 'success' ? 'border-l-accent-state!' : 'border-l-accent-danger!',
                         ]"
                     >
                         <div
@@ -186,7 +186,7 @@ onUnmounted(() => {
                         >
                             <GlassIcon :name="cfg.icon" />
                         </div>
-                        <p class="text-text-main flex-1 text-sm font-bold">
+                        <p class="text-text-main flex-1 text-sm font-medium">
                             {{ page.props.flash[type] }}
                         </p>
                         <GlassButton
@@ -219,13 +219,13 @@ onUnmounted(() => {
             >
                 <div
                     v-if="suppressionAnnulable"
-                    class="glass-panel-light border-l-accent-state mb-3 flex items-center gap-3 rounded-2xl border-l-[6px] p-4 shadow-lg backdrop-blur-xl"
+                    class="verre-epais border-l-accent-state! mb-3 flex items-center gap-3 rounded-2xl border-l-6! p-4 backdrop-blur-xl"
                     @pointerenter="surLEntreeDuPointeur"
                     @pointerleave="reprendre"
                     @focusin="suspendre"
                     @focusout="reprendre"
                 >
-                    <p class="text-text-main flex-1 text-sm font-bold">
+                    <p class="text-text-main flex-1 text-sm font-medium">
                         {{ suppressionAnnulable.message }}
                     </p>
                     <GlassButton

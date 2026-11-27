@@ -49,9 +49,13 @@ class WorkoutCompletionTest extends DuskTestCase
 
             $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::findOrFail($workout->id)->ended_at !== null);
 
-            $browser->visit('/dashboard')
+            // Le bilan s'ouvre sur la page de la séance (#2434) ; « Fermer » mène à l'accueil.
+            $browser->waitFor('dialog[open] [dusk="bilan-de-fin"]', 15)
+                ->assertPresent('[dusk="finish-workout-duree"]')
+                ->clickWhenSettled('[dusk="bilan-de-fin-fermer"]', 30)
+                ->waitForLocation('/dashboard', 15)
                 ->waitFor('#dashboard-header', 30)
-                ->assertSee('RETOUR')
+                ->assertSee('Bon retour')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('completion-failure-'.$sizeMacro);

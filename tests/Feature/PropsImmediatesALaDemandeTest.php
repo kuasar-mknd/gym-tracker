@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\BodyMeasurement;
+use App\Models\BodyPartMeasurement;
 use App\Models\Exercise;
 use App\Models\Habit;
 use App\Models\HabitLog;
@@ -25,7 +26,7 @@ use function Pest\Laravel\actingAs;
  * Inertia ne saute, dans une réponse partielle, que les props encore à
  * calculer : un contrôleur qui étale des valeurs déjà calculées les relit
  * toutes, puis la réponse les jette. La requête de la prop différée des
- * statistiques relisait ainsi la pesée et la bibliothèque d'exercices, celle
+ * statistiques relisait ainsi la bibliothèque d'exercices, celle
  * des habitudes la grille de la semaine, celle des mensurations les cent
  * dernières pesées, et le rechargement de la séance après le vidage de la file
  * (`router.reload({ only: ['workout'] })`) la bibliothèque d'exercices. Ces
@@ -38,8 +39,8 @@ use function Pest\Laravel\actingAs;
  */
 
 /**
- * Un compte qui a de quoi remplir chacune des quatre pages : des pesées, une
- * habitude cochée cette semaine, une séance avec une ligne et ses séries.
+ * Un compte qui a de quoi remplir chacune des pages : des pesées, une
+ * mensuration, une habitude cochée cette semaine, une séance avec une ligne et ses séries.
  */
 function propsImmediatesSemerUnCompte(User $compte): Workout
 {
@@ -48,6 +49,8 @@ function propsImmediatesSemerUnCompte(User $compte): Workout
         ['measured_at' => now()->subDays(8)],
         ['measured_at' => now()->subDays(15)],
     )->create(['user_id' => $compte->id]);
+
+    BodyPartMeasurement::factory()->create(['user_id' => $compte->id]);
 
     $habitude = Habit::factory()->create(['user_id' => $compte->id, 'archived' => false]);
     HabitLog::factory()->create(['habit_id' => $habitude->id, 'user_id' => $compte->id, 'date' => now()->toDateString()]);
@@ -124,11 +127,11 @@ const PROPS_IMMEDIATES_BIBLIOTHEQUE = 'from `exercises` where (`user_id` is null
  * fragments des instructions que lisent ses props immédiates.
  */
 dataset('pages aux props immédiates', [
-    'Statistiques : la pesée et la bibliothèque' => [
-        fn (User $compte, Workout $seance): string => route('stats.index'),
-        'Stats/Index',
-        'deferredData',
-        ['`body_measurements`.`user_id` is not null order by `measured_at` desc limit 2', PROPS_IMMEDIATES_BIBLIOTHEQUE],
+    'Corps : la pesée et les mensurations' => [
+        fn (User $compte, Workout $seance): string => route('corps.index'),
+        'Corps/Index',
+        'bodyStats',
+        ['`body_measurements`.`user_id` is not null order by `measured_at` desc limit 2', 'from `body_part_measurements`'],
     ],
     'Habitudes : les habitudes et leurs suivis de la semaine' => [
         fn (User $compte, Workout $seance): string => route('habits.index'),

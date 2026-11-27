@@ -137,9 +137,8 @@ describe('la copie montée au délai, puis la réponse arrivée après lui', () 
     it('se recharge d’elle-même par une visite d’Inertia, sans recharger le document', async () => {
         await vi.waitUntil(() => pageInertia?.props?.horsLigne?.raison === 'lent' && resume() === 'La copie d’hier')
 
-        expect(document.querySelector('[dusk="bandeau-hors-ligne-titre"]').textContent).toMatch(
-            /^Le réseau ne répond pas · copie du /,
-        )
+        expect(document.querySelector('[dusk="bandeau-hors-ligne-titre"]').textContent.trim()).toBe('Réseau lent')
+        expect(document.querySelector('[dusk="bandeau-hors-ligne-date"]').textContent).toMatch(/^\s*Copie du /)
         expect(requetes).toHaveLength(0)
 
         reseau.mode = 'repond'

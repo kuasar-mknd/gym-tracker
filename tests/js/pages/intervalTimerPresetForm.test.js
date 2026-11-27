@@ -221,12 +221,12 @@ describe('la phase en cours', () => {
         const wrapper = mountTimer()
         const region = wrapper.get('[aria-live="polite"]')
 
-        expect(region.text()).toBe('PRÊT')
+        expect(region.text()).toBe('Prêt')
         expect(region.attributes('aria-atomic')).toBe('true')
 
         await byLabel(wrapper, 'Démarrer').trigger('click')
 
-        expect(wrapper.get('[aria-live="polite"]').text()).not.toBe('PRÊT')
+        expect(wrapper.get('[aria-live="polite"]').text()).not.toBe('Prêt')
     })
 })
 
@@ -487,7 +487,7 @@ describe('the beeps', () => {
         // No context to build an oscillator on. The session still has to reach
         // its end rather than throwing out of the tick.
         expect(beeps).toHaveLength(0)
-        expect(wrapper.text()).toContain('TERMINÉ')
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Terminé')
     })
 
     /*
@@ -506,7 +506,7 @@ describe('the beeps', () => {
         vi.advanceTimersByTime(4000)
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.text()).toContain('TERMINÉ')
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Terminé')
         expect(avertissement).toHaveBeenCalledWith('Le son n’a pas pu se jouer.', expect.any(Error))
     })
 

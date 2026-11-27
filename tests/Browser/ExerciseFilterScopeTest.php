@@ -18,9 +18,8 @@ use Tests\DuskTestCase;
  * It now lives in the URL, which is where a filter belongs: it survives a
  * reload, it can be linked to, and opening the library fresh shows everything.
  *
- * The cards are read out of the DOM rather than with assertSee, because the
- * name is rendered through `uppercase` and the driver returns the transformed
- * string, not the one in the markup.
+ * The cards are read out of the DOM rather than with assertSee, so that a
+ * card hidden by the filter is told apart from one that is only scrolled out.
  */
 class ExerciseFilterScopeTest extends DuskTestCase
 {
@@ -58,7 +57,7 @@ class ExerciseFilterScopeTest extends DuskTestCase
             $browser->visit(route('exercises.index'))
                 ->waitFor('#main-content', 30)
                 ->waitFor('@category-pill-Jambes', 15)
-                ->waitForText('SQUAT', 10);
+                ->waitForText('Squat', 10);
 
             $names = implode(' | ', $this->renderedExerciseNames($browser));
 
@@ -88,8 +87,8 @@ class ExerciseFilterScopeTest extends DuskTestCase
             $browser->refresh()
                 ->waitFor('#main-content', 30)
                 ->waitFor('@category-pill-Jambes', 15)
-                ->waitForText('SQUAT', 10)
-                ->waitUntilMissingText('CURL BICEPS', 10);
+                ->waitForText('Squat', 10)
+                ->waitUntilMissingText('Curl biceps', 10);
 
             $names = implode(' | ', $this->renderedExerciseNames($browser));
 

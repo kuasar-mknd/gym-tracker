@@ -71,12 +71,13 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
         <template #action-left>
             <button
                 @click="emit('start-edit', exercise)"
-                class="info-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
+                class="accent-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
                 data-testid="edit-exercise-button-mobile"
+                :dusk="`swipe-edit-exercise-${exercise.id}`"
             >
                 <div class="flex flex-col items-center">
                     <GlassIcon name="edit" />
-                    <span class="text-2xs font-bold tracking-wider uppercase">Modifier</span>
+                    <span class="text-2xs font-semibold">Modifier</span>
                 </div>
             </button>
         </template>
@@ -86,10 +87,11 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                 @click="emit('delete', exercise.id)"
                 class="danger-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
                 data-testid="delete-exercise-button-mobile"
+                :dusk="`swipe-delete-exercise-${exercise.id}`"
             >
                 <div class="flex flex-col items-center">
                     <GlassIcon name="delete" />
-                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-semibold">Supprimer</span>
                 </div>
             </button>
         </template>
@@ -99,8 +101,8 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
             :dusk="`exercise-card-${exercise.id}`"
             :class="[
                 'group relative overflow-hidden transition duration-300',
-                'border-l-[6px]',
-                categoryBorderColors[category] || 'border-l-border-strong',
+                'border-l-6!',
+                categoryBorderColors[category] || 'border-l-border-strong!',
             ]"
             data-testid="exercise-card"
         >
@@ -122,16 +124,16 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                                 ? 'bg-accent-primary/10 text-accent-primary-deep'
                                 : exercise.type === 'cardio'
                                   ? 'bg-accent-state/30 text-text-main'
-                                  : 'bg-accent-info/10 text-accent-info-deep',
+                                  : 'bg-accent-tertiary/10 text-accent-tertiary-deep',
                         ]"
                     >
                         <GlassIcon :name="typeIcons[exercise.type] || 'fitness_center'" size="lg" />
                     </div>
                     <div>
-                        <div class="font-display text-text-main text-lg leading-tight font-bold uppercase italic">
+                        <div class="font-display text-text-main text-lg leading-tight font-semibold">
                             {{ exercise.name }}
                         </div>
-                        <div class="text-text-muted mt-1 text-xs font-semibold tracking-wider uppercase">
+                        <div class="etiquette mt-1">
                             {{ typeLabel(exercise.type) }}
                         </div>
                     </div>
@@ -139,25 +141,12 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                 <!-- Cachés jusqu'au survol ou au focus sous une souris seulement :
                      une tablette ne survole pas (`souris:`, app.css, #2082). -->
                 <div
-                    class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 flex shrink-0 items-center gap-2 transition-opacity"
+                    class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 flex shrink-0 items-center gap-2 transition-opacity max-sm:hidden"
                 >
                     <GlassIconButton
                         icon="edit"
                         :label="`Modifier ${exercise.name}`"
                         ton="accent"
-                        class="sm:hidden"
-                        :dusk="`edit-exercise-btn-${exercise.id}`"
-                        :disabled="surUneCopie"
-                        :aria-describedby="raisonDUneEcriture"
-                        @click.stop="emit('start-edit', exercise)"
-                    />
-
-                    <!-- Desktop Buttons -->
-                    <GlassIconButton
-                        icon="edit"
-                        :label="`Modifier ${exercise.name}`"
-                        ton="accent"
-                        class="hidden sm:inline-flex"
                         :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
                         :disabled="surUneCopie"
                         :aria-describedby="raisonDUneEcriture"
@@ -168,7 +157,6 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                         icon="delete"
                         :label="`Supprimer ${exercise.name}`"
                         ton="danger"
-                        class="hidden sm:inline-flex"
                         :dusk="`delete-exercise-btn-${exercise.id}`"
                         :disabled="surUneCopie"
                         :aria-describedby="raisonDUneEcriture"
@@ -176,6 +164,13 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                         @click.stop="emit('delete', exercise.id)"
                     />
                 </div>
+                <!-- L'indice du glissement, au doigt seulement : au-dessus de sm les boutons existent. -->
+                <GlassIcon
+                    v-if="!surUneCopie"
+                    name="chevron_left"
+                    size="sm"
+                    class="text-text-muted ml-1 shrink-0 opacity-55 sm:hidden"
+                />
             </div>
 
             <!-- Edit Mode -->

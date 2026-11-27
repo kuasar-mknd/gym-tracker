@@ -28,18 +28,15 @@ use Tests\Support\ParcoursHorsLigne;
  * de l'issue : l'accueil ouvert par un chargement complet sans rien toucher,
  * puis la séance en cours depuis lui ; les copies attendues dans IndexedDB,
  * comptées par script (le préchauffage écrit celles des pages que le parcours
- * n'ouvre pas) ; puis la coupure. Depuis la séance, Stats, qui n'a pas de
- * copie, le dit et laisse la séance ; la flèche de l'en-tête ouvre la copie
- * des séances, où la prop différée que le préchauffage ne demande jamais dit
- * « Indisponible hors ligne », et le graphique de l'historique, hors du
- * precache, « Graphique indisponible hors ligne » ; le bouton Retour du
- * navigateur rend la séance ;
+ * n'ouvre pas) ; puis la coupure. Depuis la séance, Stats, sans copie ici
+ * (`ProgresHorsLigneTest` joue celle de Progrès), le dit et laisse la séance ; la flèche de l'en-tête ouvre la copie
+ * des séances, dont la liste se lit entière, sans prop différée ni graphique
+ * à dire indisponibles ; le bouton Retour du navigateur rend la séance ;
  * Séances, Plus (où démarrer une séance reste ouvert depuis #2049), Outils et le minuteur
  * d'intervalles s'ouvrent ensuite avec le bandeau, puis de nouveau Séances.
  * Rien d'autre n'est dit. Le réseau rendu, la copie des séances se recharge
  * en entier sans être remontée (`router.reload` garde l'état), perd son
- * bandeau, et son graphique, que le composant asynchrone gardait en échec, se
- * dessine.
+ * bandeau, et sa liste reste.
  *
  * Couper le réseau par les outils de Chrome (`Network.emulateNetworkConditions`)
  * ne coupe que la page : un `import()` que le worker relaie atteint encore le
@@ -67,18 +64,11 @@ class NavigationHorsLigneTest extends DuskTestCase
 
     private const string PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau.";
 
-    /**
-     * Si la carte « Aperçu Historique » de la liste des séances porte son
-     * graphique (le résumé que `BaseChart` écrit sitôt le morceau chargé : le
-     * canevas, lui, attend d'approcher de l'écran), et plus le composant d'erreur des graphiques.
-     */
-    private const string LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE = <<<'SCRIPT'
-        (() => {
-            const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Aperçu Historique');
-            const carte = titre?.parentElement?.parentElement ?? null;
-
-            return carte !== null && carte.querySelector('p.sr-only') !== null && carte.querySelector('[data-graphique-indisponible]') === null;
-        })()
+    /** La liste des séances est entière : ni prop différée ni graphique n'y disent « indisponible hors ligne ». */
+    private const string LA_LISTE_DES_SEANCES_EST_ENTIERE = <<<'SCRIPT'
+        (() => document.querySelector('[data-indisponible-hors-ligne]') === null
+            && document.querySelector('[data-graphique-indisponible]') === null
+            && document.querySelector('a[href*="/workouts/"]') !== null)()
     SCRIPT;
 
     public function test_sans_reseau_la_seance_mene_aux_pages_de_salle_par_leurs_copies(): void
@@ -128,7 +118,7 @@ class NavigationHorsLigneTest extends DuskTestCase
             $outils = $this->outilsDuNavigateur($browser);
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $jetons, $cheminDeLaSeance): void {
-                // Stats n'a pas de copie : la séance reste, et le dit.
+                // Progrès est gardé, mais ce parcours ne l'a pas ouvert et le préchauffage le demande en dernier : sans copie, la séance reste, et le dit.
                 $browser->clickWhenSettled('[dusk="nav-stats"]')
                     ->waitUntil($this->laPageDit(self::PAGE_INDISPONIBLE), 15, 'Stats n’a rien dit sans réseau')
                     ->assertPathIs($cheminDeLaSeance)
@@ -136,14 +126,10 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 // La flèche de l'en-tête, un lien d'Inertia vers les séances, ouvre leur copie.
                 $browser->clickWhenSettled('header a[aria-label="Retour"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
-                /*
-                 * La séance en cours est dans la copie. Le préchauffage ne demande jamais la prop différée
-                 * de la liste, qui le dit ; le graphique de l'historique, hors du precache, aussi.
-                 */
+                $this->attendreLaCopie($browser, '/workouts', 'Séances');
+                // La séance en cours est dans la copie, que la liste lit entière : rien n'y est différé.
                 $browser->waitForText($jetons['seance'], 15, true)
-                    ->waitFor('[data-indisponible-hors-ligne]', 15)
-                    ->waitFor('[data-graphique-indisponible]', 15);
+                    ->waitUntil(self::LA_LISTE_DES_SEANCES_EST_ENTIERE, 15, 'la copie des séances dit qu’une partie lui manque');
 
                 // Le bouton Retour du navigateur rend la séance telle que l'historique l'a gardée, sans le serveur.
                 $browser->back()
@@ -151,25 +137,31 @@ class NavigationHorsLigneTest extends DuskTestCase
                     ->waitForText($jetons['exercice'], 15, true)
                     ->assertMissing('[dusk="bandeau-hors-ligne"]');
 
-                // Depuis la séance : Séances, Plus, Outils, puis le minuteur d'intervalles.
+                // Depuis la séance : Séances, Accueil, Profil, Outils, puis le minuteur d'intervalles.
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
+                $this->attendreLaCopie($browser, '/workouts', 'Séances');
 
+                // Une séance est en cours : l'Accueil n'en propose pas une seconde (#2434), et la bannière qui reprend la première reste ouverte sur une copie.
+                $browser->clickWhenSettled('[dusk="nav-dashboard"]');
+                $this->attendreLaCopie($browser, '/dashboard', 'Accueil');
+                $browser->assertMissing('[dusk="start-workout-button"]')
+                    ->assertScript("(() => { const bandeau = document.querySelector('[dusk=\"active-workout-banner\"]'); return bandeau !== null && !bandeau.hasAttribute('aria-disabled'); })()");
+
+                // La barre du bas n'a plus de bouton central : Profil n'a pas de « démarrer ».
                 $browser->clickWhenSettled('[dusk="nav-profile"]');
-                $this->attendreLaCopie($browser, '/profile', 'Plus');
-                // Démarrer reste ouvert sur une copie (#2049) : rien n'y est tiré d'elle, et sans réseau la séance s'ouvre depuis la file.
-                $browser->assertScript("(() => { const bouton = document.querySelector('button.glass-nav-fab'); return bouton !== null && !bouton.disabled && !bouton.hasAttribute('aria-describedby'); })()");
+                $this->attendreLaCopie($browser, '/profile', 'Profil');
+                $browser->assertMissing('button.glass-nav-fab');
 
                 $browser->clickWhenSettled('main a[href$="/tools"]');
                 $this->attendreLaCopie($browser, '/tools', 'Outils');
 
                 $browser->clickWhenSettled('main a[href$="/tools/interval-timer"]');
-                $this->attendreLaCopie($browser, '/tools/interval-timer', 'Minuteur');
+                $this->attendreLaCopie($browser, '/tools/interval-timer', 'Minuteur d\'intervalle');
 
-                // Puis les séances de nouveau, leur graphique indisponible : c'est la copie que le réseau retrouvera.
+                // Puis les séances de nouveau : c'est la copie que le réseau retrouvera.
                 $browser->clickWhenSettled('[dusk="nav-workouts"]');
-                $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
-                $browser->waitFor('[data-graphique-indisponible]', 15);
+                $this->attendreLaCopie($browser, '/workouts', 'Séances');
+                $browser->waitUntil(self::LA_LISTE_DES_SEANCES_EST_ENTIERE, 15, 'la copie des séances dit qu’une partie lui manque');
 
                 // Rien d'autre n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
                 $this->assertSame([self::PAGE_INDISPONIBLE], $this->messagesSansReseau($browser));
@@ -177,13 +169,12 @@ class NavigationHorsLigneTest extends DuskTestCase
 
             /*
              * Le réseau revenu, la copie affichée se recharge en entier, et le bandeau part avec sa marque.
-             * La page n'est pas remontée : le graphique de l'historique, en échec sur la copie, se dessine
-             * quand même, son morceau de nouveau servi.
+             * La page n'est pas remontée : sa liste reste affichée.
              */
             $browser->waitUntilMissing('[dusk="bandeau-hors-ligne"]', 90)
                 ->assertPathIs('/workouts')
-                ->assertScript($this->texteDe('header h1'), 'Mes Séances')
-                ->waitUntil(self::LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE, 30, 'le graphique de l’historique dit encore qu’il est indisponible hors ligne');
+                ->assertScript($this->texteDe('header h1'), 'Séances')
+                ->waitUntil(self::LA_LISTE_DES_SEANCES_EST_ENTIERE, 30, 'la liste des séances a disparu au retour du réseau');
         });
     }
 
@@ -275,7 +266,7 @@ class NavigationHorsLigneTest extends DuskTestCase
             ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
             ->assertPathIs($chemin)
             ->assertMissing('[dusk="page-hors-ligne"]')
-            ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
+            ->assertScript($this->leBandeauDit('Hors ligne'))
             ->assertScript($this->texteDe('header h1'), $titre)
             ->waitUntil('history.state?.page instanceof ArrayBuffer', 15, "l’entrée d’historique de la copie de {$chemin} n’est pas chiffrée");
     }
@@ -283,7 +274,8 @@ class NavigationHorsLigneTest extends DuskTestCase
     /**
      * Attend la copie d'une page de salle, ouverte depuis la page précédente :
      * son adresse, son bandeau daté et le titre de son en-tête, lus dans le
-     * DOM (`titre-carte` passe le texte en majuscules, que WebDriver rend), et
+     * DOM (WebDriver rend le texte transformé, et un rôle en capitales peut
+     * revenir), et
      * son entrée d'historique, chiffrée (`encryptHistory`, écrit en dur dans
      * la page servie).
      */
@@ -296,7 +288,7 @@ class NavigationHorsLigneTest extends DuskTestCase
         }
 
         $browser->waitFor('[dusk="bandeau-hors-ligne"]', 15)
-            ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
+            ->assertScript($this->leBandeauDit('Hors ligne'))
             ->assertScript($this->texteDe('header h1'), $titre)
             // L'entrée d'historique de la copie est chiffrée, comme celles des pages du serveur.
             ->waitUntil('history.state?.page instanceof ArrayBuffer', 15, "l’entrée d’historique de la copie de {$chemin} n’est pas chiffrée");

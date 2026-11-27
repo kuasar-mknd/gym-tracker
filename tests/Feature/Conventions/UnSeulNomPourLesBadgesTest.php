@@ -107,15 +107,16 @@ it('ne donne aux badges qu’un nom dans l’interface', function (): void {
 it('appelle « Badges » la page, les deux menus, la traduction et la notification', function (): void {
     $textes = unSeulNomTextesAffiches();
 
-    expect($textes['resources/js/Pages/Achievements/Index.vue'])->toContain('title="Badges"', 'page-title="Badges"', 'Badges 🏆')
-        ->and($textes['resources/js/Pages/Profile/Index.vue'])->toContain("name: 'Badges'")
+    expect($textes['resources/js/Pages/Achievements/Index.vue'])->toContain('title="Badges"', 'page-title="Badges"')
+        ->toMatch('/<h1 class="titre-ecran">\s*Badges\s*<\/h1>/u')
+        ->and($textes['resources/js/Pages/Stats/Index.vue'])->toContain('libelle="Badges"')
         ->and($textes['resources/js/Layouts/AuthenticatedLayout.vue'])->toMatch('/>\s*Badges\s*</u')
         ->and(unSeulNomTraductions()['Achievements'] ?? null)->toBe('Badges');
 
     $notification = new AchievementUnlocked(Achievement::factory()->make(['name' => 'Marathonien du Fer']));
     $donnees = $notification->toArray(User::factory()->make());
 
-    expect($donnees['title'])->toBe('Badge débloqué ! 🏆')
+    expect($donnees['title'])->toBe('Badge débloqué')
         ->and($donnees['message'])->toBe('Félicitations ! Tu as débloqué le badge : Marathonien du Fer.');
 });
 

@@ -13,21 +13,19 @@ class WorkoutIndexPerformanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_workouts_index_has_consolidated_deferred_prop(): void
+    public function test_workouts_index_sends_the_list_and_defers_nothing(): void
     {
         $user = User::factory()->create();
 
-        // 1. Initial Load: deferredData should be deferred (missing from initial props)
         $this->actingAs($user)
             ->get('/workouts')
-            ->assertStatus(200)
+            ->assertOk()
+            ->assertViewMissing('page.deferredProps')
             ->assertInertia(
                 fn (Assert $page): Assert => $page
                     ->component('Workouts/Index')
+                    ->has('workouts')
                     ->missing('deferredData')
-                    ->missing('exercises')
-                    ->missing('chartData')
-                    ->missing('monthlyFrequency')
             );
     }
 }

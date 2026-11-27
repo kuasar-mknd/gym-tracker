@@ -21,7 +21,7 @@ class StatsCacheTest extends TestCase
     {
         $user = User::factory()->create();
         $weekKey = now()->startOfWeek()->format('Y-W');
-        $key = \App\Services\Stats\ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}");
+        $key = \App\Services\Stats\ClesDeStats::seances($user, "weekly_volume_to_date.{$weekKey}");
 
         $this->assertFalse(Cache::has($key));
 

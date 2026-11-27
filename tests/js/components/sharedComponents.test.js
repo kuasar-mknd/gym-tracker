@@ -64,6 +64,7 @@ import GoalForm from '@/Components/Goals/GoalForm.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import { CATEGORY_BORDER_COLORS } from '@/Utils/constants'
 import { ECRITURE_NON_CONFIRMEE, SUPPRESSION_DU_COMPTE_NON_CONFIRMEE } from '@/Utils/visitesHorsLigne'
 import { annoncesPendant } from '../utils/annoncesSansReseau'
 import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
@@ -139,13 +140,13 @@ describe('Dropdown', () => {
      * Sa valeur par defaut etait `bg-surface-card/10` — du blanc a 10 % sur le fond
      * clair de l'application, c'est-a-dire un fantome (#1314). Le test vise la
      * classe de surface plutot qu'une couleur precise : c'est
-     * `glass-panel-strong` qui porte le jeton, et lui seul suit le theme.
+     * `verre-epais` qui porte le jeton, et lui seul suit le theme.
      */
     it('pose une surface opaque sous le menu, pas un voile', () => {
         const wrapper = mountDropdown()
         const classes = panel(wrapper).find('div').classes()
 
-        expect(classes).toContain('glass-panel-strong')
+        expect(classes).toContain('verre-epais')
         expect(classes.join(' ')).not.toMatch(/bg-surface-card\/(?:5|10|20|30|40)\b/)
 
         wrapper.unmount()
@@ -1093,7 +1094,7 @@ describe('ExerciseCard', () => {
 
         expect(tileFor('strength')).toContain('text-accent-primary-deep')
         expect(tileFor('cardio')).toContain('bg-accent-state/30')
-        expect(tileFor('timed')).toContain('text-accent-info-deep')
+        expect(tileFor('timed')).toContain('text-accent-tertiary-deep')
 
         // The three branches must not collapse onto one another.
         expect(tileFor('strength')).not.toBe(tileFor('cardio'))
@@ -1106,8 +1107,32 @@ describe('ExerciseCard', () => {
         known.unmount()
 
         const unknown = mountCard({ exercise: { ...EXERCISE, category: 'Cardio doux' } })
-        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-border-strong')
+        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-border-strong!')
         unknown.unmount()
+    })
+
+    /*
+     * `verre-regulier` pose `border: 1px solid` : le liseré de 6 px et sa couleur
+     * ne passent que par le suffixe `!` (mesuré : 1 px gris translucide sans lui).
+     */
+    it('impose la largeur et la couleur du liseré de catégorie au verre de la carte', () => {
+        const wrapper = mountCard()
+        const classes = wrapper.get('[data-testid="exercise-card"]').classes()
+
+        expect(classes).toContain('border-l-6!')
+        expect(Object.values(CATEGORY_BORDER_COLORS).every((nom) => nom.endsWith('!'))).toBe(true)
+
+        wrapper.unmount()
+    })
+
+    it('laisse deviner le glissement par un chevron discret, sous sm seulement', () => {
+        const wrapper = mountCard()
+        const chevron = wrapper.findAll('span').find((span) => span.text() === 'chevron_left')
+
+        expect(chevron.attributes('aria-hidden')).toBe('true')
+        expect(chevron.classes()).toEqual(expect.arrayContaining(['sm:hidden', 'opacity-55', 'text-text-muted']))
+
+        wrapper.unmount()
     })
 
     it('links the row to the page of this exercise', () => {
@@ -1118,8 +1143,11 @@ describe('ExerciseCard', () => {
         wrapper.unmount()
     })
 
-    it('hands the whole exercise to the edit handler, from either button', async () => {
-        for (const selector of ['[data-testid="edit-exercise-button"]', '[dusk="edit-exercise-btn-12"]']) {
+    it('hands the whole exercise to the edit handler, from the desktop button and from the swipe', async () => {
+        for (const selector of [
+            '[data-testid="edit-exercise-button"]',
+            '[data-testid="edit-exercise-button-mobile"]',
+        ]) {
             const wrapper = mountCard()
 
             await wrapper.get(selector).trigger('click')
@@ -1129,6 +1157,19 @@ describe('ExerciseCard', () => {
 
             wrapper.unmount()
         }
+    })
+
+    it('hides the whole button group below sm: a phone reaches edit and delete by swiping only', () => {
+        const wrapper = mountCard()
+
+        const groupe = wrapper.get('[data-testid="edit-exercise-button"]').element.parentElement
+
+        expect(groupe.classList).toContain('max-sm:hidden')
+        expect(groupe.contains(wrapper.get('[data-testid="delete-exercise-button"]').element)).toBe(true)
+        expect(wrapper.find('[dusk="edit-exercise-btn-12"]').exists()).toBe(false)
+        expect(wrapper.findAll('[data-testid="edit-exercise-button"]')).toHaveLength(1)
+
+        wrapper.unmount()
     })
 
     it('hands only the id to the delete handler', async () => {
@@ -1268,11 +1309,9 @@ describe('ExerciseCard', () => {
 
         it('ne propose ni de modifier ni de supprimer, et dit pourquoi', async () => {
             const wrapper = mountCard()
-            const boutons = [
-                `[dusk="edit-exercise-btn-${EXERCISE.id}"]`,
-                '[data-testid="edit-exercise-button"]',
-                '[data-testid="delete-exercise-button"]',
-            ].map((selecteur) => wrapper.get(selecteur))
+            const boutons = ['[data-testid="edit-exercise-button"]', '[data-testid="delete-exercise-button"]'].map(
+                (selecteur) => wrapper.get(selecteur),
+            )
 
             // La rangée coupée retire ses actions : ni le doigt ni le clavier n'atteignent les siennes.
             expect(wrapper.getComponent(SwipeableRow).props('disabled')).toBe(true)

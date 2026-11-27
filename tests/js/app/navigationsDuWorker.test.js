@@ -479,7 +479,7 @@ describe('« Attendre la réponse »', () => {
     })
 
     it.each([
-        ['une adresse hors de la salle', `${ORIGINE}/stats`],
+        ['une adresse hors de la salle', `${ORIGINE}/goals`],
         ['une adresse d’une autre origine', 'https://ailleurs.example/dashboard'],
         ['le rappel de la connexion sociale', `${ORIGINE}/auth/google/callback`],
         ['une adresse qui n’en est pas une', 42],
@@ -675,14 +675,14 @@ describe('une navigation vers un fichier du precache', () => {
 describe('une autre page de l’application', () => {
     it('attend le réseau sans délai', async () => {
         const reseau = reseauEnAttente()
-        const { reglee } = naviguer('/stats', { preloadResponse: reseau.promesse })
+        const { reglee } = naviguer('/goals', { preloadResponse: reseau.promesse })
 
         await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS * 4)
         expect(reglee.reponse).toBeUndefined()
 
-        reseau.repondre(new Response('les statistiques'))
+        reseau.repondre(new Response('les objectifs'))
         await vi.advanceTimersByTimeAsync(0)
-        await expect(reglee.reponse.text()).resolves.toBe('les statistiques')
+        await expect(reglee.reponse.text()).resolves.toBe('les objectifs')
     })
 
     it('reçoit la page « hors ligne » marquée « reseau » sans réseau', async () => {

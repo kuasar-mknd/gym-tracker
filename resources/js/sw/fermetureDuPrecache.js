@@ -59,22 +59,13 @@ export const ADRESSE_DE_LA_CONSTRUCTION = '/build/'
  * Une entrée par ligne, sous la forme `'resources/js/…Chart.vue',`.
  */
 export const GRAPHIQUES_INDISPONIBLES_HORS_LIGNE = Object.freeze([
-    'resources/js/Components/Stats/ActiveGoalsChart.vue',
-    'resources/js/Components/Stats/DashboardDurationChart.vue',
-    'resources/js/Components/Stats/DurationDistributionChart.vue',
+    'resources/js/Components/Stats/DurationHistoryChart.vue',
     'resources/js/Components/Stats/ExerciseCategoryChart.vue',
     'resources/js/Components/Stats/MonthlyVolumeChart.vue',
+    'resources/js/Components/Stats/MuscleDistributionChart.vue',
     'resources/js/Components/Stats/OneRepMaxPercentagesChart.vue',
-    'resources/js/Components/Stats/RecentPRsChart.vue',
-    'resources/js/Components/Stats/RecentWorkoutsChart.vue',
-    'resources/js/Components/Stats/RecentWorkoutsExercisesChart.vue',
-    'resources/js/Components/Stats/RecentWorkoutsTimelineChart.vue',
-    'resources/js/Components/Stats/TimeOfDayChart.vue',
-    'resources/js/Components/Stats/VolumePerWorkoutChart.vue',
-    'resources/js/Components/Stats/WeeklyVolumeChart.vue',
-    'resources/js/Components/Stats/WorkoutDurationChart.vue',
+    'resources/js/Components/Stats/VolumeTrendChart.vue',
     'resources/js/Components/Stats/WorkoutFrequencyChart.vue',
-    'resources/js/Components/Stats/WorkoutHistoryTimelineChart.vue',
     'resources/js/Components/Stats/WorkoutsPerMonthChart.vue',
 ])
 

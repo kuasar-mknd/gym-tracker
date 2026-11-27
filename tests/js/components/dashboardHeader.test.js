@@ -1,66 +1,42 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { mount } from '@vue/test-utils'
 
-import { CIBLE, hauteurDuRendu } from '../conventions/ciblesTactiles'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
 
 beforeAll(() => {
     globalThis.route = (name) => `/${name}`
 })
 
-const mountHeader = (latestWeight) =>
+const mountHeader = (user = { name: 'Samuel Dulex', current_streak: 4 }) =>
     mount(DashboardHeader, {
-        props: {
-            user: { name: 'Samuel Dulex', current_streak: 4 },
-            latestWeight,
-        },
+        props: { user },
         global: {
             // The template calls route() directly, so it has to resolve through
             // the component instance, not just on globalThis.
-            mocks: { route: globalThis.route },
+            mocks: { route: globalThis.route, $page: { props: { auth: { user: { unread_notifications_count: 0 } } } } },
+            directives: { press: {} },
             stubs: {
                 Link: { template: '<a :href="href"><slot /></a>', props: ['href'] },
             },
         },
     })
 
-/**
- * The controller has always sent latestWeight and the dashboard never rendered
- * it: the body-metrics query ran on every page load to fill a prop nothing
- * read. These follow the figure the user actually sees.
- */
-describe('DashboardHeader body weight', () => {
-    it('shows the latest weight it was given', () => {
-        expect(mountHeader('75.50').text()).toContain('75,5 kg')
+/** L'en-tête de la structure B : la salutation, la série et la cloche, sans le dernier poids. */
+describe('DashboardHeader', () => {
+    it('salue par « Bon retour » et le prénom', () => {
+        const entete = mountHeader()
+
+        expect(entete.get('[dusk="dashboard-welcome"]').text()).toBe('Bon retour')
+        expect(entete.text()).toContain('Samuel')
+        expect(entete.text()).not.toContain('Dulex')
     })
 
-    it('drops the trailing zeros the decimal column carries', () => {
-        // The column is a decimal cast, so it arrives as "80.00". Rendered raw
-        // that reads as a precision the scale never measured.
-        expect(mountHeader('80.00').text()).toContain('80 kg')
-    })
+    it('ne montre plus le dernier poids, ni de quoi dire qu’il est indisponible', () => {
+        const entete = mountHeader()
 
-    it('uses the separator every other figure on the page uses', () => {
-        expect(mountHeader('72.4').text()).not.toContain('72.4')
-    })
-
-    it('says nothing at all when no weight has been recorded', () => {
-        const header = mountHeader(null)
-
-        expect(header.find('[dusk="dashboard-latest-weight"]').exists()).toBe(false)
-        expect(header.text()).not.toContain('kg')
-    })
-
-    it('offre au doigt une zone de 44 px de haut', () => {
-        const lien = mountHeader('75.50').get('[dusk="dashboard-latest-weight"]')
-
-        expect(hauteurDuRendu(lien.element)).toBeGreaterThanOrEqual(CIBLE)
-    })
-
-    it('leads to the measurements page, where the figure can be changed', () => {
-        expect(mountHeader('75.50').find('[dusk="dashboard-latest-weight"]').attributes('href')).toBe(
-            '/body-measurements.index',
-        )
+        expect(entete.find('[dusk="dashboard-latest-weight"]').exists()).toBe(false)
+        expect(entete.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
+        expect(entete.text()).not.toContain('kg')
     })
 })
 
@@ -70,14 +46,7 @@ describe('DashboardHeader body weight', () => {
  * nothing there. It now leads to the stats page.
  */
 describe('DashboardHeader streak badge', () => {
-    const streakOf = (days) =>
-        mount(DashboardHeader, {
-            props: { user: { name: 'Samuel', current_streak: days }, latestWeight: null },
-            global: {
-                mocks: { route: globalThis.route },
-                stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
-            },
-        }).find('[dusk="dashboard-streak"]')
+    const streakOf = (days) => mountHeader({ name: 'Samuel', current_streak: days }).find('[dusk="dashboard-streak"]')
 
     it('goes somewhere, rather than only looking like it does', () => {
         expect(streakOf(4).attributes('href')).toBe('/stats.index')
@@ -94,37 +63,5 @@ describe('DashboardHeader streak badge', () => {
 
     it('reads zero when the streak is broken rather than nothing', () => {
         expect(streakOf(0).attributes('aria-label')).toBe('Série de 0 jours, voir les statistiques')
-    })
-})
-
-/*
- * Une copie hors ligne de l'accueil ne garde jamais le dernier poids (#2048,
- * partie E) : l'en-tête le dit, plutôt que de laisser croire qu'aucun poids
- * n'a été noté.
- */
-describe('DashboardHeader sur une copie hors ligne', () => {
-    const monter = (props) =>
-        mount(DashboardHeader, {
-            props: { user: { name: 'Samuel Dulex', current_streak: 4 }, ...props },
-            global: {
-                mocks: { route: globalThis.route },
-                stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
-            },
-        })
-
-    it('dit le dernier poids indisponible hors ligne', () => {
-        const entete = monter({ latestWeight: null, poidsIndisponible: true })
-
-        expect(entete.get('[dusk="dashboard-latest-weight-indisponible"]').text()).toContain(
-            'Dernier poids indisponible hors ligne',
-        )
-        expect(entete.find('[dusk="dashboard-latest-weight"]').exists()).toBe(false)
-    })
-
-    it('montre le poids qu’on lui donne, même marqué indisponible', () => {
-        const entete = monter({ latestWeight: '75.50', poidsIndisponible: true })
-
-        expect(entete.text()).toContain('75,5 kg')
-        expect(entete.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
     })
 })

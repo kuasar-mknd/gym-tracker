@@ -60,10 +60,13 @@ const message = computed(() =>
     <div
         v-if="message !== null"
         role="status"
-        :class="['mb-4 flex items-start gap-3 rounded-2xl p-4 shadow-lg', sansSeance ? 'danger-fill' : 'info-fill']"
+        :class="[
+            'mb-4 flex items-start gap-3 rounded-2xl p-4',
+            sansSeance ? 'danger-fill shadow-lg' : 'bg-surface-card border-accent-warning/60 text-text-main border',
+        ]"
         dusk="etat-de-la-seance-en-attente"
     >
-        <GlassIcon name="cloud_off" class="shrink-0" />
+        <GlassIcon name="cloud_off" :class="['shrink-0', sansSeance ? '' : 'text-accent-warning-deep']" />
         <div class="min-w-0 flex-1 space-y-2">
             <p :id="ID_DE_L_ETAT_DE_LA_SEANCE" class="text-sm font-bold">{{ message }}</p>
             <Link

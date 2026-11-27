@@ -45,7 +45,7 @@ export const ATTRIBUT_D_ATTENTE = 'data-attendre-la-reponse'
 export const ATTRIBUT_DU_MOTIF = 'data-motif'
 
 /** Ce que dit la coquille quand le réseau n'a pas répondu à temps (raison `delai`). */
-export const MOTIF_DU_DELAI = "Cette page n'a pas pu s'ouvrir : le réseau ne répond pas."
+export const MOTIF_DU_DELAI = "Cette page n'a pas pu s'ouvrir : réseau lent. Réessaie dans un instant."
 
 /** La phrase qui dit, sans copie, ce qu'il faut faire avant la salle. */
 export const AVANT_LA_SALLE =
@@ -80,11 +80,11 @@ ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille
     <main id="main-content" class="px-sure-6 py-sure-12 flex min-h-dvh flex-col items-center justify-center gap-8">
         <div class="flex items-center ${MARQUE.sens}">
             ${logoEnSvg(`${TUILE_DU_LOGO} ${MARQUE.logo}`)}
-            <p class="text-gradient font-display ${MARQUE.nom} font-black tracking-tight uppercase italic">GymTracker</p>
+            <p class="font-display ${MARQUE.nom} font-semibold">GymTracker</p>
         </div>
-        <section class="glass-panel-light w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
+        <section class="verre-regulier w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
             <span class="material-symbols-outlined text-text-muted text-5xl" aria-hidden="true" dusk="icone-hors-ligne">cloud_off</span>
-            <h1 class="titre-carte text-2xl">Pas de réseau</h1>
+            <h1 class="titre-ecran">Pas de réseau</h1>
             <p class="text-text-muted text-base font-medium" ${ATTRIBUT_DU_MOTIF}>Cette page n'a pas pu s'ouvrir : l'appareil n'est pas connecté.</p>
             <p class="text-text-muted text-sm font-medium">${AVANT_LA_SALLE}</p>
             <p class="text-text-muted text-sm font-medium">

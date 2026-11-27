@@ -1,126 +1,149 @@
-import { describe, it, expect, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
 
-vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
+import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
+import { nombre } from '@/Utils/nombre'
 
-// See durationSection.test.js: the async chart has to be in the module cache
-// before the section is imported, or it never renders and the assertions lie.
-await import('@/Components/Stats/WeeklyVolumeChart.vue')
+/** Les sept jours de la semaine du lundi 23 au dimanche 29 novembre 2026, au volume donné. */
+const semaine = (volumes = [0, 0, 0, 0, 0, 0, 0]) =>
+    volumes.map((volume, index) => ({
+        date: `2026-11-${String(23 + index)}`,
+        day_label: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'][index],
+        volume,
+    }))
 
-const WeeklyVolumeSection = (await import('@/Components/Dashboard/WeeklyVolumeSection.vue')).default
-
-const trend = [
-    { week: '2026-W30', volume: 18000 },
-    { week: '2026-W31', volume: 21500 },
-]
-
-const mountSection = async (props) => {
-    const wrapper = mount(WeeklyVolumeSection, {
-        props: { weeklyVolumeStats: {}, weeklyVolumeTrend: trend, ...props },
+const monter = (props = {}) =>
+    mount(WeeklyVolumeSection, {
+        props: { weeklyVolumeStats: {}, weeklyVolumeTrend: semaine(), ...props },
+        global: { mocks: { route: (nom) => `/${nom}` } },
     })
 
-    await flushPromises()
+const volumeDe = (wrapper) => wrapper.get('[dusk="dashboard-semaine-volume"]').text()
+const resumeDe = (wrapper) => wrapper.get('[dusk="dashboard-semaine-resume"]').text()
+const ecartDe = (wrapper) => wrapper.find('[dusk="dashboard-semaine-ecart"]')
 
-    return wrapper
-}
+beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 25, 10, 0, 0))
+})
 
-const chartOf = (wrapper) => wrapper.findComponent({ name: 'WeeklyVolumeChart' })
-
-/** The big number, read the way the user reads it. */
-const volumeText = (wrapper) => wrapper.get('p.text-4xl').text()
-
-/** The "+12% vs sem. passée" line, absent altogether when the weeks tie. */
-const comparisonOf = (wrapper) => wrapper.get('p.justify-end')
+afterEach(() => {
+    vi.useRealTimers()
+})
 
 describe('WeeklyVolumeSection', () => {
-    it('groups the thousands in the week volume instead of printing a raw integer', async () => {
-        const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 21500, percentage: 0 } })
+    it('sépare les milliers du volume de la semaine, en fr-CH', () => {
+        const wrapper = monter({ weeklyVolumeStats: { current_week_volume: 21500, sessions_count: 3, percentage: 0 } })
 
-        expect(volumeText(wrapper)).toBe("21'500")
-        expect(volumeText(wrapper)).not.toBe('21500')
+        expect(volumeDe(wrapper)).toBe(`${nombre(21500, 0)} kg`)
     })
 
-    it('falls back to zero when the week has no volume yet', async () => {
-        const wrapper = await mountSection({ weeklyVolumeStats: {} })
-
-        expect(volumeText(wrapper)).toBe('0')
+    it('retombe sur zéro quand la semaine n’a pas encore de volume', () => {
+        expect(volumeDe(monter())).toBe('0 kg')
     })
 
-    it('reads a gain as a rise, signed and pointing up', async () => {
-        const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 21500, percentage: 12 } })
+    it('compte les séances de la semaine, accordées', () => {
+        const une = monter({ weeklyVolumeStats: { current_week_volume: 900, sessions_count: 1, percentage: null } })
+        const trois = monter({ weeklyVolumeStats: { current_week_volume: 900, sessions_count: 3, percentage: null } })
 
-        const comparison = comparisonOf(wrapper)
-
-        expect(comparison.text()).toContain('trending_up')
-        expect(comparison.text()).toContain('+12 % vs sem. passée')
-        expect(comparison.classes()).toContain('text-trend-up')
+        expect(resumeDe(une)).toBe('1 séance')
+        expect(resumeDe(trois)).toBe('3 séances')
     })
 
-    it('reads a drop as a fall, unsigned by us and pointing down', async () => {
-        // The minus already comes with the number; prefixing a '+' here would
-        // print '+-8%'.
-        const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 9000, percentage: -8 } })
+    it('dit une hausse, signée, « à ce jour »', () => {
+        const wrapper = monter({ weeklyVolumeStats: { current_week_volume: 21500, sessions_count: 3, percentage: 12 } })
 
-        const comparison = comparisonOf(wrapper)
-
-        expect(comparison.text()).toContain('trending_down')
-        expect(comparison.text()).toContain('-8 % vs sem. passée')
-        expect(comparison.text()).not.toContain('+')
-        expect(comparison.classes()).toContain('text-trend-down')
+        expect(resumeDe(wrapper)).toBe('3 séances · +12 % à ce jour')
+        expect(ecartDe(wrapper).classes()).toContain('text-trend-up')
     })
 
-    /**
-     * Trois situations, et la condition n'en distinguait que deux — dans le
-     * mauvais sens. Elle n'ecartait que la valeur 0, donc :
-     *
-     * - deux semaines identiques ne disaient rien, alors qu'elles ont quelque
-     *   chose a dire : le volume n'a pas bouge ;
-     * - une comparaison absente passait le test et affichait la ligne avec un
-     *   pourcentage vide.
-     *
-     * Le serveur envoie desormais null quand il n'y a pas de semaine precedente,
-     * ce qui separe « pas de base » de « variation nulle » (#1388).
-     */
-    it('dit que le volume est stable quand les deux semaines se valent', async () => {
-        const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 21500, percentage: 0 } })
+    it('dit une baisse sans y mettre un second signe', () => {
+        const wrapper = monter({ weeklyVolumeStats: { current_week_volume: 9000, sessions_count: 2, percentage: -8 } })
 
-        const comparison = comparisonOf(wrapper)
-
-        expect(comparison.text()).toContain('Stable vs sem. passée')
-        expect(comparison.text()).toContain('trending_flat')
-        expect(comparison.classes()).not.toContain('text-trend-down')
-        expect(comparison.classes()).not.toContain('text-trend-up')
+        expect(resumeDe(wrapper)).toBe('2 séances · -8 % à ce jour')
+        expect(resumeDe(wrapper)).not.toContain('+')
+        expect(ecartDe(wrapper).classes()).toContain('text-trend-down')
     })
 
-    it("ne compare rien quand il n'y a pas de semaine precedente", async () => {
-        const wrapper = await mountSection({
-            weeklyVolumeStats: { current_week_volume: 21500, percentage: null },
+    it('dit « Stable » quand les deux semaines se valent à la même date', () => {
+        const wrapper = monter({ weeklyVolumeStats: { current_week_volume: 21500, sessions_count: 3, percentage: 0 } })
+
+        expect(resumeDe(wrapper)).toBe('3 séances · Stable à ce jour')
+    })
+
+    it('masque l’écart quand la semaine en cours n’a aucune séance, même si le serveur en envoie un', () => {
+        const wrapper = monter({
+            weeklyVolumeStats: { current_week_volume: 0, sessions_count: 0, percentage: -100 },
         })
 
-        expect(wrapper.find('p.justify-end').exists()).toBe(false)
-        expect(wrapper.text()).not.toContain('vs sem. passée')
-        // Le volume de la semaine, lui, reste affiche : il est mesure, pas compare.
-        expect(volumeText(wrapper)).toBe("21'500")
+        expect(ecartDe(wrapper).exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('-100')
+        expect(wrapper.text()).not.toContain('à ce jour')
+        expect(resumeDe(wrapper)).toBe('0 séance')
     })
 
-    it('ne compare rien non plus quand la cle manque tout court', async () => {
-        const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 21500 } })
+    it('masque l’écart quand il n’y a rien à comparer sur la même durée de la semaine passée', () => {
+        const wrapper = monter({
+            weeklyVolumeStats: { current_week_volume: 21500, sessions_count: 3, percentage: null },
+        })
 
-        expect(wrapper.find('p.justify-end').exists()).toBe(false)
+        expect(ecartDe(wrapper).exists()).toBe(false)
+        expect(volumeDe(wrapper)).toBe(`${nombre(21500, 0)} kg`)
+    })
+
+    it('masque l’écart quand la clé manque tout court', () => {
+        const wrapper = monter({ weeklyVolumeStats: { current_week_volume: 21500, sessions_count: 3 } })
+
+        expect(ecartDe(wrapper).exists()).toBe(false)
         expect(wrapper.text()).not.toContain('%')
     })
 
-    it('passes the trend on to the chart', async () => {
-        const wrapper = await mountSection({ weeklyVolumeTrend: trend })
+    it('trace sept barres, L M M J V S D, et non une courbe', () => {
+        const wrapper = monter({ weeklyVolumeTrend: semaine([1200, 0, 900, 0, 0, 0, 0]) })
+        const barres = wrapper.findAll('[data-volume]')
 
-        expect(chartOf(wrapper).exists()).toBe(true)
-        expect(chartOf(wrapper).props('data')).toEqual(trend)
+        expect(barres).toHaveLength(7)
+        expect(wrapper.findAll('[data-jour]').map((jour) => jour.text())).toEqual(['L', 'M', 'M', 'J', 'V', 'S', 'D'])
+        expect(wrapper.find('canvas').exists()).toBe(false)
     })
 
-    it('announces the empty week rather than an axis with no points', async () => {
-        const wrapper = await mountSection({ weeklyVolumeTrend: [] })
+    it('donne à chaque barre une hauteur proportionnelle au volume le plus haut, et un filet au jour sans séance', () => {
+        const wrapper = monter({ weeklyVolumeTrend: semaine([1200, 0, 600, 0, 0, 0, 0]) })
+        const hauteurs = wrapper.findAll('[data-volume]').map((barre) => barre.element.style.height)
 
-        expect(chartOf(wrapper).exists()).toBe(false)
-        expect(wrapper.text()).toContain('Pas de données cette semaine')
+        expect(hauteurs[0]).toBe('100%')
+        expect(hauteurs[2]).toBe('50%')
+        expect(hauteurs[1]).toBe('4px')
+    })
+
+    it('marque le jour courant, et lui seul', () => {
+        const wrapper = monter({ weeklyVolumeTrend: semaine([1200, 0, 600, 0, 0, 0, 0]) })
+        const jours = wrapper.findAll('[data-jour]')
+
+        expect(jours.map((jour) => jour.attributes('data-aujourdhui'))).toEqual([
+            undefined,
+            undefined,
+            'oui',
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+        ])
+        expect(jours[2].classes()).toContain('font-semibold')
+    })
+
+    it('se lit en entier au lecteur d’écran, jour par jour', () => {
+        const wrapper = monter({ weeklyVolumeTrend: semaine([1200, 0, 600, 0, 0, 0, 0]) })
+
+        expect(wrapper.get('[role="img"]').attributes('aria-label')).toBe(
+            `Volume de chaque jour de la semaine : lundi ${nombre(1200, 0)} kg, mardi 0 kg, mercredi 600 kg, jeudi 0 kg, vendredi 0 kg, samedi 0 kg, dimanche 0 kg`,
+        )
+    })
+
+    it('ne trace rien tant que la tendance manque', () => {
+        const wrapper = monter({ weeklyVolumeTrend: [] })
+
+        expect(wrapper.findAll('[data-volume]')).toHaveLength(0)
+        expect(wrapper.find('[role="img"]').exists()).toBe(false)
     })
 })

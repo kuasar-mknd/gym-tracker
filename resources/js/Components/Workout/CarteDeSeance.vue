@@ -15,6 +15,8 @@ import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     seance: { type: Object, required: true },
+    /** La séance ouverte de l'appareil : une pastille la signale dans la liste. */
+    enCours: { type: Boolean, default: false },
 })
 
 defineEmits(['supprimer'])
@@ -37,19 +39,11 @@ const formatDate = (dateStr) =>
                 @click="$emit('supprimer', seance)"
                 :dusk="`delete-workout-${seance.id}`"
                 :aria-label="`Supprimer la séance ${seance.name || 'sans nom'}`"
-                class="text-text-on-dark-accent focus-visible:ring-accent-primary flex h-full w-full items-center justify-center transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                style="
-                    background: linear-gradient(
-                        135deg,
-                        var(--color-accent-danger) 0%,
-                        var(--color-accent-danger-deep) 100%
-                    );
-                    box-shadow: inset 0 2px 4px rgb(from var(--color-surface-card) r g b / 0.2);
-                "
+                class="danger-fill focus-visible:ring-accent-primary flex h-full w-full items-center justify-center transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
             >
-                <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">
+                <div class="flex flex-col items-center" aria-hidden="true">
                     <GlassIcon name="delete" />
-                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-semibold">Supprimer</span>
                 </div>
             </button>
         </template>
@@ -58,13 +52,16 @@ const formatDate = (dateStr) =>
             <GlassCard class="hover:bg-surface-glass-strong transition active:scale-[0.99]">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <h4 class="text-text-main font-semibold">
                                 {{ seance.name || 'Séance' }}
                             </h4>
-                            <span class="glass-badge glass-badge-primary text-xs">
+                            <span class="glass-badge glass-badge-primary text-xs whitespace-nowrap">
                                 {{ compte(seance.workout_lines.length, 'exo', 'exos') }}
                             </span>
+                            <span v-if="enCours" class="glass-badge glass-badge-warning text-xs whitespace-nowrap"
+                                >En cours</span
+                            >
                         </div>
                         <div class="text-text-muted mt-1 text-sm">
                             {{ formatDate(seance.started_at) }}

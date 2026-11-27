@@ -2,211 +2,107 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
+import Cloche from '@/Components/Navigation/Cloche.vue'
 import { Head, Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import { seDeconnecter } from '@/composables/useDeconnexion'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+
+const { surUneCopie } = useCopieHorsLigne()
 
 const menuGroups = [
     {
-        title: 'Navigation',
+        title: 'Outils et suivi',
         items: [
-            {
-                name: 'Calendrier',
-                icon: 'calendar_month',
-                route: 'calendar.index',
-                description: 'Vue calendrier des séances',
-                color: 'text-accent-info-deep',
-                bgColor: 'bg-accent-info/50',
-            },
-            {
-                name: 'Exercices',
-                icon: 'library_books',
-                route: 'exercises.index',
-                description: 'Gérer ta bibliothèque',
-                color: 'text-accent-info-deep',
-                bgColor: 'bg-accent-info/50',
-            },
-            {
-                name: 'Outils',
-                icon: 'handyman',
-                route: 'tools.index',
-                description: 'Calculatrices & utilitaires',
-                color: 'text-accent-tertiary-deep',
-                bgColor: 'bg-accent-tertiary/50',
-            },
-        ],
-    },
-    {
-        title: 'Ma Progression',
-        items: [
-            {
-                name: 'Badges',
-                icon: 'emoji_events',
-                route: 'achievements.index',
-                description: 'Voir tes exploits',
-                color: 'text-accent-warning-deep',
-                bgColor: 'bg-accent-warning/50',
-            },
-            {
-                name: 'Objectifs',
-                icon: 'tour',
-                route: 'goals.index',
-                description: 'Gérer tes objectifs',
-                color: 'text-accent-state-deep',
-                bgColor: 'bg-accent-state/50',
-            },
-            {
-                name: 'Poids',
-                icon: 'straighten',
-                route: 'body-measurements.index',
-                description: 'Évolution corporelle',
-                color: 'text-accent-secondary-deep',
-                bgColor: 'bg-accent-secondary/50',
-            },
-            // These four features are routed, tested and fully working, but nothing
-            // in the app linked to them — they were reachable only by typing the URL.
-            {
-                name: 'Mensurations',
-                icon: 'accessibility_new',
-                route: 'body-parts.index',
-                description: 'Tour de bras, taille…',
-                color: 'text-accent-secondary-deep',
-                bgColor: 'bg-accent-secondary/50',
-            },
-            {
-                name: 'Habitudes',
-                icon: 'task_alt',
-                route: 'habits.index',
-                description: 'Suivi quotidien',
-                color: 'text-accent-tertiary-deep',
-                bgColor: 'bg-accent-tertiary/50',
-            },
-            {
-                name: 'Journal',
-                icon: 'menu_book',
-                route: 'daily-journals.index',
-                description: 'Notes et ressenti',
-                color: 'text-accent-info-deep',
-                bgColor: 'bg-accent-info/50',
-            },
-            {
-                name: 'Compléments',
-                icon: 'medication',
-                route: 'supplements.index',
-                description: 'Suivi des prises',
-                color: 'text-accent-state-deep',
-                bgColor: 'bg-accent-state/50',
-            },
+            { name: 'Outils', icon: 'handyman', route: 'tools.index' },
+            { name: 'Habitudes', icon: 'task_alt', route: 'habits.index' },
+            { name: 'Journal', icon: 'menu_book', route: 'daily-journals.index' },
+            { name: 'Compléments', icon: 'medication', route: 'supplements.index' },
         ],
     },
     {
         title: 'Compte',
         items: [
-            {
-                name: 'Modifier le profil',
-                icon: 'person_edit',
-                route: 'profile.edit',
-                description: 'Infos & Préférences',
-                color: 'text-text-main',
-                bgColor: 'bg-surface-sunken/50',
-            },
-            {
-                name: 'Raccourcis',
-                icon: 'keyboard',
-                route: 'shortcuts.index',
-                description: 'Ce que le clavier sait faire',
-                color: 'text-text-main',
-                bgColor: 'bg-surface-sunken/50',
-            },
+            { name: 'Paramètres', icon: 'settings', route: 'profile.edit' },
+            { name: 'Raccourcis clavier', icon: 'keyboard', route: 'shortcuts.index', bureauSeulement: true },
         ],
     },
 ]
+
+/**
+ * Sans réseau, seul « Outils » s'ouvre : les autres pages n'ont pas de copie
+ * (`Utils/pagesGardees.js`), et leurs rangées mèneraient à « Hors ligne ».
+ */
+const groupes = computed(() =>
+    surUneCopie.value
+        ? [
+              { ...menuGroups[0], items: menuGroups[0].items.slice(0, 1) },
+              { ...menuGroups[1], items: [] },
+          ]
+        : menuGroups,
+)
+
+const rangee =
+    'border-border focus-visible:ring-accent-primary min-h-14 items-center gap-4 border-t px-3 first:border-t-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset'
 </script>
 
 <template>
-    <Head title="Menu" />
+    <Head title="Profil" />
 
-    <AuthenticatedLayout page-title="Plus">
-        <div class="space-y-6">
-            <!-- User Profile Quick View -->
-            <div class="animate-fade-in flex items-center gap-4 py-2">
-                <div
-                    class="bg-gradient-main shadow-accent-primary/20 flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg"
-                >
+    <AuthenticatedLayout page-title="Profil" titre-masque>
+        <div class="flex flex-col gap-4">
+            <GlassCard class="relative" padding="p-4">
+                <div class="bureau:hidden absolute top-3 right-3 z-10"><Cloche /></div>
+
+                <div class="bureau:pe-0 flex items-center gap-4 pe-14">
                     <div
-                        class="bg-surface-card flex h-full w-full items-center justify-center rounded-xl text-3xl font-black"
+                        class="bg-surface-sunken font-display text-text-main flex size-14 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold"
                     >
                         {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                     </div>
-                </div>
-                <div>
-                    <h2 class="titre-section">
-                        {{ $page.props.auth.user.name }}
-                    </h2>
-                    <p class="text-text-muted text-sm font-bold">{{ $page.props.auth.user.email }}</p>
-                    <div class="mt-2 flex gap-2">
-                        <!--
-                            Le bouton que rendait `<Link as="button">`, à l'identique : la
-                            déconnexion détache d'abord l'appareil du compte (#1926), ce
-                            qu'un lien Inertia ne sait pas attendre. Sous 1 024 px, c'est
-                            la seule déconnexion de l'application : il offre au pouce les
-                            44 px de la charte (`min-h-touch`), son texte centré (#2116).
-                        -->
-                        <button
-                            type="button"
-                            class="text-accent-danger-deep hover:text-accent-danger-deep min-h-touch inline-flex items-center text-xs font-black tracking-widest uppercase"
-                            data-testid="logout-button"
-                            @click="seDeconnecter"
-                        >
-                            Déconnexion
-                        </button>
+                    <div class="min-w-0 flex-1">
+                        <h2 class="titre-plat truncate">{{ $page.props.auth.user.name }}</h2>
+                        <p class="text-text-muted truncate text-sm">{{ $page.props.auth.user.email }}</p>
                     </div>
                 </div>
-            </div>
+            </GlassCard>
 
-            <!-- Menu Groups -->
-            <div
-                v-for="(group, gIdx) in menuGroups"
-                :key="group.title"
-                class="animate-slide-up"
-                :style="{ animationDelay: `${0.1 + gIdx * 0.1}s` }"
-            >
-                <h3 class="text-text-muted sur-titre mb-4 ml-1">
-                    {{ group.title }}
-                </h3>
-
-                <div class="grid grid-cols-1 gap-3">
-                    <Link
-                        v-for="item in group.items"
-                        :key="item.name"
-                        :href="route(item.route)"
-                        class="group focus-visible:ring-accent-primary block rounded-2xl transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                    >
-                        <GlassCard
-                            padding="p-4"
-                            :hover="true"
-                            class="border-surface-card/40 bg-surface-card/60 rounded-2xl!"
+            <div class="bureau:grid-cols-2 bureau:items-start grid grid-cols-1 gap-4">
+                <div v-for="(groupe, rang) in groupes" :key="groupe.title" class="flex flex-col gap-4">
+                    <GlassCard v-if="groupe.items.length > 0" as="nav" :aria-label="groupe.title" padding="p-1.5">
+                        <Link
+                            v-for="item in groupe.items"
+                            :key="item.route"
+                            v-press
+                            :href="route(item.route)"
+                            :class="[rangee, item.bureauSeulement ? 'bureau:flex hidden' : 'flex']"
                         >
-                            <div class="flex items-center gap-4">
-                                <div
-                                    :class="[
-                                        'flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-active:scale-95',
-                                        item.bgColor,
-                                        item.color,
-                                    ]"
-                                >
-                                    <GlassIcon :name="item.icon" />
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-text-main font-bold">{{ item.name }}</h4>
-                                    <p class="text-text-muted text-xs">{{ item.description }}</p>
-                                </div>
-                                <GlassIcon
-                                    name="chevron_right"
-                                    class="text-text-muted/30 group-hover:text-text-main transition group-hover:translate-x-1"
-                                />
-                            </div>
-                        </GlassCard>
-                    </Link>
+                            <span
+                                class="bg-surface-sunken text-accent-primary-deep flex size-9 shrink-0 items-center justify-center rounded-xl"
+                            >
+                                <GlassIcon :name="item.icon" size="sm" />
+                            </span>
+                            <span class="text-text-main flex-1 text-lg font-semibold">{{ item.name }}</span>
+                            <GlassIcon name="chevron_right" class="text-text-muted" />
+                        </Link>
+                    </GlassCard>
+
+                    <IndisponibleHorsLigne
+                        v-if="rang === 0 && surUneCopie"
+                        texte="Habitudes, journal, compléments et paramètres reviennent avec le réseau."
+                    />
+
+                    <!-- Un bouton : la déconnexion détache d'abord l'appareil du compte (#1926). -->
+                    <button
+                        v-if="rang === groupes.length - 1"
+                        type="button"
+                        class="verre-regulier text-accent-danger-deep rounded-capsule focus-visible:ring-accent-primary flex min-h-14 w-full items-center justify-center text-base font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                        data-testid="logout-button"
+                        @click="seDeconnecter"
+                    >
+                        Déconnexion
+                    </button>
                 </div>
             </div>
         </div>

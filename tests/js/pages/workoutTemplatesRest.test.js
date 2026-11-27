@@ -119,7 +119,12 @@ const library = [
  * prop and let the double-launch guard look enforced when it is not. `v-press`
  * is registered empty because it is tested on its own in vPress.test.js.
  */
-const stubs = { AuthenticatedLayout: layoutStub, GlassCard: passesSlot, Modal: passesSlot }
+const stubs = {
+    AuthenticatedLayout: layoutStub,
+    GlassCard: passesSlot,
+    Modal: passesSlot,
+    OngletsDesSeances: passesSlot,
+}
 
 /*
  * Read at mount time, never at import time: `globalThis.route` is only set in
@@ -577,7 +582,7 @@ describe.each([
         const wrapper = mountPage()
         await seed(wrapper, twoExercises)
 
-        const bascules = wrapper.findAll('button[aria-pressed]')
+        const bascules = wrapper.findAll('button[aria-pressed][aria-label^="Échauffement"]')
 
         expect(bascules.map((bascule) => bascule.text())).toEqual(['É', 'É'])
         expect(bascules.map((bascule) => bascule.attributes('aria-label'))).toEqual([
@@ -714,9 +719,7 @@ describe.each([
 
         await wrapper.get('input[placeholder="Rechercher..."]').setValue('squ')
 
-        const offered = wrapper
-            .findAll('button')
-            .filter((b) => b.text().includes('Jambes') || b.text().includes('Pectoraux'))
+        const offered = wrapper.findAll('[dusk^="select-exercise-"]')
 
         expect(offered).toHaveLength(1)
         expect(offered[0].text()).toContain('Squat')
@@ -726,7 +729,7 @@ describe.each([
         const wrapper = mountPage()
         await openPicker(wrapper)
 
-        const squat = wrapper.findAll('button').find((b) => b.text().includes('Jambes'))
+        const squat = wrapper.findAll('[dusk^="select-exercise-"]').find((b) => b.text().includes('Squat'))
         await squat.trigger('click')
 
         expect(interne(wrapper).form.exercises.map((e) => e.name)).toEqual(['Squat'])

@@ -45,11 +45,6 @@ defineProps({
                 <path v-for="trace in TRACES_DES_BARRES" :key="trace" :d="trace" />
             </g>
         </svg>
-        <span
-            class="text-gradient font-display font-black tracking-tight uppercase italic"
-            :class="DISPOSITIONS_DE_LA_MARQUE[disposition].nom"
-        >
-            GymTracker
-        </span>
+        <span class="font-display font-semibold" :class="DISPOSITIONS_DE_LA_MARQUE[disposition].nom"> GymTracker </span>
     </span>
 </template>

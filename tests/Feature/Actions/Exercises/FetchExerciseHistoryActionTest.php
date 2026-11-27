@@ -61,13 +61,6 @@ it('fetches exercise history correctly', function (): void {
     expect($recente['workout_id'])->toBe($workout2->id);
     expect($ancienne['workout_id'])->toBe($workout1->id);
 
-    // Assert Epley 1RM calculation: 100 * (1 + 10 / 30) = 133.33
-    // 105 * (1 + 5 / 30) = 122.5
-    // Max is 133.33 for workout 1
-    // 110 * (1 + 8 / 30) = 139.33 for workout 2
-    expect($recente['best_1rm'])->toBe(139.33);
-    expect($ancienne['best_1rm'])->toBe(133.33);
-
     expect($recente['formatted_date'])->toBe($workout2->started_at->format('d/m'));
 });
 
@@ -159,14 +152,13 @@ it('rend une entree et une serie avec exactement leurs cles', function (): void 
     // d'exercice consomme. `started_at`, ajoute pour le tri, doit avoir ete
     // retire ; aucune des cinq autres cles ne doit manquer.
     expect(array_keys($entree))->toBe([
-        'id', 'workout_id', 'workout_name', 'formatted_date', 'best_1rm', 'sets',
+        'id', 'workout_id', 'workout_name', 'formatted_date', 'sets',
     ]);
 
     expect($entree['id'])->toBe($line->id);
     expect($entree['workout_id'])->toBe($workout->id);
     expect($entree['workout_name'])->toBe('Haut du corps');
     expect($entree['formatted_date'])->toBe('15/06');
-    expect($entree['best_1rm'])->toBe(133.33);
 
     // Une serie comparee d'un bloc : `toBe` sur un tableau exige les memes
     // cles, dans le meme ordre, avec les memes types. C'est ce qui tient a la
@@ -247,8 +239,4 @@ it('ne rend aucun meilleur 1RM pour une ligne sans aucune serie', function (): v
     expect($historique)->toHaveCount(1);
     expect($entree['id'])->toBe($line->id);
     expect($entree['sets'])->toHaveCount(0);
-
-    // Null et non zero : un zero se tracait comme une chute a 0 kg sur les
-    // courbes de la fiche, la ou rien n'a ete mesure (#1956).
-    expect($entree['best_1rm'])->toBeNull();
 });

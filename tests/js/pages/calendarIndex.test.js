@@ -34,7 +34,7 @@ const mountPage = ({ year = 2026, month = 2, workouts = [], journals = [] } = {}
             // The "Aujourd'hui" button lives in #header-actions; a stub that
             // forwards only the default slot drops it, and every assertion
             // about it then passes for the wrong reason.
-            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot, OngletsDesSeances: passesSlot },
         },
     })
 
@@ -371,12 +371,12 @@ describe('the panel under the grid', () => {
     })
 
     it('shows the mood of the day only when one was recorded', async () => {
-        const scored = await openTenth({ journals: [{ date: '2026-02-10', id: 2, mood_score: 7, has_note: true }] })
+        const scored = await openTenth({ journals: [{ date: '2026-02-10', id: 2, mood_score: 4, has_note: true }] })
         const unscored = await openTenth({
             journals: [{ date: '2026-02-10', id: 2, mood_score: null, has_note: true }],
         })
 
-        expect(scored.find('[dusk="calendar-day-details"]').text()).toContain('Humeur: 7/10')
+        expect(scored.find('[dusk="calendar-day-details"]').text()).toContain('Humeur: 4/5')
         expect(unscored.find('[dusk="calendar-day-details"]').text()).not.toContain('Humeur')
     })
 

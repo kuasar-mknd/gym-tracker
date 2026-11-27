@@ -6,12 +6,12 @@ namespace App\Actions\Stats;
 
 use App\Models\User;
 use App\Services\Diagnostic\ValeurLue;
-use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\ExerciseStatsService;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 class GetStatsDashboardAction
@@ -21,7 +21,7 @@ class GetStatsDashboardAction
         protected VolumeStatsService $volumeStats,
         protected ExerciseStatsService $exerciseStats,
         protected WorkoutStatsService $workoutStats,
-        protected BodyStatsService $bodyStats
+        protected FetchRegulariteAction $fetchRegularite
     ) {
     }
 
@@ -32,18 +32,21 @@ class GetStatsDashboardAction
     public const string PERIODE_PAR_DEFAUT = '30j';
 
     /**
-     * Les props de la page : les chiffres immédiats, en fermetures que la
-     * requête de la prop différée ne résout pas (#2148, étape 3a), et la
+     * Les props de la page : la période affichée, une valeur déjà là, et la
      * fermeture de la prop différée, que le contrôleur passe à
      * `Inertia::defer()`.
      *
      * @return array{
-     *     latestWeight: \Closure(): (float|string|null),
-     *     weightChange: \Closure(): float,
-     *     bodyFat: \Closure(): (float|string|null),
-     *     exercises: \Closure(): \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>,
      *     selectedPeriod: string,
-     *     deferredData: \Closure(): array<string, mixed>
+     *     deferredData: \Closure(): array{
+     *         aucuneSeanceFaite: bool,
+     *         performance: array<string, mixed>,
+     *         volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
+     *         regularite: array{
+     *             monthly_frequency: \Illuminate\Support\Collection<int, array{month: string, count: int}>,
+     *             day_of_week_frequency: \Illuminate\Support\Collection<int, array{day: string, count: int}>
+     *         }
+     *     }
      * }
      */
     public function execute(User $user, Request $request): array
@@ -52,11 +55,38 @@ class GetStatsDashboardAction
         $jours = $this->fetchStatsOverview->parsePeriod($period);
 
         return [
-            ...$this->fetchStatsOverview->chiffresImmediats($user, $period),
-            'deferredData' => fn (): array => [
-                'performance' => $this->performanceOverview($user, $jours),
-                'body' => $this->bodyStats->getBodyProgressOverview($user, $jours),
-            ],
+            ...$this->fetchStatsOverview->chiffresImmediats($period),
+            'deferredData' => fn (): array => $this->donneesDifferees($user, $jours),
+        ];
+    }
+
+    /**
+     * Le groupe différé de la page : si le compte n'a fait aucune séance
+     * (`User::seancesFaites()`, de n'importe quelle ancienneté : la page montre
+     * alors un seul état vide), la vue « performance », le volume des six
+     * derniers mois et la régularité (séances par mois et par jour). Les deux
+     * dernières suivent le mois calendaire, pas la période choisie, et
+     * reçoivent le même instant, lu une fois (#2033).
+     *
+     * @return array{
+     *     aucuneSeanceFaite: bool,
+     *     performance: array<string, mixed>,
+     *     volumeMensuel: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
+     *     regularite: array{
+     *         monthly_frequency: \Illuminate\Support\Collection<int, array{month: string, count: int}>,
+     *         day_of_week_frequency: \Illuminate\Support\Collection<int, array{day: string, count: int}>
+     *     }
+     * }
+     */
+    private function donneesDifferees(User $user, int $jours): array
+    {
+        $maintenant = now();
+
+        return [
+            'aucuneSeanceFaite' => ! $user->seancesFaites()->exists(),
+            'performance' => $this->performanceOverview($user, $jours, $maintenant),
+            'volumeMensuel' => $this->volumeStats->getMonthlyVolumeHistory($user, 6, $maintenant),
+            'regularite' => $this->fetchRegularite->execute($user, $maintenant),
         ];
     }
 
@@ -87,11 +117,12 @@ class GetStatsDashboardAction
      * le service, la comparaison pouvait tomber dans le mois suivant, et
      * l'entrée rangée sous septembre gardait celle d'octobre (#2033).
      *
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, quand la page en affiche d'autres à côté ; à défaut, l'horloge.
      * @return array<string, mixed>
      */
-    public function performanceOverview(User $user, int $jours = 30): array
+    public function performanceOverview(User $user, int $jours = 30, ?Carbon $maintenant = null): array
     {
-        $maintenant = now();
+        $maintenant ??= now();
         $mois = $maintenant->format('Y-m');
 
         return Cache::remember(

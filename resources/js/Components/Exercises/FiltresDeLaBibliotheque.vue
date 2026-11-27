@@ -60,7 +60,7 @@ onUnmounted(() => {
             >
                 <template #suffix>
                     <div
-                        class="text-text-muted/40 border-border text-2xs hidden items-center gap-1 rounded-lg border px-2 py-1 font-bold tracking-widest uppercase sm:flex"
+                        class="text-text-muted/40 border-border text-2xs hidden items-center gap-1 rounded-lg border px-2 py-1 font-medium sm:flex"
                         aria-hidden="true"
                     >
                         <GlassIcon name="keyboard" size="xs" />
@@ -86,7 +86,7 @@ onUnmounted(() => {
                 v-press="{ haptic: 'selection' }"
                 :dusk="`category-pill-${cat}`"
                 :active="categorie === cat"
-                :classe-active="`${CATEGORY_COLORS[cat] ?? 'category-fill-other'} shadow-cast`"
+                :classe-active="CATEGORY_COLORS[cat] ?? 'category-fill-other'"
                 @click="$emit('update:categorie', cat)"
             >
                 {{ cat }}

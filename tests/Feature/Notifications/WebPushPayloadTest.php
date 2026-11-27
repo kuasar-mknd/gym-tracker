@@ -114,7 +114,7 @@ describe('AchievementUnlocked::toWebPush', function (): void {
         $payload = new AchievementUnlocked($achievement)->toWebPush($user, null)->toArray();
 
         expect($payload)->toEqual([
-            'title' => 'Badge débloqué ! 🏆',
+            'title' => 'Badge débloqué',
             'actions' => [
                 ['title' => 'Voir mes badges', 'action' => '/achievements'],
             ],

@@ -18,17 +18,8 @@ const datasets = computed(() => [
     {
         label: 'Volume',
         data: props.data.map((item) => item.volume),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
-            gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
-            return gradient
-        },
+        backgroundColor: jeton('accent-primary'),
         borderRadius: 4,
-        hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
     },
 ])
 

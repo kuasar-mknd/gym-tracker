@@ -17,22 +17,14 @@ const datasets = computed(() => [
     {
         label: 'Doses prises',
         data: props.data.map((item) => item.count),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-            gradient.addColorStop(0, jeton('accent-info')) // Cyan
-            gradient.addColorStop(1, jetonTransparent('accent-info', 0.55)) // Blue
-            return gradient
-        },
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderRadius: 6,
-        hoverBackgroundColor: jeton('accent-info'),
+        hoverBackgroundColor: jeton('accent-primary'),
     },
 ])
 
 const infobulle = {
-    accent: 'accent-info',
+    accent: 'accent-primary',
     callbacks: { label: (context) => compte(context.raw, 'dose', 'doses') },
 }
 </script>

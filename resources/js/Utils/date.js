@@ -192,6 +192,24 @@ export const dateAvecJour = (date) =>
         : ''
 
 /**
+ * Une date sans jour de la semaine : `4 oct.`, et `4 oct. 2025` quand l'année
+ * n'est pas celle de `maintenant`. Là où la place est comptée, et où l'on sait
+ * déjà en quelle année on est.
+ *
+ * @param {Date|null|undefined} date
+ * @param {Date} [maintenant]
+ * @returns {string}
+ */
+export const dateSansJour = (date, maintenant = new Date()) =>
+    estUneDate(date)
+        ? date.toLocaleDateString(LANGUE_DES_DATES, {
+              day: 'numeric',
+              month: 'short',
+              ...(date.getFullYear() === maintenant.getFullYear() ? {} : { year: 'numeric' }),
+          })
+        : ''
+
+/**
  * Une heure : `14:30`, jamais `02:30 PM`.
  *
  * @param {Date|null|undefined} date

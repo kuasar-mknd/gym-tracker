@@ -74,9 +74,9 @@ describe('MuscleDistributionCard', () => {
         expect(wrapper.findComponent({ name: 'Deferred' }).props('data')).toBe('deferredData')
     })
 
-    it('retombe sur performanceStats quand la page ne groupe pas ses props différées', async () => {
+    it('attend la clé groupée même quand la page ne l’a pas encore reçue', async () => {
         const wrapper = await mountCard({ muscleDistribution: distribution })
 
-        expect(wrapper.findComponent({ name: 'Deferred' }).props('data')).toBe('performanceStats')
+        expect(wrapper.findComponent({ name: 'Deferred' }).props('data')).toBe('deferredData')
     })
 })

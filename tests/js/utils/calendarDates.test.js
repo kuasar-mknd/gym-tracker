@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach, onTestFinished, vi } from 'vitest'
 import {
     dateAvecJour,
     dateCourte,
+    dateSansJour,
     demainEnJourCalendaire,
     heureCourte,
     parseCalendarDate,
@@ -79,8 +80,23 @@ describe('dateCourte, dateAvecJour, heureCourte', () => {
         }
     })
 
+    it('dateSansJour écrit « 4 oct. », et l’année quand ce n’est pas la courante', () => {
+        const rendre = simulerUnSystemeEnAnglais()
+
+        try {
+            const maintenant = new Date(2026, 10, 20, 8, 0)
+
+            expect(dateSansJour(new Date(2026, 9, 4, 14, 30), maintenant)).toBe('4 oct.')
+            expect(dateSansJour(new Date(2026, 8, 12, 14, 30), maintenant)).toBe('12 sept.')
+            expect(dateSansJour(new Date(2025, 11, 31, 23, 59), maintenant)).toBe('31 déc. 2025')
+            expect(dateSansJour(new Date(2027, 0, 1, 0, 0), maintenant)).toBe('1 janv. 2027')
+        } finally {
+            rendre()
+        }
+    })
+
     it('rendent une chaîne vide pour une date absente ou illisible', () => {
-        for (const formateur of [dateCourte, dateAvecJour, heureCourte]) {
+        for (const formateur of [dateCourte, dateAvecJour, dateSansJour, heureCourte]) {
             expect(formateur(null)).toBe('')
             expect(formateur(undefined)).toBe('')
             expect(formateur(new Date('pas une date'))).toBe('')

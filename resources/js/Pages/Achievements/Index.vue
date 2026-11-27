@@ -42,10 +42,9 @@ const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(n
 <template>
     <Head title="Badges" />
 
-    <AuthenticatedLayout page-title="Badges">
+    <AuthenticatedLayout show-back back-route="stats.index" page-title="Badges">
         <template #header>
-            <h1 class="titre-section flex items-center gap-2">Badges 🏆</h1>
-            <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
+            <h1 class="titre-ecran">Badges</h1>
         </template>
 
         <div class="space-y-6 pb-24">
@@ -53,8 +52,8 @@ const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(n
                 Le compte des badges se lit à toute largeur : l'en-tête de page
                 n'existe qu'avec la barre de bureau, à partir de 1 024 px (#2057).
             -->
-            <p class="text-text-muted text-xs font-semibold tracking-wider uppercase">
-                <span class="text-accent-primary-deep text-2xl font-bold">
+            <p class="text-text-muted text-sm">
+                <span class="text-accent-primary-deep font-display text-2xl font-semibold tabular-nums">
                     {{ summary.unlocked }} / {{ summary.total }}
                 </span>
                 débloqués
@@ -86,7 +85,7 @@ const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(n
                     >
                         <!-- Badge Icon -->
                         <div
-                            class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-4xl transition-transform duration-300 group-hover:scale-110"
+                            class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-4xl"
                             :class="achievement.is_unlocked ? 'bg-accent-primary/10' : 'bg-surface-card/5'"
                         >
                             {{ achievement.icon }}
@@ -99,7 +98,7 @@ const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(n
                             montre l'infobulle : le nom et la description restaient coupés,
                             et la date ne se voyait nulle part (#2082).
                         -->
-                        <h3 class="titre-carte souris:line-clamp-1 mb-1">
+                        <h3 class="titre-plat souris:line-clamp-1 mb-1">
                             {{ achievement.name }}
                         </h3>
 
@@ -109,7 +108,7 @@ const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(n
 
                         <p
                             v-if="achievement.is_unlocked && jourDuDeblocage(achievement)"
-                            class="text-text-muted text-2xs mt-2 italic"
+                            class="text-text-muted text-2xs mt-2"
                         >
                             Débloqué le {{ jourDuDeblocage(achievement) }}
                         </p>
@@ -136,7 +135,7 @@ const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(n
                             }}</span>
                             <div
                                 v-if="achievement.is_unlocked && jourDuDeblocage(achievement)"
-                                class="text-text-on-dark-accent/30 text-2xs mt-2 italic"
+                                class="text-text-on-dark-accent/30 text-2xs mt-2"
                             >
                                 Débloqué le {{ jourDuDeblocage(achievement) }}
                             </div>

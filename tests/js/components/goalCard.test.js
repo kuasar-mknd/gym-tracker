@@ -109,11 +109,20 @@ describe('GoalCard — completion', () => {
     it('marks a finished goal as complete', () => {
         const wrapper = mountCard({ completed_at: '2026-07-01T10:00:00.000000Z', progress_pct: 100 })
 
-        expect(wrapper.text()).toContain('COMPLÉTÉ')
+        expect(wrapper.text()).toContain('Complété')
+    })
+
+    it('hangs the badge clear of the corner radius and drops the header below it', () => {
+        const wrapper = mountCard({ completed_at: '2026-07-01T10:00:00.000000Z', progress_pct: 100 })
+        const badge = wrapper.findAll('div').find((div) => div.text() === 'Complété')
+
+        expect(badge.classes()).toEqual(expect.arrayContaining(['right-7', 'rounded-b-xl']))
+        expect(wrapper.get('.mb-4.items-start').classes()).toContain('pt-3')
+        expect(mountCard({ progress_pct: 40 }).get('.mb-4.items-start').classes()).not.toContain('pt-3')
     })
 
     it('does not mark a goal still in progress', () => {
-        expect(mountCard({ progress_pct: 99.5 }).text()).not.toContain('COMPLÉTÉ')
+        expect(mountCard({ progress_pct: 99.5 }).text()).not.toContain('Complété')
     })
 
     it('reads as done even when the progress figure lags behind', () => {
@@ -200,7 +209,7 @@ describe('GoalCard — figures', () => {
         expect(statTile(enCours, 'Actuel')).toBe('Actuel 1 séance')
         expect(statTile(enCours, 'Cible')).toBe('Cible 3 séances par semaine')
         expect(enCours.text()).toContain('Fréquence · semaine')
-        expect(enCours.text()).not.toContain('COMPLÉTÉ')
+        expect(enCours.text()).not.toContain('Complété')
 
         const faite = mountCard({
             type: 'frequency',
@@ -212,8 +221,8 @@ describe('GoalCard — figures', () => {
             completed_at: '2026-11-11T10:00:00Z',
         })
 
-        expect(faite.text()).toContain('SEMAINE FAITE')
-        expect(faite.text()).not.toContain('COMPLÉTÉ')
+        expect(faite.text()).toContain('Semaine faite')
+        expect(faite.text()).not.toContain('Complété')
     })
 
     it('garde le pourcentage sur une ligne et passe l’unité hebdomadaire à la ligne serrée', () => {
@@ -247,7 +256,7 @@ describe('GoalCard — figures', () => {
         const unite = wrapper.findAll('.grid > div')[1].get('span').classes()
         expect(unite).not.toContain('block')
         expect(unite).not.toContain('leading-tight')
-        expect(wrapper.text()).toContain('COMPLÉTÉ')
+        expect(wrapper.text()).toContain('Complété')
     })
 
     /*

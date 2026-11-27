@@ -26,7 +26,7 @@ test('authenticated user can view stats page', function (): void {
                 ->has('deferredData.performance.muscleDistribution')
                 ->has('deferredData.performance.monthlyComparison')
             )
-            ->has('exercises')
+            ->missing('exercises')
         );
 });
 
@@ -169,49 +169,9 @@ test('stats page calculates monthly comparison correctly', function (): void {
     \Carbon\Carbon::setTestNow();
 });
 
-test('can retrieve exercise progress (1RM)', function (): void {
-    $user = User::factory()->create();
-    $exercise = Exercise::factory()->create();
-
-    $workout = Workout::factory()->create([
-        'user_id' => $user->id,
-        'started_at' => now()->subDays(5),
-    ]);
-
-    $line = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
-
-    // 100kg x 30 reps. Epley: 100 * (1 + 30/30) = 200.
-    Set::factory()->create([
-        'workout_line_id' => $line->id,
-        'weight' => 100,
-        'reps' => 30,
-    ]);
-
-    actingAs($user)
-        ->get(route('stats.exercise', $exercise))
-        ->assertOk()
-        ->assertJsonStructure(['progress'])
-        ->assertJsonPath('progress.0.one_rep_max', fn ($val): bool => $val == 200);
-});
-
 test('unauthenticated user cannot access stats', function (): void {
     get(route('stats.index'))
         ->assertRedirect(route('login'));
-
-    $exercise = Exercise::factory()->create();
-    get(route('stats.exercise', $exercise))
-        ->assertRedirect(route('login'));
-});
-
-test('cannot view stats for non-existent exercise', function (): void {
-    $user = User::factory()->create();
-
-    actingAs($user)
-        ->get('/stats/exercise/999999') // Invalid ID
-        ->assertNotFound();
 });
 
 test('stats do not include other users data', function (): void {

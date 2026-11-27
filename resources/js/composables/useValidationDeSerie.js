@@ -11,7 +11,7 @@ import { createWriteQueue } from '@/Utils/writeOrdering'
  *   isLatestWrite: (cle: string, seq: number) => boolean,
  *   flushPendingUpdates: (setId: unknown) => Promise<unknown>,
  *   reportSyncFailure: (message: string) => void,
- *   apresValidation: (exerciseRestTime: number|undefined) => void,
+ *   apresValidation: (exerciseRestTime: number|undefined, set: object) => void,
  *   noterUneEcritureNonConfirmee?: (cle: string, serie: object, champ: string, valeurDeRepli: unknown) => void,
  *   oublierLEcritureNonConfirmee?: (cle: string) => void,
  * }} page
@@ -101,10 +101,10 @@ export const useValidationDeSerie = ({
         const writeKey = `completion:${set._rowKey ?? set.id}`
         const seq = nextWrite(writeKey)
 
-        // ⚡ Perf: Optimistic update — no router.reload
+        // Optimistic update — no router.reload
         set.is_completed = newState
         if (newState && !rétablissement) {
-            apresValidation(exerciseRestTime)
+            apresValidation(exerciseRestTime, set)
         }
 
         /*

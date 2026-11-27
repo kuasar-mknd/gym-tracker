@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Browser;
 
+use App\Enums\PersonalRecordType;
 use App\Models\BodyMeasurement;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\Habit;
+use App\Models\PersonalRecord;
 use App\Models\Supplement;
 use App\Models\User;
 use App\Models\Workout;
@@ -91,7 +93,7 @@ class NoSidewaysScrollTest extends DuskTestCase
         const ligne = ouverte ? barre.querySelector('.h-16').getBoundingClientRect() : null;
         return {
             barreDeBureau: ouverte,
-            enteteMobile: affiche(document.querySelector('header.z-collant')),
+            enteteMobile: affiche(document.querySelector('[dusk="entete-mobile"]')),
             barreDuBas: affiche(document.querySelector('nav.glass-nav')),
             compte: compte === null ? null : { droite: compte.right, haut: compte.top, bas: compte.bottom },
             barre: ligne === null ? null : { haut: ligne.top, bas: ligne.bottom },
@@ -110,6 +112,8 @@ class NoSidewaysScrollTest extends DuskTestCase
             'objectifs' => ['goals.index'],
             'habitudes' => ['habits.index'],
             'compléments' => ['supplements.index'],
+            'corps' => ['corps.index'],
+            'records' => ['records.index'],
             'mesures' => ['body-measurements.index'],
             'mensurations' => ['body-parts.index'],
             'calendrier' => ['calendar.index'],
@@ -175,6 +179,17 @@ class NoSidewaysScrollTest extends DuskTestCase
         ]);
 
         BodyMeasurement::factory()->create(['user_id' => $user->id, 'measured_at' => now()->subDay()]);
+
+        foreach ([PersonalRecordType::MaxWeight, PersonalRecordType::Max1RM, PersonalRecordType::MaxVolumeSet] as $type) {
+            PersonalRecord::factory()->createQuietly([
+                'user_id' => $user->id,
+                'exercise_id' => $exercise->id,
+                'workout_id' => null,
+                'type' => $type,
+                'value' => 1234.5,
+                'secondary_value' => 12,
+            ]);
+        }
 
         return $user;
     }

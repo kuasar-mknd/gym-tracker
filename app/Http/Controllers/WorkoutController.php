@@ -8,6 +8,7 @@ use App\Actions\Workouts\CreateSetAction;
 use App\Actions\Workouts\DemarrerUneSeanceAction;
 use App\Actions\Workouts\FetchWorkoutShowAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
+use App\Actions\Workouts\ReouvrirUneSeanceAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Exceptions\UneSeanceEstDejaEnCours;
 use App\Http\Requests\UpdateWorkoutRequest;
@@ -19,24 +20,13 @@ use Inertia\Inertia;
 class WorkoutController extends Controller
 {
     /**
-     * La page des séances : la pagination et le compte des exercices arrivent
-     * en fermetures, que la requête de la prop différée, qui rejoue ce
-     * contrôleur, ne calcule plus (#2148, étape 3a).
+     * La page des séances : l'historique, en fermeture (#2148, étape 3a).
      */
     public function index(Request $request, FetchWorkoutsIndexAction $fetchWorkouts): \Inertia\Response
     {
         $this->authorize('viewAny', Workout::class);
 
-        $user = $this->user();
-
-        return Inertia::render('Workouts/Index', [
-            ...$fetchWorkouts->execute($user),
-            // ⚡ Bolt : les données lourdes du graphique et la liste des
-            // exercices tiennent en une seule prop différée — une requête XHR au
-            // lieu de deux, et un seul état de chargement à l'écran plutôt que
-            // deux qui se terminent à des moments différents.
-            'deferredData' => Inertia::defer(fn (): array => $fetchWorkouts->getDeferredData($user)),
-        ]);
+        return Inertia::render('Workouts/Index', $fetchWorkouts->execute($this->user()));
     }
 
     /**
@@ -130,6 +120,48 @@ class WorkoutController extends Controller
         }
 
         return back();
+    }
+
+    /**
+     * « Reprendre » du bilan (#2434) : rouvre la séance que le compte vient de
+     * terminer, et le ramène sur elle. Refusée (403) au-delà du délai ou pour la
+     * séance d'un autre ; refusée avec le message d'une séance déjà en cours si
+     * une autre s'est ouverte depuis.
+     */
+    public function reopen(Workout $workout, ReouvrirUneSeanceAction $reouvrir): \Illuminate\Http\RedirectResponse
+    {
+        // Le droit se juge sur la séance déjà liée, avant toute autre lecture : celle d'autrui ne coûte pas plus qu'un identifiant inconnu. Une séance déjà ouverte est un rejeu, que l'action rend telle quelle.
+        // Une seule lecture de l'horloge, pour le droit et pour l'action (`.ai/rules/horloge.md`).
+        $maintenant = now();
+
+        if ($workout->ended_at === null) {
+            $this->authorize('view', $workout);
+        } elseif (! app(\App\Policies\WorkoutPolicy::class)->reopen($this->user(), $workout, $maintenant)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException();
+        }
+
+        try {
+            $rouverte = $reouvrir->execute($this->user(), $workout->id, $maintenant);
+        } catch (UneSeanceEstDejaEnCours $refus) {
+            return redirect()->route('workouts.show', $refus->seanceEnCours)->with('error', UneSeanceEstDejaEnCours::MESSAGE);
+        }
+
+        return redirect()->route('workouts.show', $rouverte);
+    }
+
+    /**
+     * Les records de poids que la séance tient, lus par le bilan de fin une fois
+     * ouvert (#2434) : une lecture à part, hors de la réponse de la fin, que la
+     * file hors ligne rejoue aussi. Les records s'écrivent par une tâche en file :
+     * ils peuvent manquer juste après la fin, et le bilan les prend à l'ouverture.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si la séance n'est pas celle du compte.
+     */
+    public function records(Workout $workout): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('view', $workout);
+
+        return response()->json(['records' => $workout->recordsDePoids()]);
     }
 
     public function destroy(Workout $workout): \Illuminate\Http\RedirectResponse

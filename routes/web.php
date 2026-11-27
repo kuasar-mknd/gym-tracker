@@ -34,7 +34,6 @@ Route::middleware('auth')->group(function (): void {
         ->name('workouts.en-attente');
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/stats', [\App\Http\Controllers\StatsController::class, 'index'])->name('stats.index');
-    Route::get('/stats/exercise/{exercise}', [\App\Http\Controllers\StatsController::class, 'exercise'])->name('stats.exercise');
 
     Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
     Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
@@ -44,6 +43,8 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index']);
     Route::resource('templates', \App\Http\Controllers\WorkoutTemplateController::class)->only(['index', 'show', 'create', 'edit']);
     Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index', 'show']);
+    Route::get('/corps', [\App\Http\Controllers\CorpsController::class, 'index'])->name('corps.index');
+    Route::get('/records', [\App\Http\Controllers\RecordsController::class, 'index'])->name('records.index');
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
 
     Route::get('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'index'])->name('body-parts.index');
@@ -87,6 +88,8 @@ Route::middleware('auth')->group(function (): void {
 
         Route::post('/workouts', [\App\Http\Controllers\WorkoutController::class, 'store'])->name('workouts.store');
         Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'update'])->name('workouts.update');
+        Route::get('/workouts/{workout}/records', [\App\Http\Controllers\WorkoutController::class, 'records'])->name('workouts.records');
+        Route::post('/workouts/{workout}/reopen', [\App\Http\Controllers\WorkoutController::class, 'reopen'])->name('workouts.reopen');
         Route::delete('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'destroy'])->name('workouts.destroy');
 
         Route::resource('templates', \App\Http\Controllers\WorkoutTemplateController::class)->except(['index', 'show', 'create', 'edit']);

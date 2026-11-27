@@ -17,25 +17,17 @@ const datasets = computed(() => [
     {
         label: 'Séances',
         data: props.data.map((d) => d.count),
-        backgroundColor: (context) => {
-            const chart = context.chart
-            const { ctx, chartArea } = chart
-            if (!chartArea) return null
-            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-            gradient.addColorStop(0, jetonTransparent('accent-info', 0.6)) // Cyan
-            gradient.addColorStop(1, jetonTransparent('accent-tertiary', 0.8)) // Violet
-            return gradient
-        },
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderRadius: 6,
         barPercentage: 0.6,
-        hoverBackgroundColor: jetonTransparent('accent-info', 1),
+        hoverBackgroundColor: jetonTransparent('accent-primary', 1),
         borderWidth: 1,
         borderColor: jetonTransparent('surface-card', 0.2),
     },
 ])
 
 const infobulle = {
-    accent: 'accent-info',
+    accent: 'accent-primary',
     opaque: true,
     callbacks: { label: (context) => compte(context.parsed.y, 'séance', 'séances') },
 }
@@ -47,7 +39,6 @@ const infobulle = {
         :labels="labels"
         :datasets="datasets"
         hauteur="h-full"
-        lueur="accent-tertiary"
         :infobulle="infobulle"
         entiers
     />

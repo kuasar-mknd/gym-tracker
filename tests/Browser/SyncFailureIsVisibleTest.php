@@ -43,7 +43,7 @@ class SyncFailureIsVisibleTest extends DuskTestCase
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitForText('AJOUTER UN EXERCICE', 15);
+                ->waitForText('Ajouter un exercice', 15);
 
             /*
              * Retire la session sous la page, sans la quitter : le prochain
@@ -63,7 +63,7 @@ class SyncFailureIsVisibleTest extends DuskTestCase
 
             $this->assertSame(200, $statut, 'la déconnexion de Dusk n’a pas abouti');
 
-            $browser->press('AJOUTER UN EXERCICE')
+            $browser->press('Ajouter un exercice')
                 ->waitForText($exercise->name, 15)
                 ->press($exercise->name)
                 // The message is the assertion. Before this existed the row

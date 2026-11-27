@@ -1,22 +1,20 @@
 <!--
   Components/Workout/RestTimer.vue
 
-  A floating countdown timer component used during workouts to track rest periods between sets.
-
-  Features:
-  - Visual progress bar indicating remaining time.
-  - Controls to pause/resume and skip.
-  - Audio and Haptic feedback upon completion.
-  - Minimizable/Closeable interface.
-  - Draggable or fixed positioning (currently fixed).
-  - "Liquid Glass" aesthetics (Apple Human Interface Guidelines).
+  Le repos de la séance, dans la barre d'outils (#2434) : le bouton « Repos »
+  devient un anneau et le décompte pendant qu'il court. Un toucher ouvre une
+  petite feuille : Pause, Passer, la série qui suit et le démarrage
+  automatique du repos, réglé aussi dans les paramètres de la séance.
 -->
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { useSortieAudio } from '@/composables/useSortieAudio'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassToggle from '@/Components/UI/GlassToggle.vue'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+import GlassButton from '@/Components/UI/GlassButton.vue'
+import Modal from '@/Components/UI/Modal.vue'
+import AnneauDuRepos from '@/Components/Workout/AnneauDuRepos.vue'
 
 /** Combien de temps « Repos terminé » reste affiché avant que la carte se ferme. */
 const DELAI_DE_FERMETURE_MS = 4000
@@ -41,29 +39,10 @@ const props = defineProps({
         default: true,
     },
 
-    /**
-     * Le reglage de l'utilisateur, rendu ici pour qu'il se change sans quitter
-     * la seance. Le composant ne l'ecrit pas lui-meme : il l'annonce, et la
-     * page decide quoi en faire — c'est ce qui le garde ignorant d'Inertia, et
-     * donc montable seul.
-     */
-    autoRestTimer: {
-        type: Boolean,
-        default: true,
-    },
-
-    /**
-     * Le réglage ne peut pas partir, et l'identifiant du texte qui dit
-     * pourquoi : sur une copie hors ligne, rien ne part vers le serveur
-     * (#2048). La page le décide, comme le réglage lui-même.
-     */
-    reglageDesactive: {
-        type: Boolean,
-        default: false,
-    },
-    raisonDuReglage: {
+    /** La série qui suit, dite sous le décompte (« Ensuite, série 3 sur 4 ») : vide, rien n'est dit. */
+    ensuite: {
         type: String,
-        default: undefined,
+        default: '',
     },
 
     /**
@@ -78,6 +57,35 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+
+    /** Le démarrage automatique du repos, réglé aussi dans la feuille. */
+    reposAutomatique: {
+        type: Boolean,
+        default: true,
+    },
+
+    /**
+     * Un repos repris en route (#2434) : la page l'avait laissé en partant, et
+     * le minuteur remonté part de ce qu'il reste, sur la durée d'origine
+     * (la barre de progression se mesure sur elle). Sans lui, il part de
+     * `duration`, comme avant.
+     */
+    secondesRestantes: {
+        type: Number,
+        default: null,
+    },
+
+    /** L'échéance du repos repris (ms) : le décompte la suit, sans repartir des secondes arrondies. */
+    echeance: {
+        type: Number,
+        default: null,
+    },
+
+    /** Le repos repris était en pause : le minuteur attend le geste de reprise. */
+    enPause: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 /**
@@ -87,15 +95,23 @@ const props = defineProps({
  *   after the end of the rest, que la carte annonce entre-temps
  *   (« Repos terminé », `role="status"`). Un parent ferme la carte sur `close`.
  */
-const emit = defineEmits(['close', 'update:autoRestTimer'])
+const emit = defineEmits(['close', 'pause', 'reprise', 'update:reposAutomatique'])
+
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 // --- State ---
 
 /** Remaining time in seconds. */
-const timeLeft = ref(props.duration)
+const timeLeft = ref(props.secondesRestantes ?? props.duration)
+
+/** L'échéance d'un repos repris, prise une fois au premier départ ; une reprise après pause repart de ce qu'il reste. */
+let echeanceAReprendre = props.echeance
 
 /** Whether the timer is currently running. */
 const isActive = ref(false)
+
+/** Le repos attend la reprise : mis en pause d'un appui, ou repris en pause. */
+const enPauseDemandee = ref(props.enPause)
 
 /** Interval ID for the timer loop. */
 const timer = ref(null)
@@ -109,21 +125,33 @@ const termine = ref(false)
 /** Le minuteur qui ferme la carte une fois la fin annoncée. */
 const fermeture = ref(null)
 
-/** Pause et Passer disparaissent à la fin du repos : le focus qu'ils portaient passe à « Fermer ». */
-const boutonPause = ref(null)
+/** La feuille des commandes est ouverte (Pause, Passer). */
+const feuilleOuverte = ref(false)
+const racine = ref(null)
+
+/** Pause et Passer disparaissent à la fin du repos : le focus qu'ils portaient passe à l'interrupteur de la feuille. */
+const boutonBascule = ref(null)
 const boutonPasser = ref(null)
-const boutonFermer = ref(null)
-const carte = ref(null)
+const interrupteur = ref(null)
 
 /** La page démonte la carte sur `close` : le focus qu'elle portait, ou perdu, passe au contenu principal. */
 const fermerLaCarte = () => {
     const actif = document.activeElement
-    const perdu = actif === null || actif === document.body || carte.value?.contains(actif) === true
+    // La feuille est téléportée dans <body> : le focus qu'elle porte est hors de la carte, et perdu avec elle.
+    const perdu =
+        actif === null ||
+        actif === document.body ||
+        racine.value?.contains(actif) === true ||
+        actif.closest?.('dialog') != null
 
     emit('close')
 
     if (perdu) {
-        document.getElementById('main-content')?.focus({ preventScroll: true })
+        const rendreLeFocus = () => document.getElementById('main-content')?.focus({ preventScroll: true })
+
+        rendreLeFocus()
+        // Le dialogue encore ouvert rend la page inerte : le focus se rend aussi une fois démonté.
+        nextTick(rendreLeFocus)
     }
 }
 
@@ -171,7 +199,8 @@ const formatTime = (seconds) => {
 const startTimer = () => {
     if (timer.value) return
     isActive.value = true
-    endTime.value = Date.now() + timeLeft.value * 1000
+    endTime.value = echeanceAReprendre ?? Date.now() + timeLeft.value * 1000
+    echeanceAReprendre = null
 
     timer.value = setInterval(() => {
         updateTimer()
@@ -207,9 +236,13 @@ const toggleTimer = () => {
     triggerHaptic('toggle')
     if (isActive.value) {
         pauseTimer()
+        enPauseDemandee.value = true
+        emit('pause', timeLeft.value)
     } else {
         sortieAudio.preparer()
         startTimer()
+        enPauseDemandee.value = false
+        emit('reprise', timeLeft.value)
     }
 }
 
@@ -253,7 +286,7 @@ const jouerLeBipDeFin = (contexte) => {
  * son seul qui prévient.
  */
 const finishTimer = (rendreLeFocus = true) => {
-    const focusSurUnBoutonRetire = [boutonPause.value, boutonPasser.value].includes(document.activeElement)
+    const focusSurUnBoutonRetire = [boutonBascule.value?.$el, boutonPasser.value?.$el].includes(document.activeElement)
 
     pauseTimer()
     timeLeft.value = 0
@@ -267,16 +300,8 @@ const finishTimer = (rendreLeFocus = true) => {
     fermeture.value = setTimeout(fermerLaCarte, DELAI_DE_FERMETURE_MS)
 
     if (rendreLeFocus && focusSurUnBoutonRetire) {
-        nextTick(() => boutonFermer.value?.focus())
+        nextTick(() => interrupteur.value?.$el.querySelector('[role="switch"]')?.focus())
     }
-}
-
-/** Closes the timer component. */
-const close = () => {
-    triggerHaptic('tap')
-    pauseTimer()
-    clearTimeout(fermeture.value)
-    fermerLaCarte()
 }
 
 /** Handles document visibility changes to sync the timer when app returns from background. */
@@ -289,7 +314,7 @@ const handleVisibilityChange = () => {
 // Lifecycle Hooks
 onMounted(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    if (props.autoStart) {
+    if (props.autoStart && !props.enPause) {
         startTimer()
     }
 })
@@ -320,127 +345,88 @@ watch(
 </script>
 
 <template>
-    <div
-        ref="carte"
-        class="animate-bounce-in z-flottant right-sure-4 bottom-sure-36 left-sure-4 sm:right-sure-4 fixed sm:left-auto sm:w-80"
-    >
-        <!-- Liquid Glass Card -->
-        <div
-            class="border-surface-card/20 bg-surface-card/10 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition duration-300"
+    <div ref="racine" class="contents">
+        <GlassButton
+            variant="secondary"
+            class="bouton-de-barre bureau:w-full flex-auto"
+            :class="enPauseDemandee ? 'opacity-70' : ''"
+            dusk="rest-timer"
+            @click="feuilleOuverte = true"
         >
-            <!-- Progress bar -->
-            <div
-                class="bg-surface-sunken/50 h-1 w-full"
-                role="progressbar"
-                :aria-valuenow="progress"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                :aria-valuetext="formatTime(timeLeft)"
-            >
+            <AnneauDuRepos
+                :fraction="progress / 100"
+                class="bureau:size-5 size-6 @max-[19rem]:hidden"
+                dusk="anneau-de-la-barre"
+            />
+            <span class="sr-only">Repos </span>
+            <span class="font-semibold tabular-nums" role="timer" aria-atomic="true">{{ formatTime(timeLeft) }}</span>
+        </GlassButton>
+
+        <p class="sr-only" role="status" dusk="rest-timer-status">
+            {{ termine ? 'Repos terminé' : enPauseDemandee ? 'Repos en pause' : '' }}
+        </p>
+
+        <Modal
+            :show="feuilleOuverte"
+            position="feuille"
+            max-width="sm"
+            aria-labelledby="repos-titre"
+            @close="feuilleOuverte = false"
+        >
+            <div class="pb-feuille-6 px-6 pt-1" dusk="feuille-du-repos">
+                <h3 id="repos-titre" class="titre-plat mb-2">Repos</h3>
+                <p class="text-text-main mb-1 text-5xl font-medium tabular-nums" aria-hidden="true">
+                    {{ formatTime(timeLeft) }}
+                </p>
+                <p v-if="ensuite" class="text-text-muted mb-4 text-sm" dusk="rest-timer-ensuite">{{ ensuite }}</p>
                 <div
-                    class="bg-accent-primary h-full transition duration-1000 ease-linear"
-                    :style="{ width: `${progress}%` }"
-                ></div>
-            </div>
-
-            <div class="p-4">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <div
-                            role="status"
-                            class="text-xs font-bold tracking-wider uppercase"
-                            :class="termine ? 'text-text-main' : 'text-text-main/60'"
-                            dusk="rest-timer-status"
-                        >
-                            {{ termine ? 'Repos terminé' : 'Repos en cours' }}
-                        </div>
-                        <div class="text-text-main text-3xl font-black tabular-nums" role="timer" aria-atomic="true">
-                            {{ formatTime(timeLeft) }}
-                        </div>
-                    </div>
-
-                    <div class="flex shrink-0 items-center gap-2">
-                        <button
-                            v-if="!termine"
-                            ref="boutonPause"
-                            @click="toggleTimer"
-                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                            :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
-                            :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
-                        >
-                            <!-- Les ligatures de la police d'icônes, pas un dessin à la main (#2122). -->
-                            <GlassIcon :name="isActive ? 'pause' : 'play_arrow'" size="sm" />
-                        </button>
-
-                        <button
-                            ref="boutonFermer"
-                            @click="close"
-                            dusk="close-timer-x"
-                            class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                            aria-label="Fermer le minuteur"
-                            title="Fermer le minuteur"
-                        >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
+                    class="bg-surface-sunken mb-6 h-1 w-full overflow-hidden rounded-full"
+                    role="progressbar"
+                    :aria-valuenow="progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    :aria-valuetext="formatTime(timeLeft)"
+                >
+                    <div
+                        class="bg-accent-primary h-full rounded-full transition duration-1000 ease-linear"
+                        :style="{ width: `${progress}%` }"
+                    ></div>
                 </div>
-
-                <div v-if="!termine" class="mt-4 flex gap-2">
-                    <!-- Custom "Glass" button for skip to ensure style consistency -->
-                    <button
+                <GlassToggle
+                    ref="interrupteur"
+                    :model-value="reposAutomatique"
+                    label="Démarrage automatique du repos"
+                    class="mb-4"
+                    dusk="auto-rest-timer-feuille"
+                    :disabled="surUneCopie"
+                    :aria-describedby="surUneCopie ? raisonDUneEcriture : undefined"
+                    @update:model-value="emit('update:reposAutomatique', $event)"
+                />
+                <p v-if="termine" class="text-text-main text-center text-lg font-medium" aria-hidden="true">
+                    Repos terminé
+                </p>
+                <div class="flex flex-col gap-2">
+                    <GlassButton
+                        v-if="!termine"
+                        ref="boutonBascule"
+                        :aria-label="enPauseDemandee ? 'Reprendre le repos' : 'Mettre le repos en pause'"
+                        dusk="toggle-rest-timer"
+                        @click="toggleTimer"
+                    >
+                        {{ enPauseDemandee ? 'Reprendre' : 'Pause' }}
+                    </GlassButton>
+                    <GlassButton
+                        v-if="!termine"
                         ref="boutonPasser"
-                        @click="skipTimer"
-                        dusk="skip-rest-timer"
-                        class="focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/20 text-text-main hover:bg-surface-card/30 min-h-touch flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                        title="Passer le repos"
+                        variant="accent"
                         aria-label="Passer le repos"
+                        dusk="skip-rest-timer"
+                        @click="skipTimer"
                     >
                         Passer
-                    </button>
-                </div>
-
-                <div class="border-surface-card/20 mt-3 border-t pt-3">
-                    <GlassToggle
-                        :model-value="autoRestTimer"
-                        label="Démarrage automatique"
-                        size="sm"
-                        dusk="auto-rest-timer"
-                        :disabled="reglageDesactive"
-                        :aria-describedby="reglageDesactive ? raisonDuReglage : undefined"
-                        @update:model-value="emit('update:autoRestTimer', $event)"
-                    />
+                    </GlassButton>
                 </div>
             </div>
-        </div>
+        </Modal>
     </div>
 </template>
-
-<style scoped>
-.animate-bounce-in {
-    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-@keyframes bounceIn {
-    0% {
-        transform: scale(0.3);
-        opacity: 0;
-    }
-    50% {
-        transform: scale(1.05);
-    }
-    70% {
-        transform: scale(0.9);
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-</style>

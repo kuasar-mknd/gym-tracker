@@ -72,10 +72,6 @@ test('workouts index page renders with paginated data structure', function (): v
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Workouts/Index')
-                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                    ->has('deferredData.charts')
-                    ->has('deferredData.exercises')
-                )
                 // CRITICAL: workouts must be paginated object with data array
                 ->has('workouts.data')
                 ->has('workouts.links')
@@ -144,9 +140,9 @@ test('stats page renders without cache errors', function (): void {
 // In the new architecture, StatsController returns deferredData as a consolidated deferred prop
                 ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                     ->has('deferredData.performance.volumeTrend')
-                    ->has('deferredData.body.weightHistory')
+                    ->missing('deferredData.body')
                 )
-                ->has('exercises')
+                ->missing('exercises')
         );
 });
 
@@ -349,6 +345,8 @@ test('unauthenticated users are redirected to login for all protected pages', fu
     '/goals',
     '/exercises',
     '/templates',
+    '/corps',
+    '/records',
     '/body-measurements',
     '/daily-journals',
     '/notifications',

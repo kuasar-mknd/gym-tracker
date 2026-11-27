@@ -1,13 +1,8 @@
 <script setup>
-/**
- * La seance en cours : ce que la page garde apres son eclatement — la copie
- * locale de la seance, sa fusion avec les props, et le cablage des composables
- * qui font le reste.
- */
+// La seance en cours : la copie locale, sa fusion avec les props, et le cablage des composables qui font le reste.
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { useOrdreDeLaSeance } from '@/composables/useOrdreDeLaSeance'
 import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
@@ -16,23 +11,25 @@ import { useSeriesDeLaSeance } from '@/composables/useSeriesDeLaSeance'
 import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
-import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { memoireDeLaPage, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useEnsuiteDuRepos } from '@/composables/useEnsuiteDuRepos'
 import { useSortieAudio } from '@/composables/useSortieAudio'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
-import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
-import { ID_DE_L_ETAT_DE_LA_SEANCE, useSeanceEnAttente } from '@/composables/useSeanceEnAttente'
+import { useSeanceEnAttente } from '@/composables/useSeanceEnAttente'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
+import BilanDeFinDeSeance from '@/Components/Workout/BilanDeFinDeSeance.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import SeriesHorsDeLaCopie from '@/Components/Workout/SeriesHorsDeLaCopie.vue'
 import EtatDeLaSeanceEnAttente from '@/Components/Workout/EtatDeLaSeanceEnAttente.vue'
+import BoutonDesReglagesDeLaSeance from '@/Components/Workout/BoutonDesReglagesDeLaSeance.vue'
 import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
@@ -41,8 +38,7 @@ import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
 const props = defineProps({
     workout: { type: Object, required: true },
     exercises: { type: Array, required: true },
-    // Les plafonds d'une série (`Set::bornes()`), sous lesquels une série
-    // ajoutée ramène ce qu'elle recopie.
+    // Les plafonds d'une série (`Set::bornes()`), sous lesquels une série ajoutée ramène ce qu'elle recopie.
     bornesDUneSerie: { type: Object, default: null },
 })
 
@@ -83,10 +79,12 @@ watch(
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const sortieAudio = useSortieAudio()
-const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
-    useMinuteurDeRepos({ sortieAudio })
-// Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
-const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
+const { showTimer, liaisonDuMinuteur, autoRestTimer, setAutoRestTimer, openRestTimer, apresValidation } =
+    useMinuteurDeRepos({
+        sortieAudio,
+        memoire: memoireDeLaPage({ page, localWorkout, estClose: isFinished }),
+    })
+const { apresLaValidation, ensuiteDuRepos } = useEnsuiteDuRepos({ localWorkout, apresValidation })
 
 const { nouvelIdTemporaire, newRowKey, rowKey, pendingIds, queuedLineIds } = useIdentiteDesRangees()
 const showAddExercise = ref(false)
@@ -185,7 +183,7 @@ const {
     clearUnsynced,
     reportSyncFailure,
     reportEditFailure,
-    apresValidation,
+    apresValidation: apresLaValidation,
     bornesDUneSerie: props.bornesDUneSerie,
 })
 
@@ -212,6 +210,7 @@ const {
     finishWorkout,
     annulerLaCloture,
     confirmFinishWorkout,
+    liaisonDuBilan,
     showSettingsModal,
     settingsForm,
     updateSettings,
@@ -233,14 +232,12 @@ const { addExercise, removeLine, retraitDemande, titreDuRetrait, annulerLeRetrai
 // Les tests vident le debounce d'une serie par ici.
 defineExpose({ flushPendingUpdates })
 
-const handleFabAddExercise = () => (showAddExercise.value = !seanceEnLectureSeule.value)
+const ouvrirLeChoixDUnExercice = () => (showAddExercise.value = !seanceEnLectureSeule.value)
 
 onMounted(() => {
     // Le premier relevé : la séance telle qu'elle est arrivée, du serveur ou de
     // l'historique. Les suivants se font dans l'observateur des props.
     releverLesValeursDuServeur(seanceDeDepart)
-
-    window.addEventListener('open-add-exercise', handleFabAddExercise)
 
     rejouerLesBrouillons({
         trouverLaSerie: (setId) => {
@@ -259,8 +256,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-    window.removeEventListener('open-add-exercise', handleFabAddExercise)
-
     // Une valeur tapee juste avant de partir est une saisie : elle part maintenant.
     flushAllPendingUpdates()
 })
@@ -272,40 +267,42 @@ onUnmounted(() => {
         :page-title="localWorkout.name || 'Séance'"
         :show-back="true"
         back-route="workouts.index"
-        largeur="moyenne"
+        :largeur="lectureSeule ? 'moyenne' : 'rail'"
     >
         <ErreurDeSaisie v-bind="erreurDeSaisie" />
-
-        <template #header-actions>
-            <button
-                v-press
-                @click="showSettingsModal = true"
-                :disabled="seanceProvisoire"
-                :aria-describedby="seanceProvisoire ? ID_DE_L_ETAT_DE_LA_SEANCE : undefined"
-                dusk="workout-settings-button"
-                :class="[
-                    'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
-                    'border-surface-card bg-surface-card/60 border transition',
-                    'focus-visible:ring-accent-primary focus-visible:ring-2 focus-visible:outline-none',
-                ]"
-                aria-label="Paramètres de la séance"
-            >
-                <GlassIcon name="settings" />
-            </button>
+        <template #header>
+            <div class="flex items-center justify-between gap-4">
+                <h1 class="titre-ecran min-w-0 truncate">{{ localWorkout.name || 'Séance' }}</h1>
+                <BoutonDesReglagesDeLaSeance
+                    :desactive="seanceProvisoire"
+                    dusk="workout-settings-button-desktop"
+                    @click="showSettingsModal = true"
+                />
+            </div>
         </template>
 
-        <div :class="showTimer ? 'pb-main-safe-repos' : 'pb-main-safe'">
-            <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" :seance="localWorkout" />
-            <SeriesHorsDeLaCopie :seance="localWorkout.id" />
+        <template #header-actions>
+            <BoutonDesReglagesDeLaSeance
+                :desactive="seanceProvisoire"
+                dusk="workout-settings-button"
+                @click="showSettingsModal = true"
+            />
+        </template>
+
+        <div :class="lectureSeule ? 'pb-main-safe' : 'rail-de-bureau'">
+            <EtatDeLaSeanceEnAttente class="bureau:col-span-2" :etat="etatDeLaSeance" :seance="localWorkout" />
+            <SeriesHorsDeLaCopie class="bureau:col-span-2" :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
                 <GlassCard
                     v-if="localWorkout.workout_lines.length === 0"
                     class="flex flex-col items-center justify-center p-12 text-center"
                 >
-                    <h3 class="titre-section mb-4">Séance vide</h3>
+                    <h3 class="titre-plat mb-4">Séance vide</h3>
+                    <p class="text-text-muted bureau:block hidden text-sm">Ajoute un premier exercice.</p>
                     <GlassButton
                         v-if="!lectureSeule"
                         variant="primary"
+                        class="bureau:hidden"
                         @click="showAddExercise = true"
                         dusk="add-first-exercise"
                         >Ajouter un exercice</GlassButton
@@ -340,16 +337,28 @@ onUnmounted(() => {
             </div>
 
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
-
             <ActionsDeLaSeance
-                v-if="localWorkout.workout_lines.length > 0 && !lectureSeule"
+                v-if="!lectureSeule"
+                :vide="localWorkout.workout_lines.length === 0"
+                :id-de-la-seance="localWorkout.id"
                 :enregistrement-du-modele="savingTemplate"
                 :seance-en-attente="seanceProvisoire"
-                @ajouter-un-exercice="showAddExercise = true"
+                @ajouter-un-exercice="ouvrirLeChoixDUnExercice"
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"
                 @terminer="finishWorkout"
-            />
+            >
+                <template v-if="showTimer" #repos>
+                    <RestTimer
+                        v-bind="liaisonDuMinuteur"
+                        :ensuite="ensuiteDuRepos"
+                        :repos-automatique="autoRestTimer"
+                        :sortie-audio="sortieAudio"
+                        @update:repos-automatique="setAutoRestTimer"
+                        @close="showTimer = false"
+                    />
+                </template>
+            </ActionsDeLaSeance>
         </div>
 
         <!-- Modals -->
@@ -364,6 +373,8 @@ onUnmounted(() => {
         <WorkoutSettingsModal
             :show="showSettingsModal"
             :form="settingsForm"
+            :repos-automatique="autoRestTimer"
+            @update:repos-automatique="setAutoRestTimer"
             @close="showSettingsModal = false"
             @submit="updateSettings"
         />
@@ -377,24 +388,13 @@ onUnmounted(() => {
             @confirm="confirmFinishWorkout"
         />
 
+        <BilanDeFinDeSeance v-bind="liaisonDuBilan" />
+
         <ConfirmDialog
             :ouvert="retraitDemande"
             :titre="titreDuRetrait"
             @confirmer="confirmerLeRetrait"
             @annuler="annulerLeRetrait"
-        />
-
-        <RestTimer
-            v-if="showTimer"
-            :key="timerRun"
-            :duration="timerDuration"
-            :auto-rest-timer="autoRestTimer"
-            :reglage-desactive="surUneCopie"
-            :raison-du-reglage="raisonDUneEcriture"
-            :sortie-audio="sortieAudio"
-            @close="showTimer = false"
-            @update:auto-rest-timer="setAutoRestTimer"
-            dusk="rest-timer"
         />
     </AuthenticatedLayout>
 </template>

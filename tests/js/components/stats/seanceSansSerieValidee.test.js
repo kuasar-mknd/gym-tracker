@@ -6,8 +6,6 @@ vi.mock('vue-chartjs', async () => (await import('../chartRecorder.js')).chartRe
 
 const MaxRepsChart = (await import('@/Components/Stats/MaxRepsChart.vue')).default
 const MaxWeightChart = (await import('@/Components/Stats/MaxWeightChart.vue')).default
-const AverageWeightChart = (await import('@/Components/Stats/AverageWeightChart.vue')).default
-const Estimated1RMHistoryChart = (await import('@/Components/Stats/Estimated1RMHistoryChart.vue')).default
 
 /*
  * Les cartes de la fiche exercice ne lisent que les séries validées (#1956).
@@ -18,8 +16,6 @@ const Estimated1RMHistoryChart = (await import('@/Components/Stats/Estimated1RMH
 describe.each([
     ['MaxRepsChart', MaxRepsChart, 'reps'],
     ['MaxWeightChart', MaxWeightChart, 'weight'],
-    ['AverageWeightChart', AverageWeightChart, 'weight'],
-    ['Estimated1RMHistoryChart', Estimated1RMHistoryChart, 'weight'],
 ])('%s', (_nom, composant, cle) => {
     it('enjambe une séance sans série validée au lieu de la tracer à zéro', () => {
         const donnees = [

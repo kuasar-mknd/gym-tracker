@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Achievement;
-use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Notifications\AchievementUnlocked;
@@ -127,12 +126,12 @@ it('ne lit rien de `auth.user` pour une redirection d’écriture', function ():
 
 it('ne lit rien de `auth.user` pour une route JSON du groupe web', function (): void {
     $compte = propsPartageesCompteOccupe();
-    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $seance = Workout::factory()->create(['user_id' => $compte->id]);
 
     $lues = propsPartageesClesLuesPendant(
         $compte,
         fn (): TestResponse => actingAs($compte)
-            ->getJson(route('stats.exercise', ['exercise' => $exercice->id]))
+            ->getJson(route('workouts.records', ['workout' => $seance->id]))
             ->assertOk(),
     );
 

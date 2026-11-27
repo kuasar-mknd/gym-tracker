@@ -35,7 +35,10 @@ class PageScrollTest extends DuskTestCase
     public function test_the_page_scrolls_by_hand_on_the_dashboard(): void
     {
         $this->browse(function (Browser $browser): void {
-            $browser->loginAs(User::factory()->create())
+            $user = User::factory()->create();
+            Workout::factory()->count(3)->for($user)->create();
+
+            $browser->loginAs($user)
                 ->resizeToIphone15()
                 ->visit(route('dashboard'))
                 ->waitFor('#main-content', 30);

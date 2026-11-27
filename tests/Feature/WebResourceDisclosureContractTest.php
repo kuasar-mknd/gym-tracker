@@ -201,7 +201,7 @@ function webHostilePayload(\Illuminate\Routing\Route $route): array
  *
  * La fabrique seule ne suffit pas : `ExerciseFactory` cree un exercice de
  * bibliotheque, `user_id` a null, que tout le monde peut voir. Sonde ainsi,
- * `stats.exercise` repondait 200 et sortait du balayage — l'endpoint que #1432
+ * `workouts.records` repondait 200 et sortait du balayage — l'endpoint que #1432
  * cite nommement n'aurait pas ete teste. Le proprietaire est donc impose quand
  * le modele en porte un.
  *
@@ -330,7 +330,7 @@ it('answers the same on the web for a resource owned by someone else as for one 
          * - Inertia, que #1432 cite parce que l'application n'installe aucun
          *   rendu d'erreur Inertia et que le client recoit donc du HTML brut ;
          * - `http` (resources/js/Utils/http.js), par lequel
-         *   `ExerciseProgressCard.vue` appelle `stats.exercise`, une route web
+         *   `useReglagesDeLaSeance.js` appelle `workouts.records`, une route web
          *   qui repond en JSON. Ses en-tetes sont ceux que ce module envoie.
          */
         $callers = [

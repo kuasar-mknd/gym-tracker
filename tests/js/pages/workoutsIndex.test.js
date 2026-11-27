@@ -22,35 +22,6 @@ vi.mock('@/composables/useDemarrageDUneSeance', async () => {
     return { useDemarrageDUneSeance: () => ({ demarrer: (...args) => demarrer(...args), enCours: ref(false) }) }
 })
 
-/*
- * The six charts are pulled in by defineAsyncComponent, so their import chain
- * keeps resolving after the test file is done — `workoutDuration.js` was still
- * loading when the environment tore down, and Vitest reported an unhandled
- * EnvironmentTeardownError that failed the whole run while every test passed.
- *
- * Mocking the modules means the dynamic import resolves from the registry
- * instead of walking the real chain. Nothing here asserts on a chart's
- * internals; what the page hands one is asserted through its props.
- */
-vi.mock('@/Components/Stats/WorkoutFrequencyChart.vue', () => ({
-    default: { name: 'WorkoutFrequencyChart', template: '<div />' },
-}))
-vi.mock('@/Components/Stats/WorkoutsPerMonthChart.vue', () => ({
-    default: { name: 'WorkoutsPerMonthChart', template: '<div />' },
-}))
-vi.mock('@/Components/Stats/MonthlyVolumeChart.vue', () => ({
-    default: { name: 'MonthlyVolumeChart', template: '<div />' },
-}))
-vi.mock('@/Components/Stats/WorkoutDurationChart.vue', () => ({
-    default: { name: 'WorkoutDurationChart', template: '<div />' },
-}))
-vi.mock('@/Components/Stats/VolumePerWorkoutChart.vue', () => ({
-    default: { name: 'VolumePerWorkoutChart', template: '<div />' },
-}))
-vi.mock('@/Components/Stats/WorkoutHistoryTimelineChart.vue', () => ({
-    default: { name: 'WorkoutHistoryTimelineChart', template: '<div />' },
-}))
-
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => haptic(...args) }))
 
 /**
@@ -69,9 +40,6 @@ vi.mock('@inertiajs/vue3', async () => {
         // and an anonymous one gets stubbed away slots and all.
         Head: { name: 'Head', template: '<div />' },
         Link: { name: 'Link', props: ['href'], template: '<a :href="href"><slot /></a>' },
-        // Both slots, so the skeletons the page shows while the payload is in
-        // flight and the content it shows afterwards are each rendered once.
-        Deferred: { name: 'Deferred', props: ['data'], template: '<div><slot name="fallback" /><slot /></div>' },
         usePage: () => pageDInertia,
         router: { visit: (...args) => visit(...args), reload: vi.fn(), post: vi.fn() },
         useForm: (data) => {
@@ -92,16 +60,7 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 import WorkoutsIndex from '@/Pages/Workouts/Index.vue'
-import GlassStat from '@/Components/UI/GlassStat.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
-import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
-
-/** La valeur que la carte de chiffre reçoit pour ce libellé. */
-const statistique = (wrapper, libelle) =>
-    wrapper
-        .findAllComponents(GlassStat)
-        .find((carte) => carte.props('libelle') === libelle)
-        ?.props('valeur')
 
 /** La question passe par un dialogue de l'application, plus par `confirm()`. */
 const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
@@ -151,21 +110,6 @@ const paginator = {
     next_page_url: '/workouts?page=2',
 }
 
-/** Only two of the five series carry points, so the empty ones can be shown to stay hidden. */
-const deferredData = {
-    charts: {
-        day_of_week_frequency: [{ day: 'Lundi', count: 4 }],
-        monthly_frequency: [{ month: '2026-07', count: 8 }],
-        monthly_volume: [],
-        duration_history: [],
-        volume_history: [],
-    },
-    exercises: [
-        { id: 21, name: 'Rowing', category: 'Dos' },
-        { id: 22, name: 'Soulevé de terre', category: 'Jambes' },
-    ],
-}
-
 const passesSlot = { template: '<div><slot /></div>' }
 
 /**
@@ -185,21 +129,18 @@ const stubs = {
     SwipeableRow: { template: '<div><slot name="action-right" /><slot /></div>' },
     GlassEmptyState: { template: '<div dusk="empty-state" @click="$emit(\'action\')" />' },
     // Rendered by the @inertiajs/vue3 mock above rather than stubbed away: the
-    // row link and everything behind Deferred live inside their slots.
+    // row link live inside its slots.
     Link: false,
-    Deferred: false,
-    // Rendus pour de vrai : la rangée porte le bouton de suppression et le lien
-    // que les cas ci-dessous lisent, la grille porte les titres des graphiques.
+    // Rendue pour de vrai : le segment mobile et la commande de démarrage que la page lui passe (la cloche, elle, reste en stub).
+    OngletsDesSeances: false,
+    // Rendue pour de vrai : la rangée porte le bouton de suppression et le lien que les cas ci-dessous lisent.
     CarteDeSeance,
-    GraphiquesDesSeances,
 }
 
 const mountPage = (overrides = {}) =>
     mount(WorkoutsIndex, {
         props: {
             workouts: structuredClone(paginator),
-            totalExercises: 12,
-            deferredData: structuredClone(deferredData),
             ...overrides,
         },
         shallow: true,
@@ -228,31 +169,6 @@ beforeEach(() => {
     haptic.mockReset()
     forms.length = 0
     globalThis.confirm = vi.fn(() => true)
-})
-
-/**
- * The counters sit above the list and are the first thing read. Both of them
- * summarise more than the current page holds, so neither can be derived from
- * what happens to be rendered underneath.
- */
-describe('Workouts/Index — the summary above the history', () => {
-    it('counts every session ever recorded, not the twenty on this page', () => {
-        const wrapper = mountPage()
-
-        expect(statistique(wrapper, 'Séances')).toBe('47')
-    })
-
-    it('falls back to the rows on screen when the paginator gives no total', () => {
-        const wrapper = mountPage({ workouts: { ...structuredClone(paginator), total: undefined } })
-
-        expect(statistique(wrapper, 'Séances')).toBe('3')
-    })
-
-    it('shows a zero rather than a blank where the exercise count belongs', () => {
-        const wrapper = mountPage({ totalExercises: undefined })
-
-        expect(statistique(wrapper, 'Exercices')).toBe('0')
-    })
 })
 
 /**
@@ -576,64 +492,6 @@ describe('Workouts/Index — an empty history', () => {
     })
 })
 
-/**
- * The charts arrive after the page, in one deferred payload. A chart whose
- * series came back empty must not render: an axis with nothing on it reads as a
- * broken chart rather than as an absence of data.
- */
-describe('Workouts/Index — the deferred charts and exercises', () => {
-    it('shows only the charts that have something to plot', () => {
-        // Whole headings, not substrings: "Durée" also appears in the timeline
-        // card's subtitle, which has nothing to do with the duration chart.
-        const headings = mountPage()
-            .findAll('h3')
-            .map((heading) => heading.text())
-
-        expect(headings).toContain('Fréquence par Jour')
-        expect(headings).toContain('Fréquence Mensuelle')
-        expect(headings).not.toContain('Volume Mensuel')
-        expect(headings).not.toContain('Durée')
-        expect(headings).not.toContain('Volume par Séance')
-    })
-
-    it('shows all five once every series has points', () => {
-        const filled = structuredClone(deferredData)
-        for (const series of Object.keys(filled.charts)) {
-            filled.charts[series] = [{ label: 'Juillet', value: 3 }]
-        }
-
-        const headings = mountPage({ deferredData: filled })
-            .findAll('h3')
-            .map((heading) => heading.text())
-
-        expect(headings).toEqual(
-            expect.arrayContaining([
-                'Fréquence par Jour',
-                'Fréquence Mensuelle',
-                'Volume Mensuel',
-                'Durée',
-                'Volume par Séance',
-            ]),
-        )
-    })
-
-    it('lists the exercises available with the muscle group each belongs to', () => {
-        const text = mountPage().text()
-
-        expect(text).toContain('Rowing')
-        expect(text).toContain('Dos')
-        expect(text).toContain('Soulevé de terre')
-        expect(text).toContain('Jambes')
-    })
-
-    /** The summary block, charts included, hangs off the history being non-empty. */
-    it('offers no charts at all before the first session exists', () => {
-        const wrapper = mountPage({ workouts: { ...structuredClone(paginator), data: [], total: 0 } })
-
-        expect(wrapper.findAll('h3').map((heading) => heading.text())).not.toContain('Fréquence Mensuelle')
-    })
-})
-
 /*
  * Sur une copie hors ligne, rien ne part par une visite (#2048, partie E).
  * Démarrer une séance passe par la file depuis #2049, sans rien tirer de la
@@ -684,6 +542,8 @@ describe('Workouts/Index — sur une copie hors ligne', () => {
  * « Calendrier » et « Modèles », dans l'en-tête de bureau, se posaient dans un
  * `Link` autour d'un `GlassButton` : un bouton dans un lien, deux arrêts de
  * tabulation pour un seul geste (#2117). Le vrai `GlassButton` les rend ici.
+ * Le segment mobile (`nav` « Séances »), jumeau de ces commandes sous 1 024 px,
+ * est écarté de la recherche : il a ses propres cas plus bas.
  */
 describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
     it.each([
@@ -693,8 +553,6 @@ describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
         const wrapper = mount(WorkoutsIndex, {
             props: {
                 workouts: structuredClone(paginator),
-                totalExercises: 12,
-                deferredData: structuredClone(deferredData),
             },
             shallow: true,
             global: {
@@ -705,6 +563,7 @@ describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
         })
         const commandes = wrapper
             .findAll('a[href], button:not([disabled])')
+            .filter((commande) => commande.element.closest('nav[aria-label="Séances"]') === null)
             .filter((commande) => commande.text().replace(/\s+/g, ' ').trim() === nom)
 
         expect(wrapper.findAll('a button')).toHaveLength(0)
@@ -713,5 +572,148 @@ describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
         ])
 
         wrapper.unmount()
+    })
+})
+
+describe('Workouts/Index — le segment mobile', () => {
+    it('propose Historique, Modèles et Calendrier, chacun par un seul lien sauf la page courante', () => {
+        const wrapper = mountPage()
+        const segment = wrapper.get('nav[aria-label="Séances"]')
+
+        expect(segment.findAll('a, span').map((onglet) => onglet.text())).toEqual([
+            'Historique',
+            'Modèles',
+            'Calendrier',
+        ])
+        expect(segment.get('[aria-current="page"]').text()).toBe('Historique')
+        expect(segment.findAll('a').map((lien) => [lien.text(), lien.attributes('href')])).toEqual([
+            ['Modèles', globalThis.route('templates.index')],
+            ['Calendrier', globalThis.route('calendar.index')],
+        ])
+        expect(segment.findAll('button')).toHaveLength(0)
+        expect(wrapper.text()).toContain('Démarrer une séance')
+    })
+})
+
+/**
+ * La page est le journal : le segment et la cloche, le bouton de démarrage dessous, puis la liste. Sans
+ * séance, un compte neuf n'a qu'un bouton, celui de son état vide.
+ */
+describe('Workouts/Index — le journal', () => {
+    const avecUneSeanceEnCours = (seanceEnCours, overrides = {}) =>
+        mount(WorkoutsIndex, {
+            props: { workouts: structuredClone(paginator), ...overrides },
+            shallow: true,
+            global: {
+                stubs: {
+                    ...stubs,
+                    AuthenticatedLayout: {
+                        template: `<div><slot name="header" /><slot :seance-en-cours='${JSON.stringify(seanceEnCours)}' /></div>`,
+                    },
+                },
+                mocks: { route: globalThis.route },
+            },
+        })
+
+    it('range le segment et la cloche, le bouton « Démarrer » sous eux, puis la liste, et rien d’autre', () => {
+        const wrapper = mountPage()
+        const html = wrapper.html()
+
+        expect(html.indexOf('Démarrer une séance')).toBeGreaterThan(-1)
+        expect(html.indexOf('aria-label="Séances"')).toBeLessThan(html.indexOf('Démarrer une séance'))
+        expect(html.indexOf('Démarrer une séance')).toBeLessThan(html.indexOf('Push Day'))
+        expect(wrapper.text()).not.toContain('Exercices disponibles')
+        expect(wrapper.text()).not.toContain('Aperçu historique')
+        expect(wrapper.findAllComponents({ name: 'GlassStat' })).toHaveLength(0)
+    })
+
+    it('ne démarre qu’une fois sur un compte neuf : le bouton de l’état vide, ni la ligne d’action ni l’en-tête', () => {
+        const wrapper = mountPage({ workouts: { ...structuredClone(paginator), data: [], total: 0 } })
+
+        expect(wrapper.text()).not.toContain('Démarrer une séance')
+        expect(wrapper.find('[aria-label="Nouvelle séance"]').exists()).toBe(false)
+        expect(wrapper.findAll('[dusk="empty-state"]')).toHaveLength(1)
+    })
+
+    it('ne montre qu’une action « Reprendre » : celle du bandeau du layout, pas de bouton ni de « Démarrer » dans la page', () => {
+        const wrapper = avecUneSeanceEnCours({ id: 2 })
+
+        expect(wrapper.text()).not.toContain('Reprendre')
+        expect(wrapper.text()).not.toContain('Démarrer une séance')
+        expect(wrapper.find('[dusk="reprendre-la-seance"]').exists()).toBe(false)
+    })
+
+    it('ne propose pas « Démarrer » pour une séance en attente de la file : le bandeau l’ouvre', () => {
+        const wrapper = avecUneSeanceEnCours({ id: 'attente', enAttenteDe: 'cle' })
+
+        expect(wrapper.text()).not.toContain('Reprendre')
+        expect(wrapper.text()).not.toContain('Démarrer une séance')
+    })
+
+    const pageDeux = () =>
+        mountPage({
+            workouts: {
+                ...structuredClone(paginator),
+                data: [{ id: 9, name: 'Dernière', started_at: '2026-06-01T08:00:00.000000Z', workout_lines: [] }],
+                total: 21,
+                current_page: 2,
+                last_page: 2,
+                prev_page_url: '/workouts?page=1',
+                next_page_url: null,
+            },
+        })
+
+    it('ne dit pas « Pas encore de séance » quand on supprime la dernière carte d’une page autre que la première, et revient à la page précédente une fois la suppression aboutie', async () => {
+        const wrapper = pageDeux()
+
+        await deleteRow(wrapper, 9)
+
+        expect(rowIds(wrapper)).toEqual([])
+        expect(wrapper.find('[dusk="empty-state"]').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('Pas encore de séance')
+        expect(wrapper.find('[dusk="workouts-page-vide"]').exists()).toBe(true)
+        expect(visit).not.toHaveBeenCalled()
+
+        destroy.mock.calls[0][1].onSuccess()
+
+        expect(visit).toHaveBeenCalledWith('/workouts?page=1', { replace: true, preserveScroll: true })
+    })
+
+    it('ne quitte pas la page 2 tant que la suppression n’a pas abouti, et la liste revient si elle échoue', async () => {
+        const wrapper = pageDeux()
+
+        await deleteRow(wrapper, 9)
+        destroy.mock.calls[0][1].onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(visit).not.toHaveBeenCalled()
+        expect(rowIds(wrapper)).toEqual([9])
+    })
+
+    it('montre l’état vide, jamais une page sans carte, quand la seule séance de la première page est supprimée avant que le total ait suivi', async () => {
+        const wrapper = mountPage({
+            workouts: {
+                ...structuredClone(paginator),
+                data: [{ id: 9, name: 'Seule', started_at: '2026-06-01T08:00:00.000000Z', workout_lines: [] }],
+                total: 1,
+                last_page: 1,
+                next_page_url: null,
+            },
+        })
+
+        await deleteRow(wrapper, 9)
+
+        expect(rowIds(wrapper)).toEqual([])
+        expect(wrapper.findAll('[dusk="empty-state"]')).toHaveLength(1)
+        expect(wrapper.text()).not.toContain('Démarrer une séance Démarrer')
+        expect(wrapper.find('[aria-label="Nouvelle séance"]').exists()).toBe(false)
+    })
+
+    it('marque d’une pastille la seule séance ouverte de la liste', () => {
+        const wrapper = avecUneSeanceEnCours({ id: 2 })
+        const cartes = wrapper.findAllComponents(CarteDeSeance)
+
+        expect(cartes.map((carte) => carte.props('enCours'))).toEqual([false, true, false])
+        expect(wrapper.text().match(/En cours/g)).toHaveLength(1)
     })
 })

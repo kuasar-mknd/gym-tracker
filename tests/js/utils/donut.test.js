@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { optionsDAnneau, pluginCentreDAnneau } from '@/Utils/donut'
+import { optionsDAnneau } from '@/Utils/donut'
 
 /*
  * Ce que les deux anneaux du tableau de bord partagent.
@@ -37,34 +37,5 @@ describe('optionsDAnneau', () => {
         const options = optionsDAnneau((context) => `vu ${context.raw}`)
 
         expect(options.plugins.tooltip.callbacks.label({ raw: 7 })).toBe('vu 7')
-    })
-})
-
-describe('pluginCentreDAnneau', () => {
-    const chart = (arc) => ({ getDatasetMeta: () => (arc === null ? null : { data: arc === undefined ? [] : [arc] }) })
-
-    it('rapporte le centre du premier arc', () => {
-        let vu = null
-        pluginCentreDAnneau((position) => (vu = position)).afterDraw(chart({ x: 148, y: 90 }))
-
-        expect(vu).toEqual({ x: 148, y: 90 })
-    })
-
-    /*
-     * Sans arc — aucune donnée — il n'y a pas de centre à rapporter, et
-     * inventer une position placerait l'icône sur un anneau qui n'existe pas.
-     */
-    it('ne rapporte rien quand il n’y a pas d’arc', () => {
-        let vu = 'intact'
-        pluginCentreDAnneau((position) => (vu = position)).afterDraw(chart())
-
-        expect(vu).toBe('intact')
-    })
-
-    it('ne rapporte rien quand le jeu de données est absent', () => {
-        let vu = 'intact'
-        pluginCentreDAnneau((position) => (vu = position)).afterDraw(chart(null))
-
-        expect(vu).toBe('intact')
     })
 })

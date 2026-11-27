@@ -25,19 +25,34 @@ class PageBrowserTest extends DuskTestCase
                 ->{$sizeMacro}();
 
             $pages = [
-                '/dashboard' => 'RETOUR',
-                '/workouts' => 'SÉANCES',
-                '/calendar' => 'CALENDRIER',
-                '/exercises' => 'BIBLIOTHÈQUE',
-                '/stats' => 'ÉVOLUTION',
-                '/profile' => 'PLUS',
+                '/dashboard' => 'Bon retour',
+                '/workouts' => 'Démarrer une séance',
+                // Le texte « Calendrier » est aussi dans la rangée des séances : on attend l'en-tête de la grille, propre à la page.
+                '/calendar' => 'Lun',
+                '/exercises' => 'Exercices',
+                '/stats' => 'Pas encore de séance',
+                '/corps' => 'Corps',
+                '/records' => 'Records',
+                '/profile' => $user->email,
             ];
+
+            // L'Accueil, Séances, Progrès et le Profil ne montrent pas leur titre : le h1 reste dans le DOM, masqué aux yeux.
+            $titresMasques = ['/dashboard' => 'Accueil', '/workouts' => 'Séances', '/stats' => 'Progrès', '/profile' => 'Profil'];
 
             foreach ($pages as $url => $text) {
                 $browser->visit($url)
                     ->disableAnimations()
                     ->waitFor('#main-content', 30)
                     ->waitForText($text, 15);
+
+                if (isset($titresMasques[$url])) {
+                    $browser->assertScript("document.querySelector('header h1').textContent.trim()", $titresMasques[$url]);
+                    // `textContent` ignore le CSS : la boîte du titre doit tenir en un pixel (sr-only), ou ne pas exister.
+                    $browser->assertScript(
+                        "(() => { const r = document.querySelector('header h1').getBoundingClientRect(); return r.width <= 1 && r.height <= 1; })()",
+                        true,
+                    );
+                }
             }
             $browser->assertNoConsoleExceptions();
         } catch (\Exception $e) {

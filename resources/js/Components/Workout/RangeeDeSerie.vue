@@ -27,7 +27,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
 </script>
 
 <template>
-    <SwipeableRow :disabled="disabled">
+    <SwipeableRow :disabled="disabled" rayon="rounded-2xl">
         <!-- The row was swipeable with no action behind it: dragging
          it snapped it open onto an empty background and left it
          there. Same delete the row's own button calls, reached
@@ -42,7 +42,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
             >
                 <span class="flex flex-col items-center" aria-hidden="true">
                     <GlassIcon name="delete" />
-                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-semibold">Supprimer</span>
                 </span>
             </button>
         </template>
@@ -92,7 +92,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 :data-poignee-clavier="reordonnable ? '' : undefined"
                 :dusk="`reorder-set-${lineIndex}-${index}`"
                 :aria-label="reordonnable ? `Déplacer la série ${index + 1}, ${line.exercise.name}` : undefined"
-                class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black select-none focus-visible:ring-2 focus-visible:outline-none"
+                class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-semibold select-none focus-visible:ring-2 focus-visible:outline-none"
                 @keydown.up.prevent="$emit('deplacer', index - 1)"
                 @keydown.down.prevent="$emit('deplacer', index + 1)"
             >
@@ -206,7 +206,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     'before:absolute before:-inset-2.5 before:content-[\'\']',
                     // Redundant on a phone, where the row swipes.
                     // Kept from sm up, where there is no swipe at
-                    // all: SwipeableRow listens for touch events
+                    // all: SwipeableRow listens for touch and pen
                     // only, so a mouse has no other way to delete.
                     'hidden sm:block',
                 ]"

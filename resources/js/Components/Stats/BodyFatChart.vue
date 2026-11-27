@@ -14,11 +14,11 @@ const labels = computed(() => props.data.map((item) => item.date))
 
 const datasets = computed(() => [
     {
-        label: 'Masse Grasse (%)',
+        label: 'Masse grasse (%)',
         data: props.data.map((item) => item.body_fat),
         fill: true,
         tension: 0.4,
-        borderColor: jeton('accent-secondary'), // Magenta
+        borderColor: jeton('accent-secondary'),
         backgroundColor: (context) => {
             const chart = context.chart
             const { ctx, chartArea } = chart
@@ -46,7 +46,6 @@ const infobulle = { accent: 'accent-secondary', callbacks: { label: (context) =>
         :labels="labels"
         :datasets="datasets"
         hauteur="h-32"
-        lueur="accent-secondary"
         :infobulle="infobulle"
         :axe-x="false"
         :axe-y="{ grid: { display: false } }"

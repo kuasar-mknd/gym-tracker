@@ -13,7 +13,7 @@ import {
 
 /*
  * Démarrer une séance sans réseau (#2049), depuis la vraie page d'accueil et
- * la vraie barre du bas, avec le vrai client d'Inertia et la vraie file hors
+ * son bouton « Démarrer une séance », avec le vrai client d'Inertia et la vraie file hors
  * ligne.
  *
  * Le bouton « Séance » faisait une visite d'Inertia (`workouts.store`) qui ne
@@ -32,25 +32,6 @@ import {
  * par le réseau simulé.
  */
 
-// Les graphiques de l'accueil et de ses cartes : chargés à la demande, ils arriveraient après le fichier.
-vi.mock('@/Components/Stats/ActiveGoalsChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
-vi.mock('@/Components/Stats/DashboardDurationChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
-vi.mock('@/Components/Stats/DurationDistributionChart.vue', () => ({
-    __esModule: true,
-    default: { render: () => null },
-}))
-vi.mock('@/Components/Stats/RecentPRsChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
-vi.mock('@/Components/Stats/RecentWorkoutsChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
-vi.mock('@/Components/Stats/RecentWorkoutsExercisesChart.vue', () => ({
-    __esModule: true,
-    default: { render: () => null },
-}))
-vi.mock('@/Components/Stats/RecentWorkoutsTimelineChart.vue', () => ({
-    __esModule: true,
-    default: { render: () => null },
-}))
-vi.mock('@/Components/Stats/TimeOfDayChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
-vi.mock('@/Components/Stats/WeeklyVolumeChart.vue', () => ({ __esModule: true, default: { render: () => null } }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: () => {} }))
 
 /** Le serveur de l'API, derrière `Utils/http` : ce qu'il a reçu, et ce qu'il rendra à chaque écriture. */
@@ -164,7 +145,7 @@ let DEMARRAGE_SANS_RESEAU
 /** La page qu'Inertia montre, telle que `usePage()` la lit : visites du client comprises. */
 let page = null
 
-const bouton = () => document.querySelector('nav[aria-label="Navigation principale"] button')
+const bouton = () => document.querySelector('[dusk="start-workout-button"]')
 const seanceAffichee = () => document.getElementById('seance')?.textContent ?? null
 const toasts = () =>
     [...document.querySelectorAll('[role="alert"][aria-live]')].map((toast) => toast.textContent.trim())
@@ -285,7 +266,7 @@ describe('démarrer une séance sans réseau, depuis l’accueil', () => {
         expect(relais.rejets).toEqual([])
     })
 
-    it('ouvre la même séance au second appui, sans seconde création', async () => {
+    it('ne propose plus « Démarrer » tant que la séance en file est en cours : « Reprendre » la rouvre, sans seconde création', async () => {
         etatDuReseau.noterQueLeServeurNeRepondPas()
 
         bouton().click()
@@ -293,7 +274,13 @@ describe('démarrer une séance sans réseau, depuis l’accueil', () => {
         const premiere = page.url
 
         await remettreLAccueil()
-        bouton().click()
+
+        expect(bouton()).toBeNull()
+        expect(document.body.textContent).toContain('Modèles')
+
+        const reprendre = document.querySelector('[dusk="active-workout-banner"]')
+        expect(reprendre).not.toBeNull()
+        reprendre.click()
         await vi.waitUntil(() => page.component === 'Workouts/Show')
 
         expect(page.url).toBe(premiere)

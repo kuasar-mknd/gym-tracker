@@ -1,6 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import {
     DRAPEAU_DE_L_AFFICHAGE,
     FONCTION_DE_CONSOLE,
@@ -18,7 +16,6 @@ import {
     tempsDuServeur,
 } from '@/Utils/releveDesTemps'
 import { http } from '@/Utils/http'
-import { jsRoot } from '../conventions/sourceFiles'
 
 /*
  * Le relevé des temps dans le navigateur (#1315, #2148, étape 1), sur des
@@ -894,25 +891,18 @@ describe('le relevé à l’écran', () => {
     })
 
     /*
-     * Le minuteur de repos se pose au bas de l'écran, et docs/releve-des-temps.md demande le
-     * relevé de la séance en cours : posé à sa place et sur sa couche, le
-     * panneau en cachait le bas. Déplié, il dépassait le haut d'un téléphone
-     * en paysage, titre compris : plus rien ne le repliait, et « Fermer »
-     * oublie le drapeau.
+     * Déplié, le relevé dépassait le haut d'un téléphone en paysage, titre
+     * compris : plus rien ne le repliait, et « Fermer » oublie le drapeau.
      */
-    it('se tient en haut de l’écran, loin du minuteur de repos, et garde son titre à l’écran déplié', () => {
+    it('se tient en haut de l’écran, et garde son titre à l’écran déplié', () => {
         const simulee = fenetreSimulee({ navigation: documentServi(), hash: FRAGMENT_QUI_AFFICHE })
 
         installe = installerLeReleveDesTemps({ routeur: routeurSimule(), fenetre: simulee.fenetre })
 
         const panneau = document.getElementById('releve-des-temps')
-        const minuteur = readFileSync(resolve(jsRoot, 'Components/Workout/RestTimer.vue'), 'utf8')
-            .match(/class="([^"]*\bfixed\b[^"]*)"/)[1]
-            .split(/\s+/)
         const bords = (classes) => classes.filter((classe) => /^(?:[a-z]+:)*(?:top|bottom)-/.test(classe))
         const valeur = (classes, motif) => Number(classes.map((classe) => classe.match(motif)?.[1]).find(Boolean))
 
-        expect(bords(minuteur)).toEqual(['bottom-sure-36'])
         expect(bords([...panneau.classList])).toEqual([expect.stringMatching(/^top-sure-\d+$/)])
 
         // Le titre d'abord, puis un corps borné à l'écran moins le haut du panneau et son titre, qui défile en lui-même.

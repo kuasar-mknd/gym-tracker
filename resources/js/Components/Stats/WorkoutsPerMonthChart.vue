@@ -15,7 +15,7 @@ const labels = computed(() => props.data.map((item) => item.month))
 const datasets = computed(() => [
     {
         label: 'Séances',
-        backgroundColor: jetonTransparent('accent-info', 0.6),
+        backgroundColor: jetonTransparent('accent-primary', 0.6),
         borderRadius: 4,
         data: props.data.map((item) => item.count),
     },
@@ -29,7 +29,7 @@ const datasets = computed(() => [
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48 sm:h-64"
-        :infobulle="{ accent: 'accent-info' }"
+        :infobulle="{ accent: 'accent-primary' }"
         :axe-y="{ ticks: { stepSize: 1 } }"
     />
 </template>

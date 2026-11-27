@@ -1,121 +1,25 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { evenementDeDoigt, imagesALaMain } from '../utils/geste'
 
 /**
- * Three defects found by auditing the interface rather than by writing tests,
+ * Two defects found by auditing the interface rather than by writing tests,
  * each pinned here so the fix cannot quietly come undone.
  */
-const get = vi.fn()
-
-vi.mock('@/Utils/http', () => ({ http: { get: (...args) => get(...args) } }))
-vi.mock('@/Components/Stats/OneRepMaxChart.vue', () => ({
-    __esModule: true,
-    default: { name: 'OneRepMaxChart', props: ['data'], template: '<div />' },
-}))
-
-import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 
-beforeAll(() => {
-    globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
-})
-
-beforeEach(() => {
-    vi.clearAllMocks()
-})
-
-/** A promise whose settling this test controls. */
-const deferred = () => {
-    let resolve
-    let reject
-    const promise = new Promise((res, rej) => {
-        resolve = res
-        reject = rej
-    })
-
-    return { promise, resolve, reject }
-}
-
-describe('the 1RM progress card', () => {
-    const EXERCISES = [
-        { id: 1, name: 'Développé couché' },
-        { id: 2, name: 'Squat' },
-    ]
-
-    const mountCard = () =>
-        mount(ExerciseProgressCard, {
-            props: { exercises: EXERCISES },
-            global: {
-                mocks: { route: globalThis.route },
-                stubs: {
-                    GlassCard: { template: '<div><slot /></div>' },
-                    /*
-                     * `options` est declare, sinon il retombe en ATTRIBUT sur le
-                     * `<select>` natif — ou `options` est une collection en
-                     * lecture seule. Vue avertit alors « Failed setting prop
-                     * "options" », et cet avertissement, emis apres la fin du
-                     * fichier de test, fait sortir Vitest en erreur (voir
-                     * vitest.setup.js).
-                     */
-                    GlassSelect: { props: ['modelValue', 'options'], template: '<select />' },
-                },
-            },
-        })
-
-    it('ignores an answer about an exercise the user has already left', async () => {
-        const first = deferred()
-        const second = deferred()
-        get.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
-
-        const wrapper = mountCard()
-
-        wrapper.vm.selectedExercise = 1
-        await flushPromises()
-        wrapper.vm.selectedExercise = 2
-        await flushPromises()
-
-        // The newer request answers first, the older one after it. Applied in
-        // arrival order, the chart would carry exercise 1's curve under
-        // exercise 2's name — wrong numbers, presented confidently.
-        second.resolve({ data: { progress: [{ date: '01/02', value: 100 }] } })
-        await flushPromises()
-        first.resolve({ data: { progress: [{ date: '01/01', value: 42 }] } })
-        await flushPromises()
-
-        expect(wrapper.vm.exerciseProgressData).toEqual([{ date: '01/02', value: 100 }])
-
-        wrapper.unmount()
-    })
-
-    it('does not report a stale failure against the exercise now shown', async () => {
-        const first = deferred()
-        const second = deferred()
-        get.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
-
-        const wrapper = mountCard()
-
-        wrapper.vm.selectedExercise = 1
-        await flushPromises()
-        wrapper.vm.selectedExercise = 2
-        await flushPromises()
-
-        second.resolve({ data: { progress: [{ date: '01/02', value: 100 }] } })
-        await flushPromises()
-        first.reject(new Error('réseau'))
-        await flushPromises()
-
-        // The overtaken request failed, but its exercise is no longer on
-        // screen. Showing "impossible de charger" over a chart that loaded
-        // fine would be a lie about the one being displayed.
-        expect(wrapper.vm.loadFailed).toBe(false)
-        expect(wrapper.vm.loadingExercise).toBe(false)
-
-        wrapper.unmount()
-    })
-})
-
 describe('a row that swipes', () => {
+    let images
+
+    beforeEach(() => {
+        images = imagesALaMain(vi)
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
     const mountRow = () =>
         mount(SwipeableRow, {
             props: { hasRightAction: true },
@@ -124,29 +28,33 @@ describe('a row that swipes', () => {
         })
 
     /** The foreground layer, which is the element that moves. */
-    const foreground = (wrapper) => wrapper.get('.z-10')
+    const foreground = (wrapper) => wrapper.get('[data-glissant]')
 
-    const swipe = async (wrapper, from, to) => {
-        await foreground(wrapper).trigger('touchstart', { touches: [{ clientX: from, clientY: 0 }] })
-        await foreground(wrapper).trigger('touchmove', { touches: [{ clientX: to, clientY: 0 }] })
+    const send = (wrapper, type, x, horloge) =>
+        foreground(wrapper).element.dispatchEvent(evenementDeDoigt(type, { x, horloge }))
+
+    const swipe = (wrapper, from, to) => {
+        send(wrapper, 'pointerdown', from, 0)
+        send(wrapper, 'pointermove', from - 11, 16)
+        send(wrapper, 'pointermove', to, 40)
     }
 
     it('goes back to rest when the system takes the gesture away', async () => {
         const wrapper = mountRow()
 
-        await swipe(wrapper, 200, 160)
-        expect(foreground(wrapper).attributes('style')).toContain('translateX')
+        swipe(wrapper, 200, 160)
+        expect(foreground(wrapper).element.style.transform).not.toBe('translateX(0px)')
 
-        // touchcancel fires when the browser or the OS claims the touch — a
+        // pointercancel fires when the browser or the OS claims the pointer — a
         // call arriving, the notification shade, the back gesture from the
         // edge. Unhandled, the row stayed frozen mid-swipe with its actions
-        // half-revealed, and no transition to carry it back.
-        await foreground(wrapper).trigger('touchcancel')
+        // half-revealed.
+        send(wrapper, 'pointercancel', 160, 41)
+        images.poser()
+        await flushPromises()
 
-        const style = foreground(wrapper).attributes('style')
-
-        expect(style).toContain('translateX(0px)')
-        expect(style).not.toContain('transition: none')
+        expect(foreground(wrapper).element.style.transform).toBe('translateX(0px)')
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
 
         wrapper.unmount()
     })
@@ -154,10 +62,14 @@ describe('a row that swipes', () => {
     it('still settles normally when the finger is simply lifted', async () => {
         const wrapper = mountRow()
 
-        await swipe(wrapper, 200, 199)
-        await foreground(wrapper).trigger('touchend')
+        send(wrapper, 'pointerdown', 200, 0)
+        send(wrapper, 'pointermove', 199, 16)
+        send(wrapper, 'pointerup', 199, 40)
+        images.poser()
+        await flushPromises()
 
-        expect(foreground(wrapper).attributes('style')).toContain('translateX(0px)')
+        expect(foreground(wrapper).element.style.transform).toBe('translateX(0px)')
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
 
         wrapper.unmount()
     })

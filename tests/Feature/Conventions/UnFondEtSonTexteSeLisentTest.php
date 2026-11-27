@@ -25,7 +25,7 @@ declare(strict_types=1);
  * seule facon de connaitre le fond : un nom de classe de texte ne dit rien de
  * ce qu'il y a dessous.
  *
- * Le vrai remede reste les utilitaires apparies — `accent-fill`, `info-fill`,
+ * Le vrai remede reste les utilitaires apparies — `accent-fill`,
  * `category-fill-*` — qui posent le fond et son texte d'un seul geste. Ce test
  * est ce qui signale les endroits qui ne les emploient pas encore.
  *
@@ -252,7 +252,7 @@ it('ne pose jamais un texte illisible sur son propre fond', function (): void {
     expect($illisibles)->toBe([], sprintf(
         "Ces couples fond/texte ne se lisent pas :\n  %s\n\n"
         ."Plutot que de corriger la couleur du texte a la main, employez l'utilitaire apparie qui "
-        .'correspond — `accent-fill`, `state-fill`, `info-fill`, `danger-fill`, `category-fill-*`, '
+        .'correspond — `accent-fill`, `state-fill`, `danger-fill`, `category-fill-*`, '
         .'`plate-fill-*`. Ils posent le fond ET son texte, et leur valeur est calculee dans la '
         ."charte.\n\n"
         .'Choisir soi-meme le texte est precisement ce qui a produit un haltere noir sur une tuile '

@@ -21,7 +21,7 @@ import { createScrollLockToken, lockPageScroll, releasePageScroll } from '@/comp
  * @property {String} maxWidth - Controls the maximum width of the modal (sm, md, lg, xl, 2xl).
  * @property {Boolean} closeable - Determines if the modal can be closed via background click or Escape key.
  * @property {String} ariaLabelledby - The ID of the element providing the modal's accessible title.
- * @property {String} position - Where the panel sits on small screens: 'center' (default) or 'bottom' for a thumb-reachable sheet.
+ * @property {String} position - Where the panel sits on small screens: 'center' (default), 'bottom' for a thumb-reachable sheet, 'tiroir' for a full-height drawer glued to the bottom edge as in the navigation mockup (a floating sheet 8 px from the sides, with a grabber and a swipe-down to dismiss), or 'feuille' for the same sheet at the height of its content.
  */
 const props = defineProps({
     show: {
@@ -35,7 +35,7 @@ const props = defineProps({
     position: {
         type: String,
         default: 'center',
-        validator: (value) => ['center', 'bottom'].includes(value),
+        validator: (value) => ['center', 'bottom', 'tiroir', 'feuille'].includes(value),
     },
     closeable: {
         type: Boolean,
@@ -52,7 +52,7 @@ const props = defineProps({
  *
  * @event close - Emitted when the modal requests to close (background click or Escape key).
  */
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'annuler'])
 const dialog = ref()
 const showSlot = ref(props.show)
 
@@ -136,6 +136,9 @@ const onDialogClose = () => {
  * to describe something that is no longer there.
  */
 const onDialogCancel = (event) => {
+    // Le parent peut refuser la demande lui-même : un retour intérieur (Échap dans un formulaire) n'est pas une fermeture.
+    emit('annuler', event)
+
     if (!props.closeable) {
         event.preventDefault()
     }
@@ -178,8 +181,97 @@ const maxWidthClass = computed(() => {
  */
 const isBottomSheet = computed(() => props.position === 'bottom')
 
+const isFeuille = computed(() => props.position === 'feuille')
+
+const isTiroir = computed(() => props.position === 'tiroir' || isFeuille.value)
+
 const containerClass = computed(() =>
-    isBottomSheet.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
+    isBottomSheet.value || isTiroir.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
+)
+
+const panelClass = computed(() => {
+    if (isFeuille.value) {
+        return 'hauteur-max-tiroir marge-de-feuille fond-de-feuille rounded-carte rounded-b-none sm:rounded-b-carte'
+    }
+
+    return isTiroir.value
+        ? 'hauteur-tiroir marge-de-feuille fond-de-feuille rounded-carte rounded-b-none sm:rounded-b-carte'
+        : 'hauteur-sure-12 rounded-carte'
+})
+
+const enterFromClass = computed(() =>
+    isTiroir.value
+        ? 'translate-y-full opacity-0 sm:translate-y-0 sm:scale-95'
+        : 'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95',
+)
+
+const leaveToClass = computed(() =>
+    isTiroir.value
+        ? 'translate-y-full opacity-0 sm:translate-y-0 sm:scale-95'
+        : 'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95',
+)
+
+/**
+ * Le glissement vers le bas du tiroir, par la poignée. Au-delà de 120 px, ou
+ * d'un geste vif (0,6 px par ms sur 40 px au moins), le tiroir se ferme ; en
+ * deçà, il revient à sa place. La poignée porte `touch-none` : sans lui, le
+ * geste devient un défilement de la page.
+ */
+const decalage = ref(0)
+const enGlissement = ref(false)
+let departY = 0
+let departT = 0
+
+const debutDuGlissement = (event) => {
+    if (!props.closeable) {
+        return
+    }
+
+    enGlissement.value = true
+    departY = event.clientY
+    departT = event.timeStamp
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+}
+
+const glissement = (event) => {
+    if (enGlissement.value) {
+        decalage.value = Math.max(0, event.clientY - departY)
+    }
+}
+
+const finDuGlissement = (event) => {
+    if (!enGlissement.value) {
+        return
+    }
+
+    enGlissement.value = false
+
+    const distance = decalage.value
+    const vitesse = distance / Math.max(1, event.timeStamp - departT)
+
+    if (distance > 120 || (distance > 40 && vitesse > 0.6)) {
+        close()
+
+        return
+    }
+
+    decalage.value = 0
+}
+
+const styleDuPanneau = computed(() =>
+    decalage.value > 0
+        ? { transform: `translateY(${decalage.value}px)`, transition: enGlissement.value ? 'none' : undefined }
+        : undefined,
+)
+
+watch(
+    () => props.show,
+    (isVisible) => {
+        if (isVisible) {
+            decalage.value = 0
+            enGlissement.value = false
+        }
+    },
 )
 </script>
 
@@ -211,17 +303,17 @@ const containerClass = computed(() =>
                     leave-to-class="opacity-0"
                 >
                     <div v-show="show" class="fixed inset-0 transform transition" @click="close">
-                        <div class="glass-overlay" />
+                        <div :class="isTiroir ? 'voile-de-feuille' : 'glass-overlay'" />
                     </div>
                 </Transition>
 
                 <Transition
                     enter-active-class="ease-out duration-300"
-                    enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    :enter-from-class="enterFromClass"
                     enter-to-class="opacity-100 translate-y-0 sm:scale-100"
                     leave-active-class="ease-in duration-200"
                     leave-from-class="opacity-100 translate-y-0 sm:scale-100"
-                    leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    :leave-to-class="leaveToClass"
                 >
                     <!--
                       overflow-y-auto, et non overflow-hidden : `hidden` coupait
@@ -242,9 +334,22 @@ const containerClass = computed(() =>
                     -->
                     <div
                         v-show="show"
-                        class="glass-modal text-text-main border-surface-card/20 bg-surface-card/80 hauteur-sure-12 flex transform flex-col overflow-y-auto rounded-3xl border shadow-2xl backdrop-blur-xl transition sm:mx-auto sm:w-full"
-                        :class="maxWidthClass"
+                        class="glass-modal verre-epais text-text-main relative flex transform flex-col overflow-y-auto transition sm:mx-auto sm:w-full"
+                        :class="[panelClass, maxWidthClass]"
+                        :style="styleDuPanneau"
                     >
+                        <div
+                            v-if="isTiroir"
+                            class="flex h-11 shrink-0 cursor-grab touch-none items-center justify-center sm:hidden"
+                            data-testid="poignee-du-tiroir"
+                            aria-hidden="true"
+                            @pointerdown="debutDuGlissement"
+                            @pointermove="glissement"
+                            @pointerup="finDuGlissement"
+                            @pointercancel="finDuGlissement"
+                        >
+                            <span class="bg-text-muted/45 h-1.25 w-9 rounded-full" />
+                        </div>
                         <slot v-if="showSlot" />
                     </div>
                 </Transition>
