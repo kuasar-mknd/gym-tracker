@@ -85,7 +85,7 @@ const handlePeriodChange = (period) => {
 
     <AuthenticatedLayout
         v-slot="{ seanceEnCours }"
-        liquid-variant="cyan-magenta"
+        liquid-variant="violet-bleu"
         page-title="Progrès"
         titre-dans-la-page
         titre-masque

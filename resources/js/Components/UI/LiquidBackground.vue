@@ -2,7 +2,7 @@
 defineProps({
     variant: {
         type: String,
-        default: 'default', // default | cyan-magenta | subtle
+        default: 'default', // default | violet-bleu | subtle
     },
 })
 </script>
@@ -15,14 +15,14 @@ defineProps({
             <div class="liquid-bg-2"></div>
         </template>
 
-        <!-- Cyan / Magenta for analytics -->
-        <template v-else-if="variant === 'cyan-magenta'">
+        <!-- Violet et bleu, pour les statistiques -->
+        <template v-else-if="variant === 'violet-bleu'">
             <div
                 class="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] blur-[100px] filter"
                 style="
                     background: radial-gradient(
                         circle,
-                        rgb(from var(--color-accent-info) r g b / 0.2) 0%,
+                        rgb(from var(--color-accent-tertiary) r g b / 0.2) 0%,
                         transparent 70%
                     );
                 "
@@ -46,7 +46,7 @@ defineProps({
                 style="
                     background: radial-gradient(
                         circle,
-                        rgb(from var(--color-accent-info) r g b / 0.1) 0%,
+                        rgb(from var(--color-accent-tertiary) r g b / 0.1) 0%,
                         transparent 70%
                     );
                 "
