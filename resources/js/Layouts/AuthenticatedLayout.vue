@@ -68,8 +68,9 @@ const props = defineProps({
     },
     /**
      * Le titre de l'en-tête mobile ne se voit pas : une salutation, une carte
-     * d'identité ou un titre de page en tient lieu (les quatre racines :
-     * Accueil, Séances, Progrès, Profil). Le `<h1>` reste, pour les
+     * d'identité, un titre de page ou la rangée des séances en tient lieu (les
+     * quatre racines : Accueil, Séances, Progrès, Profil ; et, avec
+     * `retour-de-bureau-seul`, Modèles et Calendrier). Le `<h1>` reste, pour les
      * lecteurs d'écran, et l'en-tête garde la cloche des notifications.
      */
     titreMasque: {
@@ -106,8 +107,9 @@ const CLASSES_DU_RETOUR_DE_BUREAU =
     'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none'
 
 /*
- * Les quatre racines (Accueil, Séances, Progrès, Profil) n'ont pas de titre
- * visible sur téléphone : la cloche y est dans la page, dans la première
+ * Les quatre racines (Accueil, Séances, Progrès, Profil), et Modèles et
+ * Calendrier avec `retour-de-bureau-seul`, n'ont pas de titre visible sur
+ * téléphone : la cloche y est dans la page, dans la première
  * carte (`Cloche`), sans barre qui lui réserve une rangée. Une bande de la
  * hauteur de la barre d'état garde l'horloge lisible quand le contenu défile
  * dessous.

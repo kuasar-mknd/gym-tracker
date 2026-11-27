@@ -65,7 +65,7 @@ class OngletsDesSeancesTest extends DuskTestCase
             try {
                 foreach ([320, 393] as $largeur) {
                     $browser->resize($largeur, 852);
-                    $boites = [];
+                    $reference = null;
 
                     foreach ($pages as $adresse => [$actif, $liens]) {
                         $browser->visit($adresse)->disableAnimations()->waitFor('#main-content nav[aria-label="Séances"]', 30)->waitForStableLayout();
@@ -79,11 +79,12 @@ class OngletsDesSeancesTest extends DuskTestCase
                         $this->assertSame(0, $page['fleches'], "À $largeur px, $adresse : la flèche de retour ne se montre pas sur téléphone.");
                         $this->assertFalse($page['debordeLaPage'], "À $largeur px, $adresse : la page défile de côté.");
 
-                        $boites[$adresse] = [$page['segment'], $page['rangee']];
-                    }
+                        // La première page visitée (Historique) donne la boîte que les deux autres doivent reprendre.
+                        $boite = [$page['segment'], $page['rangee']];
+                        $reference ??= $boite;
 
-                    $this->assertSame($boites['/workouts'], $boites['/templates'], "À $largeur px, la rangée bouge entre Historique et Modèles.");
-                    $this->assertSame($boites['/workouts'], $boites['/calendar'], "À $largeur px, la rangée bouge entre Historique et Calendrier.");
+                        $this->assertSame($reference, $boite, "À $largeur px, la rangée de $adresse bouge par rapport à celle d'Historique.");
+                    }
                 }
             } finally {
                 $browser->resize(393, 852);

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+
+import { elementsDuGabarit, gabarit } from '../conventions/gabarits'
+import { jsRoot } from '../conventions/sourceFiles'
 
 vi.mock('@inertiajs/vue3', () => ({
     Link: { props: ['href'], template: '<a :href="href"><slot /></a>' },
@@ -66,4 +70,26 @@ describe('OngletsDesSeances', () => {
             wrapper.get('nav').element.parentElement,
         )
     })
+})
+
+/**
+ * Dusk force le mouvement réduit : une rangée posée dans un bloc animé y
+ * resterait immobile et passerait la mesure de `OngletsDesSeancesTest`, alors
+ * qu'à l'écran elle glisserait à l'arrivée de chaque page. La garde se lit donc
+ * dans les gabarits : aucun ancêtre de la rangée ne porte `animate-*` ni `stagger-*`.
+ */
+describe('la rangée dans les pages', () => {
+    it.each(['Workouts/Index', 'Workouts/Templates/Index', 'Calendar/Index'])(
+        '%s la pose hors de tout bloc animé',
+        (page) => {
+            const { elements } = elementsDuGabarit(gabarit(readFileSync(`${jsRoot}/Pages/${page}.vue`, 'utf8')))
+            const rangee = elements.filter(({ nom }) => nom === 'OngletsDesSeances')
+
+            expect(rangee).toHaveLength(1)
+
+            for (let ancetre = rangee[0].parent; ancetre !== null; ancetre = ancetre.parent) {
+                expect(ancetre.liste, `${ancetre.nom} anime la rangée`).not.toMatch(/(?:^|\s)(?:animate-|stagger-)/)
+            }
+        },
+    )
 })

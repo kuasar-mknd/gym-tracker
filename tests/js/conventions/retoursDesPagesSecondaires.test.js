@@ -6,7 +6,9 @@ import { jsRoot } from './sourceFiles'
 /**
  * Hors des quatre racines (accueil, séances, progrès, profil), une page n'a ni
  * onglet actif ni retour par la barre du bas : sans `show-back`, elle n'offre
- * aucune sortie au pouce (#2434). Chaque page secondaire dit où elle revient ;
+ * aucune sortie au pouce (#2434). Exception : Modèles et Calendrier, dont la
+ * rangée des séances (`OngletsDesSeances`) tient lieu de sortie sur téléphone ;
+ * leur `show-back` ne sert alors qu'au bureau (`retour-de-bureau-seul`, plus bas). Chaque page secondaire dit où elle revient ;
  * chacune nomme sa route : sans `back-route`, le retour remonte l'historique, qui peut être vide.
  */
 const RETOURS = {
