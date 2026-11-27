@@ -132,7 +132,7 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
 
                 // Le vrai toast : l'évènement que le filet des visites hors ligne envoie.
                 $browser->script("window.dispatchEvent(new CustomEvent('gym:sans-reseau', { detail: { message: 'Il faut le réseau pour démarrer une séance.', annuler: null } }));");
-                $browser->waitFor('.z-toast[role="alert"]', 10)->waitForStableLayout();
+                $browser->waitFor('#colonne-des-toasts [role="alert"]', 10)->waitForStableLayout();
                 $browser->script('window.scrollTo(0, document.documentElement.scrollHeight)');
                 $browser->waitForStableLayout();
 
@@ -143,7 +143,7 @@ class RailDeSeanceDeBureauTest extends DuskTestCase
                     return {
                         rail: boite(rail),
                         bandeau: boite(document.querySelector('[dusk="bandeau-mise-a-jour"]')),
-                        toast: boite(document.querySelector('.z-toast[role="alert"]')),
+                        toast: boite(document.querySelector('#colonne-des-toasts [role="alert"]')),
                         hauteurDuRail: rail.getBoundingClientRect().height,
                     };
                     JS)[0];

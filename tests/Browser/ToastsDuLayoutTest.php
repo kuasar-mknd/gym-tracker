@@ -19,7 +19,7 @@ class ToastsDuLayoutTest extends DuskTestCase
     use DatabaseTruncation;
 
     private const string LIT_LE_LISERE = <<<'JS'
-        const toast = document.querySelector('.z-toast[role="alert"] > div');
+        const toast = document.querySelector('#colonne-des-toasts [role="alert"] > div');
         const sonde = document.createElement('i');
         sonde.style.color = 'var(--color-__JETON__)';
         document.body.appendChild(sonde);
@@ -42,7 +42,7 @@ class ToastsDuLayoutTest extends DuskTestCase
                     const page = document.querySelector('#app').__vue_app__.config.globalProperties.$page;
                     page.props.flash = { ...page.props.flash, __TYPE__: 'Un message de test.' };
                     JS));
-                $browser->waitFor('.z-toast[role="alert"] > div', 10);
+                $browser->waitFor('#colonne-des-toasts [role="alert"] > div', 10);
 
                 /** @var array{largeur: string, couleur: string, attendue: string} $lisere */
                 $lisere = $browser->script(str_replace('__JETON__', $jeton, self::LIT_LE_LISERE))[0];
@@ -51,7 +51,7 @@ class ToastsDuLayoutTest extends DuskTestCase
                 $this->assertSame($lisere['attendue'], $lisere['couleur'], "Le liseré du toast « $type » n'a pas la couleur de $jeton.");
 
                 $browser->script(str_replace('__TYPE__', $type, 'document.querySelector("#app").__vue_app__.config.globalProperties.$page.props.flash.__TYPE__ = null;'));
-                $browser->waitUntilMissing('.z-toast[role="alert"]', 10);
+                $browser->waitUntilMissing('#colonne-des-toasts [role="alert"]', 10);
             }
         });
     }
