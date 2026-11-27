@@ -27,7 +27,8 @@ class PageBrowserTest extends DuskTestCase
             $pages = [
                 '/dashboard' => 'Bon retour',
                 '/workouts' => 'Démarrer une séance',
-                '/calendar' => 'Calendrier',
+                // Le texte « Calendrier » est aussi dans la rangée des séances : on attend l'en-tête de la grille, propre à la page.
+                '/calendar' => 'Lun',
                 '/exercises' => 'Exercices',
                 '/stats' => 'Pas encore de séance',
                 '/corps' => 'Corps',

@@ -1143,6 +1143,29 @@ describe('AuthenticatedLayout — the frame around the page', () => {
         expect(wrapper.find('[dusk="retour-de-bureau"]').exists()).toBe(false)
     })
 
+    /*
+     * Modèles et Calendrier (`retour-de-bureau-seul`) : sur téléphone, la page
+     * pose sa rangée d'onglets, qui tient lieu de flèche, de titre visible et de
+     * cloche d'en-tête ; sur bureau, le retour est celui des autres pages secondaires.
+     */
+    it('ne montre sur téléphone ni flèche ni cloche d’en-tête avec retour-de-bureau-seul, mais garde le retour de bureau', () => {
+        const wrapper = mountLayout({
+            props: {
+                showBack: true,
+                retourDeBureauSeul: true,
+                titreMasque: true,
+                backRoute: 'workouts.index',
+                pageTitle: 'Calendrier',
+            },
+        })
+
+        expect(wrapper.find('[dusk="entete-mobile"] [aria-label="Retour"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="entete-mobile"] a[href="/resolved/notifications.index"]').exists()).toBe(false)
+        expect(wrapper.get('[dusk="entete-mobile"] h1').classes()).toContain('sr-only')
+        expect(wrapper.findAll('[dusk="retour-de-bureau"]')).toHaveLength(1)
+        expect(wrapper.get('[dusk="retour-de-bureau"]').attributes('href')).toBe('/resolved/workouts.index')
+    })
+
     it('ne pose pas de retour de bureau sur une page racine', () => {
         const wrapper = mountLayout({ props: { pageTitle: 'Accueil' } })
 

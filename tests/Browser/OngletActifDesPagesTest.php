@@ -39,7 +39,7 @@ class OngletActifDesPagesTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($compte): void {
             $browser->loginAs(User::findOrFail($compte->id))->resizeToIphone15();
 
-            foreach (['/goals', '/calendar', '/habits', '/daily-journals', '/supplements', '/achievements', '/corps', '/records'] as $adresse) {
+            foreach (['/goals', '/habits', '/daily-journals', '/supplements', '/achievements', '/corps', '/records'] as $adresse) {
                 $browser->visit($adresse)->disableAnimations()->waitFor('#main-content', 30)->waitFor('nav[aria-label="Navigation principale"]', 30);
 
                 /** @var array{retour: ?string, allumes: list<string>} $page */
@@ -48,6 +48,14 @@ class OngletActifDesPagesTest extends DuskTestCase
                 $this->assertNotNull($page['retour'], "$adresse n'a pas de bouton Retour.");
                 $this->assertSame([$page['retour']], $page['allumes'], "$adresse n'allume pas l'onglet où mène son retour.");
             }
+
+            // Le calendrier n'a plus de flèche sur téléphone : la rangée des séances la remplace (OngletsDesSeancesTest), et Séances reste allumé.
+            $browser->visit('/calendar')->disableAnimations()->waitFor('#main-content', 30)->waitFor('nav[aria-label="Navigation principale"]', 30);
+            /** @var array{retour: ?string, allumes: list<string>} $page */
+            $page = $browser->script(self::LIT)[0];
+
+            $this->assertNull($page['retour'], '/calendar garde sa flèche de retour sur téléphone.');
+            $this->assertSame(['/workouts'], $page['allumes'], "/calendar n'allume pas Séances.");
 
             // Poids et mensurations reviennent à Corps, qui n'est pas un onglet : Progrès reste allumé.
             foreach (['/body-measurements', '/body-metrics'] as $adresse) {

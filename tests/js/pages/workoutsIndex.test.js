@@ -131,6 +131,8 @@ const stubs = {
     // Rendered by the @inertiajs/vue3 mock above rather than stubbed away: the
     // row link live inside its slots.
     Link: false,
+    // Rendue pour de vrai : le segment mobile et la commande de démarrage que la page lui passe (la cloche, elle, reste en stub).
+    OngletsDesSeances: false,
     // Rendue pour de vrai : la rangée porte le bouton de suppression et le lien que les cas ci-dessous lisent.
     CarteDeSeance,
 }
@@ -578,7 +580,11 @@ describe('Workouts/Index — le segment mobile', () => {
         const wrapper = mountPage()
         const segment = wrapper.get('nav[aria-label="Séances"]')
 
-        expect(segment.text().replace(/\s+/g, ' ')).toBe('Historique Modèles Calendrier')
+        expect(segment.findAll('a, span').map((onglet) => onglet.text())).toEqual([
+            'Historique',
+            'Modèles',
+            'Calendrier',
+        ])
         expect(segment.get('[aria-current="page"]').text()).toBe('Historique')
         expect(segment.findAll('a').map((lien) => [lien.text(), lien.attributes('href')])).toEqual([
             ['Modèles', globalThis.route('templates.index')],

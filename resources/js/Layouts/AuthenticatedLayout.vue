@@ -68,8 +68,9 @@ const props = defineProps({
     },
     /**
      * Le titre de l'en-tête mobile ne se voit pas : une salutation, une carte
-     * d'identité ou un titre de page en tient lieu (les quatre racines :
-     * Accueil, Séances, Progrès, Profil). Le `<h1>` reste, pour les
+     * d'identité, un titre de page ou la rangée des séances en tient lieu (les
+     * quatre racines : Accueil, Séances, Progrès, Profil ; et, avec
+     * `retour-de-bureau-seul`, Modèles et Calendrier). Le `<h1>` reste, pour les
      * lecteurs d'écran, et l'en-tête garde la cloche des notifications.
      */
     titreMasque: {
@@ -85,6 +86,16 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * Le retour ne se montre que sur bureau : sur téléphone, la page pose sa
+     * propre rangée d'onglets en haut (Modèles, Calendrier : `OngletsDesSeances`),
+     * qui tient lieu de flèche et de titre. Sert avec `titre-masque`, que le
+     * titre reste pour les lecteurs d'écran, et avec `show-back` pour le bureau.
+     */
+    retourDeBureauSeul: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 /*
@@ -96,13 +107,14 @@ const CLASSES_DU_RETOUR_DE_BUREAU =
     'text-text-muted hover:text-text-main min-h-touch focus-visible:ring-accent-primary bureau:inline-flex -ms-1 mb-1 hidden items-center gap-1 rounded-lg px-1 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none'
 
 /*
- * Les quatre racines (Accueil, Séances, Progrès, Profil) n'ont pas de titre
- * visible sur téléphone : la cloche y est dans la page, dans la première
+ * Les quatre racines (Accueil, Séances, Progrès, Profil), et Modèles et
+ * Calendrier avec `retour-de-bureau-seul`, n'ont pas de titre visible sur
+ * téléphone : la cloche y est dans la page, dans la première
  * carte (`Cloche`), sans barre qui lui réserve une rangée. Une bande de la
  * hauteur de la barre d'état garde l'horloge lisible quand le contenu défile
  * dessous.
  */
-const clocheDansLaPage = computed(() => props.titreMasque && !props.showBack)
+const clocheDansLaPage = computed(() => props.titreMasque && (!props.showBack || props.retourDeBureauSeul))
 
 const LARGEURS = { large: 'max-w-7xl', rail: 'max-w-3xl bureau:max-w-270', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
 
@@ -347,7 +359,7 @@ onUnmounted(() => {
             ></div>
             <div class="flex min-w-0 items-center gap-4">
                 <Link
-                    v-if="showBack"
+                    v-if="showBack && !retourDeBureauSeul"
                     v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
                     class="verre-regulier text-text-muted hover:text-text-main rounded-capsule flex size-11 shrink-0 items-center justify-center transition-colors"

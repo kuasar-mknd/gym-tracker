@@ -9,6 +9,7 @@ import { NOMS_DES_MOIS, parseCalendarDate } from '@/Utils/date'
 import { compte } from '@/Utils/nombre'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import OngletsDesSeances from '@/Components/Workout/OngletsDesSeances.vue'
 
 const props = defineProps({
     year: Number,
@@ -211,8 +212,17 @@ const formatDateFull = (dateStr) => {
 <template>
     <Head title="Calendrier" />
 
-    <AuthenticatedLayout show-back back-route="workouts.index" page-title="Calendrier">
+    <AuthenticatedLayout
+        show-back
+        retour-de-bureau-seul
+        titre-masque
+        back-route="workouts.index"
+        page-title="Calendrier"
+    >
         <div class="space-y-6">
+            <!-- Sur téléphone, la rangée d'onglets des séances prend la place de la flèche et du titre. -->
+            <OngletsDesSeances actif="calendrier" />
+
             <!-- Calendar Navigation -->
             <div class="flex items-center justify-between">
                 <GlassButton @click="changeMonth(-1)" class="px-3!" aria-label="Mois précédent">
