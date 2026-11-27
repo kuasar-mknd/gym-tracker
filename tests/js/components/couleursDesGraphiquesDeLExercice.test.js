@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { jeton } from '@/Utils/couleurs'
-import { chartDataOf } from './chartRecorder.js'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
+import { chartDataOf, chartOptionsOf } from './chartRecorder.js'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
 
@@ -16,14 +16,14 @@ const WeightRepsScatterChart = (await import('@/Components/Stats/WeightRepsScatt
  */
 const cartes = [
     { nom: 'Volume', composant: VolumeTrendChart, type: 'Bar', cle: 'backgroundColor', jeton: 'accent-primary' },
-    { nom: 'Endurance', composant: MaxRepsChart, type: 'Line', cle: 'borderColor', jeton: 'accent-secondary' },
+    { nom: 'Endurance', composant: MaxRepsChart, type: 'Line', cle: 'borderColor', jeton: 'accent-tertiary' },
     { nom: 'Charge max', composant: MaxWeightChart, type: 'Line', cle: 'borderColor', jeton: 'accent-state' },
     {
         nom: 'Poids vs reps',
         composant: WeightRepsScatterChart,
         type: 'Scatter',
         cle: 'borderColor',
-        jeton: 'accent-tertiary',
+        jeton: 'accent-secondary',
     },
 ]
 
@@ -45,7 +45,19 @@ describe('Couleurs des graphiques de la fiche d’un exercice', () => {
     it('garde le point de survol de l’endurance dans sa couleur', () => {
         const serie = chartDataOf(mount(MaxRepsChart, { props: { data: [] } }), 'Line').datasets[0]
 
-        expect(serie.pointBorderColor).toBe(jeton('accent-secondary'))
-        expect(serie.pointHoverBackgroundColor).toBe(jeton('accent-secondary'))
+        expect(serie.pointBorderColor).toBe(jeton('accent-tertiary'))
+        expect(serie.pointHoverBackgroundColor).toBe(jeton('accent-tertiary'))
+    })
+
+    it('accorde le trait de l’infobulle d’Endurance à sa courbe', () => {
+        const options = chartOptionsOf(mount(MaxRepsChart, { props: { data: [] } }), 'Line')
+
+        expect(options.plugins.tooltip.borderColor).toBe(jetonTransparent('accent-tertiary', 0.2))
+    })
+
+    it('remplit le nuage de points en magenta à 60 %', () => {
+        const serie = chartDataOf(mount(WeightRepsScatterChart, { props: { data: [] } }), 'Scatter').datasets[0]
+
+        expect(serie.backgroundColor).toBe(jetonTransparent('accent-secondary', 0.6))
     })
 })

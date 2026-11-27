@@ -16,8 +16,8 @@ const datasets = computed(() => [
     {
         label: 'Séries',
         data: props.data,
-        backgroundColor: jetonTransparent('accent-tertiary', 0.6),
-        borderColor: jeton('accent-tertiary'),
+        backgroundColor: jetonTransparent('accent-secondary', 0.6),
+        borderColor: jeton('accent-secondary'),
         borderWidth: 1,
         pointRadius: 5,
         pointHoverRadius: 8,
