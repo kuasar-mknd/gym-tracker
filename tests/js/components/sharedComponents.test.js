@@ -64,6 +64,7 @@ import GoalForm from '@/Components/Goals/GoalForm.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import { CATEGORY_BORDER_COLORS } from '@/Utils/constants'
 import { ECRITURE_NON_CONFIRMEE, SUPPRESSION_DU_COMPTE_NON_CONFIRMEE } from '@/Utils/visitesHorsLigne'
 import { annoncesPendant } from '../utils/annoncesSansReseau'
 import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
@@ -1106,8 +1107,32 @@ describe('ExerciseCard', () => {
         known.unmount()
 
         const unknown = mountCard({ exercise: { ...EXERCISE, category: 'Cardio doux' } })
-        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-border-strong')
+        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-border-strong!')
         unknown.unmount()
+    })
+
+    /*
+     * `verre-regulier` pose `border: 1px solid` : le liseré de 6 px et sa couleur
+     * ne passent que par le suffixe `!` (mesuré : 1 px gris translucide sans lui).
+     */
+    it('impose la largeur et la couleur du liseré de catégorie au verre de la carte', () => {
+        const wrapper = mountCard()
+        const classes = wrapper.get('[data-testid="exercise-card"]').classes()
+
+        expect(classes).toContain('border-l-6!')
+        expect(Object.values(CATEGORY_BORDER_COLORS).every((nom) => nom.endsWith('!'))).toBe(true)
+
+        wrapper.unmount()
+    })
+
+    it('laisse deviner le glissement par un chevron discret, sous sm seulement', () => {
+        const wrapper = mountCard()
+        const chevron = wrapper.findAll('span').find((span) => span.text() === 'chevron_left')
+
+        expect(chevron.attributes('aria-hidden')).toBe('true')
+        expect(chevron.classes()).toEqual(expect.arrayContaining(['sm:hidden', 'opacity-55', 'text-text-muted']))
+
+        wrapper.unmount()
     })
 
     it('links the row to the page of this exercise', () => {

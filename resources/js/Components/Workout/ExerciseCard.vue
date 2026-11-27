@@ -101,8 +101,8 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
             :dusk="`exercise-card-${exercise.id}`"
             :class="[
                 'group relative overflow-hidden transition duration-300',
-                'border-l-6',
-                categoryBorderColors[category] || 'border-l-border-strong',
+                'border-l-6!',
+                categoryBorderColors[category] || 'border-l-border-strong!',
             ]"
             data-testid="exercise-card"
         >
@@ -164,6 +164,13 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
                         @click.stop="emit('delete', exercise.id)"
                     />
                 </div>
+                <!-- L'indice du glissement, au doigt seulement : au-dessus de sm les boutons existent. -->
+                <GlassIcon
+                    v-if="!surUneCopie"
+                    name="chevron_left"
+                    size="sm"
+                    class="text-text-muted ml-1 shrink-0 opacity-55 sm:hidden"
+                />
             </div>
 
             <!-- Edit Mode -->

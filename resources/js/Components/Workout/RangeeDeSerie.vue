@@ -27,7 +27,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
 </script>
 
 <template>
-    <SwipeableRow :disabled="disabled">
+    <SwipeableRow :disabled="disabled" rayon="rounded-2xl">
         <!-- The row was swipeable with no action behind it: dragging
          it snapped it open onto an empty background and left it
          there. Same delete the row's own button calls, reached
@@ -206,7 +206,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     'before:absolute before:-inset-2.5 before:content-[\'\']',
                     // Redundant on a phone, where the row swipes.
                     // Kept from sm up, where there is no swipe at
-                    // all: SwipeableRow listens for touch events
+                    // all: SwipeableRow listens for touch and pen
                     // only, so a mouse has no other way to delete.
                     'hidden sm:block',
                 ]"

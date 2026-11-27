@@ -1,6 +1,30 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import { evenementDeDoigt } from '../utils/geste'
+
+/*
+ * Une horloge et une file d'images à la main : le ressort avance quand le test
+ * le dit, et les évènements de pointeur portent l'heure du test, comme ceux du
+ * navigateur portent la leur.
+ */
+let horloge = 0
+let file = new Map()
+let numero = 0
+
+const image = (ms = 16) => {
+    horloge += ms
+    const courantes = [...file.entries()]
+    file = new Map()
+    courantes.forEach(([, rappel]) => rappel(horloge))
+}
+
+const poser = async () => {
+    for (let i = 0; i < 400 && file.size > 0; i += 1) {
+        image()
+    }
+    await flushPromises()
+}
 
 const mountRow = (props = {}, slots = {}) =>
     mount(SwipeableRow, {
@@ -14,7 +38,6 @@ const mountRow = (props = {}, slots = {}) =>
         attachTo: document.body,
     })
 
-/** A set row, and a session card: their only action is the delete on the right. */
 const mountDeleteOnlyRow = () =>
     mount(SwipeableRow, {
         slots: {
@@ -24,106 +47,140 @@ const mountDeleteOnlyRow = () =>
         attachTo: document.body,
     })
 
-const drag = async (wrapper, from, to) => {
-    const content = wrapper.find('.relative.z-10')
+const contenu = (wrapper) => wrapper.find('[data-glissant]')
+const panneau = (wrapper, cote) => wrapper.find(`[data-panneau="${cote}"]`)
 
-    await content.trigger('touchstart', { touches: [{ clientX: from, clientY: 10 }] })
-    await content.trigger('touchmove', { touches: [{ clientX: to, clientY: 10 }] })
+const positionDe = (wrapper) => {
+    const transformation = contenu(wrapper).element.style.transform
+
+    return transformation === '' ? 0 : Number.parseFloat(transformation.match(/translateX\((-?[\d.]+)px\)/)[1])
 }
 
-const sideOpacity = (wrapper, side) =>
-    Number.parseFloat(
-        wrapper
-            .find(`.absolute.inset-y-0.${side}-0`)
-            .attributes('style')
-            .match(/opacity:\s*([\d.]+)/)[1],
-    )
+const largeurDe = (wrapper, cote) => Number.parseFloat(panneau(wrapper, cote).element.style.width)
 
-const actionsLayer = (wrapper) => wrapper.find('.absolute.inset-0')
+/** Un doigt posé sur la rangée : `vers` le déplace, `leve` le retire. */
+const doigt = (wrapper, depart, options = {}) => {
+    const cible = contenu(wrapper).element
+    const y = options.y ?? 10
+    let courant = depart
+    const envoyer = (type, x, haut = y) =>
+        cible.dispatchEvent(evenementDeDoigt(type, { x, y: haut, horloge, ...options }))
 
-const opacityOf = (wrapper) =>
-    Number.parseFloat(
-        actionsLayer(wrapper)
-            .attributes('style')
-            .match(/opacity:\s*([\d.]+)/)[1],
-    )
+    envoyer('pointerdown', depart)
 
-const translateOf = (wrapper) => {
-    const style = wrapper.find('.relative.z-10').attributes('style')
+    return {
+        vers(x, ms = 16, haut = y) {
+            horloge += ms
+            courant = x
+            envoyer('pointermove', x, haut)
 
-    return Number.parseFloat(style.match(/translateX\((-?[\d.]+)px\)/)[1])
+            return this
+        },
+        leve(ms = 0) {
+            horloge += ms
+            envoyer('pointerup', courant)
+
+            return this
+        },
+        annule() {
+            envoyer('pointercancel', courant)
+
+            return this
+        },
+    }
 }
 
-describe('SwipeableRow', () => {
-    /**
-     * The actions live behind the row at opacity 0 and only appear once a swipe
-     * drags the content aside — but they stay in the tab order the whole time.
-     * On Workouts/Index the right-hand action deletes the session and is the
-     * only delete affordance on the card, so a keyboard user could focus, and
-     * activate, a destructive control that renders nothing on screen.
-     */
-    it('is fully transparent while closed', () => {
+/** Ouvre la rangée comme le fait le clavier, puis laisse le ressort se poser. */
+const ouvrirAuFocus = async (wrapper, cote) => {
+    await wrapper.find(`[data-testid="${cote === 'droite' ? 'delete' : 'edit'}"]`).trigger('focusin')
+    await poser()
+}
+
+beforeEach(() => {
+    horloge = 1000
+    file = new Map()
+    numero = 0
+    vi.stubGlobal('requestAnimationFrame', (rappel) => {
+        numero += 1
+        file.set(numero, rappel)
+
+        return numero
+    })
+    vi.stubGlobal('cancelAnimationFrame', (id) => file.delete(id))
+    vi.stubGlobal('matchMedia', (requete) => ({
+        matches: false,
+        media: requete,
+        addEventListener() {},
+        removeEventListener() {},
+    }))
+})
+
+afterEach(() => {
+    vi.unstubAllGlobals()
+    document.body.innerHTML = ''
+})
+
+describe('SwipeableRow, au repos et au clavier', () => {
+    it('est fermée, sans panneau visible, tant qu’on ne l’a pas ouverte', () => {
         const wrapper = mountRow()
 
-        expect(opacityOf(wrapper)).toBe(0)
-        expect(translateOf(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
+        expect(positionDe(wrapper)).toBe(0)
+        expect(largeurDe(wrapper, 'droite')).toBe(0)
 
         wrapper.unmount()
     })
 
-    it('opens the row when a right-hand action takes focus', async () => {
+    it('s’ouvre quand une action de droite prend le focus, et le dit sur la racine', async () => {
         const wrapper = mountRow()
 
-        await wrapper.find('[data-testid="delete"]').trigger('focusin')
+        await ouvrirAuFocus(wrapper, 'droite')
 
-        expect(translateOf(wrapper)).toBe(-80)
-        expect(opacityOf(wrapper)).toBe(1)
+        expect(positionDe(wrapper)).toBe(-80)
+        expect(wrapper.attributes('data-ouverte')).toBe('droite')
 
         wrapper.unmount()
     })
 
-    it('opens the other way for a left-hand action', async () => {
+    it('s’ouvre de l’autre côté pour une action de gauche', async () => {
         const wrapper = mountRow({ actionThreshold: 64 })
 
-        await wrapper.find('[data-testid="edit"]').trigger('focusin')
+        await ouvrirAuFocus(wrapper, 'gauche')
 
-        expect(translateOf(wrapper)).toBe(64)
+        expect(positionDe(wrapper)).toBe(64)
+        expect(wrapper.attributes('data-ouverte')).toBe('gauche')
 
         wrapper.unmount()
     })
 
-    it('closes again once focus leaves the actions', async () => {
+    it('se referme quand le focus quitte les actions', async () => {
         const wrapper = mountRow()
 
-        await wrapper.find('[data-testid="delete"]').trigger('focusin')
+        await ouvrirAuFocus(wrapper, 'droite')
         await wrapper.find('[data-testid="delete"]').trigger('focusout', { relatedTarget: document.body })
+        await poser()
 
-        expect(translateOf(wrapper)).toBe(0)
-        expect(opacityOf(wrapper)).toBe(0)
+        expect(positionDe(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
 
         wrapper.unmount()
     })
 
-    it('stays open while focus moves between two actions of the same row', async () => {
+    it('reste ouverte quand le focus passe d’une action à l’autre de la même rangée', async () => {
         const wrapper = mountRow()
-
         const edit = wrapper.find('[data-testid="edit"]')
         const remove = wrapper.find('[data-testid="delete"]')
 
         await edit.trigger('focusin')
         await edit.trigger('focusout', { relatedTarget: remove.element })
+        await poser()
 
-        expect(translateOf(wrapper)).toBe(80)
+        expect(positionDe(wrapper)).toBe(80)
 
         wrapper.unmount()
     })
 
-    /**
-     * ExerciseCard disables the row while its inline edit form is open. Keeping
-     * the layer mounted there would put two invisible buttons in front of the
-     * form's own fields.
-     */
-    it('drops the actions entirely when the row is disabled', () => {
+    it('retire ses actions quand elle est coupée', () => {
         const wrapper = mountRow({ disabled: true })
 
         expect(wrapper.find('[data-testid="delete"]').exists()).toBe(false)
@@ -131,143 +188,603 @@ describe('SwipeableRow', () => {
         wrapper.unmount()
     })
 
-    it('snaps shut when the row becomes disabled mid-swipe', async () => {
+    it('se referme d’un coup quand elle est coupée ouverte', async () => {
         const wrapper = mountRow()
 
-        await wrapper.find('[data-testid="delete"]').trigger('focusin')
-        expect(translateOf(wrapper)).toBe(-80)
-
+        await ouvrirAuFocus(wrapper, 'droite')
         await wrapper.setProps({ disabled: true })
 
-        expect(translateOf(wrapper)).toBe(0)
+        expect(positionDe(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
 
         wrapper.unmount()
     })
 
-    /**
-     * An action is exactly the strip the content has uncovered, and never wider.
-     *
-     * Each action used to be half the row, with the content sitting on top of
-     * the other half — and the content is glass, `bg-surface-card/10` over a row at
-     * `bg-surface-card/80`. A red delete panel behind that does not stay behind it: on
-     * an open row it came through as a pink wash across the values. Fading the
-     * layer in with the drag was supposed to hide that, but the fade is complete
-     * by 20px and the row opens at 80, so by the time it mattered opacity was 1.
-     *
-     * Widths are the assertion that can be made without layout: jsdom gives
-     * every element a zero rect, so an overlap cannot be measured here. What it
-     * can hold is that the action is never asked to be wider than the gap.
-     */
-    it('sizes an action to the strip the content uncovers, never wider', async () => {
+    it('se referme par close()', async () => {
         const wrapper = mountRow()
-        const widthOf = (side) =>
-            wrapper
-                .find(`.absolute.inset-y-0.${side}-0`)
-                .attributes('style')
-                .match(/width:\s*([\d.]+)px/)[1]
 
-        expect(widthOf('right')).toBe('80')
-        expect(widthOf('left')).toBe('80')
+        await ouvrirAuFocus(wrapper, 'droite')
+        wrapper.vm.close()
+        await poser()
 
-        await wrapper.find('[data-testid="delete"]').trigger('focusin')
-
-        expect(Number(widthOf('right'))).toBe(Math.abs(translateOf(wrapper)))
+        expect(positionDe(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
 
         wrapper.unmount()
     })
 
-    /** An over-drag uncovers more than the snap width; the action has to follow. */
-    it('grows with an over-drag rather than leaving a gap', async () => {
+    it('se referme quand on touche ailleurs, pas quand on touche la rangée', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'droite')
+
+        contenu(wrapper).element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+        await poser()
+        expect(positionDe(wrapper)).toBe(-80)
+
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+        await poser()
+
+        expect(positionDe(wrapper)).toBe(0)
+
+        wrapper.unmount()
+    })
+})
+
+describe('SwipeableRow, le panneau', () => {
+    it('est détaché de la carte par 8 px, et suit son bord', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'droite')
+
+        expect(largeurDe(wrapper, 'droite')).toBe(72)
+        expect(largeurDe(wrapper, 'gauche')).toBe(0)
+
+        wrapper.unmount()
+    })
+
+    it('grandit avec un tirage au-delà du cran, sans laisser de vide', async () => {
         const wrapper = mountRow({ actionThreshold: 64 })
-        const content = wrapper.find('.relative.z-10')
-        const rightAction = () => wrapper.find('.absolute.inset-y-0.right-0')
+        const main = doigt(wrapper, 300)
 
-        expect(rightAction().attributes('style')).toContain('width: 64px')
+        main.vers(289)
+        main.vers(100)
 
-        await content.trigger('touchstart', { touches: [{ clientX: 300, clientY: 10 }] })
-        await content.trigger('touchmove', { touches: [{ clientX: 100, clientY: 10 }] })
+        const tire = Math.abs(positionDe(wrapper))
 
-        const dragged = Math.abs(translateOf(wrapper))
+        expect(tire).toBeGreaterThan(64)
+        expect(largeurDe(wrapper, 'droite')).toBeCloseTo(tire - 8, 5)
 
-        // Past the threshold the drag is damped, so this is well beyond 64 but
-        // not the full 200 the finger travelled.
-        expect(dragged).toBeGreaterThan(64)
-        expect(rightAction().attributes('style')).toContain(`width: ${dragged}px`)
-
+        main.leve()
         wrapper.unmount()
     })
 
-    /**
-     * Sizing an action to the offset keeps it from bleeding through the content
-     * beside it, but not through content that moved *towards* it. A right action
-     * is anchored to the right edge, so a swipe to the right slides the glass
-     * over it instead of away from it, and the values were washed red by an
-     * action that was uncovering nothing.
-     */
-    it('draws only the action the swipe is uncovering', async () => {
+    it('ne montre que l’action que le geste découvre', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 100)
+
+        main.vers(111)
+        main.vers(180)
+
+        expect(positionDe(wrapper)).toBeGreaterThan(0)
+        expect(largeurDe(wrapper, 'gauche')).toBeGreaterThan(0)
+        expect(largeurDe(wrapper, 'droite')).toBe(0)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('fond l’icône et le libellé entre 24 et 56 px de largeur', async () => {
+        const wrapper = mountRow()
+        const fondu = () => Number.parseFloat(panneau(wrapper, 'droite').element.style.getPropertyValue('--fondu'))
+        const main = doigt(wrapper, 300)
+
+        main.vers(289)
+        main.vers(289 - 28)
+        expect(fondu()).toBeCloseTo(0, 5)
+
+        main.vers(289 - 40)
+        expect(fondu()).toBeCloseTo((32 - 24) / 32, 5)
+
+        main.vers(289 - 70)
+        expect(fondu()).toBe(1)
+
+        main.leve()
+        wrapper.unmount()
+    })
+})
+
+describe('SwipeableRow, le geste', () => {
+    it('ne suit pas un tirage vers un côté sans action', () => {
+        const wrapper = mountDeleteOnlyRow()
+        const main = doigt(wrapper, 100)
+
+        main.vers(111)
+        main.vers(260)
+
+        expect(positionDe(wrapper)).toBe(0)
+        expect(largeurDe(wrapper, 'droite')).toBe(0)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('suit un tirage vers le côté qui en a une', () => {
+        const wrapper = mountDeleteOnlyRow()
+        const main = doigt(wrapper, 260)
+
+        main.vers(249)
+        main.vers(200)
+
+        expect(positionDe(wrapper)).toBe(-49)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('prend l’origine au verrou : la rangée ne saute pas de 11 px', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(211)
+
+        expect(Math.abs(positionDe(wrapper))).toBeLessThanOrEqual(1)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('ne verrouille pas un geste plutôt vertical, même s’il glisse ensuite sur le côté', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(205, 16, 30)
+        main.vers(100, 16, 30)
+
+        expect(positionDe(wrapper)).toBe(0)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('suit le doigt à 1 pour 1, puis de plus en plus mollement au-delà du cran', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 0)
+
+        main.vers(11)
+        main.vers(160)
+
+        expect(positionDe(wrapper)).toBeGreaterThan(110)
+        expect(positionDe(wrapper)).toBeLessThan(149)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('repart d’où est la rangée ouverte : +30 depuis -80 donne -60, pas +30', async () => {
         const wrapper = mountRow()
 
-        await drag(wrapper, 100, 200)
+        await ouvrirAuFocus(wrapper, 'droite')
+        const main = doigt(wrapper, 200)
 
-        expect(translateOf(wrapper)).toBeGreaterThan(0)
-        expect(sideOpacity(wrapper, 'left')).toBe(1)
-        expect(sideOpacity(wrapper, 'right')).toBe(0)
+        main.vers(211)
+        main.vers(231)
 
+        expect(positionDe(wrapper)).toBe(-60)
+        expect(positionDe(wrapper)).toBeLessThanOrEqual(0)
+
+        main.leve()
         wrapper.unmount()
     })
 
-    it('draws the other one the other way', async () => {
+    it('reste ouverte quand on la tire un peu plus loin, puis qu’on lâche', async () => {
         const wrapper = mountRow()
 
-        await drag(wrapper, 200, 100)
+        await ouvrirAuFocus(wrapper, 'droite')
+        const main = doigt(wrapper, 200)
 
-        expect(translateOf(wrapper)).toBeLessThan(0)
-        expect(sideOpacity(wrapper, 'right')).toBe(1)
-        expect(sideOpacity(wrapper, 'left')).toBe(0)
+        main.vers(211)
+        main.vers(181, 200)
+        main.leve(200)
+        await poser()
+
+        expect(wrapper.attributes('data-ouverte')).toBe('droite')
+        expect(positionDe(wrapper)).toBe(-80)
 
         wrapper.unmount()
     })
 
-    /**
-     * A set row has only a delete. Pulling it the other way used to slide the
-     * whole row off its card to reveal bare background — and, once the action
-     * stopped being half the row, the delete panel itself through the glass.
-     */
-    /**
-     * Une rangee desarmee en cours de geste : un deplacement vient de commencer
-     * dessus. Elle doit cesser de suivre le doigt, sans quoi les deux gestes
-     * avancent ensemble.
-     */
-    it('stops following the finger when it is disabled mid-swipe', async () => {
-        const wrapper = mountRow({ disabled: false })
-        const contenu = wrapper.find('.relative.z-10')
+    it('s’ouvre sur un coup sec de 25 px en 50 ms', async () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
 
-        await contenu.trigger('touchstart', { touches: [{ clientX: 300, clientY: 10 }] })
-        await contenu.trigger('touchmove', { touches: [{ clientX: 260, clientY: 10 }] })
+        main.vers(188, 16)
+        main.vers(163, 50)
+        main.leve(4)
+        await poser()
+
+        expect(wrapper.attributes('data-ouverte')).toBe('droite')
+        expect(positionDe(wrapper)).toBe(-80)
+
+        wrapper.unmount()
+    })
+
+    it('se referme quand on la retient à 45 px en revenant vers le bord', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'gauche')
+        const main = doigt(wrapper, 100)
+
+        main.vers(111, 16)
+        main.vers(76, 50)
+        main.leve(4)
+        await poser()
+
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
+        expect(positionDe(wrapper)).toBe(0)
+
+        wrapper.unmount()
+    })
+
+    it('reste ouverte quand le doigt s’arrête à 45 px avant de lâcher', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'gauche')
+        const main = doigt(wrapper, 100)
+
+        main.vers(111, 16)
+        main.vers(76, 50)
+        main.leve(300)
+        await poser()
+
+        expect(wrapper.attributes('data-ouverte')).toBe('gauche')
+
+        wrapper.unmount()
+    })
+
+    it('ne va jamais d’un côté à l’autre, même lancée', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'gauche')
+        const main = doigt(wrapper, 300)
+
+        main.vers(311, 16)
+        main.vers(120, 40)
+        main.leve(2)
+        await poser()
+
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
+        expect(positionDe(wrapper)).toBe(0)
+
+        wrapper.unmount()
+    })
+
+    it('est à mi-chemin une image après le relâchement, entre le lâcher et le cran', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(188, 16)
+        main.vers(158, 60)
+        const lache = positionDe(wrapper)
+
+        main.leve(4)
+        image()
+
+        const apres = positionDe(wrapper)
+
+        expect(lache).toBeCloseTo(-30, 5)
+        expect(apres).toBeLessThan(lache)
+        expect(apres).toBeGreaterThan(-80)
+
+        wrapper.unmount()
+    })
+
+    it('se pose pour de bon sur le cran, sans image restante', async () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(188, 16)
+        main.vers(100, 60)
+        main.leve(4)
+        await poser()
+
+        expect(positionDe(wrapper)).toBe(-80)
+        expect(file.size).toBe(0)
+
+        wrapper.unmount()
+    })
+
+    it('reprend en vol : la saisie arrête le ressort et part de la position affichée', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(188, 16)
+        main.vers(158, 60)
+        main.leve(4)
+        image()
+        image()
+
+        const enVol = positionDe(wrapper)
+        const saisie = doigt(wrapper, 200)
+
+        expect(file.size).toBe(0)
+        saisie.vers(211)
+        expect(positionDe(wrapper)).toBe(enVol)
+
+        saisie.leve()
+        wrapper.unmount()
+    })
+
+    it('rend la rangée à zéro quand le système reprend le geste', async () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(188, 16)
+        main.vers(158, 60)
+        main.annule()
+        await poser()
+
+        expect(positionDe(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
+
+        wrapper.unmount()
+    })
+
+    it('cesse de suivre le doigt quand elle est coupée en plein geste', async () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 300)
+
+        main.vers(289)
+        main.vers(260)
         await wrapper.setProps({ disabled: true })
-        await contenu.trigger('touchmove', { touches: [{ clientX: 180, clientY: 10 }] })
+        main.vers(180)
 
-        expect(contenu.attributes('style')).not.toMatch(/translateX\(-/)
-    })
-
-    it('does not follow a drag towards a side with no action', async () => {
-        const wrapper = mountDeleteOnlyRow()
-
-        await drag(wrapper, 100, 260)
-
-        expect(translateOf(wrapper)).toBe(0)
-        expect(sideOpacity(wrapper, 'right')).toBe(0)
+        expect(positionDe(wrapper)).toBe(0)
 
         wrapper.unmount()
     })
 
-    it('still follows a drag towards the side that has one', async () => {
-        const wrapper = mountDeleteOnlyRow()
+    it('relâche la capture quand elle est coupée en plein geste', async () => {
+        const wrapper = mountRow()
+        const relache = vi.fn()
 
-        await drag(wrapper, 260, 100)
+        contenu(wrapper).element.setPointerCapture = vi.fn()
+        contenu(wrapper).element.releasePointerCapture = relache
+        const main = doigt(wrapper, 300, { pointerType: 'pen' })
 
-        expect(translateOf(wrapper)).toBeLessThan(0)
-        expect(sideOpacity(wrapper, 'right')).toBe(1)
+        main.vers(289)
+        await wrapper.setProps({ disabled: true })
+
+        expect(relache).toHaveBeenCalledWith(1)
+
+        wrapper.unmount()
+    })
+
+    it('ne capture le pointeur qu’au verrou, pas à la saisie', () => {
+        const wrapper = mountRow()
+        const capture = vi.fn()
+
+        contenu(wrapper).element.setPointerCapture = capture
+        const main = doigt(wrapper, 300, { pointerType: 'pen' })
+
+        expect(capture).not.toHaveBeenCalled()
+        main.vers(305)
+        expect(capture).not.toHaveBeenCalled()
+        main.vers(289)
+        expect(capture).toHaveBeenCalledWith(1)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('suit un doigt posé sur un champ, même si le navigateur y annule le pointeur', async () => {
+        const wrapper = mountRow({}, { default: '<input type="number" />' })
+        const champ = wrapper.find('input').element
+        const envoyer = (type, x) => champ.dispatchEvent(evenementDeDoigt(type, { x, y: 10, horloge }))
+
+        envoyer('pointerdown', 300)
+        horloge += 16
+        envoyer('pointermove', 289)
+        champ.dispatchEvent(new Event('pointercancel', { bubbles: true }))
+        horloge += 16
+        envoyer('pointermove', 200)
+        image()
+
+        expect(positionDe(wrapper)).toBeLessThan(0)
+
+        envoyer('pointerup', 200)
+        wrapper.unmount()
+    })
+
+    it('ne pose aucun écouteur actif et garde touch-action: pan-y', () => {
+        const wrapper = mountRow()
+
+        expect(contenu(wrapper).classes()).toContain('touch-pan-y')
+
+        wrapper.unmount()
+    })
+
+    it('ignore la souris, que le glisser natif du réordonnancement garde', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200, { pointerType: 'mouse' })
+
+        main.vers(188)
+        main.vers(100)
+
+        expect(positionDe(wrapper)).toBe(0)
+
+        main.leve()
+        wrapper.unmount()
+    })
+
+    it('ne dépose aucune image en attente en mouvement réduit : pose directe sur la cible', async () => {
+        vi.stubGlobal('matchMedia', (requete) => ({
+            matches: requete.includes('reduce'),
+            media: requete,
+            addEventListener() {},
+            removeEventListener() {},
+        }))
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(188, 16)
+        main.vers(100, 60)
+        expect(positionDe(wrapper)).toBeLessThan(-80)
+
+        main.leve(4)
+        await flushPromises()
+
+        expect(file.size).toBe(0)
+        expect(positionDe(wrapper)).toBe(-80)
+        expect(wrapper.attributes('data-ouverte')).toBe('droite')
+
+        wrapper.unmount()
+    })
+})
+
+describe('SwipeableRow, un doigt qui coupe l’animation', () => {
+    it('relance le retour quand un tap le coupe en route, au lieu de figer la rangée', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'droite')
+        wrapper.vm.close()
+        for (let i = 0; i < 4; i += 1) {
+            image()
+        }
+        const enRoute = positionDe(wrapper)
+
+        expect(enRoute).toBeLessThan(0)
+        expect(enRoute).toBeGreaterThan(-80)
+
+        doigt(wrapper, 150).leve(40)
+        await poser()
+
+        expect(positionDe(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
+
+        wrapper.unmount()
+    })
+
+    it('reprend l’ouverture quand le doigt la coupe puis part en défilement vertical', async () => {
+        const wrapper = mountRow()
+
+        await wrapper.find('[data-testid="delete"]').trigger('focusin')
+        image()
+        image()
+
+        const main = doigt(wrapper, 200)
+
+        main.vers(205, 16, 30)
+        main.leve(16)
+        await poser()
+
+        expect(positionDe(wrapper)).toBe(-80)
+
+        wrapper.unmount()
+    })
+})
+
+describe('SwipeableRow, le clic sans geste derrière lui', () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    const cliquerLeLien = (wrapper) => {
+        const clic = new MouseEvent('click', { bubbles: true, cancelable: true })
+
+        wrapper.find('a').element.dispatchEvent(clic)
+
+        return clic
+    }
+
+    it('laisse passer un clic de clavier ou de lecteur d’écran venu longtemps après un tap sur rangée ouverte', async () => {
+        const wrapper = mountRow()
+        let maintenant = 5000
+
+        vi.spyOn(performance, 'now').mockImplementation(() => maintenant)
+        await ouvrirAuFocus(wrapper, 'droite')
+        doigt(wrapper, 150).leve(40)
+        maintenant += 2000
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    it('laisse passer un clic de clavier venu longtemps après un glissement', () => {
+        const wrapper = mountRow()
+        let maintenant = 5000
+
+        vi.spyOn(performance, 'now').mockImplementation(() => maintenant)
+        const main = doigt(wrapper, 200)
+
+        main.vers(188)
+        main.vers(100, 60)
+        main.leve()
+        maintenant += 2000
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    it('garde l’avalement d’un tap sur rangée ouverte quand un deuxième doigt se pose', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'droite')
+        const premier = doigt(wrapper, 150)
+
+        doigt(wrapper, 100, { pointerId: 2 })
+        premier.leve(40)
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(true)
+
+        wrapper.unmount()
+    })
+})
+
+describe('SwipeableRow, le clic qui suit un geste', () => {
+    const cliquerLeLien = (wrapper) => {
+        const clic = new MouseEvent('click', { bubbles: true, cancelable: true })
+
+        wrapper.find('a').element.dispatchEvent(clic)
+
+        return clic
+    }
+
+    it('est avalé après un glissement', () => {
+        const wrapper = mountRow()
+        const main = doigt(wrapper, 200)
+
+        main.vers(188)
+        main.vers(100, 60)
+        main.leve()
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(true)
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    it('ferme la rangée ouverte et avale le clic d’un tap', async () => {
+        const wrapper = mountRow()
+
+        await ouvrirAuFocus(wrapper, 'droite')
+        doigt(wrapper, 150).leve(40)
+        const clic = cliquerLeLien(wrapper)
+        await poser()
+
+        expect(clic.defaultPrevented).toBe(true)
+        expect(positionDe(wrapper)).toBe(0)
+        expect(wrapper.attributes('data-ouverte')).toBeUndefined()
+
+        wrapper.unmount()
+    })
+
+    it('laisse passer le clic d’un tap sur une rangée fermée', () => {
+        const wrapper = mountRow()
+
+        doigt(wrapper, 150).leve(40)
+
+        expect(cliquerLeLien(wrapper).defaultPrevented).toBe(false)
 
         wrapper.unmount()
     })

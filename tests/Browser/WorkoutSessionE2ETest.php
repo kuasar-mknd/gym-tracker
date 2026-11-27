@@ -190,8 +190,9 @@ class WorkoutSessionE2ETest extends DuskTestCase
              * perform, but focusing the action opens the row, which is exactly
              * what SwipeableRow does so the gesture is not the only way in.
              *
-             * Focus comes before waitFor: the action rests at opacity 0, so it
-             * is present long before it is visible.
+             * Focus comes before waitFor: the action rests at zero width, so it
+             * is present long before it is visible, and the spring is still
+             * settling when it first is: the click waits for it to stop.
              */
             $browser->script(
                 "document.querySelector('[dusk=\"swipe-remove-set-0-1\"]').scrollIntoView({block: 'center'});"
@@ -199,7 +200,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             );
 
             $browser->waitFor('@swipe-remove-set-0-1', 10)
-                ->click('@swipe-remove-set-0-1')
+                ->clickWhenSettled('[dusk="swipe-remove-set-0-1"]')
                 ->waitUntilMissing('@weight-input-0-1', 15);
 
             // 6d. Modify workout settings
