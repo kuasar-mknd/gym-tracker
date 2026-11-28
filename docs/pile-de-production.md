@@ -10,8 +10,9 @@ Cette page explique comment `docker-compose.prod.yml` est construit et pourquoi 
 | `worker` | la même | Horizon (`php artisan horizon`) : les files. | `backend`, `sortie` | 512 Mo |
 | `scheduler` | la même | Les tâches planifiées (`php artisan schedule:work`). | `backend`, `sortie` | 256 Mo |
 | `db` | `mysql:8.4` | MySQL, volume `db_data`. | `backend` | 1 Go |
-| `redis` | `redis:8.10.3-alpine` | L'instance des données : file, Horizon, sessions, verrous, limiteurs, battements de santé. Volume `redis_data`. | `backend` | 256 Mo |
+| `redis` | `redis:8.10.3-alpine` | L'instance des données : file, Horizon, verrous, limiteurs, battements de santé. Volume `redis_data`. | `backend` | 256 Mo |
 | `redis-cache` | `redis:8.10.3-alpine` | L'instance du cache. Sans volume. | `backend` | 192 Mo |
+| `redis-sessions` | `redis:8.10.3-alpine` | L'instance des sessions. Volume `redis_sessions_data`. | `backend` | 128 Mo |
 
 Le volume `journaux` porte les fichiers de journal des trois conteneurs de l'application (voir [Exploitation](exploitation.md#journaux)).
 
@@ -36,19 +37,24 @@ Sans `scheduler`, les tâches planifiées ne tournent pas : ni les sauvegardes, 
 
 `worker` envoie les notifications en file (push, courriels, avis des sauvegardes lancées du panneau, dont le job tourne dans Horizon). `scheduler` envoie lui-même, sans file, les alertes de santé. Ils ont un réseau à eux plutôt que `frontend` : ils n'ont rien à recevoir, et ce qui se brancherait sur `frontend` pour joindre `app` les joindrait aussi. `db` et `redis` n'y sont pas.
 
-## Deux instances de Redis
+## Trois instances de Redis
 
-Le cache a sa propre instance, pour que son éviction n'atteigne ni la file, ni les sessions, ni les verrous.
+Chaque usage a son instance, pour que l'éviction ou le remplissage de l'une n'atteigne pas les autres.
 
-| Instance | Contenu | Politique |
-| --- | --- | --- |
-| `redis` | file, Horizon, sessions, verrous, limiteurs, battements de santé | `noeviction` : pleine, elle refuse une écriture plutôt que de perdre une session ou un travail. Persistée (AOF, volume `redis_data`). |
-| `redis-cache` | ce qui se recalcule | `allkeys-lru`, sans persistance ni volume : elle repart vide. |
+| Instance | Contenu | Plafond | Politique | Persistance |
+| --- | --- | --- | --- | --- |
+| `redis` | file, Horizon, verrous, limiteurs, battements de santé | 128 Mo | `noeviction` : pleine, elle refuse une écriture plutôt que de perdre un travail. | AOF, volume `redis_data` |
+| `redis-cache` | ce qui se recalcule | 128 Mo | `allkeys-lru` | aucune, elle repart vide |
+| `redis-sessions` | sessions et pierres tombales de session | 64 Mo | `volatile-lru` : chaque session porte une échéance, donc pleine, elle évince la moins récemment servie. | instantané toutes les cinq minutes (écrit aussi à l'arrêt propre), volume `redis_sessions_data`, sans AOF |
 
-- Les deux ont un plafond de 128 Mo.
+- Les trois partagent `REDIS_PASSWORD` et le réseau `backend`, et ne publient aucun port.
 - Les limiteurs de tentatives et les battements de « File d'attente » et « Planificateur » restent sur l'instance des données (`CACHE_DURABLE_STORE`) : le cache à part peut repartir vide sans fausse alerte.
-- Un retour en arrière remet la composition d'avant, jamais l'image seule : l'ancienne image avec la nouvelle composition range le cache sur la base 1 de `redis`, en `noeviction`, qui refuse alors les écritures dès 128 Mo.
-- La procédure de bascule est dans [la mise à niveau](mise-a-niveau.md#depuis-une-version-davant-les-deux-instances-de-redis).
+- **Pourquoi les sessions ont leur instance.** Une requête sans cookie en ouvre une, d'environ 1 Ko, pour deux heures. Un afflux depuis beaucoup d'adresses la remplirait : sur `redis`, en `noeviction`, plus rien ne s'y écrirait (connexion, limiteurs, verrous, file). Sur `redis-sessions`, l'instance pleine évince des sessions et le reste de la pile ne le voit pas.
+- **Ce que cela coûte.** L'éviction ne distingue pas un invité d'un compte connecté : sous un afflux, une session inactive depuis longtemps peut se fermer avant son échéance, et son titulaire se reconnecte (son cookie « Se souvenir de moi » le fait seul).
+- **Persistance des sessions.** Sans AOF : sa synchronisation chaque seconde coûte cher sur le disque de production. Un arrêt propre n'en perd aucune ; un plantage perd au plus cinq minutes de sessions. Un instantané qui échoue ne ferme pas les écritures (`--stop-writes-on-bgsave-error no`) : « Réglages de Redis » passe au rouge, et les connexions continuent.
+- **Capacité.** 64 Mo tiennent environ 48 000 sessions de 1 Ko (mesuré). La limite du conteneur (128 Mo) laisse la marge de la copie d'un instantané. Seul `app` attend `redis-sessions` : il est le seul à ouvrir une session.
+- Un retour en arrière remet la composition d'avant **et** l'image d'avant : l'ancienne image avec la nouvelle composition échoue sur toute requête qui ouvre une session (connexion `sessions` inconnue) et, avec la composition d'avant la séparation du cache, range le cache sur la base 1 de `redis`, en `noeviction`, qui refuse alors les écritures dès 128 Mo.
+- Les procédures sont dans la mise à niveau : [le cache](mise-a-niveau.md#le-cache-a-son-instance-redis) et [les sessions](mise-a-niveau.md#les-sessions-ont-leur-instance-redis).
 
 ## Secrets hors des lignes de commande
 
@@ -78,7 +84,7 @@ Coût du chiffrement (AES-256-CBC, PHP 8.5, aarch64) :
 | 450 octets | 9 µs | 8 µs | 996 octets au lieu de 449 (2,2 fois plus) |
 | 4 Ko | 45 µs | 42 µs | |
 
-- Cela fait environ un mégaoctet pour mille sessions, dans les 128 Mo de `redis`.
+- Cela fait environ un mégaoctet pour mille sessions, dans les 64 Mo de `redis-sessions`.
 - Sur le serveur de production, comptez quelques fois plus par requête : c'est une estimation, sans mesure, négligeable devant les 0,35 à 1,7 s que coûte chaque écriture SQL.
 - `SessionsChiffreesTest` (`tests/Feature/Security`) joue la bascule dans les deux sens.
 
@@ -144,6 +150,6 @@ Aucune variable d'environnement n'est ajoutée : redéployer la pile recrée ces
 
 `pull_policy: always` fait retélécharger l'image à chaque mise à jour de la pile et recréer les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé : retélécharger `:v1` ne met à jour aucun conteneur existant, et un simple redémarrage ne télécharge rien.
 
-`db`, `redis` et `redis-cache` ne suivent pas `v1` : ils lancent l'étiquette de la composition (une ligne pour `db`, une version exacte pour `redis` et `redis-cache`), sans `pull_policy`.
+`db`, `redis`, `redis-cache` et `redis-sessions` ne suivent pas `v1` : ils lancent l'étiquette de la composition (une ligne pour `db`, une version exacte pour les trois Redis), sans `pull_policy`.
 
 Au démarrage, `app` joue les migrations. Une migration qui échoue l'arrête, plutôt que de servir un code qui ne correspond pas au schéma.

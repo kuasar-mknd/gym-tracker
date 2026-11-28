@@ -66,14 +66,15 @@ Les seuils, les mesures et les gardes de convention sont dans [docs/developpemen
 
 ## Mise en production
 
-La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée à chaque tag `v*`, par `docker-compose.prod.yml`. Il lance six services :
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée à chaque tag `v*`, par `docker-compose.prod.yml`. Il lance sept services :
 
 - `app` : le serveur web ;
 - `worker` : Horizon, les files ;
 - `scheduler` : les tâches planifiées (sans lui, ni sauvegarde ni alerte de santé) ;
 - `db` : MySQL 8.4 ;
-- `redis` : la file, les sessions et les verrous ;
-- `redis-cache` : le cache.
+- `redis` : la file et les verrous ;
+- `redis-cache` : le cache ;
+- `redis-sessions` : les sessions.
 
 Le détail de chaque étape est dans [docs/deploiement.md](docs/deploiement.md).
 
@@ -104,7 +105,7 @@ Le détail de chaque étape est dans [docs/deploiement.md](docs/deploiement.md).
 2. Lire [la mise à niveau](docs/mise-a-niveau.md), qui dit les effets du déploiement.
 3. Lancer `docker compose -f docker-compose.prod.yml up -d` : l'image est retéléchargée et les conteneurs recréés.
 
-`db` et `redis` ne suivent pas `v1` : leur version est celle de l'étiquette `image:` de la composition.
+`db` et les trois Redis ne suivent pas `v1` : leur version est celle de l'étiquette `image:` de la composition.
 
 ### Revenir en arrière
 

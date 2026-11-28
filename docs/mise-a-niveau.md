@@ -14,7 +14,8 @@ Cette page dit ce que la version qui suit v1.7.0 fait une seule fois, au déploi
 | [Résolution DNS bornée](#résolution-dns-bornée--app-worker-et-scheduler-sont-recréés) | rien | rien : `app`, `worker` et `scheduler` sont recréés | oui |
 | [Port sur la boucle locale](#port-de-lapplication-sur-la-boucle-locale) | rien, si le proxy inverse est sur le même hôte | vérifier le proxy | oui |
 | [Clé `APP_KEY` publiée](#remplacer-une-clé-app_key-publiée) | rien, tant qu'on ne la remplace pas | remplacer la clé si le contrôle est rouge | non |
-| [Deux instances de Redis](#depuis-une-version-davant-les-deux-instances-de-redis) | rien | une bascule en trois commandes | oui |
+| [Le cache a son instance Redis](#le-cache-a-son-instance-redis) | rien | une bascule en trois commandes | oui |
+| [Les sessions ont leur instance Redis](#les-sessions-ont-leur-instance-redis) | Tout le monde se reconnecte une fois ; un formulaire ouvert pendant la montée échoue une fois | `up -d` | oui |
 
 ## Sessions et cookies : tout le monde se reconnecte une fois
 
@@ -58,7 +59,7 @@ Une seule fois, à une heure creuse, avec la composition de la release :
 
    `up -d` recrée :
    - `db` : sa sonde a changé. MySQL s'arrête proprement (`stop_grace_period` de cinq minutes) et repart sur le même volume.
-   - `redis` et `redis-cache` : leur commande a changé. `redis` écrit son AOF en s'arrêtant et la relit (les sessions et la file y sont). `redis-cache` repart vide, comme toujours.
+   - `redis` et `redis-cache` : leur commande a changé. `redis` écrit son AOF en s'arrêtant et la relit (la file y est). `redis-cache` repart vide, comme toujours.
    - `app`, `worker` et `scheduler`.
 
    Les variables de la pile, `REDIS_PASSWORD` comprise, ne changent pas.
@@ -70,7 +71,7 @@ Une seule fois, à une heure creuse, avec la composition de la release :
 
 ### Vérifier
 
-- `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis` et `redis-cache` en `healthy`.
+- `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis`, `redis-cache` et `redis-sessions` en `healthy`.
 - `docker inspect <projet>-redis-1 --format '{{json .Config.Cmd}} {{json .Config.Healthcheck}}'` (et `<projet>-db-1`) ne montre aucun mot de passe.
 - `docker compose -f docker-compose.prod.yml exec redis redis-cli ping` répond `PONG`.
 - « Réglages de Redis » et « Versions des services », dans « Santé », restent verts.
@@ -127,9 +128,9 @@ Le contrôle « Clé de l'application » de la page « Santé » passe au rouge 
 
 Effets : toutes les sessions se ferment, et les liens déjà envoyés par courriel cessent de valoir (voir [`APP_KEY` : générer, changer](variables-d-environnement.md#app_key--générer-changer)). Pas de retour possible : les liens et sessions d'avant ne reviennent pas.
 
-## Depuis une version d'avant les deux instances de Redis
+## Le cache a son instance Redis
 
-Le cache a sa propre instance (`redis-cache`). Les raisons sont dans [La pile de production](pile-de-production.md#deux-instances-de-redis).
+Le cache a sa propre instance (`redis-cache`). Les raisons sont dans [La pile de production](pile-de-production.md#trois-instances-de-redis).
 
 **Avant de commencer** : l'image de la release (celle qui connaît `REDIS_CACHE_HOST` et `CACHE_DURABLE_STORE`) doit être publiée, et son `APP_VERSION` vérifié (« Versions des conteneurs »), avant de poser la nouvelle composition.
 
@@ -143,7 +144,7 @@ docker compose -f docker-compose.prod.yml exec redis redis-cli -n 1 FLUSHDB ASYN
 
 | Commande | Ce qu'elle fait |
 | --- | --- |
-| 1. `cache:clear` | Vide l'ancien cache avant que `redis` ne passe en `noeviction`. Sans elle, `redis` recharge jusqu'à 128 Mo d'ancien cache depuis son AOF et refuse sessions et mises en file. |
+| 1. `cache:clear` | Vide l'ancien cache avant que `redis` ne passe en `noeviction`. Sans elle, `redis` recharge jusqu'à 128 Mo d'ancien cache depuis son AOF et refuse des mises en file. |
 | 2. `up -d -t 60` | Met la pile à jour. Dès lors, `app` écrit son cache sur `redis-cache`. |
 | 3. `FLUSHDB ASYNC` | Vide la base 1 de `redis`, où les anciens conteneurs ont pu écrire pendant la bascule. **Jamais `FLUSHALL`, jamais sans `-n 1`.** Elle seule la vide : un `cache:clear` lancé après la mise à jour ne vide que `redis-cache`. |
 
@@ -158,13 +159,34 @@ Effets :
 docker compose -f docker-compose.prod.yml up -d --remove-orphans
 ```
 
-Sans `--remove-orphans`, `redis-cache` reste lancé. Les sessions et la file restent dans `redis_data` ; le cache repart vide. Revenir ensuite à la nouvelle composition, c'est refaire les trois commandes : le cache a rempli la base 1 entre-temps.
+Sans `--remove-orphans`, `redis-cache` reste lancé. La file reste dans `redis_data` ; le cache repart vide. Revenir ensuite à la nouvelle composition, c'est refaire les trois commandes : le cache a rempli la base 1 entre-temps.
+
+## Les sessions ont leur instance Redis
+
+Un service `redis-sessions` porte les sessions (64 Mo, `volatile-lru`). Les raisons, le compromis de l'éviction et la persistance sont dans [La pile de production](pile-de-production.md#trois-instances-de-redis). `app`, `worker` et `scheduler` sont recréés, avec `SESSION_CONNECTION`, `REDIS_SESSIONS_HOST` et `REDIS_SESSIONS_PORT` ; aucune variable n'est à poser, `REDIS_PASSWORD` sert aux trois Redis.
+
+**Avant de commencer** : l'image de la release (celle qui connaît la connexion `sessions`) doit être publiée, et son `APP_VERSION` vérifié (« Versions des conteneurs »), avant de poser la nouvelle composition. L'ancienne image avec la nouvelle composition échoue sur toute requête qui ouvre une session.
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Effets :
+
+- **Toutes les sessions s'ouvrent de nouveau** : chacun se reconnecte une fois, hors les appareils dont le cookie « Se souvenir de moi » le fait seul.
+- **Un formulaire ouvert pendant la montée échoue une fois** (erreur 419, « page expirée ») : son jeton CSRF vivait dans une session que la nouvelle instance ne connaît pas. Recharger la page suffit.
+- Les copies hors ligne de chaque appareil s'effacent une fois ; les modifications qui attendaient leur envoi restent.
+- Les anciennes sessions restent dans `redis` jusqu'à leur échéance (`SESSION_LIFETIME` minutes), sans effet.
+
+À vérifier : `docker compose -f docker-compose.prod.yml ps` montre `redis-sessions` en `healthy` ; après une connexion, `docker compose -f docker-compose.prod.yml exec redis-sessions redis-cli DBSIZE` n'est plus à zéro ; « Réglages de Redis » et « Versions des services » restent verts.
+
+**Retour** : la composition d'avant **et** l'image d'avant, puis `up -d --remove-orphans`. Les sessions reviennent sur `redis`, chacun se reconnecte une fois de plus, et le volume `redis_sessions_data` reste (`docker volume rm <projet>_redis_sessions_data` s'il ne sert plus).
 
 ## Dans tous les cas
 
 - À chaque release, la pile reçoit la composition de son tag. « Versions des services », dans la page « Santé », dit ensuite si `db` et `redis` servent la version attendue.
 - Une release qui monte `redis` ou MySQL se déploie par la marche de `.ai/rules/dependencies.md`, à une heure creuse.
-- Après la mise à jour : `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis` et `redis-cache` en `healthy`, et la page « Santé » reste verte.
+- Après la mise à jour : `docker compose -f docker-compose.prod.yml ps` montre `db`, `redis`, `redis-cache` et `redis-sessions` en `healthy`, et la page « Santé » reste verte.
 
 ## Retour arrière
 
@@ -174,5 +196,5 @@ Pour revenir à la release d'avant : remettre la composition d'avant **et** épi
 | --- | --- |
 | le port sur la boucle locale (remettre `8888:80`) | les sessions fermées par le cookie `__Host-` et les copies hors ligne effacées (rien ne les rend) |
 | les sessions chiffrées (`SESSION_ENCRYPT=false`, chacun se reconnecte une fois de plus) | les administrateurs déconnectés et la double authentification enrôlée (on ne redevient pas sans second facteur d'un geste ; `admin:reinitialiser-mfa` efface un secret) |
-| les deux instances de Redis (composition d'avant, `--remove-orphans`) | la clé `APP_KEY` remplacée (les liens et sessions d'avant ne reviennent pas) |
+| les instances de Redis du cache et des sessions (composition d'avant **et** image d'avant, `--remove-orphans`) | la clé `APP_KEY` remplacée (les liens et sessions d'avant ne reviennent pas) |
 | `dns_opt` (composition d'avant) | |
