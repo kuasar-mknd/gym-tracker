@@ -41,13 +41,18 @@ describe('GoalsSummary', () => {
         expect(wrapper.text()).not.toContain('100')
     })
 
-    it('stays off the dashboard entirely when nothing is in progress', () => {
+    it('propose de fixer un objectif quand aucun n’est en cours', () => {
         const wrapper = mountSummary([])
 
-        // Not an empty list with a heading above it: the whole block is absent,
-        // heading, "Voir tout" link and all.
-        expect(wrapper.find('section').exists()).toBe(false)
-        expect(wrapper.text()).toBe('')
+        expect(wrapper.get('[dusk="objectifs-vides"]').text()).toContain('Objectifs en cours')
+        expect(wrapper.text()).toContain('Aucun objectif en cours')
+        expect(wrapper.find('[role="progressbar"]').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('Voir tout')
+
+        const liens = wrapper.findAll('a')
+        expect(liens).toHaveLength(1)
+        expect(liens[0].text()).toBe('Fixer un objectif')
+        expect(liens[0].attributes('href')).toBe('/goals.index')
     })
 
     it('rounds the figure it prints but not the bar it draws', () => {
@@ -93,7 +98,11 @@ describe('GoalsSummary sur une copie hors ligne', () => {
         expect(carte.find('a').exists()).toBe(false)
     })
 
-    it('ne dit rien de tel pour un compte sans objectif', () => {
-        expect(monter().text()).toBe('')
+    it('ne dit pas « indisponible » pour un compte sans objectif, et propose d’en fixer un', () => {
+        const carte = monter()
+
+        expect(carte.find('[data-indisponible-hors-ligne]').exists()).toBe(false)
+        expect(carte.text()).not.toContain('indisponibles')
+        expect(carte.get('a').text()).toBe('Fixer un objectif')
     })
 })
