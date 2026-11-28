@@ -112,6 +112,15 @@ Si le proxy est sur un autre hôte : remettre `8888:80` et régler `TRUSTED_PROX
 
 Retour : remettre `8888:80` dans la composition.
 
+## `TRUSTED_PROXIES` : le défaut ne couvre plus les réseaux locaux
+
+Sans la variable, l'application ne croit plus `X-Forwarded-*` que de la boucle locale et des ponts Docker (`172.16.0.0/12`), plus de `10.0.0.0/8` ni de `192.168.0.0/16`.
+
+1. Avant de déployer, lire la passerelle du réseau `frontend` : `docker network inspect <projet>_frontend`.
+2. Si elle tombe dans `10.x` ou `192.168.x`, ou si un proxy en amont du réseau local chaîne vers celui de l'hôte, poser `TRUSTED_PROXIES` sur son adresse, faute de quoi HTTPS n'est plus détecté.
+
+Retour arrière : poser l'ancienne liste (`127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`) dans la variable.
+
 ## Remplacer une clé `APP_KEY` publiée
 
 Le contrôle « Clé de l'application » de la page « Santé » passe au rouge en production quand `APP_KEY` est l'une des clés qui ont été lisibles dans l'historique du dépôt.

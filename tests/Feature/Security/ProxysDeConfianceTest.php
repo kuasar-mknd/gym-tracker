@@ -11,9 +11,8 @@ use function Pest\Laravel\withServerVariables;
 /*
  * Les proxys dont l'application croit les en-têtes `X-Forwarded-*` se règlent
  * par `TRUSTED_PROXIES` (config/trustedproxy.php). Sans réglage, la liste
- * reste exactement celle d'avant la variable : la boucle locale et les trois
- * plages privées, pour que la production garde la détection de HTTPS derrière
- * son proxy inverse. Réglée, elle ne fait plus croire que les pairs qu'elle
+ * est la boucle locale et les ponts Docker, pour que la production garde la
+ * détection de HTTPS derrière son proxy inverse, sans croire les réseaux locaux. Réglée, elle ne fait plus croire que les pairs qu'elle
  * nomme.
  */
 
@@ -80,7 +79,7 @@ function proxysDeConfianceLireDepuis(string $pair, array $entetes = []): TestRes
     return withServerVariables(['REMOTE_ADDR' => $pair])->withHeaders($entetes)->get('/_proxys/client')->assertOk();
 }
 
-it('garde, sans réglage, exactement la liste d’avant la variable', function (?string $valeur): void {
+it('ne fait confiance, sans réglage, qu’à la boucle locale et aux ponts Docker', function (?string $valeur): void {
     $precedentes = proxysDeConfiancePoserLaVariable($valeur);
 
     try {
@@ -90,7 +89,7 @@ it('garde, sans réglage, exactement la liste d’avant la variable', function (
         proxysDeConfianceRendreLaVariable($precedentes);
     }
 
-    expect($configuration['proxies'])->toBe(['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
+    expect($configuration['proxies'])->toBe(['127.0.0.1', '172.16.0.0/12']);
 })->with([
     'absente' => [null],
     'vide' => [''],
@@ -111,11 +110,11 @@ it('lit dans TRUSTED_PROXIES des adresses et des sous-réseaux séparés par des
 });
 
 /*
- * Le comportement par défaut ne change pas : un pair des plages privées reste
+ * Le défaut croit la boucle locale et les ponts Docker : un pair de ces plages reste
  * cru, d'où la recommandation de régler la variable en production.
  */
-it('croit, sans réglage, un pair des plages privées comme avant', function (): void {
-    proxysDeConfianceLireDepuis('10.1.2.3', ['X-Forwarded-For' => '198.51.100.9', 'X-Forwarded-Proto' => 'https'])
+it('croit, sans réglage, la passerelle d’un pont Docker', function (): void {
+    proxysDeConfianceLireDepuis('172.18.0.1', ['X-Forwarded-For' => '198.51.100.9', 'X-Forwarded-Proto' => 'https'])
         ->assertJson(['adresse' => '198.51.100.9', 'https' => true]);
 });
 
@@ -142,17 +141,17 @@ it('lit derrière le proxy déclaré HTTPS et l’adresse que le proxy ajoute', 
 });
 
 /*
- * Un client des plages privées, à travers le proxy déclaré, ne passe plus
+ * Un client d'un pont Docker, à travers le proxy déclaré, ne passe plus
  * pour un proxy : l'adresse qu'il annonce est ignorée, la sienne est lue.
  */
 it('lit l’adresse privée d’un client à travers le proxy déclaré, pas celle qu’il annonce', function (): void {
-    proxysDeConfianceLireDepuis('10.0.0.2', ['X-Forwarded-For' => '198.51.100.9, 192.168.1.20'])
+    proxysDeConfianceLireDepuis('172.18.0.2', ['X-Forwarded-For' => '198.51.100.9, 172.20.0.5'])
         ->assertJson(['adresse' => '198.51.100.9']);
 
-    config(['trustedproxy.proxies' => ['10.0.0.2']]);
+    config(['trustedproxy.proxies' => ['172.18.0.2']]);
 
-    proxysDeConfianceLireDepuis('10.0.0.2', ['X-Forwarded-For' => '198.51.100.9, 192.168.1.20'])
-        ->assertJson(['adresse' => '192.168.1.20']);
+    proxysDeConfianceLireDepuis('172.18.0.2', ['X-Forwarded-For' => '198.51.100.9, 172.20.0.5'])
+        ->assertJson(['adresse' => '172.20.0.5']);
 });
 
 it('lit un client à adresse publique sous sa vraie adresse, réglage ou non', function (): void {
@@ -189,3 +188,36 @@ it('ne laisse pas un pair qui n’est pas le proxy changer d’adresse devant le
     'pair du réseau local' => ['192.168.1.50'],
     'pair public' => ['203.0.113.50'],
 ]);
+
+/*
+ * Audit des proxys de confiance : derrière la passerelle du pont, un appareil
+ * du réseau local qui forge `X-Forwarded-For` ne devient plus l'adresse
+ * cliente, et la liste blanche du panneau ne s'en laisse pas ouvrir.
+ */
+it('lit l’adresse du client du réseau local, pas l’entrée qu’il a forgée à sa gauche', function (string $client): void {
+    proxysDeConfianceLireDepuis('172.18.0.1', ['X-Forwarded-For' => "203.0.113.99, {$client}", 'X-Forwarded-Proto' => 'https'])
+        ->assertJson(['adresse' => $client, 'https' => true]);
+})->with([
+    'réseau en 192.168' => ['192.168.1.20'],
+    'réseau en 10' => ['10.0.0.20'],
+]);
+
+it('lit toujours l’adresse publique que le proxy ajoute derrière la passerelle', function (): void {
+    proxysDeConfianceLireDepuis('172.18.0.1', ['X-Forwarded-For' => '203.0.113.99, 198.51.100.9', 'X-Forwarded-Proto' => 'https'])
+        ->assertJson(['adresse' => '198.51.100.9', 'https' => true]);
+});
+
+it('garde la liste blanche fermée à l’entrée forgée et ouverte à l’adresse légitime', function (): void {
+    config(['app.admin_allowed_ips' => ['203.0.113.99', '198.51.100.9']]);
+
+    $forgee = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => '172.18.0.1', 'HTTP_X_FORWARDED_FOR' => '203.0.113.99, 192.168.1.20']);
+    $legitime = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => '172.18.0.1', 'HTTP_X_FORWARDED_FOR' => '198.51.100.9']);
+    Request::setTrustedProxies(array_values(array_filter((array) config('trustedproxy.proxies'), is_string(...))), Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PROTO);
+
+    try {
+        expect(\App\Http\Middleware\IpWhitelist::admet($forgee))->toBeFalse()
+            ->and(\App\Http\Middleware\IpWhitelist::admet($legitime))->toBeTrue();
+    } finally {
+        Request::setTrustedProxies([], Request::HEADER_X_FORWARDED_FOR);
+    }
+});

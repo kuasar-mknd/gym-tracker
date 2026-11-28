@@ -14,10 +14,12 @@ declare(strict_types=1);
  * requête à l'autre sous Octane.
  *
  * `TRUSTED_PROXIES` : adresses ou sous-réseaux CIDR séparés par des virgules.
- * Absente ou vide, la liste reste celle d'avant la variable — la boucle locale
- * et les trois plages privées —, pour qu'une installation qui ne la règle pas
- * garde la détection de HTTPS derrière son proxy inverse. En production, elle
- * se règle sur l'adresse précise sous laquelle le proxy inverse joint
+ * Absente ou vide, la liste est la boucle locale et la plage des ponts Docker
+ * (`172.16.0.0/12`, où tombe la passerelle par laquelle le proxy inverse de
+ * l'hôte joint `app`), pour garder la détection de HTTPS. Les réseaux locaux
+ * `10.0.0.0/8` et `192.168.0.0/16` n'y sont plus : un appareil du réseau local
+ * pris pour un proxy faisait lire l'entrée qu'il forge dans `X-Forwarded-For`.
+ * En production, elle se règle sur l'adresse précise sous laquelle le proxy inverse joint
  * l'application (docs/variables-d-environnement.md).
  */
 
@@ -32,9 +34,7 @@ return [
 
     'proxies' => $proxies !== [] ? $proxies : [
         '127.0.0.1',
-        '10.0.0.0/8',
         '172.16.0.0/12',
-        '192.168.0.0/16',
     ],
 
 ];
