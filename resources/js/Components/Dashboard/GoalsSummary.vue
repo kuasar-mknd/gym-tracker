@@ -9,8 +9,8 @@ defineProps({
     activeGoals: { type: Array, required: true },
     /**
      * Les objectifs manquent parce que la page est une copie hors ligne, qui
-     * ne garde jamais rien d'eux (#2048) : la carte le dit, plutôt que de
-     * annoncer à tort un compte sans objectif. Sans lien vers les objectifs,
+     * ne garde jamais rien d'eux (#2048) : la carte le dit, plutôt que
+     * d'annoncer à tort un compte sans objectif. Sans lien vers les objectifs,
      * qu'aucune copie ne garde non plus.
      */
     indisponible: { type: Boolean, default: false },
